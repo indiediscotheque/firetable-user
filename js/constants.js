@@ -38,7 +38,10 @@ var STORAGE = {
   desktopNotify:      "firetableDTNM",
   screenControl:      "firetableScreenControl",
   avatarStyle:        "firetableAvatarStyle",
-  lastfmSession:      "ftLastfmSession"
+  lastfmSession:      "ftLastfmSession",
+  navView:            "firetableNavView",
+  navSide:            "firetableNavSide",
+  navMobile:          "firetableNavMobile"
 };
 
 // ─── External Service URLs ──────────────────────────────────────────────────
@@ -49,7 +52,7 @@ var SC_RESOLVE_URL = "https://thompsn.com/resolvesc/";
 /** SoundCloud general proxy */
 var SC_PROXY_URL = "https://thompsn.com/soundcloud/";
 /** SoundCloud API track base URL */
-var SC_API_TRACK_URL = "http://api.soundcloud.com/tracks/";
+var SC_API_TRACK_URL = "https://api.soundcloud.com/tracks/";
 /** Last.fm API base URL */
 var LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 

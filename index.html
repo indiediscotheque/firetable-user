@@ -6,6 +6,7 @@
 	<title>firetable</title>
 	<meta name="description" content="Collaborative radio." />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<meta name="theme-color" content="#181818" />
 	<link rel="shortcut icon" href="favicon.png" />
 	<link rel="stylesheet" href="css/reset.css" type="text/css" />
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,700" type="text/css" />
@@ -179,8 +180,8 @@
 						<div class="ft-avatar"></div>
 						<div class="chatContent">
 							<div class="chatHead">
-								<span class="material-symbols-outlined utitle"></span>
 								<div class="chatName"></div>
+								<span class="material-symbols-outlined utitle"></span>
 							</div>
 							<div id="chattxtKEY" class="chatText"></div>
 						</div>
@@ -383,7 +384,12 @@
 						</div>
 						<div class="qtxt">
 							<div class="listwords"><a target="_blank" href="" class="histlink"></a></div>
-							<span class="histdj"></span> · <span class="histdate"></span> <span class="histtime"></span>
+							<div class="fresh-meta">
+								<span class="fresh-dj-avatar ft-avatar"></span>
+								<span class="histdj"></span>
+								<span class="histdate"></span>
+								<span class="histtime"></span>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -473,6 +479,11 @@
 			<div class="modalContent">
 				<div id="cardsMain">loading your cards...</div>
 			</div>
+		</div>
+
+		<div class="modalThing" id="cardViewLargerModal">
+			<button role="button" class="butt graybutt iconbutt closeModal" id="cardViewLargerClose" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			<canvas id="cardViewLargerCanvas" width="225" height="300"></canvas>
 		</div>
 
 		<div class="modalThing" id="accountSettingsBox">

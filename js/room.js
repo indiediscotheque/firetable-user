@@ -90,7 +90,17 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
   });
 
   // Track link
-  $histItem.find('.histlink').attr('id', data.histID).text(data.artist + " - " + data.title);
+  var titleText = firetable.ui.strip(data.title || "");
+  var artistText = firetable.ui.strip(data.artist || "");
+  var $histLink = $histItem.find('.histlink').attr('id', data.histID);
+  if (artClass === "discart") {
+    $histLink.html(
+      '<span class="fresh-track-title">' + firetable.utilities.htmlEscape(titleText) + '</span>' +
+      '<span class="fresh-track-artist">' + firetable.utilities.htmlEscape(artistText) + '</span>'
+    );
+  } else {
+    $histLink.text(artistText + " - " + titleText);
+  }
   $histItem.find('.tracklink-btn').attr('href', data.url || '');
 
   // Edit tags button (mod only)
@@ -115,9 +125,16 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
 
   // Metadata
   $histItem.find('.histdj').text(data.dj);
-  $histItem.find('.hist-dj-avatar')
-    .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
-    .attr('data-label', data.dj);
+  if (artClass === "discart") {
+    $histItem.find('.fresh-dj-avatar')
+      .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
+      .attr('data-label', data.dj)
+      .attr('aria-label', data.dj);
+  } else {
+    $histItem.find('.hist-dj-avatar')
+      .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
+      .attr('data-label', data.dj);
+  }
   $histItem.find('.histdate').text(firetable.utilities.format_date(data.when));
   $histItem.find('.histtime').text(firetable.utilities.format_time(data.when));
 
@@ -423,10 +440,10 @@ firetable.ui.setupRoomEvents = function () {
 
       if (firetable.ytLoaded && !firetable.preview) {
         if (firetable.scLoaded) firetable.scwidget.pause();
-        if (!firetable.disableMediaPlayback) player.loadVideoById(data.cid, secSince, "large");
-        var thevol = $("#slider").slider("value");
+        var thevol = firetable.utilities.getEffectiveVolume();
         player.setVolume(thevol);
         firetable.scwidget.setVolume(thevol);
+        if (!firetable.disableMediaPlayback) player.loadVideoById(data.cid, secSince, "large");
       }
 
     } else if (data.type === MEDIA_SOUNDCLOUD) {
@@ -448,7 +465,7 @@ firetable.ui.setupRoomEvents = function () {
             auto_play: true,
             single_active: false,
             callback: function () {
-              var vol = parseInt(localStorage[STORAGE.volume], 10) || DEFAULT_VOLUME;
+              var vol = firetable.utilities.getEffectiveVolume();
               player.setVolume(vol);
               firetable.scwidget.setVolume(vol);
               // Explicitly play — auto_play can be suppressed in background tabs
