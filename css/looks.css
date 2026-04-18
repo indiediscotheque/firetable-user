@@ -365,8 +365,43 @@ code {
 }
 
 .removemeIcon {
+    grid-area: 1 / 1;
+    justify-self: start;
     font-size: 1rem;
-    vertical-align: middle;
+    line-height: 1.5rem;
+}
+
+.djplaque .deckDepartureBtn {
+    grid-area: 1 / 1;
+    justify-self: start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+}
+.djplaque .deckDepartureBtn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+.djplaque .deckDepartureBtn.on {
+    color: var(--color-orange);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    text-shadow: none;
+}
+.djplaque .deckDepartureBtn i {
+    font-size: 0.9rem;
+    pointer-events: none;
 }
 
 .djplaque .deckRemoveBtn {
@@ -558,7 +593,6 @@ code {
     margin-left: var(--pad3);
 }
 
-#viewnav .header_icon .material-symbols-outlined,
 #viewnav .header_icon .material-symbols-outlined {
     font-size: 1.75rem;
 }
@@ -647,6 +681,10 @@ a.sociallogo[href] {
     background: none;
     border: 0;
     box-shadow: none;
+
+    &#cardcase i {
+        transform: rotate(180deg);
+    }
 }
 
 .header_icon .material-symbols-outlined,
@@ -1552,16 +1590,21 @@ html .ui-button.ui-state-disabled:active {
     padding: 0.5rem;
     box-sizing: border-box;
     z-index: 0;
+    background-color: rgba(0, 0, 0, 0.95);
+    background-image: url(../img/idlogo2.png);
+    background-size: 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-blend-mode: hue;
 }
 
 .ft-eq-bar {
     flex: 1;
     min-height: 15%;
     background-color: var(--color-accent);
-    opacity: 0.25;
     animation: ft-eq-bounce 10s ease-in-out infinite;
-    transform: scaleX(2) scaleY(2);
-    filter: blur(50px);
+    transform: scaleX(3) scaleY(3);
+    filter: blur(150px);
 }
 
 .ft-eq-bar:nth-child(1)  { animation-duration: 11s; animation-delay: 0s; background-color: color-mix(in srgb, var(--color-accent) 80%, rebeccapurple 20%); }
@@ -2660,6 +2703,35 @@ img.emoji,
     font-size: 0.8rem;
     font-weight: 500;
     line-height: 1.3;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+#thediscovers .listwords .histlink {
+    flex: 1;
+}
+#thediscovers .listwords .butt {
+    align-self: flex-start;
+    flex-shrink: 0;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    font-size: 1.25rem;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1.1;
+    box-shadow: none;
+}
+#thediscovers .listwords .butt:hover {
+    color: var(--color-text-light);
+}
+#thediscovers .discart .previewicon {
+    width: 3rem;
+    height: 3rem;
+    font-size: 2rem;
 }
 
 #thediscovers .histlink {
@@ -2669,6 +2741,7 @@ img.emoji,
 #thediscovers .fresh-track-title,
 #thediscovers .fresh-track-artist {
     display: block;
+    text-wrap: balance;
 }
 
 #thediscovers .fresh-track-title {
@@ -3448,7 +3521,7 @@ body.blog {
     #mainGrid.mmchat,
     #mainGrid.mmusrs {
         grid-template-rows: auto 1fr;
-        grid-template-columns: min-content minmax(min-content, auto) min-content minmax(min-content, auto);
+        grid-template-columns: min-content 20vw min-content 30vw;
         grid-template-areas:
             "head people stage chat"
             "head people view  chat";
@@ -3521,7 +3594,6 @@ body.blog {
 
     #allUsersWrap {
         align-self: flex-end;
-        transform: translateX(1vw);
     }
 
     #usersWaitlist {
