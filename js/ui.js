@@ -260,6 +260,18 @@ firetable.ui.initSettings = function () {
   }
   firetable.ui.updateScreenBtn(firetable.screenControl);
 
+  // ── Share Typing Status ──
+  var shareTyping = localStorage[STORAGE.shareTyping];
+  if (typeof shareTyping == "undefined") {
+    localStorage[STORAGE.shareTyping] = true;
+    firetable.shareTyping = true;
+    $("#shareTypingToggle").prop("checked", true);
+  } else {
+    shareTyping = JSON.parse(shareTyping);
+    firetable.shareTyping = shareTyping;
+    $("#shareTypingToggle").prop("checked", shareTyping);
+  }
+
   // ── Avatar Style ──
   var savedAvatarStyle = localStorage[STORAGE.avatarStyle];
   if (savedAvatarStyle) {
@@ -506,7 +518,7 @@ firetable.ui.tooltip = (function () {
       hide();
     });
 
-    // ── User list: title-based tooltips ──
+    // ── User list: title-based tooltips (for blocked icon etc.) ──
     $('#allUsersWrap').on('mouseenter.ft-tooltip', '[title]', function () {
       var $el = $(this), text = $el.attr('title');
       $el.attr('data-ft-title', text).removeAttr('title');
@@ -516,6 +528,145 @@ firetable.ui.tooltip = (function () {
       $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
       hide();
     });
+
+    // ── User list: rich user info tooltip on .prson hover ──
+    var userTipEl = document.getElementById('ft-user-tip');
+    var userTipArrowEl = document.getElementById('ft-user-tip-arrow');
+    var $userTip  = $(userTipEl);
+    var _cardCountCache = {};
+
+    function showUserTip(anchorEl, userid) {
+      var userData = ftapi.users && ftapi.users[userid];
+      if (!userData) return;
+
+      var role = userData.hostbot  ? 'Bot'
+               : userData.supermod ? 'Supermod'
+               : userData.mod      ? 'Mod'
+               : 'Member';
+
+      var facts = [];
+
+      if (userData.joined) {
+        facts.push({ label: 'Joined', val: firetable.utilities.format_date(userData.joined) });
+      }
+
+      facts.push({ label: 'Role', val: role });
+
+      // Session plays (if currently on the deck)
+      if (firetable.tableData) {
+        for (var k in firetable.tableData) {
+          if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userid) {
+            facts.push({ label: 'Session plays', val: firetable.tableData[k].plays });
+            break;
+          }
+        }
+      }
+
+      // Audio broadcasting
+      if (userData.idle && userData.idle.audio === 2) {
+        facts.push({ label: 'Audio', val: 'Broadcasting' });
+      }
+
+      // Cards (async — placeholder first)
+      facts.push({ label: 'Cards', val: '<span class="utt-cards-val">…</span>' });
+
+      var factsHtml = facts.map(function (f) {
+        return '<div class="utt-fact"><span class="utt-label">' + f.label + '</span><span class="utt-val">' + f.val + '</span></div>';
+      }).join('');
+
+      $userTip.find('.utt-facts').html(factsHtml);
+      $userTip.attr('data-for', userid);
+
+      // >1024px: tooltip on the right; <=1024px: tooltip on the left
+      var placement = window.matchMedia('(min-width: 1024px)').matches ? 'right' : 'left';
+
+      userTipEl.style.visibility = 'hidden';
+      $userTip.addClass('is-visible');
+
+      FloatingUIDOM.computePosition(anchorEl, userTipEl, {
+        placement: placement,
+        strategy: 'fixed',
+        middleware: [
+          FloatingUIDOM.offset(8),
+          FloatingUIDOM.flip(),
+          FloatingUIDOM.shift({ padding: 8 }),
+          FloatingUIDOM.arrow({ element: userTipArrowEl, padding: 4 })
+        ]
+      }).then(function (pos) {
+        userTipEl.style.left = pos.x + 'px';
+        userTipEl.style.top  = pos.y + 'px';
+
+        // Arrow positioning
+        if (pos.middlewareData.arrow) {
+          var ax = pos.middlewareData.arrow.x;
+          var ay = pos.middlewareData.arrow.y;
+          var staticSide = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' }[pos.placement.split('-')[0]];
+          Object.assign(userTipArrowEl.style, {
+            left:         ax != null ? ax + 'px' : '',
+            top:          ay != null ? ay + 'px' : '',
+            right:        '',
+            bottom:       '',
+            [staticSide]: '-4px'
+          });
+        }
+
+        userTipEl.style.visibility = 'visible';
+      });
+
+      // Mod/supermod actions
+      var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
+      var isMod = ownUser && (ownUser.mod || ownUser.supermod);
+      var actionsHtml = '';
+      if (isMod && userid !== ftapi.uid) {
+        actionsHtml = '<button class="utt-action-btn" data-action="add-to-deck">Add to deck</button>';
+      }
+      $userTip.find('.utt-actions').html(actionsHtml);
+
+      // Resolve card count
+      if (_cardCountCache.hasOwnProperty(userid)) {
+        $userTip.find('.utt-cards-val').text(_cardCountCache[userid]);
+      } else {
+        firebase.app("firetable").database().ref("cards")
+          .orderByChild('owner').equalTo(userid)
+          .once("value")
+          .then(function (snap) {
+            var count = snap.numChildren();
+            _cardCountCache[userid] = count;
+            if ($userTip.attr('data-for') === userid) {
+              $userTip.find('.utt-cards-val').text(count);
+            }
+          });
+      }
+    }
+
+    var _hideTimer = null;
+    function scheduleHideUserTip() {
+      _hideTimer = setTimeout(function () {
+        $userTip.removeClass('is-visible').removeAttr('data-for');
+      }, 150);
+    }
+    function cancelHideUserTip() {
+      clearTimeout(_hideTimer);
+    }
+
+    $(userTipEl)
+      .on('mouseenter', cancelHideUserTip)
+      .on('mouseleave', scheduleHideUserTip)
+      .on('click', '[data-action="add-to-deck"]', function () {
+        var uid = $userTip.attr('data-for');
+        var userData = uid && ftapi.users && ftapi.users[uid];
+        if (userData && userData.username) {
+          ftapi.actions.sendBotCommand('!add ' + userData.username);
+        }
+      });
+
+    $('#allUsersWrap')
+      .on('mouseenter.ft-usertip', '.prson', function () {
+        cancelHideUserTip();
+        var uid = $(this).attr('data-userid');
+        if (uid) showUserTip(this, uid);
+      })
+      .on('mouseleave.ft-usertip', '.prson', scheduleHideUserTip);
   }
 
   return { bind: bind, show: show, hide: hide };
@@ -582,7 +733,8 @@ firetable.ui.setupMiscEvents = function () {
     var src = firetable.stealTarget || (firetable.song && firetable.song.cid != 0 && {
       cid: firetable.song.cid,
       type: firetable.song.type,
-      title: firetable.song.artist + " - " + firetable.song.title
+      title: firetable.song.artist + " - " + firetable.song.title,
+      img: (firetable.imgCache && firetable.imgCache[firetable.song.cid]) || ''
     });
     if (src) {
       if (firetable.stealSourceBtn) {
@@ -592,7 +744,7 @@ firetable.ui.setupMiscEvents = function () {
         $("#grab").removeClass('on');
       }
       firetable.stealTarget = null;
-      ftapi.actions.addToList(src.type, src.title, src.cid, dest);
+      ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
       $("#stealContain").hide();
     }
   });
@@ -734,6 +886,13 @@ firetable.ui.setupMiscEvents = function () {
     firetable.debug && console.log("badoop " + (this.checked ? "on" : "off"));
     localStorage[STORAGE.badoop] = this.checked;
     firetable.playBadoop = this.checked;
+  });
+  $('#shareTypingToggle').change(function () {
+    localStorage[STORAGE.shareTyping] = this.checked;
+    firetable.shareTyping = this.checked;
+    if (ftapi.uid) {
+      firebase.app("firetable").database().ref("users/" + ftapi.uid + "/shareTyping").set(this.checked ? null : false);
+    }
   });
   $('#showImagesToggle').change(function () {
     firetable.debug && console.log("show images " + (this.checked ? "on" : "off"));

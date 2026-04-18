@@ -142,8 +142,14 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
   $histItem.find('.histeal').attr('id', "apv" + data.type + data.cid).on('click', function () {
     var $btn = $(this);
     var btnCid = $(this).closest('.pvbar').attr('data-cid');
-    var btnType = $(this).closest('.pvbar').attr('data-type');
-    var btnTitle = firetable.utilities.htmlEscape($(this).closest('.pvbar').find('.histlink').text());
+    var btnType = parseInt($(this).closest('.pvbar').attr('data-type'), 10);
+    var btnImg = $(this).closest('.pvbar').attr('data-img') || '';
+    var $histlink = $(this).closest('.pvbar').find('.histlink');
+    var $trackTitle = $histlink.find('.fresh-track-title');
+    var $trackArtist = $histlink.find('.fresh-track-artist');
+    var btnTitle = ($trackTitle.length && $trackArtist.length)
+      ? firetable.utilities.htmlEscape($trackArtist.text().trim() + ' - ' + $trackTitle.text().trim())
+      : firetable.utilities.htmlEscape($histlink.text());
 
     // If this button's picker is already open, close it
     if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$("#stealContain").is(':hidden')) {
@@ -171,7 +177,7 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
       $("#grab").removeClass('on');
 
       firetable.stealSourceBtn = $btn;
-      firetable.stealTarget = { cid: btnCid, type: btnType, title: btnTitle };
+      firetable.stealTarget = { cid: btnCid, type: btnType, title: btnTitle, img: btnImg };
       $btn.addClass('on');
 
       var stealContainEl = document.getElementById('stealContain');
@@ -185,6 +191,12 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
   if (artClass) {
     $histItem.find('.' + artClass).css('background-image', 'url(' + data.img + ')');
   }
+  // Cache img by cid so playlist renderer can use it even without Firebase storage
+  if (data.img && data.cid) {
+    firetable.imgCache = firetable.imgCache || {};
+    firetable.imgCache[data.cid] = data.img;
+  }
+  $histItem.attr('data-img', data.img || '');
 
   if (containerSel === "#thehistory") {
     var dateKey = firetable.utilities.format_date(data.when);
@@ -252,12 +264,15 @@ firetable.ui.setupRoomEvents = function () {
 
   // ── Discover (Recently Played by Others) ──
   var $discoverItem = $('#thediscovers .pvbar').remove();
+  firetable._produceCache = firetable._produceCache || [];
   ftapi.events.on('newProduce', function (data) {
+    firetable._produceCache.push(data);
     renderHistoryItem(data, $discoverItem, "#thediscovers", "discart");
   });
 
   // ── History (Your Play History) ──
   var $historyItem = $('#thehistory .pvbar').remove();
+  firetable._historyCache = firetable._historyCache || [];
 
   function applyHistoryFilter() {
     var q = ($("#histFilter").val() || "").toLowerCase().trim();
@@ -279,8 +294,28 @@ firetable.ui.setupRoomEvents = function () {
   });
 
   ftapi.events.on('newHistory', function (data) {
+    firetable._historyCache.push(data);
     renderHistoryItem(data, $historyItem, "#thehistory", "histart");
     applyHistoryFilter();
+  });
+
+  // ── Re-render history/discover after re-login ──
+  // Firebase won't re-fire child_added for already-seen items after a logout/login
+  // cycle, so replay from cache into the now-reattached containers.
+  ftapi.events.on('loggedIn', function () {
+    if (firetable._produceCache && firetable._produceCache.length) {
+      $('#thediscovers').empty();
+      firetable._produceCache.forEach(function (data) {
+        renderHistoryItem(data, $discoverItem, "#thediscovers", "discart");
+      });
+    }
+    if (firetable._historyCache && firetable._historyCache.length) {
+      $('#thehistory').empty();
+      firetable._historyCache.forEach(function (data) {
+        renderHistoryItem(data, $historyItem, "#thehistory", "histart");
+      });
+      applyHistoryFilter();
+    }
   });
 
   // ── Edited History (tag correction) ──
@@ -632,8 +667,8 @@ firetable.ui.setupRoomEvents = function () {
             if (hasPending && !!data[key].removeAfter === !!_pendingDeparture[data[key].id]) {
               delete _pendingDeparture[data[key].id];
             }
-            var departureTitleOff = isSelfDj ? 'You will not be taking the bus after your next play' : djDisplayName + ' will not be taking the bus after their next play';
-            var departureTitleOn  = isSelfDj ? 'You are taking the bus after your next play'           : djDisplayName + ' is taking the bus after their next play';
+            var departureTitleOff = isSelfDj ? `Step down after your next play` : 'Have ' + djDisplayName + ' step down after their next play';
+            var departureTitleOn  = isSelfDj ? `Don't step down after your next play` : `Don't have ` + djDisplayName + ' step down after their next play';
             var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
             departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + data[key].id + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-outlined">departure_board</i></button>';
           } else if (data[key].removeAfter) {
@@ -698,16 +733,13 @@ firetable.ui.setupRoomEvents = function () {
       if (userId === ftapi.uid) {
         ftapi.actions.sendBotCommand("!removeme");
       } else {
-        var tableKey = $(this).data('tablekey');
-        firebase.app("firetable").database().ref("table/" + tableKey).remove();
-        if (firetable.waitlistData) {
-          for (var wkey in firetable.waitlistData) {
-            if (firetable.waitlistData.hasOwnProperty(wkey) && firetable.waitlistData[wkey].id === userId) {
-              firebase.app("firetable").database().ref("waitlist/" + wkey).remove();
-              break;
-            }
+        var djName = firetable.tableData && (function () {
+          for (var k in firetable.tableData) {
+            if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userId)
+              return firetable.tableData[k].name;
           }
-        }
+        })();
+        if (djName) ftapi.actions.sendBotCommand("!remove " + djName);
       }
     });
 

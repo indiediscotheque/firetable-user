@@ -49,20 +49,6 @@
 
 		<section id="stage">
 		<div id="djStage">
-			<div id="ft-eq" aria-hidden="true">
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-				<div class="ft-eq-bar"></div>
-			</div>
 			<div id="screenBox">
 				<div id="playerArea"></div>
 				<div id="scScreen"></div>
@@ -196,6 +182,7 @@
 				<form id="newchatForm" autocomplete="off" onsubmit="return false;">
 					<input maxlength="240" autocomplete="off" name="newchat" placeholder="Chat a thing" type="text"
 						id="newchat" tabindex="0" />
+					<div id="typing-indicator"></div>
 				</form>
 				<div id="emojiPicker">
 					<div id="pickerNav"></div>
@@ -230,15 +217,12 @@
 					<div id="userKEY" class="prson">
 						<!-- template for users -->
 						<div class="ft-avatar">
-							<span class="material-symbols-outlined blockon">block</span>
-							<span class="material-symbols-outlined imptcon">radio</span>
-							<span class="material-symbols-outlined prsnStatus">lens</span>
+							<span class="material-symbols-outlined blockon"></span>
 						</div>
+						<span class="material-symbols-outlined prsnRole">person</span>
 						<div class="prsnNameRole">
 							<span class="prsnName"></span>
-							<span class="material-symbols-outlined prsnRole"></span>
 						</div>
-						<span class="djOrder"></span>
 					</div>
 					<div id="usersDJs"></div>
 					<div id="usersBot"></div>
@@ -543,6 +527,10 @@
 						<label for="desktopNotifyMentionsToggle">Desktop notifications for @mentions</label>
 					</div>
 					<div class="settingline">
+						<input type="checkbox" id="shareTypingToggle" name="shareTypingToggle">
+						<label for="shareTypingToggle">Let others know when I'm typing</label>
+					</div>
+					<div class="settingline">
 						<input type="checkbox" id="showImagesToggle" name="showImagesToggle">
 						<label for="showImagesToggle">Show images in chat</label><br />
 					</div>
@@ -644,6 +632,12 @@
 	</div>
 
 	<div id="ft-tooltip" role="tooltip" aria-hidden="true"></div>
+	<div id="ft-user-tip" role="tooltip" aria-hidden="true" data-for="">
+		<div id="ft-user-tip-arrow"></div>
+		<div class="utt-facts"></div>
+		<p>click user to @ them in chat</p>
+		<div class="utt-actions"></div>
+	</div>
 
 	<iframe allow="autoplay; encrypted-media" id="sc-widget" width="100%" height="166" scrolling="no" frameborder="no"
 		src="https://w.soundcloud.com/player/?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1848notarealidthanks538&show_artwork=false"></iframe>
