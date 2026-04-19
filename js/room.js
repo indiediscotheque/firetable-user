@@ -647,6 +647,9 @@ firetable.ui.setupRoomEvents = function () {
       var countr = 0;
       for (var key in data) {
         if (data.hasOwnProperty(key)) {
+          // "ghost" user is on the deck but has disconnected (status=false).
+          var isGhost = !!(ftapi.users !== null && typeof ftapi.users === 'object' &&
+                          !ftapi.users[data[key].id]);
           var isSelf = data[key].id === ftapi.uid;
           var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
           var isMod = ownUser && (ownUser.mod || ownUser.supermod);
@@ -676,7 +679,7 @@ firetable.ui.setupRoomEvents = function () {
           } else {
             departureIndicator = '';
           }
-          html += '<div id="spt' + countr + '" class="spot">' +
+          html += '<div id="spt' + countr + '" class="spot' + (isGhost ? ' ghost' : '') + '">' +
             '<div class="avtr" id="avtr' + countr + '" style="background-image: url(' +
             firetable.utilities.avatarURL(data[key].id, data[key].name) + ');"></div>' +
             '<div id="djthing' + countr + '" class="djplaque">' +
@@ -755,6 +758,8 @@ firetable.ui.setupRoomEvents = function () {
     }
 
     positionFyreAtActiveDJ();
+    // Sync ghost useres in the user list whenever the deck changes
+    if (firetable.ui && firetable.ui.syncGhostUsers) firetable.ui.syncGhostUsers();
   });
 
   // Re-render deck when user data arrives (mod status affects button visibility)

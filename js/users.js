@@ -367,6 +367,42 @@ function getUserDestination(data) {
  * Set up all ftapi user-related event handlers.
  * Called once from firetable.ui.init().
  */
+/**
+ * Reconcile "fake/ghost" (disconnected-but-on-deck) entries in the user list.
+ * - Adds ghost user to user list for any deck DJ not currently in ftapi.users.
+ * - Removes ghost users from user list for any user is now online again or has left the deck.
+ * Safe to call any time tableData or ftapi.users may have changed.
+ */
+firetable.ui.syncGhostUsers = function () {
+  // Remove ghost rows for users who are back online or off the deck
+  $("#allUsers .prson.ghost").each(function () {
+    var uid = $(this).data("userid");
+    var onDeck = false;
+    if (firetable.tableData) {
+      for (var k in firetable.tableData) {
+        if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === uid) { onDeck = true; break; }
+      }
+    }
+    if (!onDeck || (ftapi.users && ftapi.users[uid])) $(this).remove();
+  });
+
+  // Insert ghost users for deck DJs not currently in the user list
+  if (!firetable.tableData) return;
+  for (var k in firetable.tableData) {
+    if (!firetable.tableData.hasOwnProperty(k)) continue;
+    var dj = firetable.tableData[k];
+    if (ftapi.users && ftapi.users[dj.id]) continue; // live user, not a ghost
+    var ghostData = { userid: dj.id, username: dj.name };
+    var $el = $("<div></div>")
+      .addClass("prson ghost")
+      .attr("id", "user" + dj.id)
+      .attr("data-userid", dj.id)
+      .html(buildUserHTML(ghostData));
+    firetable.utilities.chatAt($el);
+    $("#usersRegular").append($el);
+  }
+};
+
 firetable.ui.setupUserEvents = function () {
 
   // ── Auth state events (already bound in init.js, but user-list events here) ──
@@ -385,7 +421,16 @@ firetable.ui.setupUserEvents = function () {
   });
 
   ftapi.events.on("userLeft", function (data) {
-    $("#user" + data.userid).remove();
+    // If this user still occupies a deck slot, keep them in the list
+    // instead of removing them — the ghost user will clear once the bot removes them from the deck.
+    var onDeck = firetable.tableData && (function () {
+      for (var k in firetable.tableData) {
+        if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === data.userid) return true;
+      }
+    })();
+    if (!onDeck) {
+      $("#user" + data.userid).remove();
+    }
   });
 
   ftapi.events.on("userChanged", function (data) {
@@ -442,6 +487,8 @@ firetable.ui.setupUserEvents = function () {
     var count = okdata ? Object.keys(okdata).length : 0;
     $("#label1 .count").text(" (" + count + ")");
     firetable.debug && console.log('users:', okdata);
+    // Re-insert any ghost deck users that were cleared by the full rebuild
+    firetable.ui.syncGhostUsers();
   });
 
   // ── User tab switching ──
