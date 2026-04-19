@@ -426,7 +426,8 @@ firetable.ui.setupChatEvents = function () {
     _typingListener = typingRef.on("value", function (snap) {
       _typingUsers = {};
       snap.forEach(function (child) {
-        if (child.key !== ftapi.uid && child.val() !== null) {
+        if (child.key !== ftapi.uid && child.val() !== null &&
+            !(ftapi.blockedUsers && ftapi.blockedUsers[child.key])) {
           _typingUsers[child.key] = child.val(); // string or true
         }
       });
@@ -445,6 +446,19 @@ firetable.ui.setupChatEvents = function () {
     _renderTypingIndicator();
     _typingRef = null;
     clearTimeout(_typingTimeout);
+  });
+
+  // When blocked-user list changes, remove any newly-blocked uids from the
+  // typing display immediately without waiting for their next typing event.
+  ftapi.events.on("usersChanged", function () {
+    var changed = false;
+    for (var uid in _typingUsers) {
+      if (_typingUsers.hasOwnProperty(uid) && ftapi.blockedUsers && ftapi.blockedUsers[uid]) {
+        delete _typingUsers[uid];
+        changed = true;
+      }
+    }
+    if (changed) _renderTypingIndicator();
   });
 
   $("#newchat").on("input", function () {
