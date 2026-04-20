@@ -601,16 +601,16 @@ firetable.ui.setupRoomEvents = function () {
           hasEntries = true;
           var userId = data[key].id;
           var removeMe = data[key].removeAfter
-            ? '<span class="removemeIcon material-symbols-outlined">departure_board</span>' : '';
+            ? '<span class="removemeIcon material-symbols-filled">departure_board</span>' : '';
 
           // Look up role icon from live user data
           var userInfo = ftapi.users && ftapi.users[userId];
           var roleicon = 'person';
-          var roleiconclass = 'material-symbols-outlined';
+          var roleiconclass = 'material-symbols-filled';
           if (userInfo) {
-            if (userInfo.mod)      { roleicon = 'shield';       roleiconclass = 'material-symbols-outlined-outlined'; }
-            if (userInfo.supermod) { roleicon = 'local_police'; roleiconclass = 'material-symbols-outlined'; }
-            if (userInfo.hostbot)  { roleicon = 'smart_toy';    roleiconclass = 'material-symbols-outlined'; }
+            if (userInfo.mod)      { roleicon = 'shield';       roleiconclass = 'material-symbols-filled-outlined'; }
+            if (userInfo.supermod) { roleicon = 'local_police'; roleiconclass = 'material-symbols-filled'; }
+            if (userInfo.hostbot)  { roleicon = 'smart_toy';    roleiconclass = 'material-symbols-filled'; }
           }
 
           html += '<div class="waitlist-item">' +
@@ -632,7 +632,7 @@ firetable.ui.setupRoomEvents = function () {
     }
     var $wl = $('#usersWaitlist');
     if (hasEntries) {
-      $wl.html('<div class="waitlist-label"><span class="material-symbols-outlined">queue_music</span> Up next</div>' + html).addClass('has-entries');
+      $wl.html('<div class="waitlist-label"><span class="material-symbols-filled">queue_music</span> Up next</div>' + html).addClass('has-entries');
     } else {
       $wl.removeClass('has-entries').empty();
     }
@@ -657,7 +657,7 @@ firetable.ui.setupRoomEvents = function () {
           var btnIcon = isSelf ? 'close' : 'person_remove';
           var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
           var actionBtn = showBtn
-            ? '<button class="iconbutt deckRemoveBtn" data-userid="' + data[key].id + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-outlined">' + btnIcon + '</i></button>'
+            ? '<button class="iconbutt deckRemoveBtn" data-userid="' + data[key].id + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
             : '';
           var departureIndicator;
           if (showBtn) {
@@ -673,9 +673,9 @@ firetable.ui.setupRoomEvents = function () {
             var departureTitleOff = isSelfDj ? `Step down after your next play` : 'Have ' + djDisplayName + ' step down after their next play';
             var departureTitleOn  = isSelfDj ? `Don't step down after your next play` : `Don't have ` + djDisplayName + ' step down after their next play';
             var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
-            departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + data[key].id + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-outlined">departure_board</i></button>';
+            departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + data[key].id + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
           } else if (data[key].removeAfter) {
-            departureIndicator = '<span class="removemeIcon material-symbols-outlined" title="Stepping down after this song">departure_board</span>';
+            departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down after this song">departure_board</span>';
           } else {
             departureIndicator = '';
           }
@@ -801,7 +801,7 @@ firetable.ui.setupRoomEvents = function () {
         ftapi.lookup.userByName(key, function (person) {
           $("#activeSuspentions").append(
             '<div class="importResult"><div class="imtxt">' + person.username + '</div>' +
-            '<i role="button" onclick="firetable.actions.unban(\'' + person.userid + '\')" class="material-symbols-outlined" title="Unsuspend">&#xE5C9;</i></div>'
+            '<i role="button" onclick="firetable.actions.unban(\'' + person.userid + '\')" class="material-symbols-filled" title="Unsuspend">&#xE5C9;</i></div>'
           );
         });
       }

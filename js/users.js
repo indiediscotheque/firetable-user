@@ -337,13 +337,13 @@ function buildUserHTML(data) {
 
   if (!data.username) data.username = data.userid;
   var roleicon = "person";
-  var roleiconclass = "material-symbols-outlined";
-  if (data.mod) { roleicon = "shield"; roleiconclass = "material-symbols-outlined"; }
-  if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-outlined"; }
-  if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-outlined"; }
+  var roleiconclass = "material-symbols-filled";
+  if (data.mod) { roleicon = "shield"; roleiconclass = "material-symbols-filled"; }
+  if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; }
+  if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; }
 
   return '<div class="ft-avatar" style="background-image:url(' + firetable.utilities.avatarURL(data.userid, data.username, null, data.avatarStyle) + ');">' +
-         '<span class="material-symbols-outlined blockon"' + (data.blocked ? ' title="You have blocked this user. They will not see your chats, and you will not see their chats."' : '') + '>' + blockcon + '</span>' +
+         '<span class="material-symbols-outlined blockon">' + blockcon + '</span>' +
          '</div>' +
          '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
          '<div class="prsnNameRole">' +
@@ -398,7 +398,6 @@ firetable.ui.syncGhostUsers = function () {
       .attr("id", "user" + dj.id)
       .attr("data-userid", dj.id)
       .html(buildUserHTML(ghostData));
-    firetable.utilities.chatAt($el);
     $("#usersRegular").append($el);
   }
 };
@@ -416,7 +415,6 @@ firetable.ui.setupUserEvents = function () {
       .attr("id", "user" + data.userid)
       .attr("data-userid", data.userid)
       .html(buildUserHTML(data));
-    firetable.utilities.chatAt($el);
     $(getUserDestination(data)).append($el);
   });
 
@@ -464,7 +462,6 @@ firetable.ui.setupUserEvents = function () {
           .attr("id", "user" + uid)
           .attr("data-userid", uid)
           .html(buildUserHTML(data));
-        firetable.utilities.chatAt($el);
         $(getUserDestination(data)).append($el);
       }
     }
