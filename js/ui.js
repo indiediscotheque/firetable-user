@@ -438,7 +438,7 @@ firetable.ui.getViewFromPath = function () {
 firetable.ui.updateScreenBtn = function (val) {
   var icons  = { on: 'capture', off: 'cancel_presentation', sync: 'microwave' };
   var titles = { on: 'Screen: always on', off: 'Screen: disabled', sync: 'Screen: synced' };
-  $('#screenControl').find('.material-symbols-outlined').text(icons[val] || 'microwave');
+  $('#screenControl').find('.material-symbols-filled').text(icons[val] || 'microwave');
   $('#screenControl').attr('data-label', titles[val] || 'Screen: synced').attr('aria-label', titles[val] || 'Screen: synced');
   var isOn = (val === 'on') || (val === 'sync' && firetable.screenSyncPos);
   $('#screenControl').toggleClass('on', isOn);
@@ -529,6 +529,17 @@ firetable.ui.tooltip = (function () {
       hide();
     });
 
+    // ── User tip action buttons: title-based tooltips ──
+    $(document).on('mouseenter.ft-tooltip', '#ft-user-tip [title]', function () {
+      var $el = $(this), text = $el.attr('title');
+      $el.attr('data-ft-title', text).removeAttr('title');
+      show(this, text);
+    }).on('mouseleave.ft-tooltip', '#ft-user-tip [data-ft-title]', function () {
+      var $el = $(this);
+      $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
+      hide();
+    });
+
     // ── User list: rich user info tooltip on .prson hover ──
     var userTipEl = document.getElementById('ft-user-tip');
     var userTipArrowEl = document.getElementById('ft-user-tip-arrow');
@@ -571,7 +582,7 @@ firetable.ui.tooltip = (function () {
       facts.push({ label: 'Cards', val: '<span class="utt-cards-val">…</span>' });
 
       var factsHtml = facts.map(function (f) {
-        return '<div class="utt-fact"><span class="utt-label">' + f.label + '</span><span class="utt-val">' + f.val + '</span></div>';
+        return '<div class="utt-fact' + (f.cls ? ' ' + f.cls : '') + '"><span class="utt-label">' + f.label + '</span><span class="utt-val">' + f.val + '</span></div>';
       }).join('');
 
       $userTip.find('.utt-facts').html(factsHtml);
@@ -613,14 +624,18 @@ firetable.ui.tooltip = (function () {
         userTipEl.style.visibility = 'visible';
       });
 
+      // Suppress interaction hints for blocked users and own user
+      var isBlocked = !!(userData.blocked);
+      var isSelf = userid === ftapi.uid;
+      $userTip.toggleClass('is-blocked', isBlocked);
+      $userTip.toggleClass('is-self', isSelf);
+      $userTip.toggleClass('can-block', !isSelf);
+      $userTip.find('.utt-block-btn').attr('title', isBlocked ? 'Unblock' : 'Block');
+
       // Mod/supermod actions
       var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
       var isMod = ownUser && (ownUser.mod || ownUser.supermod);
-      var actionsHtml = '';
-      if (isMod && userid !== ftapi.uid) {
-        actionsHtml = '<button class="utt-action-btn" data-action="add-to-deck">Add to deck</button>';
-      }
-      $userTip.find('.utt-actions').html(actionsHtml);
+      $userTip.toggleClass('can-add-to-deck', !!(isMod && !isSelf));
 
       // Resolve card count
       if (_cardCountCache.hasOwnProperty(userid)) {
@@ -652,11 +667,32 @@ firetable.ui.tooltip = (function () {
     $(userTipEl)
       .on('mouseenter', cancelHideUserTip)
       .on('mouseleave', scheduleHideUserTip)
+      .on('click', '[data-action="chat-at"]', function () {
+        var uid = $userTip.attr('data-for');
+        var userData = uid && ftapi.users && ftapi.users[uid];
+        if (!userData || !userData.username) return;
+        $('#newchat').val(function (i, val) { return val + '@' + userData.username + ' '; }).focus();
+      })
       .on('click', '[data-action="add-to-deck"]', function () {
         var uid = $userTip.attr('data-for');
         var userData = uid && ftapi.users && ftapi.users[uid];
         if (userData && userData.username) {
           ftapi.actions.sendBotCommand('!add ' + userData.username);
+        }
+      })
+      .on('click', '[data-action="toggle-block"]', function () {
+        var uid = $userTip.attr('data-for');
+        var userData = uid && ftapi.users && ftapi.users[uid];
+        if (!userData || !userData.username) return;
+        var isCurrentlyBlocked = !!(ftapi.blockedUsers && ftapi.blockedUsers[uid]);
+        if (isCurrentlyBlocked) {
+          ftapi.actions.unblockUser(userData.username, function () {});
+          $userTip.removeClass('is-blocked').removeClass('no-interact');
+          $userTip.find('.utt-block-btn').attr('title', 'Block');
+        } else {
+          ftapi.actions.blockUser(userData.username, function () {});
+          $userTip.addClass('is-blocked').addClass('no-interact');
+          $userTip.find('.utt-block-btn').attr('title', 'Unblock');
         }
       });
 
