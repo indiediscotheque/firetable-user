@@ -1039,14 +1039,6 @@ a.sociallogo[href] {
     opacity: 0.5;
 }
 
-.prson.blockd {
-    cursor: default;
-}
-
-#allUsers .prson.blockd {
-    cursor: default;
-}
-
 .prsnName {
     font-weight: 300;
     color: var(--color-text);
@@ -3529,6 +3521,19 @@ body.blog {
         color: #fff;
         background: rgba(255,255,255,0.1);
     }
+}
+
+.utt-icon-btn.is-disabled,
+.utt-icon-btn.is-disabled:hover {
+    color: rgba(255,255,255,0.22);
+}
+
+.utt-icon-btn.is-disabled {
+    cursor: not-allowed;
+}
+
+.utt-icon-btn.is-disabled:hover {
+    background: unset;
 }
 
 .utt-at-btn    { anchor-name: --utt-btn-at; }

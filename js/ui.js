@@ -662,6 +662,10 @@ firetable.ui.tooltip = (function () {
       $userTip.toggleClass('is-blocked', isBlocked);
       $userTip.toggleClass('is-self', isSelf);
       $userTip.toggleClass('can-block', !isSelf);
+      $userTip.find('.utt-at-btn')
+        .toggleClass('is-disabled', isBlocked)
+        .attr('aria-disabled', isBlocked ? 'true' : 'false')
+        .attr('title', isBlocked ? 'Cannot @ mention blocked users. Unblock them first.' : '@ in chat');
       $userTip.find('.utt-block-btn').attr('title', isBlocked ? 'Unblock' : 'Block');
 
       // Mod/supermod actions
@@ -688,6 +692,7 @@ firetable.ui.tooltip = (function () {
 
     $(userTipEl)
       .on('click', '[data-action="chat-at"]', function () {
+        if ($(this).hasClass('is-disabled')) return;
         var uid = $userTip.attr('data-for');
         var userData = uid && ftapi.users && ftapi.users[uid];
         if (!userData || !userData.username) return;
