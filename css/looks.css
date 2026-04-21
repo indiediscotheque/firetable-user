@@ -1483,6 +1483,7 @@ html .ui-button.ui-state-disabled:active {
     justify-content: flex-end;
     position: relative;
     overflow: hidden;
+    isolation: isolate;
     background: linear-gradient(to bottom, color-mix(in srgb, transparent 85%, var(--color-accent)), color-mix(in srgb, transparent 66%, var(--color-accent)));
     border-top-left-radius: 1.5rem;
     border-top-right-radius: 1.5rem;
@@ -1499,6 +1500,11 @@ html .ui-button.ui-state-disabled:active {
         pointer-events: none;
         opacity: 0.05;
     }
+}
+
+/* Tunable fyre compositing mode for stronger integration with stage colors. */
+:root {
+    --fyre-blend-mode: plus-lighter;
 }
 
 #deck {
@@ -1641,6 +1647,7 @@ html .ui-button.ui-state-disabled:active {
     pointer-events: none;
     overflow: visible;
     display: none;
+    mix-blend-mode: var(--fyre-blend-mode);
 /* 
     &::before,
     &::after {
