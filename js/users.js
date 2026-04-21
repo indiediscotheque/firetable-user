@@ -392,6 +392,7 @@ firetable.ui.syncGhostUsers = function () {
     if (!firetable.tableData.hasOwnProperty(k)) continue;
     var dj = firetable.tableData[k];
     if (ftapi.users && ftapi.users[dj.id]) continue; // live user, not a ghost
+    if ($("#user" + dj.id).length) continue; // already in list (ghost or live)
     var ghostData = { userid: dj.id, username: dj.name };
     var $el = $("<div></div>")
       .addClass("prson ghost")
@@ -408,6 +409,8 @@ firetable.ui.setupUserEvents = function () {
 
   ftapi.events.on("userJoined", function (data) {
     console.log(data);
+    // Remove any existing entry (ghost or duplicate) before inserting
+    $("#user" + data.userid).remove();
     var isIdle = "";
     if (data.idle && data.idle.isIdle && !data.hostbot) isIdle = "idle";
     var $el = $("<div></div>")

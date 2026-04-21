@@ -214,11 +214,25 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
     }
     var timeStr = firetable.utilities.format_time(data.when);
     var $avatar = $histItem.find('.hist-dj-avatar').detach();
-    var $entry = $('<div class="hist-entry"></div>');
+    var entryHour = new Date(data.when).getHours();
+    var $entry = $('<div class="hist-entry" data-hour="' + entryHour + '"></div>');
     $('<span class="hist-timestamp">' + timeStr + '</span>').appendTo($entry);
     $avatar.appendTo($entry);
     $histItem.appendTo($entry);
-    $entry.prependTo($dayGroup.find('.hist-day-items'));
+    var $dayItems = $dayGroup.find('.hist-day-items');
+    $entry.prependTo($dayItems);
+
+    // Insert an hour marker when crossing an hour boundary
+    var $nextEntry = $entry.next('.hist-entry');
+    if ($nextEntry.length) {
+      var nextHour = parseInt($nextEntry.attr('data-hour'), 10);
+      if (entryHour !== nextHour) {
+        var markerDate = new Date(data.when);
+        markerDate.setMinutes(0, 0, 0);
+        var hourLabel = markerDate.toLocaleTimeString(undefined, { hour: 'numeric' });
+        $('<div class="hist-hour-marker"><span class="hist-hour-label">' + hourLabel + '</span></div>').insertAfter($entry);
+      }
+    }
   } else {
     $histItem.prependTo(containerSel);
   }
