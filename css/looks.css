@@ -2058,6 +2058,10 @@ a.importLinkCheck {
     display: none;
 }
 
+#actualChat.songAnnouncementsOff .nowplayn {
+    display: none;
+}
+
 .nowplayn {
     position: relative;
     background-color: transparent;

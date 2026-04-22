@@ -72,6 +72,8 @@ var firetable = {
   disableMediaPlayback: false,
   /** @type {boolean}  Show avatar images in chat? */
   showAvatars: true,
+  /** @type {boolean}  Show automatic now-playing song announcements in chat? */
+  showSongAnnouncements: true,
 
   // ── SoundCloud ──
   /** @type {number|false}  Seek position (ms) to set when SC widget starts playing */

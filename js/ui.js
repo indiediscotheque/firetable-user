@@ -218,6 +218,18 @@ firetable.ui.initSettings = function () {
     }
   }
 
+  // ── Show Song Announcements ──
+  var showSongAnnouncements = localStorage[STORAGE.showSongAnnouncements];
+  if (typeof showSongAnnouncements == "undefined") {
+    localStorage[STORAGE.showSongAnnouncements] = true;
+    firetable.showSongAnnouncements = true;
+    $("#showSongAnnouncementsToggle").prop("checked", true);
+  } else {
+    showSongAnnouncements = JSON.parse(showSongAnnouncements);
+    firetable.showSongAnnouncements = showSongAnnouncements;
+    $("#showSongAnnouncementsToggle").prop("checked", showSongAnnouncements);
+  }
+
   // ── Chat Sound (Badoop) ──
   var playBadoop = localStorage[STORAGE.badoop];
   if (typeof playBadoop == "undefined") {
@@ -278,6 +290,17 @@ firetable.ui.initSettings = function () {
     firetable.avatarStyle = savedAvatarStyle;
     $("#avatarStylePicker").val(savedAvatarStyle);
   }
+
+  firetable.ui.applySongAnnouncementVisibility();
+};
+
+/**
+ * Toggle visibility of song announcement rows in chat based on user setting.
+ */
+firetable.ui.applySongAnnouncementVisibility = function () {
+  var el = document.getElementById("actualChat");
+  if (!el) return;
+  el.classList.toggle("songAnnouncementsOff", firetable.showSongAnnouncements === false);
 };
 
 // ─── Miscellaneous UI Event Bindings ─────────────────────────────────────────
@@ -1003,6 +1026,16 @@ firetable.ui.setupMiscEvents = function () {
       document.getElementById("actualChat").classList.remove("avatarsOff");
     } else {
       document.getElementById("actualChat").classList.add("avatarsOff");
+    }
+  });
+  $('#showSongAnnouncementsToggle').change(function () {
+    var wasAtBottom = firetable.utilities.isChatPrettyMuchAtBottom();
+    firetable.debug && console.log("show song announcements " + (this.checked ? "on" : "off"));
+    localStorage[STORAGE.showSongAnnouncements] = this.checked;
+    firetable.showSongAnnouncements = this.checked;
+    firetable.ui.applySongAnnouncementVisibility();
+    if (this.checked && wasAtBottom) {
+      firetable.utilities.scrollToBottom();
     }
   });
   $('#desktopNotifyMentionsToggle').change(function () {
