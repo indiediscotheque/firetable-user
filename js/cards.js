@@ -269,6 +269,49 @@ firetable.actions.displayCard = function (data, chatid) {
   ctx.fillText(data.num, 200.5, 20);
 
   // ── Image Drawing ─────────────────────────────────────────────────────
+  function buildAlbumImageCandidates(url) {
+    if (!url || typeof url !== "string") return [];
+    var candidates = [url];
+    var ytMatch = url.match(/ytimg\.com\/vi\/([^\/?#]+)/i);
+    if (ytMatch && ytMatch[1]) {
+      var base = "https://i.ytimg.com/vi/" + ytMatch[1] + "/";
+      candidates.push(base + "hqdefault.jpg");
+      candidates.push(base + "mqdefault.jpg");
+      candidates.push(base + "default.jpg");
+    }
+    return candidates.filter(function (src, idx, arr) {
+      return src && arr.indexOf(src) === idx;
+    });
+  }
+
+  function drawAlbumImage(onDone) {
+    var candidates = buildAlbumImageCandidates(data.image);
+    if (!candidates.length) {
+      onDone && onDone();
+      return;
+    }
+
+    var idx = 0;
+    function tryNext() {
+      if (idx >= candidates.length) {
+        onDone && onDone();
+        return;
+      }
+      var src = candidates[idx++];
+      var albumImg = new Image();
+      albumImg.onload = function () {
+        if (!ctx) return;
+        var height = src.match(/ytimg\.com/i) ? 28 : 50;
+        ctx.drawImage(this, 10, 230, 50, height);
+        onDone && onDone();
+      };
+      albumImg.onerror = tryNext;
+      albumImg.src = src;
+    }
+
+    tryNext();
+  }
+
   /**
    * Default image loader: draws avatar + album art thumbnail.
    */
@@ -276,13 +319,9 @@ firetable.actions.displayCard = function (data, chatid) {
     var avatarImg = new Image();
     avatarImg.onload = function () {
       ctx.drawImage(this, 20, 30, 175, 175);
-      var albumImg = new Image();
-      albumImg.onload = function () {
-        var height = data.image.match(/ytimg.com/) ? 28 : 50;
-        ctx.drawImage(this, 10, 230, 50, height);
+      drawAlbumImage(function () {
         ctx = null; // release context
-      };
-      albumImg.src = data.image;
+      });
     };
     avatarImg.src = firetable.utilities.avatarURL(data.djid, data.djname, "175x175");
   };
@@ -334,13 +373,9 @@ firetable.actions.displayCard = function (data, chatid) {
         var bgImg = new Image();
         bgImg.onload = function () {
           ctx.drawImage(this, 25, 40, 170, 170);
-          var albumImg = new Image();
-          albumImg.onload = function () {
-            var height = data.image.match(/ytimg.com/) ? 28 : 50;
-            ctx.drawImage(this, 10, 230, 50, height);
+          drawAlbumImage(function () {
             ctx = null;
-          };
-          albumImg.src = data.image;
+          });
         };
         bgImg.src = 'img/id9.png';
       };
