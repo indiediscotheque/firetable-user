@@ -2066,7 +2066,8 @@ a.importLinkCheck {
 }
 
 .newChat .ft-avatar {
-    position: relative;
+    position: sticky;
+    top: 1rem;
     z-index: 2;
     margin-top: 0.125rem;
     width: 1.75rem;
@@ -2478,7 +2479,7 @@ img.emoji,
 
     #histFilterBar {
         flex-shrink: 0;
-        padding: var(--pad3) var(--pad3) 0 var(--pad3);
+        padding: var(--pad3);
     }
 
     #histFilter {
