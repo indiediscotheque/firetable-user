@@ -1,4 +1,16 @@
 /* ============================================
+   Fonts
+   ============================================ */
+
+@font-face {
+    font-family: 'Material Symbols Outlined';
+    font-style: normal;
+    font-weight: 100 700;
+    font-display: block;
+    src: url('../fonts/material-symbols-outlined.woff2') format('woff2');
+}
+
+/* ============================================
    Keyframes
    ============================================ */
 
@@ -117,6 +129,7 @@ select,
 textarea,
 button {
     font-family: var(--font-family);
+    font-optical-sizing: auto;
 }
 
 h2 {
@@ -506,7 +519,9 @@ code {
     font-size: 1.43rem;
 }
 
-.material-symbols-filled {
+.material-symbols-outlined,
+.material-symbols-filled,
+.material-symbols-filled-outlined {
     font-family: 'Material Symbols Outlined';
     font-style: normal;
     font-weight: normal;
@@ -518,11 +533,16 @@ code {
     white-space: nowrap;
     direction: ltr;
     -webkit-font-smoothing: antialiased;
+    -webkit-font-feature-settings: 'liga';
     font-feature-settings: 'liga';
+}
+
+.material-symbols-filled {
     font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-.material-symbols-outlined {
+.material-symbols-outlined,
+.material-symbols-filled-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
@@ -932,6 +952,7 @@ a.sociallogo[href] {
     align-items: center;
     gap: var(--pad2);
     padding: var(--pad1) 0;
+    cursor: pointer;
 }
 
 #allUsers #userKEY.prson {
@@ -1036,14 +1057,6 @@ a.sociallogo[href] {
 }
 .prson.blockd .prsnNameRole {
     opacity: 0.5;
-}
-
-.prson.blockd {
-    cursor: default;
-}
-
-#allUsers .prson.blockd {
-    cursor: default;
 }
 
 .prsnName {
@@ -1490,10 +1503,11 @@ html .ui-button.ui-state-disabled:active {
     justify-content: flex-end;
     position: relative;
     overflow: hidden;
+    isolation: isolate;
     background: linear-gradient(to bottom, color-mix(in srgb, transparent 85%, var(--color-accent)), color-mix(in srgb, transparent 66%, var(--color-accent)));
     border-top-left-radius: 1.5rem;
     border-top-right-radius: 1.5rem;
-    box-shadow: inset 0 0 8rem -7rem var(--color-accent), 0 0 2rem -1rem black;
+    box-shadow: inset 0 0 8rem -7rem var(--color-accent);
 
     &::before {
         content: "";
@@ -1506,6 +1520,11 @@ html .ui-button.ui-state-disabled:active {
         pointer-events: none;
         opacity: 0.05;
     }
+}
+
+/* Tunable fyre compositing mode for stronger integration with stage colors. */
+:root {
+    --fyre-blend-mode: plus-lighter;
 }
 
 #deck {
@@ -1648,6 +1667,7 @@ html .ui-button.ui-state-disabled:active {
     pointer-events: none;
     overflow: visible;
     display: none;
+    mix-blend-mode: var(--fyre-blend-mode);
 /* 
     &::before,
     &::after {
@@ -2046,7 +2066,8 @@ a.importLinkCheck {
 }
 
 .newChat .ft-avatar {
-    position: relative;
+    position: sticky;
+    top: 1rem;
     z-index: 2;
     margin-top: 0.125rem;
     width: 1.75rem;
@@ -2055,6 +2076,10 @@ a.importLinkCheck {
 }
 
 #actualChat.avatarsOff .ft-avatar {
+    display: none;
+}
+
+#actualChat.songAnnouncementsOff .nowplayn {
     display: none;
 }
 
@@ -2454,7 +2479,7 @@ img.emoji,
 
     #histFilterBar {
         flex-shrink: 0;
-        padding: var(--pad3) var(--pad3) 0 var(--pad3);
+        padding: var(--pad3);
     }
 
     #histFilter {
@@ -3377,11 +3402,35 @@ body.blog {
     opacity: 1;
 }
 
+@position-try --ft-user-tip-left {
+    position-area: center left;
+    margin-inline-start: 0;
+    margin-inline-end: 8px;
+}
+@position-try --ft-user-tip-above {
+    position-area: top center;
+    margin-inline-start: 0;
+    margin-block-end: 8px;
+}
+@position-try --ft-user-tip-below {
+    position-area: bottom center;
+    margin-inline-start: 0;
+    margin-block-start: 8px;
+}
+
 #ft-user-tip {
+    /* Popover resets */
     position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 9999;
+    inset: auto;
+    margin: 0;
+    border: none;
+    overflow: visible;
+    /* CSS anchor positioning */
+    position-anchor: --ft-user-anchor;
+    position-area: center right;
+    margin-inline-start: 8px;
+    position-try-fallbacks: --ft-user-tip-left, --ft-user-tip-above, --ft-user-tip-below;
+    /* Visual styles */
     background-color: var(--color-bg-t3);
     color: var(--color-text-light);
     padding: 0.5rem 0.65rem;
@@ -3389,9 +3438,6 @@ body.blog {
     font-size: 0.8rem;
     min-width: 11rem;
     box-shadow: 0 2px 8px black;
-    visibility: hidden;
-    opacity: 0;
-    transition: opacity 120ms ease;
 
     p {
         font-size: 0.75rem;
@@ -3408,17 +3454,73 @@ body.blog {
     }
 }
 
-#ft-user-tip.is-visible {
-    opacity: 1;
-}
-
 #ft-user-tip-arrow {
     position: absolute;
-    width: 0.5rem;
-    height: 0.5rem;
+    width: 0.56rem;
+    height: 0.56rem;
     background: var(--color-bg-t3);
     transform: rotate(45deg);
     pointer-events: none;
+}
+
+#ft-user-tip.tail-left #ft-user-tip-arrow {
+    left: -0.28rem;
+    top: 50%;
+    margin-top: -0.28rem;
+}
+
+#ft-user-tip.tail-right #ft-user-tip-arrow {
+    right: -0.28rem;
+    top: 50%;
+    margin-top: -0.28rem;
+}
+
+#ft-user-tip.tail-top #ft-user-tip-arrow {
+    top: -0.28rem;
+    left: 50%;
+    margin-left: -0.28rem;
+}
+
+#ft-user-tip.tail-bottom #ft-user-tip-arrow {
+    bottom: -0.28rem;
+    left: 50%;
+    margin-left: -0.28rem;
+}
+
+#ft-user-tip-tooltip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, calc(-100% - 8px));
+    z-index: 3;
+    background-color: var(--color-bg-t3);
+    color: var(--color-text-light);
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+#ft-user-tip-tooltip.is-visible {
+    visibility: visible;
+    opacity: 1;
+}
+
+#ft-user-tip-tooltip::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -0.28rem;
+    width: 0.56rem;
+    height: 0.56rem;
+    margin-left: -0.28rem;
+    background: var(--color-bg-t3);
+    transform: rotate(45deg);
 }
 
 #ft-user-tip .utt-fact {
@@ -3453,6 +3555,23 @@ body.blog {
     }
 }
 
+.utt-icon-btn.is-disabled,
+.utt-icon-btn.is-disabled:hover {
+    color: rgba(255,255,255,0.22);
+}
+
+.utt-icon-btn.is-disabled {
+    cursor: not-allowed;
+}
+
+.utt-icon-btn.is-disabled:hover {
+    background: unset;
+}
+
+.utt-at-btn    { anchor-name: --utt-btn-at; }
+.utt-deck-btn  { anchor-name: --utt-btn-deck; }
+.utt-block-btn { anchor-name: --utt-btn-block; }
+
 /* @ button: hidden for self */
 #ft-user-tip.is-self .utt-at-btn {
     display: none;
@@ -3466,7 +3585,7 @@ body.blog {
     display: flex;
 }
 
-/* Block button: hidden for self, mods, bots */
+/* Block button: hidden for self, disabled for protected roles */
 .utt-block-btn {
     display: none;
 }
@@ -3736,8 +3855,7 @@ body.blog {
         justify-self: flex-end;
     }
 
-    #nowplaying,
-    #djStage {
+    #stage {
         margin-top: 1.5rem;
     }
 
@@ -3810,6 +3928,7 @@ body.blog {
         padding-top: var(--pad5);
     }
     #allUsers .prson {
+        align-self: end;
         flex-direction: row-reverse;
     }
     #allUsers .prsnNameRole {

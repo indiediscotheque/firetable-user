@@ -4,6 +4,21 @@ let fireBackground = false;
 
 var fyreStage = null;
 
+function createCircleTexture(radius, color)
+{
+	var size = Math.max(2, Math.ceil(radius * 2));
+	var c = document.createElement('canvas');
+	c.width = size;
+	c.height = size;
+	var ctx = c.getContext('2d');
+	ctx.fillStyle = '#' + ('000000' + (color >>> 0).toString(16)).slice(-6);
+	ctx.beginPath();
+	ctx.arc(size / 2, size / 2, radius, 0, Math.PI * 2, false);
+	ctx.closePath();
+	ctx.fill();
+	return PIXI.Texture.fromCanvas(c, PIXI.SCALE_MODES.LINEAR);
+}
+
 
 class Ember
 {
@@ -19,13 +34,7 @@ class Ember
 		}
 		
 		colors.map(color => {
-			var circle = new PIXI.Graphics();
-			circle.lineStyle(0);
-			circle.beginFill(color, 1);
-			circle.drawCircle(0, 0, 10);
-			circle.endFill();
-
-			this.emberBlobs.push(app.renderer.generateTexture(circle));
+			this.emberBlobs.push(createCircleTexture(10, color));
 		})
 		
 		
@@ -132,19 +141,8 @@ class Fire
 		
 		this.fire.alpha = 0.7;
 		
-		var circle = new PIXI.Graphics();
-		circle.lineStyle(0);
-		circle.beginFill(color, 1);
-		circle.drawCircle(0, 0, this.radius);
-		circle.endFill();
-		this.fireBlob = app.renderer.generateTexture(circle);
-		
-		var cutoutCircle = new PIXI.Graphics();
-		cutoutCircle.lineStyle(0);
-		cutoutCircle.beginFill(0x000000, 1);
-		cutoutCircle.drawCircle(0, 0, this.radius + 5);
-		cutoutCircle.endFill();
-		this.cutoutBlob = app.renderer.generateTexture(cutoutCircle);
+		this.fireBlob = createCircleTexture(this.radius, color);
+		this.cutoutBlob = createCircleTexture(this.radius + 5, 0x000000);
 
 		this.flame.filters = [];
 		if (PIXI.filters && PIXI.filters.AdvancedBloomFilter) {

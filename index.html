@@ -9,11 +9,7 @@
 	<meta name="theme-color" content="#181818" />
 	<link rel="shortcut icon" href="favicon.png" />
 	<link rel="stylesheet" href="css/reset.css" type="text/css" />
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,700" type="text/css" />
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap">
-	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" />
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+	<link rel="stylesheet" href="css/fonts-local.css" type="text/css" />
 	<link rel="stylesheet" href="css/looks.css?v=01.10.8" type="text/css" />
 </head>
 
@@ -541,6 +537,10 @@
 						<label for="showAvatarsToggle">Show user avatars in chat</label>
 					</div>
 					<div class="settingline">
+						<input type="checkbox" id="showSongAnnouncementsToggle" name="showSongAnnouncementsToggle">
+						<label for="showSongAnnouncementsToggle">Show song announcements in chat</label>
+					</div>
+					<div class="settingline">
 						<input type="checkbox" id="mediaDisableToggle" name="mediaDisableToggle">
 						<label for="mediaDisableToggle">Disable Media Playback</label>
 					</div>
@@ -634,9 +634,10 @@
 	</div>
 
 	<div id="ft-tooltip" role="tooltip" aria-hidden="true"></div>
-	<div id="ft-user-tip" role="tooltip" aria-hidden="true" data-for="">
+	<div id="ft-user-tip" popover="auto" data-for="">
 		<div id="ft-user-tip-arrow"></div>
 		<div class="utt-facts"></div>
+		<div id="ft-user-tip-tooltip" role="tooltip"></div>
 		<div class="utt-actions">
 			<button class="utt-icon-btn utt-at-btn" data-action="chat-at" title="@ in chat"><i class="material-symbols-outlined">alternate_email</i></button>
 			<button class="utt-icon-btn utt-deck-btn" data-action="add-to-deck" title="Add to deck"><i class="material-symbols-outlined">add_2</i></button>

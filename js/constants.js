@@ -34,6 +34,7 @@ var STORAGE = {
   disableMedia:       "firetableDisableMedia",
   showImages:         "firetableShowImages",
   showAvatars:        "firetableShowAvatars",
+  showSongAnnouncements: "firetableShowSongAnnouncements",
   badoop:             "firetableBadoop",
   desktopNotify:      "firetableDTNM",
   screenControl:      "firetableScreenControl",
