@@ -631,6 +631,26 @@ firetable.ui.tooltip = (function () {
       var userData = ftapi.users && ftapi.users[userid];
       if (!userData) return;
 
+      function getBlockActionState(targetUser, targetUid) {
+        var isCurrentlyBlocked = !!(ftapi.blockedUsers && ftapi.blockedUsers[targetUid]);
+        if (isCurrentlyBlocked) {
+          return { canToggle: true, title: 'Unblock' };
+        }
+        if (targetUid === ftapi.uid) {
+          return { canToggle: false, title: 'You cannot block yourself.' };
+        }
+        if (targetUser.hostbot) {
+          return { canToggle: false, title: 'You cannot block the room bot.' };
+        }
+        if (targetUser.supermod) {
+          return { canToggle: false, title: 'You cannot block a supermod.' };
+        }
+        if (targetUser.mod) {
+          return { canToggle: false, title: 'You cannot block a moderator.' };
+        }
+        return { canToggle: true, title: 'Block' };
+      }
+
       var role = userData.hostbot  ? 'Bot'
                : userData.supermod ? 'Supermod'
                : userData.mod      ? 'Mod'
@@ -680,8 +700,9 @@ firetable.ui.tooltip = (function () {
       });
 
       // Suppress interaction hints for blocked users and own user
-      var isBlocked = !!(userData.blocked);
+      var isBlocked = !!(ftapi.blockedUsers && ftapi.blockedUsers[userid]);
       var isSelf = userid === ftapi.uid;
+      var blockAction = getBlockActionState(userData, userid);
       $userTip.toggleClass('is-blocked', isBlocked);
       $userTip.toggleClass('is-self', isSelf);
       $userTip.toggleClass('can-block', !isSelf);
@@ -689,7 +710,10 @@ firetable.ui.tooltip = (function () {
         .toggleClass('is-disabled', isBlocked)
         .attr('aria-disabled', isBlocked ? 'true' : 'false')
         .attr('title', isBlocked ? 'Cannot @ mention blocked users. Unblock them first.' : '@ in chat');
-      $userTip.find('.utt-block-btn').attr('title', isBlocked ? 'Unblock' : 'Block');
+      $userTip.find('.utt-block-btn')
+        .toggleClass('is-disabled', !blockAction.canToggle)
+        .attr('aria-disabled', blockAction.canToggle ? 'false' : 'true')
+        .attr('title', blockAction.title);
 
       // Mod/supermod actions
       var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
@@ -731,6 +755,7 @@ firetable.ui.tooltip = (function () {
         }
       })
       .on('click', '[data-action="toggle-block"]', function () {
+        if ($(this).hasClass('is-disabled')) return;
         var uid = $userTip.attr('data-for');
         var userData = uid && ftapi.users && ftapi.users[uid];
         if (!userData || !userData.username) return;

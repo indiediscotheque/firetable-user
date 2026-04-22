@@ -3584,7 +3584,7 @@ body.blog {
     display: flex;
 }
 
-/* Block button: hidden for self, mods, bots */
+/* Block button: hidden for self, disabled for protected roles */
 .utt-block-btn {
     display: none;
 }
