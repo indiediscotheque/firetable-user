@@ -16,6 +16,10 @@ $(document)
     var $group = $(this).closest('.hist-day-group');
     $group.toggleClass('collapsed');
     $(this).attr('aria-expanded', String(!$group.hasClass('collapsed')));
+  })
+  .off('input.cardFilters change.cardFilters')
+  .on('input.cardFilters change.cardFilters', '#cardFilterRow input, #cardFilterRow select', function () {
+    firetable.actions.applyCardFilters();
   });
 
 /**
@@ -64,6 +68,13 @@ firetable.actions.renderCardStats = function (data) {
     );
   }).join('');
 
+  var djOptions = Object.keys(perDj).sort(function (a, b) {
+    return a.localeCompare(b);
+  }).map(function (name) {
+    var safeName = escapeHtml(name);
+    return '<option value="' + safeName + '">' + safeName + '</option>';
+  }).join('');
+
   return (
     '<section id="cardStats">' +
     '<div class="cardStatsSummary">' +
@@ -76,8 +87,54 @@ firetable.actions.renderCardStats = function (data) {
     '<div class="hist-day-header" role="button" aria-expanded="false">Cards Per DJ</div>' +
     '<div class="hist-day-items cardStatDjList">' + djRows + '</div>' +
     '</div>' +
+    '<div id="cardFilterRow" class="cardFilterRow">' +
+    '<div class="cardFilterControl"><input id="cardFilterText" class="cardFilterInput" type="text" placeholder="Search cards" aria-label="Filter cards by text" /></div>' +
+    '<div class="cardFilterControl"><select id="cardFilterDj" class="cardFilterSelect" aria-label="Filter cards by DJ"><option value="">All DJs</option>' + djOptions + '</select></div>' +
+    '<div class="cardFilterControl"><select id="cardSortBy" class="cardFilterSelect" aria-label="Sort cards by"><option value="cardnum">Card Number</option><option value="djname">DJ Name</option><option value="temp">Temp</option><option value="num">Num</option></select></div>' +
+    '</div>' +
     '</section>'
   );
+};
+
+firetable.actions.applyCardFilters = function () {
+  var $spots = $('#cardsMain .caseCardSpot');
+  if (!$spots.length) return;
+
+  var textFilter = String($('#cardFilterText').val() || '').toLowerCase().trim();
+  var djFilter = String($('#cardFilterDj').val() || '').trim();
+  var sortBy = String($('#cardSortBy').val() || 'cardnum');
+  var spots = $spots.get();
+
+  spots.sort(function (a, b) {
+    var $a = $(a);
+    var $b = $(b);
+    var aVal;
+    var bVal;
+
+    if (sortBy === 'djname') {
+      aVal = String($a.data('djname') || '');
+      bVal = String($b.data('djname') || '');
+      var byName = aVal.localeCompare(bVal);
+      if (byName !== 0) return byName;
+    } else {
+      aVal = Number($a.data(sortBy));
+      bVal = Number($b.data(sortBy));
+      if (isNaN(aVal)) aVal = Number.POSITIVE_INFINITY;
+      if (isNaN(bVal)) bVal = Number.POSITIVE_INFINITY;
+      if (aVal !== bVal) return aVal - bVal;
+    }
+
+    return String($a.data('cardkey') || '').localeCompare(String($b.data('cardkey') || ''));
+  });
+
+  spots.forEach(function (spot) {
+    var $spot = $(spot);
+    var matchesText = !textFilter || String($spot.data('search') || '').indexOf(textFilter) !== -1;
+    var matchesDj = !djFilter || String($spot.data('djname') || '') === djFilter;
+    var visible = matchesText && matchesDj;
+    $spot.toggle(visible);
+    $('#cardsMain').append($spot);
+  });
 };
 
 /**
@@ -105,8 +162,31 @@ firetable.actions.cardCase = function () {
         '<span role="button" onclick="firetable.actions.viewLargerCard(\'' + key + '\')" class="cardViewLarger">View Larger</span>' +
         '</span>'
       );
+
+      var $spot = $('#caseCardSpot' + key);
+      var djName = String(childData.djname || 'Unknown DJ').trim() || 'Unknown DJ';
+      var title = String(childData.title || '');
+      var artist = String(childData.artist || '');
+      var cardNum = Number(childData.cardnum);
+      var temp = Number(childData.temp);
+      var num = Number(childData.num);
+      var searchText = [djName, title, artist, childData.cardnum, childData.num, childData.temp]
+        .join(' ')
+        .toLowerCase();
+
+      $spot.data('cardkey', key);
+      $spot.data('djname', djName);
+      $spot.data('title', title);
+      $spot.data('artist', artist);
+      $spot.data('cardnum', isNaN(cardNum) ? Number.POSITIVE_INFINITY : cardNum);
+      $spot.data('temp', isNaN(temp) ? Number.POSITIVE_INFINITY : temp);
+      $spot.data('num', isNaN(num) ? Number.POSITIVE_INFINITY : num);
+      $spot.data('search', searchText);
+
       firetable.actions.displayCard(childData, key);
     }
+
+    firetable.actions.applyCardFilters();
   });
 };
 

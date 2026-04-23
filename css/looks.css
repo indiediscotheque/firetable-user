@@ -3134,6 +3134,57 @@ img.emoji,
     background-color: var(--color-orange);
 }
 
+.cardFilterRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding-top: var(--pad1);
+}
+
+.cardFilterControl {
+    display: flex;
+    flex: 1 1 9rem;
+    min-width: 0;
+}
+
+.cardFilterControl:first-child {
+    flex: 2 1 12rem;
+    padding-top: 4px;
+}
+
+.cardFilterInput,
+.cardFilterSelect {
+    width: 100%;
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-s2);
+    color: var(--color-text-subtle);
+    padding: 0 0.7rem;
+    font-size: 0.82rem;
+    font-family: inherit;
+    line-height: 2.5;
+}
+
+.cardFilterInput {
+    line-height: 2;
+}
+
+.cardFilterInput::placeholder {
+    color: var(--color-text-subtle);
+}
+
+.cardFilterInput:focus,
+.cardFilterSelect:focus {
+    outline: none;
+    border-color: var(--color-orange);
+}
+
+@media screen and (max-width: 760px) {
+    .cardFilterControl {
+        flex: 1 1 100%;
+    }
+}
+
 .cardsEmpty {
     grid-column: 1 / -1;
     padding: var(--pad4);
