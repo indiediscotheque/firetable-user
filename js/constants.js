@@ -42,8 +42,7 @@ var STORAGE = {
   lastfmSession:      "ftLastfmSession",
   navView:            "firetableNavView",
   navSide:            "firetableNavSide",
-  navMobile:          "firetableNavMobile",
-  shareTyping:        "firetableShareTyping"
+  navMobile:          "firetableNavMobile"
 };
 
 // ─── External Service URLs ──────────────────────────────────────────────────
