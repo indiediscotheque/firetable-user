@@ -978,6 +978,66 @@ firetable.ui.setupMiscEvents = function () {
     if (!$(e.target).closest("#emojiPicker, #pickEmoji").length) closeEmojiPicker();
   });
 
+  // ── Print Card theme popover ──
+  var printCardPopoverEl = document.getElementById('printCardPopover');
+
+  function closePrintCardPopover() {
+    if (!printCardPopoverEl) return;
+    if (printCardPopoverEl.matches(':popover-open')) {
+      printCardPopoverEl.hidePopover();
+    }
+  }
+
+  $("#printCardLauncher")
+    .off('click.printCardPopover')
+    .on('click.printCardPopover', function () {
+      if (!printCardPopoverEl) return;
+      if (printCardPopoverEl.matches(':popover-open')) {
+        closePrintCardPopover();
+        return;
+      }
+
+      $(this).addClass('on');
+      printCardPopoverEl.style.visibility = 'hidden';
+      printCardPopoverEl.showPopover();
+      firetable.ui.positionPopover(this, printCardPopoverEl, document.getElementById('printCardArrow'), 'top').then(function () {
+        var focusTarget = printCardPopoverEl.querySelector('.printCardThemePrimary') || printCardPopoverEl.querySelector('.printCardThemeChoice');
+        if (focusTarget) focusTarget.focus();
+      });
+    });
+
+  $(document)
+    .off('click.printCardThemeChoice')
+    .on('click.printCardThemeChoice', '#printCardPopover .printCardThemeChoice', function () {
+      var selectedTheme = $(this).attr('data-theme') || 'classic';
+      if (firetable.actions.requestPrintCard) {
+        firetable.actions.requestPrintCard(selectedTheme);
+      } else {
+        ftapi.actions.sendChat('!printcard');
+      }
+      closePrintCardPopover();
+      $('#newchat').focus();
+    })
+    .off('keydown.printCardPopoverDismiss')
+    .on('keydown.printCardPopoverDismiss', function (e) {
+      if (e.key === 'Escape') closePrintCardPopover();
+    })
+    .off('click.printCardPopoverDismiss')
+    .on('click.printCardPopoverDismiss', function (e) {
+      if (!printCardPopoverEl || !printCardPopoverEl.matches(':popover-open')) return;
+      if ($(e.target).closest('#printCardPopover, #printCardLauncher').length) return;
+      closePrintCardPopover();
+    });
+
+  if (printCardPopoverEl && !printCardPopoverEl.dataset.printCardToggleBound) {
+    printCardPopoverEl.addEventListener('toggle', function (e) {
+      if (e.newState === 'closed') {
+        $('#printCardLauncher').removeClass('on');
+      }
+    });
+    printCardPopoverEl.dataset.printCardToggleBound = '1';
+  }
+
   // ── Settings Toggles ──
   $('#badoopToggle').change(function () {
     firetable.debug && console.log("badoop " + (this.checked ? "on" : "off"));

@@ -129,6 +129,49 @@ firetable.actions.localChatResponse = function (txt) {
   }
 };
 
+/**
+ * Normalize requested print-card theme.
+ * @param {string} theme - requested theme key
+ * @returns {string} normalized theme key
+ */
+firetable.actions.normalizePrintCardTheme = function (theme) {
+  var val = String(theme || "classic").toLowerCase().trim();
+  if (val === "id8" || val === "id9" || val === "v2") return val;
+  return "classic";
+};
+
+/**
+ * Build chat command for printing a card with the requested theme.
+ * @param {string} theme - normalized theme key
+ * @returns {string} command text to send in chat
+ */
+firetable.actions.buildPrintCardCommand = function (theme) {
+  var normalized = firetable.actions.normalizePrintCardTheme(theme);
+  if (normalized === "classic") return "!printcard";
+  return "!printcard " + normalized;
+};
+
+/**
+ * Hook to prep persisted theme/card-print context before sending !printcard.
+ * TODO: Wire Firebase persistence/lookup here when backend support lands.
+ * @param {string} theme - requested theme
+ * @param {Function} done - callback receiving final theme
+ */
+firetable.actions.preparePrintCardThemeSelection = function (theme, done) {
+  var normalized = firetable.actions.normalizePrintCardTheme(theme);
+  if (done) done(normalized);
+};
+
+/**
+ * Request card printing using chosen theme.
+ * @param {string} theme - requested theme key
+ */
+firetable.actions.requestPrintCard = function (theme) {
+  firetable.actions.preparePrintCardThemeSelection(theme, function (resolvedTheme) {
+    ftapi.actions.sendChat(firetable.actions.buildPrintCardCommand(resolvedTheme));
+  });
+};
+
 // ─── Text Processing Helpers ─────────────────────────────────────────────────
 
 firetable.ui = firetable.ui || {};

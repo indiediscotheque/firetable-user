@@ -180,6 +180,9 @@
 						id="newchat" tabindex="0" />
 
 				</form>
+				<button role="button" class="butt graybutt iconbutt" id="printCardLauncher" data-label="Print card" aria-label="Print card">
+					<i class="material-symbols-outlined"> print </i>
+				</button>
 				<div id="emojiPicker">
 					<div id="pickerNav"></div>
 					<input type="text" placeholder="Filter emoji things..." id="pickerSearch" tabindex="-1" />
@@ -648,6 +651,19 @@
 			<div class="shuffleQueuePromptActions">
 				<button type="button" class="shuffleQueueConfirm shuffleQueuePrimary">Shuffle</button>
 				<button type="button" class="shuffleQueueCancel">Cancel</button>
+			</div>
+		</div>
+	</div>
+
+	<div id="printCardPopover" popover="auto" class="ft-popover">
+		<div id="printCardArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box printCardPromptBox">
+			<div class="printCardPromptMessage">Print card style</div>
+			<div class="printCardThemeActions">
+				<button type="button" class="printCardThemeChoice" data-theme="classic">Classic</button>
+				<button type="button" class="printCardThemeChoice" data-theme="id8">ID8</button>
+				<button type="button" class="printCardThemeChoice" data-theme="id9">ID9</button>
+				<button type="button" class="printCardThemeChoice printCardThemePrimary" data-theme="v2">Noumshine</button>
 			</div>
 		</div>
 	</div>
