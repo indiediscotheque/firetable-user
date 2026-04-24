@@ -105,6 +105,72 @@ firetable.actions.deleteSong = function (id) {
 };
 
 /**
+ * Delete a track and run a queue search using the track's tags.
+ * @param {string} id        - Track key
+ * @param {string} tags      - Track tags (Artist - Song ...)
+ * @param {number|string} type - MEDIA_YOUTUBE or MEDIA_SOUNDCLOUD
+ */
+firetable.actions.deleteSongAndSearch = function (id, tags, type) {
+  firetable.actions.deleteSong(id);
+  var query = String(tags || "").trim();
+  if (!query) return;
+
+  // Switch to Add to Playlist/search view before filling and submitting.
+  $("#mainqueuestuff").css("display", "none");
+  $("#filterMachine").css("display", "none");
+  $("#addbox").css("display", "flex");
+  $("#cancelqsearch").show();
+  $("#qControlButtons").hide();
+  $("#plmanager").css("display", "none");
+
+  if (String(type) === String(MEDIA_SOUNDCLOUD)) {
+    $("#scsearchSelect").trigger("click");
+  } else {
+    $("#ytsearchSelect").trigger("click");
+  }
+
+  $("#qsearch").focus().val(query);
+  var enterEvent = $.Event("keyup");
+  enterEvent.which = 13;
+  enterEvent.keyCode = 13;
+  $("#qsearch").trigger(enterEvent);
+};
+
+/**
+ * Show the delete-track confirmation popover.
+ * @param {string} songid   - Track key
+ * @param {string} tags     - Track tags
+ * @param {number|string} type - MEDIA_YOUTUBE or MEDIA_SOUNDCLOUD
+ * @param {HTMLElement} anchorEl - Element to anchor the popover to
+ */
+firetable.actions.deleteSongPrompt = function (songid, tags, type, anchorEl) {
+  var popoverEl = document.getElementById('deleteSongPopover');
+  if (!popoverEl) {
+    firetable.actions.deleteSong(songid);
+    return;
+  }
+
+  if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
+  $('.pvbar.deleting').removeClass('deleting');
+
+  var $pvbar = $('.pvbar[data-key="' + songid + '"]').first();
+  $pvbar.addClass('deleting');
+  firetable.deletingPvbar = $pvbar;
+
+  var $popover = $(popoverEl);
+  $popover.data('songid', songid);
+  $popover.data('tags', tags || '');
+  $popover.data('type', type);
+
+  popoverEl.style.visibility = 'hidden';
+  popoverEl.showPopover();
+  firetable.ui.positionPopover(anchorEl || $pvbar.find('.deletesong')[0], popoverEl, document.getElementById('deleteSongArrow'), 'bottom').then(function () {
+    var primaryBtn = popoverEl.querySelector('.deleteSongConfirm');
+    if (primaryBtn) primaryBtn.focus();
+  });
+};
+
+/**
  * Filter visible queue items by a search string.
  * @param {string} val - Filter text (empty string shows all)
  */
@@ -483,7 +549,18 @@ firetable.ui.setupPlaylistEvents = function () {
 
       // Delete button
       $newli.find('.deletesong').on('click', function () {
-        firetable.actions.deleteSong($(this).closest('.pvbar').attr('data-key'));
+        var popoverEl = document.getElementById('deleteSongPopover');
+        var $pvbar = $(this).closest('.pvbar');
+        if (popoverEl && popoverEl.matches(':popover-open') && firetable.deletingPvbar && firetable.deletingPvbar.is($pvbar)) {
+          popoverEl.hidePopover();
+          return;
+        }
+        firetable.actions.deleteSongPrompt(
+          $pvbar.attr('data-key'),
+          $pvbar.find('.listwords').text(),
+          $pvbar.attr('data-type'),
+          this
+        );
       });
 
       // Edit tags button
@@ -698,6 +775,51 @@ firetable.ui.setupPlaylistEvents = function () {
     if (e.newState === 'closed' && firetable.editingPvbar) {
       firetable.editingPvbar.removeClass('editing');
       firetable.editingPvbar = null;
+    }
+  });
+
+  // ── Delete confirmation popover actions ──
+  $(document)
+    .off('click.deleteSongConfirm')
+    .on('click.deleteSongConfirm', '#deleteSongPopover .deleteSongConfirm', function () {
+      var popoverEl = document.getElementById('deleteSongPopover');
+      var $popover = $(popoverEl);
+      firetable.actions.deleteSong($popover.data('songid'));
+      popoverEl.hidePopover();
+    })
+    .off('click.deleteSongConfirmSearch')
+    .on('click.deleteSongConfirmSearch', '#deleteSongPopover .deleteSongAndSearch', function () {
+      var popoverEl = document.getElementById('deleteSongPopover');
+      var $popover = $(popoverEl);
+      firetable.actions.deleteSongAndSearch(
+        $popover.data('songid'),
+        $popover.data('tags'),
+        $popover.data('type')
+      );
+      popoverEl.hidePopover();
+    })
+    .off('click.deleteSongConfirmCancel')
+    .on('click.deleteSongConfirmCancel', '#deleteSongPopover .deleteSongCancel', function () {
+      var popoverEl = document.getElementById('deleteSongPopover');
+      popoverEl.hidePopover();
+    })
+    .off('keydown.deleteSongConfirmKeys')
+    .on('keydown.deleteSongConfirmKeys', '#deleteSongPopover', function (e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.hidePopover();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        $(this).find('.deleteSongConfirm').trigger('click');
+      }
+    });
+
+  document.getElementById('deleteSongPopover').addEventListener('toggle', function (e) {
+    if (e.newState === 'closed' && firetable.deletingPvbar) {
+      firetable.deletingPvbar.removeClass('deleting');
+      firetable.deletingPvbar = null;
     }
   });
 };

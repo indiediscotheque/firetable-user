@@ -1971,6 +1971,32 @@ a.importLinkCheck {
     margin: 0 0 var(--pad2);
 }
 
+.deleteSongPromptBox {
+    width: min(12rem, 90vw);
+    font-size: 0.875rem;
+}
+
+.deleteSongPromptActions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pad1);
+}
+
+.deleteSongPromptActions button {
+    width: 100%;
+}
+
+.deleteSongPromptActions .deleteSongPrimary {
+    font-size: 1rem;
+    font-weight: 700;
+    background-color: #b1272e;
+    color: #fff;
+}
+
+#queuelist .pvbar.deleting .deletesong {
+    color: var(--firetable-orange);
+}
+
 /* ============================================
    Theme Bar
    ============================================ */
