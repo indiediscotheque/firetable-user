@@ -5,7 +5,7 @@
  * played it, album art, and a unique card number. They can be shared in chat
  * or gifted to the current DJ.
  *
- * Special edition cards (id8, id9) have custom artwork for anniversary events.
+ * Special card styles are selected via data.special (classic, id8, id9, v2).
  */
 
 firetable.actions = firetable.actions || {};
@@ -258,7 +258,7 @@ firetable.actions.showCard = function (cardid, chatid) {
  * @param {number} data.temp - "Max operating temperature" gag value
  * @param {number} data.date - Timestamp when the card was created
  * @param {string} [data.set] - Robohash set override
- * @param {string} [data.special] - Special edition identifier ("id8", "id9")
+ * @param {string|boolean} [data.special] - Card style key: false/empty (classic), "id8", "id9", or "v2"
  * @param {string} chatid - Suffix for the canvas element ID ("cardMaker" + chatid)
  */
 firetable.actions.displayCard = function (data, chatid) {
@@ -288,25 +288,18 @@ firetable.actions.displayCard = function (data, chatid) {
   var accentColor = (data.colors && data.colors.color) || firetable.orange;
   var accentText = (data.colors && data.colors.txt) || "#fff";
   var accentRgb = firetable.utilities.hexToRGB(accentColor) || { r: 244, g: 129, b: 11 };
-  var specialName = String(data.special || "").toLowerCase().trim();
-
-  // Backward-compatible fallback while older cards still depend on card number ranges.
-  if (!specialName) {
-    specialName = Number(data.cardnum) <= 1315 ? "legacy" : "modern";
-  }
-
-  var isLegacyTheme = specialName.indexOf("legacy") === 0;
-  var anniversary =
-    specialName.indexOf("id8") !== -1 ? "id8" :
-    specialName.indexOf("id9") !== -1 ? "id9" :
-    "";
+  var specialName = (data.special === false || data.special === null || typeof data.special === "undefined")
+    ? ""
+    : String(data.special).toLowerCase().trim();
+  var isV2Theme = specialName === "v2";
+  var anniversary = specialName === "id8" ? "id8" : (specialName === "id9" ? "id9" : "");
   var heroX = 16;
   var heroY = 16;
   var heroW = 193;
   var heroH = 150;
 
-  // ── Legacy card theme (card numbers 1–1315) ───────────────────────────
-  if (isLegacyTheme) {
+  // ── Classic card theme (default, id8, id9) ─────────────────────────────
+  if (!isV2Theme) {
     // Base layers
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, 225, 300);
