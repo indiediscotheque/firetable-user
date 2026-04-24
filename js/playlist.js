@@ -171,23 +171,80 @@ firetable.actions.deleteSongPrompt = function (songid, tags, type, anchorEl) {
 };
 
 /**
+ * Parse a queue track duration into seconds.
+ * Accepts numeric seconds/ms or strings like "3:45" and "1:02:03".
+ * @param {number|string} rawDuration - raw duration value from queue payload
+ * @returns {number} whole seconds (0 when unknown)
+ */
+firetable.actions.parseTrackDurationSeconds = function (rawDuration) {
+  if (rawDuration === null || typeof rawDuration === "undefined") return 0;
+
+  if (typeof rawDuration === "number" && isFinite(rawDuration)) {
+    if (rawDuration <= 0) return 0;
+    // Large values are likely milliseconds.
+    if (rawDuration > 10000) return Math.max(0, Math.round(rawDuration / 1000));
+    return Math.round(rawDuration);
+  }
+
+  var str = String(rawDuration).trim();
+  if (!str) return 0;
+
+  if (/^\d+$/.test(str)) {
+    return firetable.actions.parseTrackDurationSeconds(Number(str));
+  }
+
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
+    var bits = str.split(':').map(function (part) { return Number(part); });
+    if (bits.length === 2) return (bits[0] * 60) + bits[1];
+    return (bits[0] * 3600) + (bits[1] * 60) + bits[2];
+  }
+
+  return 0;
+};
+
+/**
+ * Format seconds into m:ss or h:mm:ss.
+ * @param {number} seconds - integer seconds
+ * @returns {string} formatted duration text
+ */
+firetable.actions.formatTrackDuration = function (seconds) {
+  var total = Math.max(0, Math.floor(Number(seconds) || 0));
+  var hrs = Math.floor(total / 3600);
+  var mins = Math.floor((total % 3600) / 60);
+  var secs = total % 60;
+
+  if (hrs > 0) {
+    return hrs + ":" + String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+  }
+  return mins + ":" + String(secs).padStart(2, "0");
+};
+
+
+/**
  * Filter visible queue items by a search string.
  * @param {string} val - Filter text (empty string shows all)
  */
 firetable.actions.filterQueue = function (val) {
-  if (val.length === 0) {
-    $("#mainqueue .pvbar").show();
-    return;
-  }
-  val = val.toLowerCase();
+  var textFilter = String(typeof val === "string" ? val : $("#queueFilter").val() || "").toLowerCase().trim();
+  var remixOnly = $("#queueFilterRemixOnly").is(":checked");
+  var brokenOnly = $("#queueFilterBrokenOnly").is(":checked");
+  var visibleCount = 0;
+
   $("#mainqueue .pvbar").each(function (p, q) {
-    var txt = $(q).find(".listwords").text();
-    if (txt.match(new RegExp(val, 'ig'))) {
-      $(q).show();
-    } else {
-      $(q).hide();
-    }
+    var $row = $(q);
+    var tags = String($row.attr("data-tags") || "");
+    var searchText = tags.toLowerCase();
+    var matchesText = !textFilter || searchText.indexOf(textFilter) !== -1;
+    var matchesRemix = !remixOnly || /\([^)]*\)/.test(tags);
+    var isBroken = String($row.attr("data-broken") || "0") === "1";
+    var matchesBroken = !brokenOnly || isBroken;
+
+    var show = matchesText && matchesRemix && matchesBroken;
+    $row.toggle(show);
+    if (show) visibleCount += 1;
   });
+
+  $("#mainqueue").toggleClass("overFiltered", visibleCount === 0 && $("#mainqueue .pvbar").length > 0);
 };
 
 // ─── Merge / Copy Lists ──────────────────────────────────────────────────────
@@ -483,11 +540,22 @@ firetable.ui.setupPlaylistEvents = function () {
       var thisone = okdata[key];
       var $newli = $playlistItemTemplate.clone();
       var psign = (key === firetable.preview) ? "&#xE034;" : "&#xE037;";
+      var trackName = String(thisone.name || "Unknown");
+      var safeTrackName = firetable.utilities.htmlEscape(trackName);
+      var trackSeconds = firetable.actions.parseTrackDurationSeconds(
+        thisone.duration || thisone.length || thisone.dur || thisone.time || thisone.seconds || thisone.msecs || thisone.ms || 0
+      );
+      var durationHtml = trackSeconds > 0
+        ? '<span class="trackDuration">' + firetable.actions.formatTrackDuration(trackSeconds) + '</span>'
+        : '';
 
       $newli.attr('id', "pvbar" + key)
             .attr("data-key", key)
             .attr("data-type", thisone.type)
-            .attr("data-cid", thisone.cid);
+        .attr("data-cid", thisone.cid)
+        .attr("data-tags", trackName)
+        .attr("data-broken", thisone.flagged ? "1" : "0")
+        .attr("data-track-seconds", trackSeconds || "");
 
       // Album art thumbnail
       var artUrl = (thisone.type == MEDIA_YOUTUBE)
@@ -505,7 +573,7 @@ firetable.ui.setupPlaylistEvents = function () {
       }).html(psign);
 
       // Track title
-      $newli.find('.listwords').html(thisone.name);
+      $newli.find('.listwords').html(safeTrackName + durationHtml);
 
       // Bump to top
       $newli.find('.bumpsongs').on('click', function () {
@@ -557,7 +625,7 @@ firetable.ui.setupPlaylistEvents = function () {
         }
         firetable.actions.deleteSongPrompt(
           $pvbar.attr('data-key'),
-          $pvbar.find('.listwords').text(),
+          $pvbar.attr('data-tags') || $pvbar.find('.listwords').text(),
           $pvbar.attr('data-type'),
           this
         );
@@ -572,7 +640,7 @@ firetable.ui.setupPlaylistEvents = function () {
         } else {
           firetable.actions.editTagsPrompt(
             $pvbar.attr('data-key'),
-            $pvbar.find('.listwords').text(),
+            $pvbar.attr('data-tags') || $pvbar.find('.listwords').text(),
             this
           );
         }
@@ -591,7 +659,7 @@ firetable.ui.setupPlaylistEvents = function () {
         var $pvbar = $btn.closest('.pvbar');
         var btnCid = $pvbar.attr('data-cid');
         var btnType = $pvbar.attr('data-type');
-        var btnTitle = firetable.utilities.htmlEscape($pvbar.find('.listwords').text());
+        var btnTitle = firetable.utilities.htmlEscape($pvbar.attr('data-tags') || $pvbar.find('.listwords').text());
 
         if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$("#stealContain").is(':hidden')) {
           $btn.removeClass('on');
@@ -627,11 +695,19 @@ firetable.ui.setupPlaylistEvents = function () {
 
       $('#mainqueue').append($newli);
     }
+
+    firetable.actions.filterQueue($("#queueFilter").val() || "");
   });
 
   // ── Queue filter input ──
   $("#queueFilter").on("change paste keyup", function () {
     firetable.actions.filterQueue($(this).val());
+  });
+  $("#queueFilterRemixOnly").on("change", function () {
+    firetable.actions.filterQueue($("#queueFilter").val() || "");
+  });
+  $("#queueFilterBrokenOnly").on("change", function () {
+    firetable.actions.filterQueue($("#queueFilter").val() || "");
   });
 
   // ── Shuffle button ──

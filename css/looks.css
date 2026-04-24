@@ -1728,11 +1728,97 @@ html .ui-button.ui-state-disabled:active {
     border-radius: 1.5rem 1.5rem var(--radius-md) var(--radius-md);
 }
 
+#queueFilterForm {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    padding: 0 var(--pad3) var(--pad2) var(--pad3);
+}
+
 #queueFilter {
-    width: 100%;
-    border-bottom: 0;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
+    flex: 1;
+    width: auto;
+    margin: 2px 0 0 0;
+}
+
+.queueFilterExtras {
+    display: flex;
+    align-items: center;
+    gap: var(--pad1);
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.queueFilterRemixOnly,
+.queueFilterBrokenOnly {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pad1);
+    height: 2rem;
+    padding: var(--pad2);
+    white-space: nowrap;
+    color: var(--color-text-muted);
+    background: linear-gradient(180deg, var(--color-bg-t2) 0%, var(--color-bg) 100%);
+    border-top: 1px solid var(--color-bg-t3);
+    border-bottom: 1px solid var(--color-bg-s2);
+    border-radius: 0.67em;
+    font-size: 0.8rem;
+    letter-spacing: 0.01em;
+    transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+    cursor: pointer;
+}
+
+.queueFilterRemixOnly input,
+.queueFilterBrokenOnly input {
+    margin: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 0.24rem;
+    border: 1px solid var(--color-bg-t3);
+    background-color: var(--color-bg);
+    display: inline-grid;
+    place-content: center;
+    cursor: pointer;
+    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.queueFilterRemixOnly input::before,
+.queueFilterBrokenOnly input::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 0.14rem;
+    transform: scale(0);
+    transition: transform 0.14s ease;
+    background: var(--color-accent);
+}
+
+.queueFilterRemixOnly input:checked,
+.queueFilterBrokenOnly input:checked {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent);
+
+    + span {
+        color: var(--color-text);
+    }
+}
+
+.queueFilterRemixOnly input:checked::before,
+.queueFilterBrokenOnly input:checked::before {
+    transform: scale(1);
+}
+
+.queueFilterRemixOnly:hover,
+.queueFilterBrokenOnly:hover {
+    background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg) 100%);
+}
+
+.queueFilterRemixOnly:focus-visible,
+.queueFilterBrokenOnly:focus-visible {
+    box-shadow: 0 0 0.5rem var(--color-accent);
 }
 
 #filterMachine {
@@ -1825,6 +1911,12 @@ html .ui-button.ui-state-disabled:active {
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
+}
+
+#queuelist .trackDuration {
+    margin-left: 0.45em;
+    color: rgba(255, 255, 255, 0.52);
+    font-size: 0.82em;
 }
 
 #listpickerWrap {
