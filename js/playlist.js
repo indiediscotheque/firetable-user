@@ -171,6 +171,31 @@ firetable.actions.deleteSongPrompt = function (songid, tags, type, anchorEl) {
 };
 
 /**
+ * Show the shuffle confirmation popover.
+ * @param {HTMLElement} anchorEl - Element to anchor the popover to
+ */
+firetable.actions.shuffleQueuePrompt = function (anchorEl) {
+  var popoverEl = document.getElementById('shuffleQueuePopover');
+  if (!popoverEl) {
+    firetable.actions.shuffleQueue();
+    return;
+  }
+
+  if (popoverEl.matches(':popover-open')) {
+    popoverEl.hidePopover();
+    return;
+  }
+
+  $('#shuffleQueue').addClass('on');
+  popoverEl.style.visibility = 'hidden';
+  popoverEl.showPopover();
+  firetable.ui.positionPopover(anchorEl || document.getElementById('shuffleQueue'), popoverEl, document.getElementById('shuffleQueueArrow'), 'bottom').then(function () {
+    var primaryBtn = popoverEl.querySelector('.shuffleQueueConfirm');
+    if (primaryBtn) primaryBtn.focus();
+  });
+};
+
+/**
  * Parse a queue track duration into seconds.
  * Accepts numeric seconds/ms or strings like "3:45" and "1:02:03".
  * @param {number|string} rawDuration - raw duration value from queue payload
@@ -711,7 +736,9 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   // ── Shuffle button ──
-  $("#shuffleQueue").bind("click", firetable.actions.shuffleQueue);
+  $("#shuffleQueue").off('click.shuffleQueueConfirm').on('click.shuffleQueueConfirm', function () {
+    firetable.actions.shuffleQueuePrompt(this);
+  });
 
   // ── Add-to-queue toggle ──
   $("#addToQueueBttn").bind("click", function () {
@@ -784,6 +811,14 @@ firetable.ui.setupPlaylistEvents = function () {
   $("#importDubGo").bind("click", firetable.actions.dubtrackImport);
 
   // ── Merge lists UI ──
+  function closeMergeContain() {
+    $("#mergeSetup").show();
+    $("#mergeCompleted").hide();
+    $("#mergeHappening").hide();
+    $("#mergeContain").hide();
+    $("#mergeLists").removeClass('on');
+  }
+
   $("#mergeLists").bind("click", function () {
     var $this = $(this);
     var isHidden = $("#mergeContain").is(":hidden");
@@ -805,8 +840,7 @@ firetable.ui.setupPlaylistEvents = function () {
         $this.addClass('on');
       });
     } else {
-      $("#mergeContain").hide();
-      $this.removeClass('on');
+      closeMergeContain();
     }
   });
   $("#startMerge").bind("click", function () {
@@ -819,11 +853,23 @@ firetable.ui.setupPlaylistEvents = function () {
     firetable.actions.mergeLists(source, dest, sourceName);
   });
   $("#mergeOK").bind("click", function () {
-    $("#mergeSetup").show();
-    $("#mergeCompleted").hide();
-    $("#mergeHappening").hide();
-    $("#mergeContain").hide();
+    closeMergeContain();
   });
+
+  // Dismiss merge popover when clicking outside of it.
+  $(document)
+    .off('click.mergeContainDismiss')
+    .on('click.mergeContainDismiss', function (e) {
+      if ($("#mergeContain").is(':hidden')) return;
+      if ($(e.target).closest('#mergeContain, #mergeLists').length) return;
+      closeMergeContain();
+    })
+    .off('keydown.mergeContainDismiss')
+    .on('keydown.mergeContainDismiss', function (e) {
+      if (e.key === 'Escape' && !$("#mergeContain").is(':hidden')) {
+        closeMergeContain();
+      }
+    });
 
   // ── Tag editing (Enter in .tagMachine) ──
   $(document).on("keyup", ".tagMachine", function (e) {
@@ -890,12 +936,41 @@ firetable.ui.setupPlaylistEvents = function () {
         e.preventDefault();
         $(this).find('.deleteSongConfirm').trigger('click');
       }
+    })
+    .off('click.shuffleQueueConfirm')
+    .on('click.shuffleQueueConfirm', '#shuffleQueuePopover .shuffleQueueConfirm', function () {
+      var popoverEl = document.getElementById('shuffleQueuePopover');
+      firetable.actions.shuffleQueue();
+      popoverEl.hidePopover();
+    })
+    .off('click.shuffleQueueCancel')
+    .on('click.shuffleQueueCancel', '#shuffleQueuePopover .shuffleQueueCancel', function () {
+      var popoverEl = document.getElementById('shuffleQueuePopover');
+      popoverEl.hidePopover();
+    })
+    .off('keydown.shuffleQueueKeys')
+    .on('keydown.shuffleQueueKeys', '#shuffleQueuePopover', function (e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.hidePopover();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        $(this).find('.shuffleQueueConfirm').trigger('click');
+      }
     });
 
   document.getElementById('deleteSongPopover').addEventListener('toggle', function (e) {
     if (e.newState === 'closed' && firetable.deletingPvbar) {
       firetable.deletingPvbar.removeClass('deleting');
       firetable.deletingPvbar = null;
+    }
+  });
+
+  document.getElementById('shuffleQueuePopover').addEventListener('toggle', function (e) {
+    if (e.newState === 'closed') {
+      $('#shuffleQueue').removeClass('on');
     }
   });
 };

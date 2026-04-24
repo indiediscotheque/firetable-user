@@ -2074,7 +2074,17 @@ a.importLinkCheck {
     gap: var(--pad1);
 }
 
+.shuffleQueuePromptActions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pad1);
+}
+
 .deleteSongPromptActions button {
+    width: 100%;
+}
+
+.shuffleQueuePromptActions button {
     width: 100%;
 }
 
@@ -2083,6 +2093,12 @@ a.importLinkCheck {
     font-weight: 700;
     background-color: #b1272e;
     color: #fff;
+}
+
+.shuffleQueuePromptActions .shuffleQueuePrimary {
+    font-size: 1rem;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--color-accent) 50%, black);
 }
 
 #queuelist .pvbar.deleting .deletesong {
