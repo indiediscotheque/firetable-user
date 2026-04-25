@@ -1059,6 +1059,11 @@ a.sociallogo[href] {
     opacity: 0.5;
 }
 
+/* Disconnected deck users (ghost rows) stay visible but de-emphasized. */
+.prson.ghost {
+    opacity: 0.66;
+}
+
 .prsnName {
     font-weight: 300;
     color: var(--color-text);
@@ -1072,7 +1077,8 @@ a.sociallogo[href] {
     color: #43b581;
     line-height: 1;
 }
-.prson.idle .prsnRole {
+.prson.idle .prsnRole,
+.prson.ghost .prsnRole {
     color: var(--color-orange);
 }
 
