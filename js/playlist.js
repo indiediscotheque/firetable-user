@@ -105,23 +105,171 @@ firetable.actions.deleteSong = function (id) {
 };
 
 /**
+ * Delete a track and run a queue search using the track's tags.
+ * @param {string} id        - Track key
+ * @param {string} tags      - Track tags (Artist - Song ...)
+ * @param {number|string} type - MEDIA_YOUTUBE or MEDIA_SOUNDCLOUD
+ */
+firetable.actions.deleteSongAndSearch = function (id, tags, type) {
+  firetable.actions.deleteSong(id);
+  var query = String(tags || "").trim();
+  if (!query) return;
+
+  // Switch to Add to Playlist/search view before filling and submitting.
+  $("#mainqueuestuff").css("display", "none");
+  $("#filterMachine").css("display", "none");
+  $("#addbox").css("display", "flex");
+  $("#cancelqsearch").show();
+  $("#qControlButtons").hide();
+  $("#plmanager").css("display", "none");
+
+  if (String(type) === String(MEDIA_SOUNDCLOUD)) {
+    $("#scsearchSelect").trigger("click");
+  } else {
+    $("#ytsearchSelect").trigger("click");
+  }
+
+  $("#qsearch").focus().val(query);
+  var enterEvent = $.Event("keyup");
+  enterEvent.which = 13;
+  enterEvent.keyCode = 13;
+  $("#qsearch").trigger(enterEvent);
+};
+
+/**
+ * Show the delete-track confirmation popover.
+ * @param {string} songid   - Track key
+ * @param {string} tags     - Track tags
+ * @param {number|string} type - MEDIA_YOUTUBE or MEDIA_SOUNDCLOUD
+ * @param {HTMLElement} anchorEl - Element to anchor the popover to
+ */
+firetable.actions.deleteSongPrompt = function (songid, tags, type, anchorEl) {
+  var popoverEl = document.getElementById('deleteSongPopover');
+  if (!popoverEl) {
+    firetable.actions.deleteSong(songid);
+    return;
+  }
+
+  if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
+  $('.pvbar.deleting').removeClass('deleting');
+
+  var $pvbar = $('.pvbar[data-key="' + songid + '"]').first();
+  $pvbar.addClass('deleting');
+  firetable.deletingPvbar = $pvbar;
+
+  var $popover = $(popoverEl);
+  $popover.data('songid', songid);
+  $popover.data('tags', tags || '');
+  $popover.data('type', type);
+
+  popoverEl.style.visibility = 'hidden';
+  popoverEl.showPopover();
+  firetable.ui.positionPopover(anchorEl || $pvbar.find('.deletesong')[0], popoverEl, document.getElementById('deleteSongArrow'), 'bottom').then(function () {
+    var primaryBtn = popoverEl.querySelector('.deleteSongConfirm');
+    if (primaryBtn) primaryBtn.focus();
+  });
+};
+
+/**
+ * Show the shuffle confirmation popover.
+ * @param {HTMLElement} anchorEl - Element to anchor the popover to
+ */
+firetable.actions.shuffleQueuePrompt = function (anchorEl) {
+  var popoverEl = document.getElementById('shuffleQueuePopover');
+  if (!popoverEl) {
+    firetable.actions.shuffleQueue();
+    return;
+  }
+
+  if (popoverEl.matches(':popover-open')) {
+    popoverEl.hidePopover();
+    return;
+  }
+
+  $('#shuffleQueue').addClass('on');
+  popoverEl.style.visibility = 'hidden';
+  popoverEl.showPopover();
+  firetable.ui.positionPopover(anchorEl || document.getElementById('shuffleQueue'), popoverEl, document.getElementById('shuffleQueueArrow'), 'bottom').then(function () {
+    var primaryBtn = popoverEl.querySelector('.shuffleQueueConfirm');
+    if (primaryBtn) primaryBtn.focus();
+  });
+};
+
+/**
+ * Parse a queue track duration into seconds.
+ * Accepts numeric seconds/ms or strings like "3:45" and "1:02:03".
+ * @param {number|string} rawDuration - raw duration value from queue payload
+ * @returns {number} whole seconds (0 when unknown)
+ */
+firetable.actions.parseTrackDurationSeconds = function (rawDuration) {
+  if (rawDuration === null || typeof rawDuration === "undefined") return 0;
+
+  if (typeof rawDuration === "number" && isFinite(rawDuration)) {
+    if (rawDuration <= 0) return 0;
+    // Large values are likely milliseconds.
+    if (rawDuration > 10000) return Math.max(0, Math.round(rawDuration / 1000));
+    return Math.round(rawDuration);
+  }
+
+  var str = String(rawDuration).trim();
+  if (!str) return 0;
+
+  if (/^\d+$/.test(str)) {
+    return firetable.actions.parseTrackDurationSeconds(Number(str));
+  }
+
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
+    var bits = str.split(':').map(function (part) { return Number(part); });
+    if (bits.length === 2) return (bits[0] * 60) + bits[1];
+    return (bits[0] * 3600) + (bits[1] * 60) + bits[2];
+  }
+
+  return 0;
+};
+
+/**
+ * Format seconds into m:ss or h:mm:ss.
+ * @param {number} seconds - integer seconds
+ * @returns {string} formatted duration text
+ */
+firetable.actions.formatTrackDuration = function (seconds) {
+  var total = Math.max(0, Math.floor(Number(seconds) || 0));
+  var hrs = Math.floor(total / 3600);
+  var mins = Math.floor((total % 3600) / 60);
+  var secs = total % 60;
+
+  if (hrs > 0) {
+    return hrs + ":" + String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+  }
+  return mins + ":" + String(secs).padStart(2, "0");
+};
+
+
+/**
  * Filter visible queue items by a search string.
  * @param {string} val - Filter text (empty string shows all)
  */
 firetable.actions.filterQueue = function (val) {
-  if (val.length === 0) {
-    $("#mainqueue .pvbar").show();
-    return;
-  }
-  val = val.toLowerCase();
+  var textFilter = String(typeof val === "string" ? val : $("#queueFilter").val() || "").toLowerCase().trim();
+  var remixOnly = $("#queueFilterRemixOnly").is(":checked");
+  var brokenOnly = $("#queueFilterBrokenOnly").is(":checked");
+  var visibleCount = 0;
+
   $("#mainqueue .pvbar").each(function (p, q) {
-    var txt = $(q).find(".listwords").text();
-    if (txt.match(new RegExp(val, 'ig'))) {
-      $(q).show();
-    } else {
-      $(q).hide();
-    }
+    var $row = $(q);
+    var tags = String($row.attr("data-tags") || "");
+    var searchText = tags.toLowerCase();
+    var matchesText = !textFilter || searchText.indexOf(textFilter) !== -1;
+    var matchesRemix = !remixOnly || /\([^)]*\)/.test(tags);
+    var isBroken = String($row.attr("data-broken") || "0") === "1";
+    var matchesBroken = !brokenOnly || isBroken;
+
+    var show = matchesText && matchesRemix && matchesBroken;
+    $row.toggle(show);
+    if (show) visibleCount += 1;
   });
+
+  $("#mainqueue").toggleClass("overFiltered", visibleCount === 0 && $("#mainqueue .pvbar").length > 0);
 };
 
 // ─── Merge / Copy Lists ──────────────────────────────────────────────────────
@@ -157,32 +305,140 @@ firetable.actions.mergeLists = function (source, dest, sourceName) {
  * Called by the LinkGrabber when a URL is dragged onto the queue area.
  * @param {string} link - Full URL
  */
-firetable.actions.queueFromLink = function (link) {
-  if (link.match(/youtube.com\/watch/)) {
-    firetable.debug && console.log("yt");
-    var therealid = getQueryStringValue(link, "v");
-    if (therealid) {
-      youtubeAPIReady(function () {
-        gapi.client.youtube.videos.list({
-          id: therealid,
-          part: 'snippet',
-          maxResults: 1
-        }).execute(function (response) {
-          firetable.debug && console.log('queue from link:', response);
-          if (response.result && response.result.items && response.result.items.length) {
-            var item = response.result.items[0];
-            var parsed = firetable.utilities.parseArtistTitle(
-              item.snippet.title,
-              item.snippet.channelTitle.replace(" - Topic", "")
-            );
-            firetable.actions.queueTrack(item.id, parsed.artist + " - " + parsed.title, MEDIA_YOUTUBE);
-          }
-        });
-      });
+firetable.actions.extractYoutubeVideoId = function (link) {
+  var url = String(link || "").trim();
+  if (!url) return "";
+
+  try {
+    var parsed = new URL(url, window.location.href);
+    var host = String(parsed.hostname || "").toLowerCase();
+
+    if (host.indexOf("youtu.be") !== -1) {
+      return parsed.pathname.replace(/^\/+/, "").split("/")[0];
     }
-  } else if (link.match(/soundcloud.com/)) {
+
+    if (host.indexOf("youtube.com") !== -1 || host.indexOf("youtube-nocookie.com") !== -1) {
+      var vParam = parsed.searchParams.get("v");
+      if (vParam) return vParam;
+
+      var parts = parsed.pathname.split("/").filter(Boolean);
+      if (parts[0] === "shorts" && parts[1]) return parts[1];
+      if (parts[0] === "embed" && parts[1]) return parts[1];
+      if (parts[0] === "watch" && parts[1]) return parts[1];
+    }
+  } catch (err) {
+    firetable.debug && console.log("youtube id parse failed:", err);
+  }
+
+  var fallback = url.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([A-Za-z0-9_-]{11})/i);
+  return fallback ? fallback[1] : "";
+};
+
+/**
+ * Normalize dropped URLs from browser drag payloads.
+ * Needed because some drags omit protocol (e.g. "www.youtube.com/..." or "//...").
+ */
+firetable.actions.normalizeQueueLink = function (link) {
+  var out = String(link || "").trim();
+  out = out.replace(/^["'<>\s]+|["'<>\s]+$/g, "");
+  if (/^\/\//.test(out)) out = "https:" + out;
+  if (!/^https?:\/\//i.test(out) && /^(www\.|(?:m\.)?youtube\.com\/|youtu\.be\/|soundcloud\.com\/)/i.test(out)) {
+    out = "https://" + out;
+  }
+  return out;
+};
+
+/**
+ * Queue YouTube by id with layered metadata fallbacks.
+ * Why: YouTube API/gapi can be unavailable or hang in some sessions; oEmbed keeps
+ * artist/title labels working, and final ID fallback avoids silent no-op.
+ */
+firetable.actions.queueYoutubeWithFallback = function (youtubeId) {
+  var settled = false;
+
+  var queueFromTitle = function (id, rawTitle, rawArtist) {
+    var artist = String(rawArtist || "").replace(" - Topic", "");
+    var parsed = firetable.utilities.parseArtistTitle(rawTitle || ("YouTube - " + id), artist);
+    firetable.actions.queueTrack(id, parsed.artist + " - " + parsed.title, MEDIA_YOUTUBE);
+  };
+
+  var queueFallback = function (reason) {
+    if (settled) return;
+    settled = true;
+    firetable.debug && console.log("queueFromLink yt fallback:", reason);
+    firetable.actions.queueTrack(youtubeId, "YouTube - " + youtubeId, MEDIA_YOUTUBE);
+  };
+
+  var queueFromOEmbed = function (reason) {
+    $.ajax({
+      url: "https://www.youtube.com/oembed",
+      type: "GET",
+      dataType: "json",
+      data: { url: "https://www.youtube.com/watch?v=" + youtubeId, format: "json" },
+      timeout: 5000,
+      success: function (res) {
+        if (settled) return;
+        settled = true;
+        queueFromTitle(youtubeId, res && res.title, res && res.author_name);
+      },
+      error: function () {
+        queueFallback(reason + " + oembed error");
+      }
+    });
+  };
+
+  var queueFromResponse = function (response) {
+    if (settled) return;
+    var items = response && (response.items || (response.result && response.result.items));
+    if (items && items.length) {
+      settled = true;
+      var item = items[0];
+      queueFromTitle(item.id || youtubeId, item.snippet.title, item.snippet.channelTitle);
+      return;
+    }
+    queueFromOEmbed("no items");
+  };
+
+  // If YouTube API hangs, still queue via oEmbed/title fallback.
+  setTimeout(function () {
+    queueFromOEmbed("metadata timeout");
+  }, 4000);
+
+  if (typeof ytAPI === "function") {
+    ytAPI("videos", { id: youtubeId, part: "snippet", maxResults: 1 }, queueFromResponse);
+    return;
+  }
+
+  if (typeof youtubeAPIReady === "function") {
+    youtubeAPIReady(function () {
+      try {
+        gapi.client.youtube.videos.list({
+          id: youtubeId,
+          part: "snippet",
+          maxResults: 1
+        }).execute(queueFromResponse);
+      } catch (err) {
+        firetable.debug && console.log("queueFromLink yt gapi error:", err);
+        queueFromOEmbed("gapi error");
+      }
+    });
+    return;
+  }
+
+  queueFromOEmbed("no youtube api available");
+};
+
+firetable.actions.queueFromLink = function (link) {
+  var incomingLink = firetable.actions.normalizeQueueLink(link);
+  if (!incomingLink) return;
+
+  var youtubeId = firetable.actions.extractYoutubeVideoId(incomingLink);
+  if (youtubeId) {
+    firetable.debug && console.log("yt");
+    firetable.actions.queueYoutubeWithFallback(youtubeId);
+  } else if (incomingLink.match(/soundcloud.com/i)) {
     firetable.debug && console.log("sc");
-    firetable.actions.resolveSCLink(link, function (tracks) {
+    firetable.actions.resolveSCLink(incomingLink, function (tracks) {
       if (tracks) {
         var parsed = firetable.utilities.parseArtistTitle(tracks.title, tracks.user.username);
         firetable.actions.queueTrack(tracks.id, parsed.artist + " - " + parsed.title, MEDIA_SOUNDCLOUD);
@@ -417,11 +673,22 @@ firetable.ui.setupPlaylistEvents = function () {
       var thisone = okdata[key];
       var $newli = $playlistItemTemplate.clone();
       var psign = (key === firetable.preview) ? "&#xE034;" : "&#xE037;";
+      var trackName = String(thisone.name || "Unknown");
+      var safeTrackName = firetable.utilities.htmlEscape(trackName);
+      var trackSeconds = firetable.actions.parseTrackDurationSeconds(
+        thisone.duration || thisone.length || thisone.dur || thisone.time || thisone.seconds || thisone.msecs || thisone.ms || 0
+      );
+      var durationHtml = trackSeconds > 0
+        ? '<span class="trackDuration">' + firetable.actions.formatTrackDuration(trackSeconds) + '</span>'
+        : '';
 
       $newli.attr('id', "pvbar" + key)
             .attr("data-key", key)
             .attr("data-type", thisone.type)
-            .attr("data-cid", thisone.cid);
+        .attr("data-cid", thisone.cid)
+        .attr("data-tags", trackName)
+        .attr("data-broken", thisone.flagged ? "1" : "0")
+        .attr("data-track-seconds", trackSeconds || "");
 
       // Album art thumbnail
       var artUrl = (thisone.type == MEDIA_YOUTUBE)
@@ -439,7 +706,7 @@ firetable.ui.setupPlaylistEvents = function () {
       }).html(psign);
 
       // Track title
-      $newli.find('.listwords').html(thisone.name);
+      $newli.find('.listwords').html(safeTrackName + durationHtml);
 
       // Bump to top
       $newli.find('.bumpsongs').on('click', function () {
@@ -483,7 +750,18 @@ firetable.ui.setupPlaylistEvents = function () {
 
       // Delete button
       $newli.find('.deletesong').on('click', function () {
-        firetable.actions.deleteSong($(this).closest('.pvbar').attr('data-key'));
+        var popoverEl = document.getElementById('deleteSongPopover');
+        var $pvbar = $(this).closest('.pvbar');
+        if (popoverEl && popoverEl.matches(':popover-open') && firetable.deletingPvbar && firetable.deletingPvbar.is($pvbar)) {
+          popoverEl.hidePopover();
+          return;
+        }
+        firetable.actions.deleteSongPrompt(
+          $pvbar.attr('data-key'),
+          $pvbar.attr('data-tags') || $pvbar.find('.listwords').text(),
+          $pvbar.attr('data-type'),
+          this
+        );
       });
 
       // Edit tags button
@@ -495,7 +773,7 @@ firetable.ui.setupPlaylistEvents = function () {
         } else {
           firetable.actions.editTagsPrompt(
             $pvbar.attr('data-key'),
-            $pvbar.find('.listwords').text(),
+            $pvbar.attr('data-tags') || $pvbar.find('.listwords').text(),
             this
           );
         }
@@ -514,7 +792,7 @@ firetable.ui.setupPlaylistEvents = function () {
         var $pvbar = $btn.closest('.pvbar');
         var btnCid = $pvbar.attr('data-cid');
         var btnType = $pvbar.attr('data-type');
-        var btnTitle = firetable.utilities.htmlEscape($pvbar.find('.listwords').text());
+        var btnTitle = firetable.utilities.htmlEscape($pvbar.attr('data-tags') || $pvbar.find('.listwords').text());
 
         if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$("#stealContain").is(':hidden')) {
           $btn.removeClass('on');
@@ -550,15 +828,25 @@ firetable.ui.setupPlaylistEvents = function () {
 
       $('#mainqueue').append($newli);
     }
+
+    firetable.actions.filterQueue($("#queueFilter").val() || "");
   });
 
   // ── Queue filter input ──
   $("#queueFilter").on("change paste keyup", function () {
     firetable.actions.filterQueue($(this).val());
   });
+  $("#queueFilterRemixOnly").on("change", function () {
+    firetable.actions.filterQueue($("#queueFilter").val() || "");
+  });
+  $("#queueFilterBrokenOnly").on("change", function () {
+    firetable.actions.filterQueue($("#queueFilter").val() || "");
+  });
 
   // ── Shuffle button ──
-  $("#shuffleQueue").bind("click", firetable.actions.shuffleQueue);
+  $("#shuffleQueue").off('click.shuffleQueueConfirm').on('click.shuffleQueueConfirm', function () {
+    firetable.actions.shuffleQueuePrompt(this);
+  });
 
   // ── Add-to-queue toggle ──
   $("#addToQueueBttn").bind("click", function () {
@@ -631,6 +919,14 @@ firetable.ui.setupPlaylistEvents = function () {
   $("#importDubGo").bind("click", firetable.actions.dubtrackImport);
 
   // ── Merge lists UI ──
+  function closeMergeContain() {
+    $("#mergeSetup").show();
+    $("#mergeCompleted").hide();
+    $("#mergeHappening").hide();
+    $("#mergeContain").hide();
+    $("#mergeLists").removeClass('on');
+  }
+
   $("#mergeLists").bind("click", function () {
     var $this = $(this);
     var isHidden = $("#mergeContain").is(":hidden");
@@ -652,8 +948,7 @@ firetable.ui.setupPlaylistEvents = function () {
         $this.addClass('on');
       });
     } else {
-      $("#mergeContain").hide();
-      $this.removeClass('on');
+      closeMergeContain();
     }
   });
   $("#startMerge").bind("click", function () {
@@ -666,11 +961,23 @@ firetable.ui.setupPlaylistEvents = function () {
     firetable.actions.mergeLists(source, dest, sourceName);
   });
   $("#mergeOK").bind("click", function () {
-    $("#mergeSetup").show();
-    $("#mergeCompleted").hide();
-    $("#mergeHappening").hide();
-    $("#mergeContain").hide();
+    closeMergeContain();
   });
+
+  // Dismiss merge popover when clicking outside of it.
+  $(document)
+    .off('click.mergeContainDismiss')
+    .on('click.mergeContainDismiss', function (e) {
+      if ($("#mergeContain").is(':hidden')) return;
+      if ($(e.target).closest('#mergeContain, #mergeLists').length) return;
+      closeMergeContain();
+    })
+    .off('keydown.mergeContainDismiss')
+    .on('keydown.mergeContainDismiss', function (e) {
+      if (e.key === 'Escape' && !$("#mergeContain").is(':hidden')) {
+        closeMergeContain();
+      }
+    });
 
   // ── Tag editing (Enter in .tagMachine) ──
   $(document).on("keyup", ".tagMachine", function (e) {
@@ -698,6 +1005,80 @@ firetable.ui.setupPlaylistEvents = function () {
     if (e.newState === 'closed' && firetable.editingPvbar) {
       firetable.editingPvbar.removeClass('editing');
       firetable.editingPvbar = null;
+    }
+  });
+
+  // ── Delete confirmation popover actions ──
+  $(document)
+    .off('click.deleteSongConfirm')
+    .on('click.deleteSongConfirm', '#deleteSongPopover .deleteSongConfirm', function () {
+      var popoverEl = document.getElementById('deleteSongPopover');
+      var $popover = $(popoverEl);
+      firetable.actions.deleteSong($popover.data('songid'));
+      popoverEl.hidePopover();
+    })
+    .off('click.deleteSongConfirmSearch')
+    .on('click.deleteSongConfirmSearch', '#deleteSongPopover .deleteSongAndSearch', function () {
+      var popoverEl = document.getElementById('deleteSongPopover');
+      var $popover = $(popoverEl);
+      firetable.actions.deleteSongAndSearch(
+        $popover.data('songid'),
+        $popover.data('tags'),
+        $popover.data('type')
+      );
+      popoverEl.hidePopover();
+    })
+    .off('click.deleteSongConfirmCancel')
+    .on('click.deleteSongConfirmCancel', '#deleteSongPopover .deleteSongCancel', function () {
+      var popoverEl = document.getElementById('deleteSongPopover');
+      popoverEl.hidePopover();
+    })
+    .off('keydown.deleteSongConfirmKeys')
+    .on('keydown.deleteSongConfirmKeys', '#deleteSongPopover', function (e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.hidePopover();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        $(this).find('.deleteSongConfirm').trigger('click');
+      }
+    })
+    .off('click.shuffleQueueConfirm')
+    .on('click.shuffleQueueConfirm', '#shuffleQueuePopover .shuffleQueueConfirm', function () {
+      var popoverEl = document.getElementById('shuffleQueuePopover');
+      firetable.actions.shuffleQueue();
+      popoverEl.hidePopover();
+    })
+    .off('click.shuffleQueueCancel')
+    .on('click.shuffleQueueCancel', '#shuffleQueuePopover .shuffleQueueCancel', function () {
+      var popoverEl = document.getElementById('shuffleQueuePopover');
+      popoverEl.hidePopover();
+    })
+    .off('keydown.shuffleQueueKeys')
+    .on('keydown.shuffleQueueKeys', '#shuffleQueuePopover', function (e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.hidePopover();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        $(this).find('.shuffleQueueConfirm').trigger('click');
+      }
+    });
+
+  document.getElementById('deleteSongPopover').addEventListener('toggle', function (e) {
+    if (e.newState === 'closed' && firetable.deletingPvbar) {
+      firetable.deletingPvbar.removeClass('deleting');
+      firetable.deletingPvbar = null;
+    }
+  });
+
+  document.getElementById('shuffleQueuePopover').addEventListener('toggle', function (e) {
+    if (e.newState === 'closed') {
+      $('#shuffleQueue').removeClass('on');
     }
   });
 };

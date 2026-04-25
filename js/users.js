@@ -364,6 +364,21 @@ function getUserDestination(data) {
 }
 
 /**
+ * Persist minimal role metadata so ghost deck users keep the correct icon.
+ * This is needed because disconnected deck users disappear from ftapi.users.
+ */
+function rememberGhostRole(data) {
+  if (!data || !data.userid) return;
+  firetable.ghostRoleCache = firetable.ghostRoleCache || {};
+  firetable.ghostRoleCache[data.userid] = {
+    mod: !!data.mod,
+    supermod: !!data.supermod,
+    hostbot: !!data.hostbot,
+    avatarStyle: data.avatarStyle || null
+  };
+}
+
+/**
  * Set up all ftapi user-related event handlers.
  * Called once from firetable.ui.init().
  */
@@ -393,7 +408,15 @@ firetable.ui.syncGhostUsers = function () {
     var dj = firetable.tableData[k];
     if (ftapi.users && ftapi.users[dj.id]) continue; // live user, not a ghost
     if ($("#user" + dj.id).length) continue; // already in list (ghost or live)
-    var ghostData = { userid: dj.id, username: dj.name };
+    var roleCache = (firetable.ghostRoleCache && firetable.ghostRoleCache[dj.id]) || {};
+    var ghostData = {
+      userid: dj.id,
+      username: dj.name,
+      mod: !!roleCache.mod,
+      supermod: !!roleCache.supermod,
+      hostbot: !!roleCache.hostbot,
+      avatarStyle: roleCache.avatarStyle || null
+    };
     var $el = $("<div></div>")
       .addClass("prson ghost")
       .attr("id", "user" + dj.id)
@@ -409,6 +432,7 @@ firetable.ui.setupUserEvents = function () {
 
   ftapi.events.on("userJoined", function (data) {
     console.log(data);
+    rememberGhostRole(data);
     // Remove any existing entry (ghost or duplicate) before inserting
     $("#user" + data.userid).remove();
     var isIdle = "";
@@ -436,6 +460,7 @@ firetable.ui.setupUserEvents = function () {
 
   ftapi.events.on("userChanged", function (data) {
     console.log("CHANGE", data);
+    rememberGhostRole(data);
     $("#user" + data.userid).html(buildUserHTML(data));
   });
 
@@ -457,6 +482,7 @@ firetable.ui.setupUserEvents = function () {
         if (!okdata.hasOwnProperty(uid)) continue;
         var data = okdata[uid];
         data.userid = uid;
+        rememberGhostRole(data);
         if (ftapi.blockedUsers && ftapi.blockedUsers[uid]) data.blocked = true;
         if (waitlistIds[uid]) continue;
         var isIdle = (data.idle && data.idle.isIdle && !data.hostbot) ? "idle" : "";

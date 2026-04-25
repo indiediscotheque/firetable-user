@@ -5,7 +5,7 @@
  * played it, album art, and a unique card number. They can be shared in chat
  * or gifted to the current DJ.
  *
- * Special edition cards (id8, id9) have custom artwork for anniversary events.
+ * Special card styles are selected via data.special (classic, id8, id9, v2).
  */
 
 firetable.actions = firetable.actions || {};
@@ -258,7 +258,7 @@ firetable.actions.showCard = function (cardid, chatid) {
  * @param {number} data.temp - "Max operating temperature" gag value
  * @param {number} data.date - Timestamp when the card was created
  * @param {string} [data.set] - Robohash set override
- * @param {string} [data.special] - Special edition identifier ("id8", "id9")
+ * @param {string|boolean} [data.special] - Card style key: false/empty (classic), "id8", "id9", or "v2"
  * @param {string} chatid - Suffix for the canvas element ID ("cardMaker" + chatid)
  */
 firetable.actions.displayCard = function (data, chatid) {
@@ -288,10 +288,172 @@ firetable.actions.displayCard = function (data, chatid) {
   var accentColor = (data.colors && data.colors.color) || firetable.orange;
   var accentText = (data.colors && data.colors.txt) || "#fff";
   var accentRgb = firetable.utilities.hexToRGB(accentColor) || { r: 244, g: 129, b: 11 };
+  var specialName = (data.special === false || data.special === null || typeof data.special === "undefined")
+    ? ""
+    : String(data.special).toLowerCase().trim();
+  var isV2Theme = specialName === "v2";
+  var anniversary = specialName === "id8" ? "id8" : (specialName === "id9" ? "id9" : "");
   var heroX = 16;
-  var heroY = 44;
+  var heroY = 16;
   var heroW = 193;
   var heroH = 150;
+
+  // ── Classic card theme (default, id8, id9) ─────────────────────────────
+  if (!isV2Theme) {
+    // Base layers
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, 225, 300);
+
+    ctx.fillStyle = defaultScheme ? "#fff" : accentColor;
+    ctx.fillRect(1, 30, 223, 175);
+
+    var legGrd = ctx.createLinearGradient(0, 0, 0, 175);
+    legGrd.addColorStop(0, "rgba(0,0,0,0.75)");
+    legGrd.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = legGrd;
+    ctx.fillRect(1, 30, 223, 175);
+
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(1, 205, 223, 10);
+
+    ctx.fillStyle = "#151515";
+    ctx.fillRect(1, 216, 223, 75);
+
+    // DJ name
+    ctx.fillStyle = "#eee";
+    ctx.font = "700 11px Helvetica, Arial, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(data.djname, 10, 20);
+
+    // Footer
+    ctx.font = "400 8px Helvetica, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Printed " + firetable.utilities.format_date(data.date) + " | " + ftconfigs.roomNameShort, 112.5, 299);
+
+    // Title + artist
+    ctx.fillStyle = "#eee";
+    ctx.font = "700 10px Helvetica, Arial, sans-serif";
+    ctx.textAlign = "left";
+    var legacyLinez = firetable.utilities.wrapText(ctx, data.title, 66, 240, 160, 15);
+    ctx.font = "400 8px Helvetica, Arial, sans-serif";
+    firetable.utilities.wrapText(ctx, data.artist, 66, 253 + (15 * legacyLinez), 160, 15);
+
+    // Card info strip
+    ctx.fillStyle = accentText;
+    ctx.font = "400 9px Helvetica, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Card No. " + data.cardnum + " | DJ Card | Max Operating Temp " + data.temp + "\u00b0", 112.5, 214);
+
+    // Num badge
+    ctx.beginPath();
+    ctx.arc(205, 15, 12, 0, 2 * Math.PI, false);
+    ctx.fillStyle = accentColor;
+    ctx.fill();
+    ctx.fillStyle = accentText;
+    ctx.font = "700 15px Helvetica, Arial, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(String(data.num || ""), 200.5, 20);
+
+    // Standard legacy image loader: avatar then album art
+    var legacyDoImages = function () {
+      var legAvatar = new Image();
+      legAvatar.onload = function () {
+        if (!ctx) return;
+        ctx.drawImage(this, 20, 30, 175, 175);
+        if (data.image) {
+          var legAlbum = new Image();
+          legAlbum.onload = function () {
+            if (!ctx) return;
+            var legH = data.image.match(/ytimg\.com/i) ? 28 : 50;
+            ctx.drawImage(this, 10, 230, 50, legH);
+            ctx = null;
+          };
+          legAlbum.onerror = function () { ctx = null; };
+          legAlbum.src = data.image;
+        } else {
+          ctx = null;
+        }
+      };
+      legAvatar.src = firetable.utilities.avatarURL(data.djid, data.djname, "175x175");
+    };
+
+    // Legacy special edition overlays
+    if (anniversary === "id8") {
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(1, 30, 223, 10);
+      ctx.fillStyle = accentText;
+      ctx.font = "400 10px Helvetica, Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Celebrating 8 Years of Indie Discotheque", 112.5, 38);
+
+      var legCake = new Image();
+      legCake.onload = function () {
+        var c = canvas.getContext('2d');
+        if (!c) return;
+        c.drawImage(this, 10, 50, 35, 35);
+        var legEight = new Image();
+        legEight.onload = function () {
+          var c2 = canvas.getContext('2d');
+          if (!c2) return;
+          c2.drawImage(this, 180, 50, 35, 35);
+          legacyDoImages();
+        };
+        legEight.src = 'img/8.png';
+      };
+      legCake.src = 'img/cake.png';
+
+    } else if (anniversary === "id9") {
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(1, 30, 223, 10);
+      ctx.fillStyle = accentText;
+      ctx.font = "400 10px Helvetica, Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Celebrating 9 Years of Indie Discotheque", 112.5, 38);
+
+      var legArnold = new Image();
+      legArnold.onload = function () {
+        var c = canvas.getContext('2d');
+        if (!c) return;
+        c.drawImage(this, 5, 50, 45, 45);
+        var legRobot = new Image();
+        legRobot.onload = function () {
+          var c2 = canvas.getContext('2d');
+          if (!c2) return;
+          c2.save();
+          c2.translate(75 * 0.5, 75 * 0.5);
+          c2.rotate(0.959931);
+          c2.translate(-75 * 0.5, -75 * 0.5);
+          c2.drawImage(this, 125, -81, 75, 75);
+          c2.restore();
+          var legId9 = new Image();
+          legId9.onload = function () {
+            var c3 = canvas.getContext('2d');
+            if (!c3) return;
+            c3.drawImage(this, 25, 40, 170, 170);
+            var legAlbum2 = new Image();
+            legAlbum2.onload = function () {
+              var c4 = canvas.getContext('2d');
+              if (!c4) return;
+              var legH2 = data.image.match(/ytimg\.com/i) ? 28 : 50;
+              c4.drawImage(this, 10, 230, 50, legH2);
+              ctx = null;
+            };
+            legAlbum2.onerror = function () { ctx = null; };
+            legAlbum2.src = data.image;
+          };
+          legId9.src = 'img/id9.png';
+        };
+        legRobot.src = firetable.utilities.avatarURL(data.djid, data.djname, "110x110");
+      };
+      legArnold.src = 'img/arnold.png';
+
+    } else {
+      legacyDoImages();
+    }
+
+    return;
+  }
+  // ── End legacy card theme ─────────────────────────────────────────────
 
   function roundedRect(x, y, width, height, radius) {
     var r = Math.min(radius, width / 2, height / 2);
@@ -338,14 +500,15 @@ firetable.actions.displayCard = function (data, chatid) {
     var logo = new Image();
 
     logo.onload = function () {
-      if (!ctx) return;
+      var c = canvas.getContext('2d');
+      if (!c) return;
       var logoRatio = logo.naturalWidth / logo.naturalHeight;
       var drawH = slotH - (padY * 2);
       var drawW = drawH * logoRatio;
       var drawX = slotX + padX;
       var drawY = slotY + padY;
 
-      ctx.drawImage(logo, drawX, drawY, drawW, drawH);
+      c.drawImage(logo, drawX, drawY, drawW, drawH);
     };
     logo.src = 'img/idlogo2.png';
   }
@@ -382,21 +545,13 @@ firetable.actions.displayCard = function (data, chatid) {
     strokeRoundedRect(8, 8, 209, 284, 20, "rgba(255,255,255,0.08)", 1);
     strokeRoundedRect(13, 13, 199, 274, 16, "rgba(" + accentRgb.r + "," + accentRgb.g + "," + accentRgb.b + ",0.45)", 1.25);
 
-    drawTopLogo();
-
-    fillRoundedRect(153, 21, 49, 16, 10, "transparent");
-    ctx.fillStyle = "white";
-    ctx.font = "600 14px Inter, Helvetica, Arial, sans-serif";
-    ctx.textAlign = "right";
-    ctx.fillText("#" + data.cardnum, 198, 34);
-
     fillRoundedRect(heroX, heroY, heroW, heroH, 18, "#0b0d12");
     strokeRoundedRect(heroX, heroY, heroW, heroH, 18, "rgba(255,255,255,0.12)", 1);
 
     var heroOverlay = ctx.createLinearGradient(heroX, heroY, heroX, heroY + heroH);
-    heroOverlay.addColorStop(0, "rgba(0,0,0,0.08)");
-    heroOverlay.addColorStop(0.72, "rgba(4,7,14,0.08)");
-    heroOverlay.addColorStop(1, "rgba(4,7,14,0.82)");
+    heroOverlay.addColorStop(0, "rgba(0,0,0,0.18)");
+    heroOverlay.addColorStop(0.72, "rgba(0,0,0,0.01)");
+    heroOverlay.addColorStop(1, "rgba(0,0,0,0.82)");
     fillRoundedRect(heroX, heroY, heroW, heroH, 18, heroOverlay);
 
     fillRoundedRect(16, 199, 193, 60, 16, "#11151f");
@@ -404,17 +559,17 @@ firetable.actions.displayCard = function (data, chatid) {
 
     ctx.fillStyle = accentColor;
     ctx.beginPath();
-    ctx.moveTo(16, 179);
-    ctx.lineTo(194, 179);
-    ctx.lineTo(178, 215);
-    ctx.lineTo(16, 215);
+    ctx.moveTo(16, 155);
+    ctx.lineTo(194, 155);
+    ctx.lineTo(178, 190);
+    ctx.lineTo(16, 190);
     ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = accentText;
     ctx.font = "700 18px Inter, Helvetica, Arial, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(data.djname, 24, 210);
+    ctx.fillText(data.djname, 24, 185);
 
     ctx.fillStyle = "rgba(255,255,255,0.56)";
     ctx.font = "600 12px Inter, Helvetica, Arial, sans-serif";
@@ -427,10 +582,10 @@ firetable.actions.displayCard = function (data, chatid) {
     ctx.fillText(data.temp + "°", 203, 278);
     ctx.textAlign = "left";    ctx.fillStyle = "rgba(255,255,255,0.92)";
     ctx.font = "700 13px Inter, Helvetica, Arial, sans-serif";
-    var linez = firetable.utilities.wrapText(ctx, data.title, 24, 232, 118, 14);
+    var linez = firetable.utilities.wrapText(ctx, data.title, 24, 207, 118, 14);
     ctx.fillStyle = "rgba(255,255,255,0.62)";
     ctx.font = "400 9px Open Sans, Helvetica, Arial, sans-serif";
-    firetable.utilities.wrapText(ctx, data.artist, 24, 244 + (linez * 14), 118, 11);
+    firetable.utilities.wrapText(ctx, data.artist, 24, 220 + (linez * 14), 118, 11);
   }
 
   function drawHeroImage(image, backgroundImage, onDone) {
@@ -530,7 +685,7 @@ firetable.actions.displayCard = function (data, chatid) {
   }
 
   function drawSpecialOverlay() {
-    if (data.special === "id8") {
+    if (anniversary === "id8") {
       fillRoundedRect(28, 52, 169, 18, 9, "rgba(0,0,0,0.52)");
       ctx.fillStyle = "#fff5d6";
       ctx.font = "700 8px Inter, Helvetica, Arial, sans-serif";
@@ -551,7 +706,7 @@ firetable.actions.displayCard = function (data, chatid) {
         eight.src = 'img/8.png';
       };
       cake.src = 'img/cake.png';
-    } else if (data.special === "id9") {
+    } else if (anniversary === "id9") {
       fillRoundedRect(28, 52, 169, 18, 9, "rgba(0,0,0,0.52)");
       ctx.fillStyle = "#e9f7ff";
       ctx.font = "700 8px Inter, Helvetica, Arial, sans-serif";
@@ -647,6 +802,11 @@ firetable.actions.displayCard = function (data, chatid) {
         ctx.fillStyle = accentColor;
         ctx.font = "700 24px Inter, Helvetica, Arial, sans-serif";
         ctx.fillText(String(data.num || "").slice(0, 2), 180, 185);
+        drawTopLogo();
+        ctx.fillStyle = "white";
+        ctx.font = "600 14px Inter, Helvetica, Arial, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText("#" + data.cardnum, 198, 34);
         drawSpecialOverlay();
         finishIfDone();
       });
@@ -670,15 +830,6 @@ firetable.actions.displayCard = function (data, chatid) {
     });
   };
 
-  // ── Special Edition Cards ─────────────────────────────────────────────
-  if (data.special === "id8") {
-    doImages();
-
-  } else if (data.special === "id9") {
-    doImages();
-
-  } else {
-    // Standard card
-    doImages();
-  }
+  // All modern-theme variants use the same image pipeline.
+  doImages();
 };

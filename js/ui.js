@@ -103,70 +103,245 @@ firetable.ui.usertab2 = function () {
 // ─── LinkGrabber (Drag-and-Drop Track Detection) ─────────────────────────────
 
 /**
- * Intercepts drag-and-drop events over the queue panel.
- * Creates a transparent <textarea> overlay to capture dropped URLs,
- * then passes them to queueFromLink().
+ * Handles URL drops onto the playlist panel and forwards supported links
+ * (YouTube/SoundCloud) to queueFromLink(). Listeners are attached directly
+ * to #queuebox so dragover preventDefault fires for the whole panel regardless
+ * of which child element the cursor is over.
  */
 firetable.ui.LinkGrabber = {
-  textarea: null,
+  _el: null,
+  _capture: true,
+  // External-window drags can report an unreliable drop target/point; armed
+  // remembers that the user was recently over queuebox so we still accept drop.
+  _armed: false,
 
-  /** Create the transparent textarea overlay if inside #queuelist */
-  attach_ta: function (event) {
-    if (!$.contains(document.getElementById("queuelist"), event.target)) return;
-    if (firetable.ui.LinkGrabber.textarea != null) return;
-
-    var textarea = firetable.ui.LinkGrabber.textarea = document.createElement("textarea");
-    textarea.setAttribute("style",
-      "position: fixed; width: 100%; margin: 0; top: 0; bottom: 0; right: 0; left: 0; z-index: 99999999"
-    );
-    textarea.style.opacity = "0.000000000000000001";
-    document.getElementsByTagName("body")[0].appendChild(textarea);
-    textarea.oninput = firetable.ui.LinkGrabber.evt_got_link;
+  setReady: function (active) {
+    var el = firetable.ui.LinkGrabber._el;
+    if (!el) return;
+    firetable.ui.LinkGrabber._armed = !!active;
+    el.classList.toggle("drop-ready", !!active);
   },
 
-  /** Remove the textarea overlay */
-  detach_ta: function () {
-    if (firetable.ui.LinkGrabber.textarea == null) return;
-    var textarea = firetable.ui.LinkGrabber.textarea;
-    textarea.parentNode.removeChild(textarea);
-    firetable.ui.LinkGrabber.textarea = null;
-  },
+  normalizeCandidateUrl: function (link) {
+    var out = String(link || "").trim();
+    out = out.replace(/^["'<>\s]+|["'<>\s]+$/g, "");
+    if (!out) return "";
 
-  /** Called on dragover/dragenter — creates the overlay */
-  evt_drag_over: function (event) {
-    firetable.ui.LinkGrabber.attach_ta(event);
-  },
-
-  /** Called when a link is dropped into the textarea */
-  evt_got_link: function () {
-    var link = firetable.ui.LinkGrabber.textarea.value;
-    firetable.debug && console.log("NEW LINK RECEIVED VIA THE DRAGON'S DROP. " + link);
-    firetable.actions.queueFromLink(link);
-    firetable.ui.LinkGrabber.detach_ta();
-  },
-
-  /** Called on mouseup/dragleave — removes overlay if target matches */
-  evt_drag_out: function (e) {
-    if (e.target == firetable.ui.LinkGrabber.textarea) {
-      firetable.ui.LinkGrabber.detach_ta();
+    if (/^\/\//.test(out)) return "https:" + out;
+    if (/^https?:\/\//i.test(out)) return out;
+    if (/^(www\.|(?:m\.)?youtube\.com\/|youtu\.be\/|soundcloud\.com\/)/i.test(out)) {
+      return "https://" + out;
     }
+    return out;
   },
 
-  /** Attach global drag-and-drop listeners */
+  extractFromRawText: function (raw) {
+    var found = [], seen = {};
+    (raw || []).forEach(function (text) {
+      var matches = String(text || "").match(/(?:https?:\/\/|www\.|(?:m\.)?youtube\.com\/|youtu\.be\/|soundcloud\.com\/)[^\s"'<>]+/gi) || [];
+      matches.forEach(function (link) {
+        link = link.replace(/[),.;\]]+$/g, "").trim();
+        link = firetable.ui.LinkGrabber.normalizeCandidateUrl(link);
+        if (link && !seen[link]) { seen[link] = true; found.push(link); }
+      });
+    });
+    return found;
+  },
+
+  extractLinks: function (dt) {
+    if (!dt) return [];
+    var raw = [];
+    var dataByType = function (type) {
+      try {
+        return dt.getData(type) || "";
+      } catch (err) {
+        return "";
+      }
+    };
+
+    var uriList = dataByType("text/uri-list");
+    var plain   = dataByType("text/plain");
+    var html    = dataByType("text/html");
+    var urlType = dataByType("URL");
+    var mozUrl  = dataByType("text/x-moz-url");
+    var pubUrl  = dataByType("public.url");
+
+    if (uriList) {
+      uriList.split(/\r?\n/).forEach(function (row) {
+        row = row.trim();
+        if (row && row.charAt(0) !== "#") raw.push(row);
+      });
+    }
+    if (plain)   raw.push(plain);
+    if (html)    raw.push(html);
+    if (urlType) raw.push(urlType);
+    if (mozUrl)  raw.push(mozUrl);
+    if (pubUrl)  raw.push(pubUrl);
+
+    // Try all advertised types because browsers differ in drag payload keys.
+    if (dt.types && dt.types.length) {
+      Array.prototype.forEach.call(dt.types, function (type) {
+        if (!type) return;
+        var lower = String(type).toLowerCase();
+        if (lower.indexOf("url") === -1 && lower.indexOf("text") === -1) return;
+        var val = dataByType(type);
+        if (val) raw.push(val);
+      });
+    }
+
+    return firetable.ui.LinkGrabber.extractFromRawText(raw);
+  },
+
+  extractLinksFromItems: function (dt, done) {
+    // Some browsers expose dropped text only through dataTransfer.items.
+    var items = dt && dt.items;
+    if (!items || !items.length) return done([]);
+
+    var pending = 0;
+    var raw = [];
+    var finalize = function () {
+      if (pending > 0) return;
+      done(firetable.ui.LinkGrabber.extractFromRawText(raw));
+    };
+
+    Array.prototype.forEach.call(items, function (item) {
+      if (!item || item.kind !== "string" || typeof item.getAsString !== "function") return;
+      pending += 1;
+      item.getAsString(function (value) {
+        if (value) raw.push(value);
+        pending -= 1;
+        finalize();
+      });
+    });
+
+    finalize();
+  },
+
+  queueLinks: function (links) {
+    links.forEach(function (link) {
+      firetable.actions.queueFromLink(link);
+    });
+  },
+
+  isEventInQueueBox: function (event) {
+    var el = firetable.ui.LinkGrabber._el;
+    if (!el || !event) return false;
+
+    // Try path + target + pointer hit-test because engines disagree here
+    // during cross-window drag/drop.
+    if (typeof event.composedPath === "function") {
+      var path = event.composedPath();
+      if (path && path.indexOf(el) !== -1) return true;
+    }
+
+    var target = event.target;
+    if (target && (target === el || el.contains(target))) return true;
+
+    var x = event.clientX;
+    var y = event.clientY;
+    if (typeof x !== "number" || typeof y !== "number") return false;
+
+    var hit = document.elementFromPoint(x, y);
+    if (hit && (hit === el || el.contains(hit))) return true;
+
+    var rect = el.getBoundingClientRect();
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  },
+
+  processDrop: function (event) {
+    var links = firetable.ui.LinkGrabber.extractLinks(event.dataTransfer);
+    if (links.length) {
+      firetable.ui.LinkGrabber.queueLinks(links);
+      return;
+    }
+
+    firetable.ui.LinkGrabber.extractLinksFromItems(event.dataTransfer, function (itemLinks) {
+      if (itemLinks.length) firetable.ui.LinkGrabber.queueLinks(itemLinks);
+      firetable.debug && console.log("DRAG+DROP item links:", itemLinks);
+    });
+  },
+
+  evt_drag_over: function (event) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    firetable.ui.LinkGrabber.setReady(true);
+  },
+
+  evt_drag_enter: function () {
+    firetable.ui.LinkGrabber.setReady(true);
+  },
+
+  evt_drag_leave: function (event) {
+    // only remove highlight when leaving the queuebox itself (not a child)
+    var el = firetable.ui.LinkGrabber._el;
+    if (!el) return;
+    if (event.relatedTarget && el.contains(event.relatedTarget)) return;
+
+    var x = event.clientX;
+    var y = event.clientY;
+    if (typeof x === "number" && typeof y === "number") {
+      var rect = el.getBoundingClientRect();
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return;
+    }
+
+    firetable.ui.LinkGrabber.setReady(false);
+  },
+
+  evt_drop: function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    firetable.ui.LinkGrabber.setReady(false);
+
+    firetable.ui.LinkGrabber.processDrop(event);
+  },
+
+  evt_doc_drag_over: function (event) {
+    // Keep browser from treating URL drop as navigation (new-tab/open-page).
+    event.preventDefault();
+    var inQueue = firetable.ui.LinkGrabber.isEventInQueueBox(event);
+    if (event.dataTransfer) event.dataTransfer.dropEffect = inQueue ? "copy" : "none";
+    firetable.ui.LinkGrabber.setReady(inQueue);
+  },
+
+  evt_doc_drop: function (event) {
+    // Must be blocked globally for same reason as dragover above.
+    event.preventDefault();
+    event.stopPropagation();
+    var inQueue = firetable.ui.LinkGrabber.isEventInQueueBox(event);
+
+    // Some external drags report unreliable drop coordinates/target.
+    // `_armed` preserves intent if cursor was just over queuebox.
+    if (!inQueue && !firetable.ui.LinkGrabber._armed) {
+      firetable.ui.LinkGrabber.setReady(false);
+      return;
+    }
+    firetable.ui.LinkGrabber.evt_drop(event);
+  },
+
+  /** Attach listeners directly on #queuebox */
   start: function () {
-    document.addEventListener("dragover",  firetable.ui.LinkGrabber.evt_drag_over, false);
-    document.addEventListener("dragenter", firetable.ui.LinkGrabber.evt_drag_over, false);
-    document.addEventListener("mouseup",   firetable.ui.LinkGrabber.evt_drag_out, false);
-    document.addEventListener("dragleave", firetable.ui.LinkGrabber.evt_drag_out, false);
+    var el = document.getElementById("queuebox");
+    if (!el) return;
+    firetable.ui.LinkGrabber._el = el;
+    el.addEventListener("dragover",  firetable.ui.LinkGrabber.evt_drag_over,  firetable.ui.LinkGrabber._capture);
+    el.addEventListener("dragenter", firetable.ui.LinkGrabber.evt_drag_enter, firetable.ui.LinkGrabber._capture);
+    el.addEventListener("dragleave", firetable.ui.LinkGrabber.evt_drag_leave, firetable.ui.LinkGrabber._capture);
+    el.addEventListener("drop",      firetable.ui.LinkGrabber.evt_drop,       firetable.ui.LinkGrabber._capture);
+    document.addEventListener("dragover", firetable.ui.LinkGrabber.evt_doc_drag_over, true);
+    document.addEventListener("drop", firetable.ui.LinkGrabber.evt_doc_drop, true);
   },
 
-  /** Remove global drag-and-drop listeners */
   stop: function () {
-    document.removeEventListener("dragover",  firetable.ui.LinkGrabber.evt_drag_over);
-    document.removeEventListener("dragenter", firetable.ui.LinkGrabber.evt_drag_over);
-    document.removeEventListener("mouseup",   firetable.ui.LinkGrabber.evt_drag_out);
-    document.removeEventListener("dragleave", firetable.ui.LinkGrabber.evt_drag_out);
-    firetable.ui.LinkGrabber.detach_ta();
+    var el = firetable.ui.LinkGrabber._el;
+    if (!el) return;
+    el.removeEventListener("dragover",  firetable.ui.LinkGrabber.evt_drag_over,  firetable.ui.LinkGrabber._capture);
+    el.removeEventListener("dragenter", firetable.ui.LinkGrabber.evt_drag_enter, firetable.ui.LinkGrabber._capture);
+    el.removeEventListener("dragleave", firetable.ui.LinkGrabber.evt_drag_leave, firetable.ui.LinkGrabber._capture);
+    el.removeEventListener("drop",      firetable.ui.LinkGrabber.evt_drop,       firetable.ui.LinkGrabber._capture);
+    document.removeEventListener("dragover", firetable.ui.LinkGrabber.evt_doc_drag_over, true);
+    document.removeEventListener("drop", firetable.ui.LinkGrabber.evt_doc_drop, true);
+    firetable.ui.LinkGrabber.setReady(false);
+    firetable.ui.LinkGrabber._el = null;
   }
 };
 
