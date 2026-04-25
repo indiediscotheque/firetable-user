@@ -305,32 +305,140 @@ firetable.actions.mergeLists = function (source, dest, sourceName) {
  * Called by the LinkGrabber when a URL is dragged onto the queue area.
  * @param {string} link - Full URL
  */
-firetable.actions.queueFromLink = function (link) {
-  if (link.match(/youtube.com\/watch/)) {
-    firetable.debug && console.log("yt");
-    var therealid = getQueryStringValue(link, "v");
-    if (therealid) {
-      youtubeAPIReady(function () {
-        gapi.client.youtube.videos.list({
-          id: therealid,
-          part: 'snippet',
-          maxResults: 1
-        }).execute(function (response) {
-          firetable.debug && console.log('queue from link:', response);
-          if (response.result && response.result.items && response.result.items.length) {
-            var item = response.result.items[0];
-            var parsed = firetable.utilities.parseArtistTitle(
-              item.snippet.title,
-              item.snippet.channelTitle.replace(" - Topic", "")
-            );
-            firetable.actions.queueTrack(item.id, parsed.artist + " - " + parsed.title, MEDIA_YOUTUBE);
-          }
-        });
-      });
+firetable.actions.extractYoutubeVideoId = function (link) {
+  var url = String(link || "").trim();
+  if (!url) return "";
+
+  try {
+    var parsed = new URL(url, window.location.href);
+    var host = String(parsed.hostname || "").toLowerCase();
+
+    if (host.indexOf("youtu.be") !== -1) {
+      return parsed.pathname.replace(/^\/+/, "").split("/")[0];
     }
-  } else if (link.match(/soundcloud.com/)) {
+
+    if (host.indexOf("youtube.com") !== -1 || host.indexOf("youtube-nocookie.com") !== -1) {
+      var vParam = parsed.searchParams.get("v");
+      if (vParam) return vParam;
+
+      var parts = parsed.pathname.split("/").filter(Boolean);
+      if (parts[0] === "shorts" && parts[1]) return parts[1];
+      if (parts[0] === "embed" && parts[1]) return parts[1];
+      if (parts[0] === "watch" && parts[1]) return parts[1];
+    }
+  } catch (err) {
+    firetable.debug && console.log("youtube id parse failed:", err);
+  }
+
+  var fallback = url.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([A-Za-z0-9_-]{11})/i);
+  return fallback ? fallback[1] : "";
+};
+
+/**
+ * Normalize dropped URLs from browser drag payloads.
+ * Needed because some drags omit protocol (e.g. "www.youtube.com/..." or "//...").
+ */
+firetable.actions.normalizeQueueLink = function (link) {
+  var out = String(link || "").trim();
+  out = out.replace(/^["'<>\s]+|["'<>\s]+$/g, "");
+  if (/^\/\//.test(out)) out = "https:" + out;
+  if (!/^https?:\/\//i.test(out) && /^(www\.|(?:m\.)?youtube\.com\/|youtu\.be\/|soundcloud\.com\/)/i.test(out)) {
+    out = "https://" + out;
+  }
+  return out;
+};
+
+/**
+ * Queue YouTube by id with layered metadata fallbacks.
+ * Why: YouTube API/gapi can be unavailable or hang in some sessions; oEmbed keeps
+ * artist/title labels working, and final ID fallback avoids silent no-op.
+ */
+firetable.actions.queueYoutubeWithFallback = function (youtubeId) {
+  var settled = false;
+
+  var queueFromTitle = function (id, rawTitle, rawArtist) {
+    var artist = String(rawArtist || "").replace(" - Topic", "");
+    var parsed = firetable.utilities.parseArtistTitle(rawTitle || ("YouTube - " + id), artist);
+    firetable.actions.queueTrack(id, parsed.artist + " - " + parsed.title, MEDIA_YOUTUBE);
+  };
+
+  var queueFallback = function (reason) {
+    if (settled) return;
+    settled = true;
+    firetable.debug && console.log("queueFromLink yt fallback:", reason);
+    firetable.actions.queueTrack(youtubeId, "YouTube - " + youtubeId, MEDIA_YOUTUBE);
+  };
+
+  var queueFromOEmbed = function (reason) {
+    $.ajax({
+      url: "https://www.youtube.com/oembed",
+      type: "GET",
+      dataType: "json",
+      data: { url: "https://www.youtube.com/watch?v=" + youtubeId, format: "json" },
+      timeout: 5000,
+      success: function (res) {
+        if (settled) return;
+        settled = true;
+        queueFromTitle(youtubeId, res && res.title, res && res.author_name);
+      },
+      error: function () {
+        queueFallback(reason + " + oembed error");
+      }
+    });
+  };
+
+  var queueFromResponse = function (response) {
+    if (settled) return;
+    var items = response && (response.items || (response.result && response.result.items));
+    if (items && items.length) {
+      settled = true;
+      var item = items[0];
+      queueFromTitle(item.id || youtubeId, item.snippet.title, item.snippet.channelTitle);
+      return;
+    }
+    queueFromOEmbed("no items");
+  };
+
+  // If YouTube API hangs, still queue via oEmbed/title fallback.
+  setTimeout(function () {
+    queueFromOEmbed("metadata timeout");
+  }, 4000);
+
+  if (typeof ytAPI === "function") {
+    ytAPI("videos", { id: youtubeId, part: "snippet", maxResults: 1 }, queueFromResponse);
+    return;
+  }
+
+  if (typeof youtubeAPIReady === "function") {
+    youtubeAPIReady(function () {
+      try {
+        gapi.client.youtube.videos.list({
+          id: youtubeId,
+          part: "snippet",
+          maxResults: 1
+        }).execute(queueFromResponse);
+      } catch (err) {
+        firetable.debug && console.log("queueFromLink yt gapi error:", err);
+        queueFromOEmbed("gapi error");
+      }
+    });
+    return;
+  }
+
+  queueFromOEmbed("no youtube api available");
+};
+
+firetable.actions.queueFromLink = function (link) {
+  var incomingLink = firetable.actions.normalizeQueueLink(link);
+  if (!incomingLink) return;
+
+  var youtubeId = firetable.actions.extractYoutubeVideoId(incomingLink);
+  if (youtubeId) {
+    firetable.debug && console.log("yt");
+    firetable.actions.queueYoutubeWithFallback(youtubeId);
+  } else if (incomingLink.match(/soundcloud.com/i)) {
     firetable.debug && console.log("sc");
-    firetable.actions.resolveSCLink(link, function (tracks) {
+    firetable.actions.resolveSCLink(incomingLink, function (tracks) {
       if (tracks) {
         var parsed = firetable.utilities.parseArtistTitle(tracks.title, tracks.user.username);
         firetable.actions.queueTrack(tracks.id, parsed.artist + " - " + parsed.title, MEDIA_SOUNDCLOUD);

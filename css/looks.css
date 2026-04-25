@@ -1721,6 +1721,19 @@ html .ui-button.ui-state-disabled:active {
     overflow: hidden;
 }
 
+#queuebox.drop-ready #queuelist {
+    position: relative;
+
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 2px dashed var(--color-accent);
+        border-radius: var(--radius-md);
+    }
+}
+
 .queuetop {
     background-color: var(--color-bg-t1);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
