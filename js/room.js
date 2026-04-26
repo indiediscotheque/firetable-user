@@ -433,7 +433,7 @@ firetable.ui.setupRoomEvents = function () {
     if (data.image === "img/idlogo.png" && ftconfigs.defaultAlbumArtUrl.length) {
       data.image = ftconfigs.defaultAlbumArtUrl;
     }
-    $("#prgbar").css("background", "#151515");
+    $("#prgbar").css("background", "color-mix(in srgb, " + ftconfigs.accentColor + " 33%, black)");
 
     // Check if tagUpdate has pre-corrected metadata for this track
     var showPlaycount = false;
@@ -564,7 +564,7 @@ firetable.ui.setupRoomEvents = function () {
       var now = Date.now();
       var sofar = now - firetable.song.started;
       var pcnt = (sofar / (firetable.song.duration * 1000)) * 100;
-      $("#prgbar").css("background", "linear-gradient(90deg, " + firetable.color + " " + pcnt + "%, #151515 " + pcnt + "%)");
+      $("#prgbar").css("background", "linear-gradient(90deg, " + firetable.color + " " + pcnt + "%, color-mix(in srgb, " + firetable.color + " 33%, black) " + pcnt + "%)");
     }, PROGRESS_BAR_INTERVAL);
   });
 
