@@ -425,15 +425,17 @@ firetable.ui.setupRoomEvents = function () {
     $("#cloud_with_rain, #fire").removeClass("on");
     $("#timr").countdown("destroy");
 
+    // Fade the progress bar out, then reset it
+    var $prg = $("#prgbar");
+    $prg.css("opacity", "0");
     if (firetable.moveBar != null) {
       clearInterval(firetable.moveBar);
       firetable.moveBar = null;
     }
-
-    if (data.image === "img/idlogo.png" && ftconfigs.defaultAlbumArtUrl.length) {
-      data.image = ftconfigs.defaultAlbumArtUrl;
-    }
-    $("#prgbar").css("background", "color-mix(in srgb, " + ftconfigs.accentColor + " 33%, black)");
+    setTimeout(function () {
+      $prg.css("background", "color-mix(in srgb, " + ftconfigs.accentColor + " 33%, black)");
+      $prg.css("opacity", "1");
+    }, 450);
 
     // Check if tagUpdate has pre-corrected metadata for this track
     var showPlaycount = false;
@@ -456,6 +458,9 @@ firetable.ui.setupRoomEvents = function () {
     $("#track").text(firetable.ui.strip(data.title));
     $("#artist").text(firetable.ui.strip(data.artist));
     $("#songlink").attr("href", data.url);
+    if (data.image === "img/idlogo.png" && ftconfigs.defaultAlbumArtUrl.length) {
+      data.image = ftconfigs.defaultAlbumArtUrl;
+    }
     $("#albumArt").css("background-image", "url(" + data.image + ")");
 
     // Calculate elapsed time
