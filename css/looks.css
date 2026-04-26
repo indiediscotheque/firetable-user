@@ -55,7 +55,7 @@
     --color-bg-t2: #282828;
     --color-bg-t3: #2E2E2E;
     --color-orange: #f4810b;
-    --color-orangelite: #f6993c;
+    --color-orange-lite: #f6993c;
     --color-orange66: #f4810b66;
     --color-orange33: #f4810b33;
     --color-accent: var(--color-orange);
@@ -139,7 +139,8 @@ h2 {
 }
 
 a {
-    color: var(--color-orange);
+    color: var(--color-accent);
+    mix-blend-mode: plus-lighter;
     text-decoration: none;
 }
 
@@ -153,7 +154,7 @@ a {
 
 :focus-visible {
     outline: none;
-    box-shadow: 0 0 0.5rem var(--color-orange);
+    box-shadow: 0 0 0.5rem var(--color-accent);
 }
 
 input:not([type="checkbox"]):not([type="radio"]),
@@ -167,8 +168,13 @@ button {
     border: 1px solid transparent;
     border-bottom-color: rgba(0, 0, 0, 0.85);
     border-top-color: rgba(255, 255, 255, 0.15);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-drop);
+}
+
+select,
+button {
+    cursor: pointer;
 }
 
 select {
@@ -293,7 +299,7 @@ code {
 }
 
 .track-warning {
-    color: var(--color-orange);
+    color: var(--color-accent);
     cursor: pointer;
 }
 
@@ -456,7 +462,7 @@ code {
     text-transform: uppercase;
     letter-spacing: 0.1em;
     text-decoration: none;
-    background-color: var(--color-orange);
+    background-color: var(--color-accent);
     border-top: 1px solid rgba(255, 255, 255, 0.3);
     border-bottom: 1px solid black;
     box-shadow: var(--shadow-drop);
@@ -472,7 +478,7 @@ code {
 }
 
 .butt:hover {
-    background-color: var(--color-orangelite);
+    background-color: var(--color-accentlite);
 }
 
 .graybutt {
@@ -503,7 +509,7 @@ code {
 }
 
 .iconbutt.on {
-    color: var(--color-orange);
+    color: var(--color-accent);
     background: rgba(255, 255, 255, 0.033);
     border-top: 1px solid rgba(88, 88, 88, 0.5);
     border-bottom: 1px solid rgba(0, 0, 0, 0.5);
@@ -548,7 +554,7 @@ code {
 
 .accent {
     color: white;
-    background-color: var(--color-orange);
+    background-color: var(--color-accent);
     background-image: radial-gradient(circle at 50% 15%, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4));
     border-right: 1px solid rgba(123, 123, 123, 0.5);
     border-left: 1px solid rgba(123, 123, 123, 0.5);
@@ -556,7 +562,7 @@ code {
 }
 
 .accent:hover {
-    background-color: var(--color-orangelite);
+    background-color: var(--color-accentlite);
 }
 
 .scrollWrap {
@@ -645,7 +651,7 @@ code {
 
 .ftlogo {
     margin-right: 0.5rem;
-    color: var(--color-orange);
+    color: var(--color-accent);
     font-size: 1.25rem;
     font-weight: 700;
 }
@@ -1090,7 +1096,7 @@ a.sociallogo[href] {
     width: calc(0.75rem + 0.25rem);
     padding: 0.125rem;
     font-size: 0.75em;
-    color: var(--color-orange);
+    color: var(--color-accent);
     background-color: var(--color-bg-t2);
     border-radius: var(--radius-pill);
 }
@@ -1402,7 +1408,7 @@ a.sociallogo[href] {
 
 .ui-slider-horizontal .ui-slider-range-min {
     left: 0;
-    background-color: var(--color-orange);
+    background-color: var(--color-accent);
 }
 
 /* Vertical volume slider */
@@ -1513,7 +1519,7 @@ html .ui-button.ui-state-disabled:active {
     background: linear-gradient(to bottom, color-mix(in srgb, transparent 85%, var(--color-accent)), color-mix(in srgb, transparent 66%, var(--color-accent)));
     border-top-left-radius: 1.5rem;
     border-top-right-radius: 1.5rem;
-    box-shadow: inset 0 0 8rem -7rem var(--color-accent);
+    box-shadow: inset 0 0 8rem -7rem white, 0 0 4rem -3rem var(--color-accent);
 
     &::before {
         content: "";
@@ -1844,6 +1850,20 @@ html .ui-button.ui-state-disabled:active {
     padding: 0;
 }
 
+#searchMachine {
+    display: none;
+    padding: 0 var(--pad3);
+}
+
+#searchMachine #qsearch {
+    margin: 2px 0 0 0;
+    width: 100%;
+}
+
+#searchMachine #searchSelects {
+    margin-top: var(--pad1);
+}
+
 #mainqueue {
     padding: var(--pad1) 0.75rem;
 }
@@ -1892,18 +1912,23 @@ html .ui-button.ui-state-disabled:active {
     left: 0.2rem;
 }
 
-#queuelist .pvbar {
+#queuelist .pvbar,
+#searchResults .pvbar {
     margin: var(--pad1) 0;
     padding-right: var(--pad2);
     background-color: var(--color-bg-t1);
     border-top: 1px solid var(--color-bg-t2);
     border-bottom: 1px solid var(--color-bg);
     border-radius: var(--radius-md);
-    cursor: grab;
     overflow: hidden;
 }
 
-#queuelist .q-art {
+#queuelist .pvbar {
+    cursor: grab;
+}
+
+#queuelist .q-art,
+#searchResults .q-art {
     flex-shrink: 0;
     width: 2.25rem;
     height: 2.25rem;
@@ -1912,7 +1937,8 @@ html .ui-button.ui-state-disabled:active {
     background-color: var(--color-bg-t2);
 }
 
-#queuelist .pvbarWrap {
+#queuelist .pvbarWrap,
+#searchResults .pvbarWrap {
     align-items: center;
 }
 
@@ -1924,7 +1950,8 @@ html .ui-button.ui-state-disabled:active {
     display: block;
 }
 
-#queuelist .listwords {
+#queuelist .listwords,
+#searchResults .listwords {
     flex: 1;
     margin-left: var(--pad3);
     white-space: nowrap;
@@ -1986,7 +2013,42 @@ html .ui-button.ui-state-disabled:active {
 
 #searchResults {
     flex: 1;
-    background-color: var(--color-bg-t2);
+    min-height: 0;
+    overflow: auto;
+    padding: var(--pad1) 0 var(--pad1) 0.75rem;
+}
+
+#searchResults .previewicon {
+    position: absolute;
+    z-index: 1;
+    left: 0.2rem;
+}
+
+#searchResults [class*="material-symbols-"] {
+    margin: 0 var(--pad1);
+    font-size: 1.2rem;
+}
+
+#searchResults i[class*="material-symbols-"] {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+}
+
+.search-feedback {
+    font-size: 0.75rem;
+    color: #4caf50;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    margin-right: var(--pad1);
+}
+
+.search-feedback.visible {
+    opacity: 1;
 }
 #mergeContain {
     overflow: auto;
@@ -2501,7 +2563,7 @@ a.importLinkCheck {
 }
 
 #pickerNav .on {
-    color: var(--color-orange);
+    color: var(--color-accent);
     filter: none;
     opacity: 1;
 }
@@ -3284,7 +3346,8 @@ img.emoji,
     font-size: 0.7rem;
     font-weight: 700;
     color: #000;
-    background-color: var(--color-orange);
+    background-color: var(--color-accent);
+    mix-blend-mode: plus-lighter;
 }
 
 .cardFilterRow {
@@ -3329,7 +3392,7 @@ img.emoji,
 .cardFilterInput:focus,
 .cardFilterSelect:focus {
     outline: none;
-    border-color: var(--color-orange);
+    border-color: var(--color-accent);
 }
 
 @media screen and (max-width: 760px) {
@@ -3391,7 +3454,7 @@ span.cardViewLarger {
 span.cardViewLarger:hover,
 span.cardGiftChat:hover,
 span.cardShareChat:hover {
-    background-color: var(--color-orange);
+    background-color: var(--color-accent);
     color: #000;
 }
 
@@ -3487,7 +3550,7 @@ input.tagMachine,
 }
 
 .responseBox {
-    background-color: var(--color-orange);
+    background-color: var(--color-accent);
     margin: 0.625rem;
     padding: 0.5rem;
     color: #000;

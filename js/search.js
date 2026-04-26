@@ -61,6 +61,53 @@ function getQueryStringValue(str, key) {
 firetable.ui.setupSearchEvents = function () {
   var $searchItemTemplate = $('#searchResults .pvbar').remove();
 
+  // ── Shared helper: bind addtolist + queuetrack buttons on a search result row ──
+  var bindSearchResultButtons = function ($srli, mediaCid, mediaType) {
+    $srli.find('.addtolist').on('click', function () {
+      var listid = $("#listpicker").val();
+      var title = firetable.utilities.htmlEscape($srli.find('.listwords').text());
+      var cuteid = ftapi.actions.addToList(mediaType, title, mediaCid, listid);
+      // bump to top when adding to the active queue (list 0)
+      if (!listid || listid === "0") firetable.actions.bumpSongInQueue(cuteid);
+      var $fb = $srli.find('.search-feedback');
+      $fb.text('added').addClass('visible');
+      setTimeout(function () { $fb.removeClass('visible'); }, 2000);
+    });
+
+    $srli.find('.queuetrack').on('click', function () {
+      var $btn = $(this);
+      var title = firetable.utilities.htmlEscape($srli.find('.listwords').text());
+      // toggle off if already open for this button
+      if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$("#stealContain").is(':hidden')) {
+        $btn.removeClass('on');
+        firetable.stealSourceBtn = null;
+        firetable.stealTarget = null;
+        $("#stealContain").hide();
+        return;
+      }
+      ftapi.lookup.allLists(function (allPlaylists) {
+        $("#stealpicker").html(
+          '<option value="-1">Where to?</option>' +
+          '<option value="0">Default Queue</option>'
+        );
+        for (var key in allPlaylists) {
+          if (allPlaylists.hasOwnProperty(key)) {
+            $("#stealpicker").append('<option value="' + key + '">' + allPlaylists[key].name + '</option>');
+          }
+        }
+        if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
+        $("#grab").removeClass('on');
+        firetable.stealSourceBtn = $btn;
+        firetable.stealTarget = { cid: mediaCid, type: mediaType, title: title };
+        $btn.addClass('on');
+        var stealContainEl = document.getElementById('stealContain');
+        stealContainEl.style.visibility = 'hidden';
+        $("#stealContain").show();
+        firetable.ui.positionPopover($btn[0], stealContainEl, document.getElementById('stealArrow'), 'left');
+      });
+    });
+  };
+
   // ── Track Search (Enter in #qsearch) ──
   $("#qsearch").bind("keyup", function (e) {
     if (e.which !== 13) return;
@@ -88,17 +135,12 @@ firetable.ui.setupSearchEvents = function () {
           $srli.attr('id', "pvbar" + pkey)
                .attr("data-key", pkey)
                .attr("data-cid", thecid);
+          $srli.find('.q-art').css('background-image', 'url(https://img.youtube.com/vi/' + thecid + '/mqdefault.jpg)');
           $srli.find('.previewicon').attr('id', "pv" + pkey).on('click', function () {
             firetable.actions.pview($(this).closest('.pvbar').attr('data-key'), true, MEDIA_YOUTUBE);
           });
           $srli.find('.listwords').html(vidTitle);
-          $srli.find('.queuetrack').on('click', function () {
-            firetable.actions.queueTrack(
-              $(this).closest('.pvbar').attr('data-cid'),
-              firetable.utilities.htmlEscape($(this).closest('.pvbar').find('.listwords').text()),
-              MEDIA_YOUTUBE
-            );
-          });
+          bindSearchResultButtons($srli, thecid, MEDIA_YOUTUBE);
           $("#searchResults").append($srli);
         });
       };
@@ -137,17 +179,12 @@ firetable.ui.setupSearchEvents = function () {
           $srli.attr('id', "pvbar" + pkey)
                .attr("data-key", pkey)
                .attr("data-cid", item.id);
+          if (item.artwork_url) $srli.find('.q-art').css('background-image', 'url(' + item.artwork_url + ')');
           $srli.find('.previewicon').attr('id', "pv" + pkey).on('click', function () {
             firetable.actions.pview($(this).closest('.pvbar').attr('data-key'), true, MEDIA_SOUNDCLOUD);
           });
           $srli.find('.listwords').html(vidTitle);
-          $srli.find('.queuetrack').on('click', function () {
-            firetable.actions.queueTrack(
-              $(this).closest('.pvbar').attr('data-cid'),
-              firetable.utilities.htmlEscape($(this).closest('.pvbar').find('.listwords').text()),
-              MEDIA_SOUNDCLOUD
-            );
-          });
+          bindSearchResultButtons($srli, item.id, MEDIA_SOUNDCLOUD);
           $("#searchResults").append($srli);
         });
       };
@@ -173,13 +210,13 @@ firetable.ui.setupSearchEvents = function () {
 
   // ── Search Source Toggle Buttons ──
   $("#ytsearchSelect").bind("click", function () {
-    $("#scsearchSelect").removeClass("on");
-    $(this).addClass("on");
+    $("#scsearchSelect").removeClass("on").attr("aria-selected", "false");
+    $(this).addClass("on").attr("aria-selected", "true");
     firetable.searchSelectsChoice = MEDIA_YOUTUBE;
   });
   $("#scsearchSelect").bind("click", function () {
-    $("#ytsearchSelect").removeClass("on");
-    $(this).addClass("on");
+    $("#ytsearchSelect").removeClass("on").attr("aria-selected", "false");
+    $(this).addClass("on").attr("aria-selected", "true");
     firetable.searchSelectsChoice = MEDIA_SOUNDCLOUD;
   });
 

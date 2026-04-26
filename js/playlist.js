@@ -52,6 +52,7 @@ firetable.actions.queueTrack = function (cid, name, type, tobottom) {
   // Switch view back to queue
   $("#mainqueuestuff").css("display", "block");
   $("#filterMachine").css("display", "block");
+  $("#searchMachine").css("display", "none");
   $("#addbox").css("display", "none");
   $("#cancelqsearch").hide();
   $("#qControlButtons").show();
@@ -118,6 +119,7 @@ firetable.actions.deleteSongAndSearch = function (id, tags, type) {
   // Switch to Add to Playlist/search view before filling and submitting.
   $("#mainqueuestuff").css("display", "none");
   $("#filterMachine").css("display", "none");
+  $("#searchMachine").css("display", "block");
   $("#addbox").css("display", "flex");
   $("#cancelqsearch").show();
   $("#qControlButtons").hide();
@@ -852,6 +854,7 @@ firetable.ui.setupPlaylistEvents = function () {
   $("#addToQueueBttn").bind("click", function () {
     $("#mainqueuestuff").css("display", "none");
     $("#filterMachine").css("display", "none");
+    $("#searchMachine").css("display", "block");
     $("#addbox").css("display", "flex");
     $("#cancelqsearch").show();
     $("#qControlButtons").hide();
@@ -862,6 +865,7 @@ firetable.ui.setupPlaylistEvents = function () {
   $("#cancelqsearch").bind("click", function () {
     $("#mainqueuestuff").css("display", "block");
     $("#filterMachine").css("display", "block");
+    $("#searchMachine").css("display", "none");
     $("#cancelqsearch").hide();
     $("#qControlButtons").show();
     $("#addbox").css("display", "none");
