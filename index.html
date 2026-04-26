@@ -10,7 +10,7 @@
 	<link rel="shortcut icon" href="favicon.png" />
 	<link rel="stylesheet" href="css/reset.css" type="text/css" />
 	<link rel="stylesheet" href="css/fonts-local.css" type="text/css" />
-	<link rel="stylesheet" href="css/looks.css?v=01.10.19" type="text/css" />
+	<link rel="stylesheet" href="css/looks.css?v=01.10.25" type="text/css" />
 </head>
 
 <body>
@@ -239,8 +239,8 @@
 						</select>
 					</div>
 					<div id="qControlButtons">
-						<button role="button" class="butt graybutt iconbutt" id="addToQueueBttn" data-label="Add track" aria-label="Add track">
-							<i class="material-symbols-outlined"> add </i>
+						<button role="button" class="butt graybutt iconbutt" id="addToQueueBttn" data-label="Find tracks" aria-label="Find tracks">
+							<i class="material-symbols-outlined"> search </i>
 						</button>
 						<button role="button" class="butt graybutt iconbutt" id="mergeLists" data-label="Merge playlists" aria-label="Merge playlists">
 							<i class="material-symbols-outlined"> merge_type </i>
@@ -249,7 +249,7 @@
 							<i class="material-symbols-outlined"> shuffle </i>
 						</button>
 					</div>
-					<button role="button" class="butt graybutt" id="cancelqsearch">Cancel</button>
+					<button role="button" class="butt graybutt" id="cancelqsearch">Done</button>
 				</div>
 				<div id="mergeContain">
 					<div id="mergeArrow"></div>
@@ -333,9 +333,10 @@
 						<div class="pvbar" id="pvbarKEY">
 							<!-- template for search result items -->
 							<div class="pvbarWrap">
-						<button id="pvKEY" class="material-symbols-outlined previewicon">&#xE037;</button>
-								<div class="listwords"></div>
-								<i role="button" id="pvKEY" class="material-symbols-outlined queuetrack">&#xE03B;</i>
+								<div class="q-art"></div>
+								<button id="pvKEY" class="material-symbols-outlined previewicon">&#xE037;</button>
+								<div class="listwords"></div>									<span class="search-feedback"></span>								<i role="button" class="material-symbols-outlined addtolist" title="Add to current list">add</i>
+								<i role="button" class="material-symbols-outlined queuetrack" title="Add to playlist">playlist_add</i>
 							</div>
 						</div>
 					</div>
@@ -696,27 +697,27 @@
 	<script src="https://www.youtube.com/iframe_api"></script>
 	<script src="https://cdn.jsdelivr.net/npm/pixi.js@4.8.9/dist/pixi.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js"></script>
-	<script type="text/javascript" src="config.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/firetable.js?v=01.10.19"></script>
+	<script type="text/javascript" src="config.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/firetable.js?v=01.10.25"></script>
 
 	<!-- Application modules (order matters — each builds on the previous) -->
-	<script type="text/javascript" src="js/constants.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/state.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/fire.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/md5.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/helpers.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/emoji.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/lastfm.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/player.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/cards.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/chat.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/search.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/playlist.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/users.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/room.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/ui.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/glitch.js?v=01.10.19"></script>
-	<script type="text/javascript" src="js/init.js?v=01.10.19"></script>
+	<script type="text/javascript" src="js/constants.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/state.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/fire.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/md5.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/helpers.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/emoji.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/lastfm.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/player.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/cards.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/chat.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/search.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/playlist.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/users.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/room.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/ui.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/glitch.js?v=01.10.25"></script>
+	<script type="text/javascript" src="js/init.js?v=01.10.25"></script>
 
 </body>
 

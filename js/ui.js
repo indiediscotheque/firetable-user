@@ -1009,22 +1009,32 @@ firetable.ui.setupMiscEvents = function () {
       img: (firetable.imgCache && firetable.imgCache[firetable.song.cid]) || ''
     });
     if (src) {
-      if (firetable.stealSourceBtn) {
-        firetable.stealSourceBtn.removeClass('on');
+      var $sourceBtn = firetable.stealSourceBtn;
+      if ($sourceBtn) {
+        $sourceBtn.removeClass('on');
         firetable.stealSourceBtn = null;
       } else {
         $("#grab").removeClass('on');
       }
       firetable.stealTarget = null;
-      ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
+      var cuteid = ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
+      if (!dest || dest === "0") firetable.actions.bumpSongInQueue(cuteid);
       $("#stealContain").hide();
+      // Show "added" feedback if the source button was inside a search result row
+      if ($sourceBtn) {
+        var $fb = $sourceBtn.closest('.pvbar').find('.search-feedback');
+        if ($fb.length) {
+          $fb.text('added').addClass('visible');
+          setTimeout(function () { $fb.removeClass('visible'); }, 2000);
+        }
+      }
     }
   });
 
   // ── Close steal popover when clicking outside it ──
   $(document).on('click', function (e) {
     if ($("#stealContain").is(':hidden')) return;
-    if (!$(e.target).closest('#stealContain, .histeal, #grab').length) {
+    if (!$(e.target).closest('#stealContain, .histeal, .queuetrack, #grab').length) {
       if (firetable.stealSourceBtn) {
         firetable.stealSourceBtn.removeClass('on');
         firetable.stealSourceBtn = null;

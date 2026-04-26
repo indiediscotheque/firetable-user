@@ -167,7 +167,7 @@ button {
     border: 1px solid transparent;
     border-bottom-color: rgba(0, 0, 0, 0.85);
     border-top-color: rgba(255, 255, 255, 0.15);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-drop);
 }
 
@@ -1892,18 +1892,23 @@ html .ui-button.ui-state-disabled:active {
     left: 0.2rem;
 }
 
-#queuelist .pvbar {
+#queuelist .pvbar,
+#searchResults .pvbar {
     margin: var(--pad1) 0;
     padding-right: var(--pad2);
     background-color: var(--color-bg-t1);
     border-top: 1px solid var(--color-bg-t2);
     border-bottom: 1px solid var(--color-bg);
     border-radius: var(--radius-md);
-    cursor: grab;
     overflow: hidden;
 }
 
-#queuelist .q-art {
+#queuelist .pvbar {
+    cursor: grab;
+}
+
+#queuelist .q-art,
+#searchResults .q-art {
     flex-shrink: 0;
     width: 2.25rem;
     height: 2.25rem;
@@ -1912,7 +1917,8 @@ html .ui-button.ui-state-disabled:active {
     background-color: var(--color-bg-t2);
 }
 
-#queuelist .pvbarWrap {
+#queuelist .pvbarWrap,
+#searchResults .pvbarWrap {
     align-items: center;
 }
 
@@ -1924,7 +1930,8 @@ html .ui-button.ui-state-disabled:active {
     display: block;
 }
 
-#queuelist .listwords {
+#queuelist .listwords,
+#searchResults .listwords {
     flex: 1;
     margin-left: var(--pad3);
     white-space: nowrap;
@@ -1986,7 +1993,42 @@ html .ui-button.ui-state-disabled:active {
 
 #searchResults {
     flex: 1;
-    background-color: var(--color-bg-t2);
+    min-height: 0;
+    overflow: auto;
+    padding: var(--pad1) 0 var(--pad1) 0.75rem;
+}
+
+#searchResults .previewicon {
+    position: absolute;
+    z-index: 1;
+    left: 0.2rem;
+}
+
+#searchResults [class*="material-symbols-"] {
+    margin: 0 var(--pad1);
+    font-size: 1.2rem;
+}
+
+#searchResults i[class*="material-symbols-"] {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+}
+
+.search-feedback {
+    font-size: 0.75rem;
+    color: #4caf50;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    margin-right: var(--pad1);
+}
+
+.search-feedback.visible {
+    opacity: 1;
 }
 #mergeContain {
     overflow: auto;
