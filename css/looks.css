@@ -1208,11 +1208,52 @@ a.sociallogo[href] {
 
 #albumArt {
     grid-area: art;
+    position: relative;
     margin: 0 var(--pad3) 0 var(--pad1);
     width: 4rem;
     height: 4rem;
+    perspective: 700px;
+    transform-style: preserve-3d;
+    --album-art-front: none;
+    --album-art-back: none;
+}
+
+#albumArt::before,
+#albumArt::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-md);
     background-size: cover;
     background-position: center center;
+    background-repeat: no-repeat;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 560ms ease;
+    box-shadow: 0 0.4rem 1.2rem -0.45rem rgba(0, 0, 0, 0.75);
+}
+
+#albumArt::before {
+    background-image: var(--album-art-front);
+    transform: rotateY(0deg);
+}
+
+#albumArt::after {
+    background-image: var(--album-art-back);
+    transform: rotateY(180deg);
+}
+
+#albumArt.is-flipping::before {
+    transform: rotateY(-180deg);
+}
+
+#albumArt.is-flipping::after {
+    transform: rotateY(0deg);
+}
+
+#albumArt.is-flip-resetting::before,
+#albumArt.is-flip-resetting::after {
+    transition: none;
 }
 
 #track {
@@ -1264,6 +1305,21 @@ a.sociallogo[href] {
 #firstPlay:empty,
 #lastPlay:empty {
     display: none;
+}
+
+#track,
+#artist,
+#plays,
+#timr {
+    transition: opacity 180ms ease, transform 180ms ease;
+}
+
+#nowplaying.is-transitioning #track,
+#nowplaying.is-transitioning #artist,
+#nowplaying.is-transitioning #plays,
+#nowplaying.is-transitioning #timr {
+    opacity: 0;
+    transform: translateY(0.2rem);
 }
 
 /* ============================================

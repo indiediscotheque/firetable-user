@@ -215,6 +215,8 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
  * Called once from firetable.ui.init().
  */
 firetable.ui.setupRoomEvents = function () {
+  var NOW_PLAYING_TEXT_FADE_MS = 180;
+  var NOW_PLAYING_ALBUM_FLIP_MS = 560;
 
   function positionFyreAtActiveDJ() {
     var $fyre = $("#fyre");
@@ -242,6 +244,64 @@ firetable.ui.setupRoomEvents = function () {
     if (firetable.fyreStage && typeof firetable.fyreStage.onResize === "function") {
       firetable.fyreStage.onResize();
     }
+  }
+
+  function toCssBackgroundImage(url) {
+    if (!url) return 'none';
+    return 'url("' + String(url).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
+  }
+
+  function setNowPlayingAlbumArt(imageUrl, animate) {
+    var artEl = document.getElementById('albumArt');
+    if (!artEl) return;
+
+    var currentUrl = artEl.dataset.albumArtCurrent || '';
+    var nextUrl = imageUrl || '';
+    var cssImage = toCssBackgroundImage(nextUrl);
+
+    clearTimeout(firetable.albumArtFlipTimer);
+
+    if (!animate || !artEl.dataset.albumArtReady) {
+      artEl.style.setProperty('--album-art-front', cssImage);
+      artEl.style.setProperty('--album-art-back', cssImage);
+      artEl.classList.remove('is-flipping');
+      artEl.dataset.albumArtReady = 'true';
+      artEl.dataset.albumArtCurrent = nextUrl;
+      return;
+    }
+
+    if (currentUrl === nextUrl) return;
+
+    artEl.style.setProperty('--album-art-back', cssImage);
+    artEl.classList.add('is-flipping');
+    firetable.albumArtFlipTimer = setTimeout(function () {
+      artEl.classList.add('is-flip-resetting');
+      artEl.style.setProperty('--album-art-front', cssImage);
+      artEl.style.setProperty('--album-art-back', cssImage);
+      artEl.classList.remove('is-flipping');
+      void artEl.offsetWidth;
+      artEl.classList.remove('is-flip-resetting');
+      artEl.dataset.albumArtCurrent = nextUrl;
+    }, NOW_PLAYING_ALBUM_FLIP_MS);
+  }
+
+  function animateNowPlayingChange(updateFn) {
+    var $nowPlaying = $('#nowplaying');
+    clearTimeout(firetable.nowPlayingTextTimer);
+
+    if (!$nowPlaying.data('nowPlayingAnimated')) {
+      updateFn();
+      $nowPlaying.data('nowPlayingAnimated', 'true');
+      return;
+    }
+
+    $nowPlaying.addClass('is-transitioning');
+    firetable.nowPlayingTextTimer = setTimeout(function () {
+      updateFn();
+      requestAnimationFrame(function () {
+        $nowPlaying.removeClass('is-transitioning');
+      });
+    }, NOW_PLAYING_TEXT_FADE_MS);
   }
 
   $(window).off('resize.fyrePosition').on('resize.fyrePosition', positionFyreAtActiveDJ);
@@ -424,14 +484,21 @@ firetable.ui.setupRoomEvents = function () {
       }
     }
 
-    // Update now-playing UI
-    $("#track").text(firetable.ui.strip(data.title));
-    $("#artist").text(firetable.ui.strip(data.artist));
-    $("#songlink").attr("href", data.url);
     if (data.image === "img/idlogo.png" && ftconfigs.defaultAlbumArtUrl.length) {
       data.image = ftconfigs.defaultAlbumArtUrl;
     }
-    $("#albumArt").css("background-image", "url(" + data.image + ")");
+    var displayImage = data.type === MEDIA_SOUNDCLOUD
+      ? data.image.replace('-large', '-t500x500')
+      : data.image;
+    var nextTitle = firetable.ui.strip(data.title);
+    var nextArtist = firetable.ui.strip(data.artist);
+
+    animateNowPlayingChange(function () {
+      $("#track").text(nextTitle);
+      $("#artist").text(nextArtist);
+      $("#songlink").attr("href", data.url);
+      setNowPlayingAlbumArt(displayImage, true);
+    });
 
     // Calculate elapsed time
     var nownow = Date.now();
@@ -476,7 +543,7 @@ firetable.ui.setupRoomEvents = function () {
 
       var biggerImg = data.image.replace('-large', '-t500x500');
       firetable.scImg = biggerImg;
-      $("#albumArt").css("background-image", "url(" + biggerImg + ")");
+      setNowPlayingAlbumArt(biggerImg, false);
       try { setup(biggerImg); } catch (e) {
         firetable.debug && console.log('big image error:', e);
       }
