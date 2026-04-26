@@ -123,13 +123,14 @@ firetable.actions.loggedIn = function (user) {
         var val = $("#listpicker").val();
         if (val === "1") {
           // Show playlist manager
-          $("#mainqueuestuff, #filterMachine, #addbox").css("display", "none");
+          $("#mainqueuestuff, #filterMachine, #searchMachine, #addbox").css("display", "none");
           $("#cancelqsearch").hide();
           $("#qControlButtons").hide();
           $("#plmanager").css("display", "flex");
         } else if (val !== ftapi.selectedListThing) {
           // Switch to selected playlist
           $("#mainqueuestuff, #filterMachine").css("display", "block");
+          $("#searchMachine").css("display", "none");
           $("#addbox").css("display", "none");
           $("#cancelqsearch").hide();
           $("#qControlButtons").show();
@@ -138,6 +139,7 @@ firetable.actions.loggedIn = function (user) {
         } else {
           // Already on this playlist
           $("#mainqueuestuff, #filterMachine").css("display", "block");
+          $("#searchMachine").css("display", "none");
           $("#addbox").css("display", "none");
           $("#cancelqsearch").hide();
           $("#qControlButtons").show();

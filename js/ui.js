@@ -1269,6 +1269,7 @@ firetable.ui.setupMiscEvents = function () {
   $("#cancelqsearch").bind("click", function () {
     $("#mainqueuestuff").css("display", "block");
     $("#filterMachine").css("display", "block");
+    $("#searchMachine").css("display", "none");
     $("#cancelqsearch").hide();
     $("#qControlButtons").show();
     $("#addbox").css("display", "none");
@@ -1279,6 +1280,7 @@ firetable.ui.setupMiscEvents = function () {
   $("#addToQueueBttn").bind("click", function () {
     $("#mainqueuestuff").css("display", "none");
     $("#filterMachine").css("display", "none");
+    $("#searchMachine").css("display", "block");
     $("#addbox").css("display", "flex");
     $("#cancelqsearch").show();
     $("#qControlButtons").hide();

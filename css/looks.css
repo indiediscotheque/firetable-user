@@ -1850,6 +1850,20 @@ html .ui-button.ui-state-disabled:active {
     padding: 0;
 }
 
+#searchMachine {
+    display: none;
+    padding: 0 var(--pad3);
+}
+
+#searchMachine #qsearch {
+    margin: 2px 0 0 0;
+    width: 100%;
+}
+
+#searchMachine #searchSelects {
+    margin-top: var(--pad1);
+}
+
 #mainqueue {
     padding: var(--pad1) 0.75rem;
 }
