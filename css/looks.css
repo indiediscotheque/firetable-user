@@ -1468,6 +1468,13 @@ a.sociallogo[href] {
     right: 0;
 }
 
+/* Hide volume slider on touch devices where OS controls volume (not the browser) */
+@media (hover: none) and (pointer: coarse) {
+    #volplace {
+        display: none;
+    }
+}
+
 .ui-state-default,
 .ui-widget-content .ui-state-default,
 .ui-widget-header .ui-state-default,
