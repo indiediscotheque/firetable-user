@@ -119,7 +119,7 @@ body {
     font-size: 1rem;
     color: var(--color-text);
     background-color: var(--color-bg);
-    background-image: linear-gradient(var(--color-bg-t1), var(--color-bg));
+    background-image: linear-gradient(var(--color-bg), var(--color-bg-s2));
     overflow: hidden;
 }
 
@@ -1468,6 +1468,13 @@ a.sociallogo[href] {
     right: 0;
 }
 
+/* Hide volume slider on touch devices where OS controls volume (not the browser) */
+@media (hover: none) and (pointer: coarse) {
+    #volplace {
+        display: none;
+    }
+}
+
 .ui-state-default,
 .ui-widget-content .ui-state-default,
 .ui-widget-header .ui-state-default,
@@ -1494,9 +1501,10 @@ html .ui-button.ui-state-disabled:active {
 #stage {
     grid-area: stage;
     display: grid;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: 1fr auto auto;
     grid-template-areas:
         "visual"
+        "progress"
         "controls";
 }
 
@@ -1519,7 +1527,7 @@ html .ui-button.ui-state-disabled:active {
     background: linear-gradient(to bottom, color-mix(in srgb, transparent 85%, var(--color-accent)), color-mix(in srgb, transparent 66%, var(--color-accent)));
     border-top-left-radius: 1.5rem;
     border-top-right-radius: 1.5rem;
-    box-shadow: inset 0 0 8rem -7rem white, 0 0 4rem -3rem var(--color-accent);
+    box-shadow: inset 0 0 8rem -7rem white, 0 2rem 8rem color-mix(in srgb, var(--color-accent), transparent 85%), 0 0.5rem 1rem color-mix(in srgb, var(--color-accent), transparent 85%);
 
     &::before {
         content: "";
@@ -1595,13 +1603,13 @@ html .ui-button.ui-state-disabled:active {
     font-size: 0.75rem;
     line-height: 1.5rem;
     color: #fff;
-    background-image: linear-gradient(to bottom, var(--color-bg-t2), rgb(21,21,21));
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--color-accent), #333 66%), color-mix(in srgb, var(--color-accent), black 50%));
     box-shadow: inset 0 1px rgba(255,255,255,0.2);
     border-top-left-radius: var(--radius-md);
     border-top-right-radius: var(--radius-md);
 }
 .djActive {
-    background-image: linear-gradient(to top, color-mix(in srgb, var(--color-bg-t2) 50%, var(--color-accent) 50%), var(--color-accent));
+    background: linear-gradient(to bottom, var(--color-accent), color-mix(in srgb, var(--color-bg-t2), var(--color-accent) 66%));
 }
 
 .djname {
@@ -1625,10 +1633,9 @@ html .ui-button.ui-state-disabled:active {
 }
 
 #prgbar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    grid-area: progress;
+    position: relative;
+    width: 100%;
     height: 0.1875rem;
     z-index: 1;
 }
@@ -1729,7 +1736,6 @@ html .ui-button.ui-state-disabled:active {
     display: none;
     flex-direction: column;
     position: relative;
-    padding-top: var(--pad4);
     overflow: hidden;
 }
 
@@ -1750,7 +1756,7 @@ html .ui-button.ui-state-disabled:active {
     background-color: var(--color-bg-t1);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1.5rem 1.5rem var(--radius-md) var(--radius-md);
+    border-radius: 1.5rem 1.5rem 1rem 1rem;
 }
 
 #queueFilterForm {
@@ -1762,8 +1768,9 @@ html .ui-button.ui-state-disabled:active {
 
 #queueFilter {
     flex: 1;
-    width: auto;
     margin: 2px 0 0 0;
+    width: auto;
+    min-width: 0;
 }
 
 .queueFilterExtras {
@@ -2203,6 +2210,7 @@ a.importLinkCheck {
     background-color: var(--color-bg-s1);
     border-bottom-left-radius: 1.5rem;
     border-bottom-right-radius: 1.5rem;
+    box-shadow: 0 0.25rem 1rem -0.33rem black;
 }
 
 .themeLeft,
@@ -2215,7 +2223,7 @@ a.importLinkCheck {
 
 .themeCenter {
     flex: 1;
-    min-width: 0;
+    width: 0;
     overflow: hidden;
 }
 
@@ -4006,6 +4014,10 @@ body.blog {
 
     #roomlogo {
         margin-bottom: 0.5rem;
+    }
+
+    #queuebox {
+        padding-top: var(--pad4);
     }
 
     #newchatForm {
