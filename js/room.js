@@ -20,36 +20,6 @@
  *   This caused SoundCloud tracks in history/discover to always get "yt" prefix.
  */
 
-// ─── Festive Lights CSS Generator ────────────────────────────────────────────
-
-/**
- * Build the <style> block for festive lights using the current accent color.
- * Extracted to avoid duplicating this 30+ line CSS string in both
- * lightsChanged and colorsChanged handlers.
- * @param {{r: number, g: number, b: number}} rgb - Accent color as RGB
- * @returns {string} Full <style class="festiveLights"> HTML string
- */
-function buildFestiveLightsCSS(rgb) {
-  var r = rgb.r, g = rgb.g, b = rgb.b;
-  var c = "rgba(" + r + "," + g + "," + b;
-  return "<style class='festiveLights'>" +
-    ".lightrope { text-align: center; white-space: nowrap; overflow: hidden; position: absolute; z-index: 1; margin: -6px 0 0 0; padding: 0; pointer-events: none; width: 100%; z-index: 55; }" +
-    "ul.lightrope li { position: relative; list-style: none; margin: 0; padding: 0; display: block; width: 6px; height: 14px; border-radius: 50%; margin: 10px; display: inline-block; background: #111; }" +
-    " .lightrope li span { position: relative; animation-fill-mode: both; animation-iteration-count: infinite; list-style: none; margin: 0; padding: 0; display: block; width: 6px; height: 14px; border-radius: 50%; display: inline-block; background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); animation-name: flash-1; animation-duration: 2s; }" +
-    " .lightrope li:nth-child(2n+1) span { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 0.5); animation-name: flash-2; animation-duration: 0.4s; }" +
-    " .lightrope li:nth-child(4n+2) span { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); animation-name: flash-3; animation-duration: 1.1s; }" +
-    " .lightrope li:nth-child(odd) span { animation-duration: 1.8s; }" +
-    " .lightrope li:nth-child(3n+1) span { animation-duration: 1.4s; }" +
-    " .lightrope li:before { content: \"\"; position: absolute; background: #4e4e4e; width: 4px; height: 4.667px; border-radius: 3px; top: -2.333px; left: 1px; }" +
-    " .lightrope li:after { content: \"\"; top: -7px; left: 3px; position: absolute; width: 32px; height: 9.333px; border-bottom: solid #4e4e4e 2px; border-radius: 50%; }" +
-    " .lightrope li:last-child:after { content: none; }" +
-    " .lightrope li:first-child { margin-left: -20px; }" +
-    " @keyframes flash-1 { 0%, 100% { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); } 50% { background: " + c + ", 0.4); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 0.2); } }" +
-    " @keyframes flash-2 { 0%, 100% { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); } 50% { background: " + c + ", 0.4); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 0.2); } }" +
-    " @keyframes flash-3 { 0%, 100% { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); } 50% { background: " + c + ", 0.4); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 0.2); } }" +
-    "</style>";
-}
-
 // ─── History Item Renderer ────────────────────────────────────────────────────
 
 /**
@@ -594,14 +564,12 @@ firetable.ui.setupRoomEvents = function () {
   // ── Festive Lights ──
   ftapi.events.on("lightsChanged", function (data) {
     firetable.debug && console.log('lights check:', data);
-    $('.festiveLights').remove();
     if (data) {
       firetable.lights = true;
-      var rgb = firetable.utilities.hexToRGB(firetable.color);
-      $("head").append(buildFestiveLightsCSS(rgb));
     } else {
       firetable.lights = false;
     }
+    $("body").toggleClass("lights-on", !!firetable.lights);
   });
 
   // ── Waitlist ──
@@ -849,11 +817,5 @@ firetable.ui.setupRoomEvents = function () {
       "#themebox { background-color: " + firetable.color + "33; }</style>"
     );
 
-    // Rebuild festive lights with new color
-    $('.festiveLights').remove();
-    if (firetable.lights) {
-      var rgb = firetable.utilities.hexToRGB(firetable.color);
-      $("head").append(buildFestiveLightsCSS(rgb));
-    }
   });
 };

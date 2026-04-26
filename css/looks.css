@@ -1689,6 +1689,136 @@ html .ui-button.ui-state-disabled:active {
     background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.15));
 }
 
+.lightrope {
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 55;
+    margin: -6px 0 0 0;
+    padding: 0;
+    pointer-events: none;
+    width: 100%;
+    display: none;
+}
+
+body.lights-on .lightrope {
+    display: block;
+}
+
+ul.lightrope li {
+    position: relative;
+    list-style: none;
+    margin: 10px;
+    padding: 0;
+    display: inline-block;
+    width: 6px;
+    height: 14px;
+    border-radius: 50%;
+    background: #111;
+}
+
+.lightrope li span {
+    position: relative;
+    animation-fill-mode: both;
+    animation-iteration-count: infinite;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: inline-block;
+    width: 6px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 2.333px 12px 1.5px var(--color-accent);
+    animation-name: flash-1;
+    animation-duration: 2s;
+}
+
+.lightrope li:nth-child(2n+1) span {
+    box-shadow: 0 2.333px 12px 1.5px color-mix(in srgb, var(--color-accent) 50%, transparent);
+    animation-name: flash-2;
+    animation-duration: 0.4s;
+}
+
+.lightrope li:nth-child(4n+2) span {
+    animation-name: flash-3;
+    animation-duration: 1.1s;
+}
+
+.lightrope li:nth-child(odd) span {
+    animation-duration: 1.8s;
+}
+
+.lightrope li:nth-child(3n+1) span {
+    animation-duration: 1.4s;
+}
+
+.lightrope li:before {
+    content: "";
+    position: absolute;
+    background: #4e4e4e;
+    width: 4px;
+    height: 4.667px;
+    border-radius: 3px;
+    top: -2.333px;
+    left: 1px;
+}
+
+.lightrope li:after {
+    content: "";
+    top: -7px;
+    left: 3px;
+    position: absolute;
+    width: 32px;
+    height: 9.333px;
+    border-bottom: solid #4e4e4e 2px;
+    border-radius: 50%;
+}
+
+.lightrope li:last-child:after {
+    content: none;
+}
+
+.lightrope li:first-child {
+    margin-left: -20px;
+}
+
+@keyframes flash-1 {
+    0%, 100% {
+        background: var(--color-accent);
+        box-shadow: 0 2.333px 12px 1.5px var(--color-accent);
+    }
+    50% {
+        background: color-mix(in srgb, var(--color-accent) 40%, transparent);
+        box-shadow: 0 2.333px 12px 1.5px color-mix(in srgb, var(--color-accent) 20%, transparent);
+    }
+}
+
+@keyframes flash-2 {
+    0%, 100% {
+        background: var(--color-accent);
+        box-shadow: 0 2.333px 12px 1.5px var(--color-accent);
+    }
+    50% {
+        background: color-mix(in srgb, var(--color-accent) 40%, transparent);
+        box-shadow: 0 2.333px 12px 1.5px color-mix(in srgb, var(--color-accent) 20%, transparent);
+    }
+}
+
+@keyframes flash-3 {
+    0%, 100% {
+        background: var(--color-accent);
+        box-shadow: 0 2.333px 12px 1.5px var(--color-accent);
+    }
+    50% {
+        background: color-mix(in srgb, var(--color-accent) 40%, transparent);
+        box-shadow: 0 2.333px 12px 1.5px color-mix(in srgb, var(--color-accent) 20%, transparent);
+    }
+}
+
 :root {
     /* the only thing needed is a grainy/noisy background image */
     --glitter: url("/img/fire-noise.png");
