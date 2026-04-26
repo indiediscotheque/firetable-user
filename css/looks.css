@@ -157,6 +157,7 @@ a {
     color: var(--color-accent);
     mix-blend-mode: plus-lighter;
     text-decoration: none;
+    border-radius: var(--radius-md);
 }
 
 [role="button"] {
@@ -3578,6 +3579,17 @@ img.emoji,
     width: 100%;
 }
 
+#cardsMain .caseCardSpot {
+    opacity: 0;
+    transform: translateY(0.35rem);
+    transition: opacity 220ms ease, transform 220ms ease;
+}
+
+#cardsMain .caseCardSpot.is-rendered {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .caseCardSpot canvas {
     display: block;
     width: 100%;
@@ -3658,10 +3670,6 @@ input.tagMachine,
     width: 100%;
     padding: 0.5rem;
     margin-bottom: 1rem;
-}
-
-#songlink {
-    border-radius: var(--radius-sm);
 }
 
 #songlink svg {

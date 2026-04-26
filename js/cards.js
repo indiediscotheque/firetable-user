@@ -10,6 +10,15 @@
 
 firetable.actions = firetable.actions || {};
 
+firetable.actions.markCardRendered = function (cardid) {
+  var $spot = $('#caseCardSpot' + cardid);
+  if (!$spot.length) return;
+
+  requestAnimationFrame(function () {
+    $spot.addClass('is-rendered');
+  });
+};
+
 $(document)
   .off('click.cardStatsToggle')
   .on('click.cardStatsToggle', '#cardStats .hist-day-header', function () {
@@ -182,6 +191,7 @@ firetable.actions.cardCase = function () {
       $spot.data('temp', isNaN(temp) ? Number.POSITIVE_INFINITY : temp);
       $spot.data('num', isNaN(num) ? Number.POSITIVE_INFINITY : num);
       $spot.data('search', searchText);
+      $spot.removeClass('is-rendered');
 
       firetable.actions.displayCard(childData, key);
     }
@@ -263,6 +273,10 @@ firetable.actions.showCard = function (cardid, chatid) {
  */
 firetable.actions.displayCard = function (data, chatid) {
   firetable.debug && console.log("display card");
+
+  function finishCardRender() {
+    firetable.actions.markCardRendered(chatid);
+  }
 
   // ── Normalize colours ──
   var defaultScheme = false;
@@ -367,11 +381,16 @@ firetable.actions.displayCard = function (data, chatid) {
             var legH = data.image.match(/ytimg\.com/i) ? 28 : 50;
             ctx.drawImage(this, 10, 230, 50, legH);
             ctx = null;
+            finishCardRender();
           };
-          legAlbum.onerror = function () { ctx = null; };
+          legAlbum.onerror = function () {
+            ctx = null;
+            finishCardRender();
+          };
           legAlbum.src = data.image;
         } else {
           ctx = null;
+          finishCardRender();
         }
       };
       legAvatar.src = firetable.utilities.avatarURL(data.djid, data.djname, "175x175");
@@ -437,8 +456,12 @@ firetable.actions.displayCard = function (data, chatid) {
               var legH2 = data.image.match(/ytimg\.com/i) ? 28 : 50;
               c4.drawImage(this, 10, 230, 50, legH2);
               ctx = null;
+              finishCardRender();
             };
-            legAlbum2.onerror = function () { ctx = null; };
+            legAlbum2.onerror = function () {
+              ctx = null;
+              finishCardRender();
+            };
             legAlbum2.src = data.image;
           };
           legId9.src = 'img/id9.png';
@@ -790,6 +813,7 @@ firetable.actions.displayCard = function (data, chatid) {
     function finishIfDone() {
       if (heroDrawn && albumBadgeDrawn) {
         ctx = null; // release context
+        finishCardRender();
       }
     }
 
