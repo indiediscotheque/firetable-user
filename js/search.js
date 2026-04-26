@@ -210,13 +210,13 @@ firetable.ui.setupSearchEvents = function () {
 
   // ── Search Source Toggle Buttons ──
   $("#ytsearchSelect").bind("click", function () {
-    $("#scsearchSelect").removeClass("on");
-    $(this).addClass("on");
+    $("#scsearchSelect").removeClass("on").attr("aria-selected", "false");
+    $(this).addClass("on").attr("aria-selected", "true");
     firetable.searchSelectsChoice = MEDIA_YOUTUBE;
   });
   $("#scsearchSelect").bind("click", function () {
-    $("#ytsearchSelect").removeClass("on");
-    $(this).addClass("on");
+    $("#ytsearchSelect").removeClass("on").attr("aria-selected", "false");
+    $(this).addClass("on").attr("aria-selected", "true");
     firetable.searchSelectsChoice = MEDIA_SOUNDCLOUD;
   });
 
