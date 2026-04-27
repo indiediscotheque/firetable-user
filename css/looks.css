@@ -1196,7 +1196,11 @@ a.sociallogo[href] {
     align-self: start;
     position: relative;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    --np-art-size: 4rem;
+    --np-art-col: var(--np-art-size);
+    --np-art-gap: var(--pad3);
+    grid-template-columns: var(--np-art-col) minmax(0, 1fr) auto;
+    column-gap: var(--np-art-gap);
     grid-template-rows: auto auto 1fr;
     grid-template-areas:
         "art track timrvol"
@@ -1204,18 +1208,20 @@ a.sociallogo[href] {
         "art plays timrvol";
     margin-bottom: auto;
     padding: var(--pad4) var(--pad4) 2.5rem var(--pad4);
+    transition: grid-template-columns 300ms ease, column-gap 300ms ease;
 }
 
 #albumArt {
     grid-area: art;
     position: relative;
-    margin: 0 var(--pad3) 0 var(--pad1);
-    width: 4rem;
-    height: 4rem;
+    margin: 0 0 0 var(--pad1);
+    width: var(--np-art-size);
+    height: var(--np-art-size);
     perspective: 700px;
     transform-style: preserve-3d;
     --album-art-front: none;
     --album-art-back: none;
+    transition: opacity 300ms ease, transform 300ms ease;
 }
 
 #albumArt::before,
@@ -4153,7 +4159,14 @@ body.blog {
 /* ── 800px: 3-column layout, header becomes vertical sidebar ── */
 @media only screen and (min-width: 800px) {
     body.screen #albumArt {
-        display: none;
+        opacity: 0;
+        transform: translateX(-1.5rem);
+        pointer-events: none;
+    }
+
+    body.screen #nowplaying {
+        --np-art-col: 0rem;
+        --np-art-gap: 0rem;
     }
 
     body.screen #screenBox {
@@ -4323,9 +4336,9 @@ body.blog {
         display: block;
     }
 
-    #albumArt {
-        height: 6.5rem;
-        width: 6.5rem;
+    #nowplaying {
+        --np-art-size: 6.5rem;
+        --np-art-col: 6.5rem;
     }
 
     .djplaque {
