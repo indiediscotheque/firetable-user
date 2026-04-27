@@ -20,36 +20,6 @@
  *   This caused SoundCloud tracks in history/discover to always get "yt" prefix.
  */
 
-// ─── Festive Lights CSS Generator ────────────────────────────────────────────
-
-/**
- * Build the <style> block for festive lights using the current accent color.
- * Extracted to avoid duplicating this 30+ line CSS string in both
- * lightsChanged and colorsChanged handlers.
- * @param {{r: number, g: number, b: number}} rgb - Accent color as RGB
- * @returns {string} Full <style class="festiveLights"> HTML string
- */
-function buildFestiveLightsCSS(rgb) {
-  var r = rgb.r, g = rgb.g, b = rgb.b;
-  var c = "rgba(" + r + "," + g + "," + b;
-  return "<style class='festiveLights'>" +
-    ".lightrope { text-align: center; white-space: nowrap; overflow: hidden; position: absolute; z-index: 1; margin: -6px 0 0 0; padding: 0; pointer-events: none; width: 100%; z-index: 55; }" +
-    "ul.lightrope li { position: relative; list-style: none; margin: 0; padding: 0; display: block; width: 6px; height: 14px; border-radius: 50%; margin: 10px; display: inline-block; background: #111; }" +
-    " .lightrope li span { position: relative; animation-fill-mode: both; animation-iteration-count: infinite; list-style: none; margin: 0; padding: 0; display: block; width: 6px; height: 14px; border-radius: 50%; display: inline-block; background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); animation-name: flash-1; animation-duration: 2s; }" +
-    " .lightrope li:nth-child(2n+1) span { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 0.5); animation-name: flash-2; animation-duration: 0.4s; }" +
-    " .lightrope li:nth-child(4n+2) span { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); animation-name: flash-3; animation-duration: 1.1s; }" +
-    " .lightrope li:nth-child(odd) span { animation-duration: 1.8s; }" +
-    " .lightrope li:nth-child(3n+1) span { animation-duration: 1.4s; }" +
-    " .lightrope li:before { content: \"\"; position: absolute; background: #4e4e4e; width: 4px; height: 4.667px; border-radius: 3px; top: -2.333px; left: 1px; }" +
-    " .lightrope li:after { content: \"\"; top: -7px; left: 3px; position: absolute; width: 32px; height: 9.333px; border-bottom: solid #4e4e4e 2px; border-radius: 50%; }" +
-    " .lightrope li:last-child:after { content: none; }" +
-    " .lightrope li:first-child { margin-left: -20px; }" +
-    " @keyframes flash-1 { 0%, 100% { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); } 50% { background: " + c + ", 0.4); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 0.2); } }" +
-    " @keyframes flash-2 { 0%, 100% { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); } 50% { background: " + c + ", 0.4); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 0.2); } }" +
-    " @keyframes flash-3 { 0%, 100% { background: " + c + ", 1); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 1); } 50% { background: " + c + ", 0.4); box-shadow: 0px 2.333px 12px 1.5px " + c + ", 0.2); } }" +
-    "</style>";
-}
-
 // ─── History Item Renderer ────────────────────────────────────────────────────
 
 /**
@@ -245,6 +215,20 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
  * Called once from firetable.ui.init().
  */
 firetable.ui.setupRoomEvents = function () {
+  var NOW_PLAYING_TEXT_FADE_MS = 180;
+  var NOW_PLAYING_ALBUM_FLIP_MS = 560;
+
+  function applyDjActive(idx) {
+    for (var i = 0; i < 4; i++) {
+      if (i === idx) {
+        $("#avtr" + i).addClass("animate");
+        $("#djthing" + i).addClass("djActive");
+      } else {
+        $("#avtr" + i).removeClass("animate");
+        $("#djthing" + i).removeClass("djActive");
+      }
+    }
+  }
 
   function positionFyreAtActiveDJ() {
     var $fyre = $("#fyre");
@@ -272,6 +256,64 @@ firetable.ui.setupRoomEvents = function () {
     if (firetable.fyreStage && typeof firetable.fyreStage.onResize === "function") {
       firetable.fyreStage.onResize();
     }
+  }
+
+  function toCssBackgroundImage(url) {
+    if (!url) return 'none';
+    return 'url("' + String(url).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
+  }
+
+  function setNowPlayingAlbumArt(imageUrl, animate) {
+    var artEl = document.getElementById('albumArt');
+    if (!artEl) return;
+
+    var currentUrl = artEl.dataset.albumArtCurrent || '';
+    var nextUrl = imageUrl || '';
+    var cssImage = toCssBackgroundImage(nextUrl);
+
+    clearTimeout(firetable.albumArtFlipTimer);
+
+    if (!animate || !artEl.dataset.albumArtReady) {
+      artEl.style.setProperty('--album-art-front', cssImage);
+      artEl.style.setProperty('--album-art-back', cssImage);
+      artEl.classList.remove('is-flipping');
+      artEl.dataset.albumArtReady = 'true';
+      artEl.dataset.albumArtCurrent = nextUrl;
+      return;
+    }
+
+    if (currentUrl === nextUrl) return;
+
+    artEl.style.setProperty('--album-art-back', cssImage);
+    artEl.classList.add('is-flipping');
+    firetable.albumArtFlipTimer = setTimeout(function () {
+      artEl.classList.add('is-flip-resetting');
+      artEl.style.setProperty('--album-art-front', cssImage);
+      artEl.style.setProperty('--album-art-back', cssImage);
+      artEl.classList.remove('is-flipping');
+      void artEl.offsetWidth;
+      artEl.classList.remove('is-flip-resetting');
+      artEl.dataset.albumArtCurrent = nextUrl;
+    }, NOW_PLAYING_ALBUM_FLIP_MS);
+  }
+
+  function animateNowPlayingChange(updateFn) {
+    var $nowPlaying = $('#nowplaying');
+    clearTimeout(firetable.nowPlayingTextTimer);
+
+    if (!$nowPlaying.data('nowPlayingAnimated')) {
+      updateFn();
+      $nowPlaying.data('nowPlayingAnimated', 'true');
+      return;
+    }
+
+    $nowPlaying.addClass('is-transitioning');
+    firetable.nowPlayingTextTimer = setTimeout(function () {
+      updateFn();
+      requestAnimationFrame(function () {
+        $nowPlaying.removeClass('is-transitioning');
+      });
+    }, NOW_PLAYING_TEXT_FADE_MS);
   }
 
   $(window).off('resize.fyrePosition').on('resize.fyrePosition', positionFyreAtActiveDJ);
@@ -425,15 +467,17 @@ firetable.ui.setupRoomEvents = function () {
     $("#cloud_with_rain, #fire").removeClass("on");
     $("#timr").countdown("destroy");
 
+    // Fade the progress bar out, then reset it
+    var $prg = $("#prgbar");
+    $prg.css("opacity", "0");
     if (firetable.moveBar != null) {
       clearInterval(firetable.moveBar);
       firetable.moveBar = null;
     }
-
-    if (data.image === "img/idlogo.png" && ftconfigs.defaultAlbumArtUrl.length) {
-      data.image = ftconfigs.defaultAlbumArtUrl;
-    }
-    $("#prgbar").css("background", "color-mix(in srgb, " + ftconfigs.accentColor + " 33%, black)");
+    setTimeout(function () {
+      $prg.css("background", "color-mix(in srgb, " + ftconfigs.accentColor + " 33%, black)");
+      $prg.css("opacity", "1");
+    }, 450);
 
     // Check if tagUpdate has pre-corrected metadata for this track
     var showPlaycount = false;
@@ -452,11 +496,21 @@ firetable.ui.setupRoomEvents = function () {
       }
     }
 
-    // Update now-playing UI
-    $("#track").text(firetable.ui.strip(data.title));
-    $("#artist").text(firetable.ui.strip(data.artist));
-    $("#songlink").attr("href", data.url);
-    $("#albumArt").css("background-image", "url(" + data.image + ")");
+    if (data.image === "img/idlogo.png" && ftconfigs.defaultAlbumArtUrl.length) {
+      data.image = ftconfigs.defaultAlbumArtUrl;
+    }
+    var displayImage = data.type === MEDIA_SOUNDCLOUD
+      ? data.image.replace('-large', '-t500x500')
+      : data.image;
+    var nextTitle = firetable.ui.strip(data.title);
+    var nextArtist = firetable.ui.strip(data.artist);
+
+    animateNowPlayingChange(function () {
+      $("#track").text(nextTitle);
+      $("#artist").text(nextArtist);
+      $("#songlink").attr("href", data.url);
+      setNowPlayingAlbumArt(displayImage, true);
+    });
 
     // Calculate elapsed time
     var nownow = Date.now();
@@ -501,7 +555,7 @@ firetable.ui.setupRoomEvents = function () {
 
       var biggerImg = data.image.replace('-large', '-t500x500');
       firetable.scImg = biggerImg;
-      $("#albumArt").css("background-image", "url(" + biggerImg + ")");
+      setNowPlayingAlbumArt(biggerImg, false);
       try { setup(biggerImg); } catch (e) {
         firetable.debug && console.log('big image error:', e);
       }
@@ -589,14 +643,12 @@ firetable.ui.setupRoomEvents = function () {
   // ── Festive Lights ──
   ftapi.events.on("lightsChanged", function (data) {
     firetable.debug && console.log('lights check:', data);
-    $('.festiveLights').remove();
     if (data) {
       firetable.lights = true;
-      var rgb = firetable.utilities.hexToRGB(firetable.color);
-      $("head").append(buildFestiveLightsCSS(rgb));
     } else {
       firetable.lights = false;
     }
+    $("body").toggleClass("lights-on", !!firetable.lights);
   });
 
   // ── Waitlist ──
@@ -760,16 +812,10 @@ firetable.ui.setupRoomEvents = function () {
       }
     });
 
-    // Highlight current DJ
-    for (var i = 0; i < 4; i++) {
-      if (i === firetable.playdex) {
-        $("#avtr" + i).addClass("animate");
-        $("#djthing" + i).addClass("djActive");
-      } else {
-        $("#avtr" + i).removeClass("animate");
-        $("#djthing" + i).removeClass("djActive");
-      }
-    }
+    // Highlight current DJ — use displayedPlaydex so re-renders during the
+    // deferred window don't prematurely switch the active highlight
+    var _activeIdx = (firetable.displayedPlaydex !== undefined) ? firetable.displayedPlaydex : firetable.playdex;
+    applyDjActive(_activeIdx);
 
     positionFyreAtActiveDJ();
     // Sync ghost useres in the user list whenever the deck changes
@@ -786,17 +832,18 @@ firetable.ui.setupRoomEvents = function () {
   // ── Spotlight (Active DJ Index) ──
   ftapi.events.on("spotlightStateChanged", function (data) {
     firetable.playdex = data;
-    for (var i = 0; i < 4; i++) {
-      if (i === data) {
-        $("#avtr" + i).addClass("animate");
-        $("#djthing" + i).addClass("djActive");
-      } else {
-        $("#avtr" + i).removeClass("animate");
-        $("#djthing" + i).removeClass("djActive");
-      }
-    }
 
-    positionFyreAtActiveDJ();
+    // Defer both avatar animation and djActive plaque switch until colorsChanged
+    // fires so they switch at the same moment the color transition starts.
+    // Also defer fyre repositioning so it doesn't flash to the new DJ before
+    // the visual highlight actually updates.
+    clearTimeout(firetable._djActiveTimer);
+    firetable._djActiveTimer = setTimeout(function () {
+      firetable.displayedPlaydex = firetable.playdex;
+      applyDjActive(firetable.displayedPlaydex);
+      positionFyreAtActiveDJ();
+      firetable._djActiveTimer = undefined;
+    }, 2000); // fallback if colorsChanged never follows
   });
 
   // ── Play Limit ──
@@ -832,23 +879,22 @@ firetable.ui.setupRoomEvents = function () {
       firetable.color = firetable.orange;
       firetable.countcolor = "#fff";
     }
-
+    // Apply deferred djActive switch — highlight changes as color transition starts
+    if (firetable._djActiveTimer !== undefined) {
+      clearTimeout(firetable._djActiveTimer);
+      firetable._djActiveTimer = undefined;
+      firetable.displayedPlaydex = firetable.playdex;
+      applyDjActive(firetable.displayedPlaydex);
+    }
     // Update custom color styles
     $('.customColorStyles').remove();
     $("head").append(
       "<style class='customColorStyles'>:root { --color-accent: " + firetable.color + "; } " +
       ":focus-visible { box-shadow: 0 0 0.5rem " + firetable.color + "; } " +
-      ".accent:not(#fire), .butt:not(.graybutt):not(#fire), .ui-slider-horizontal .ui-slider-range-min { background-color: " + firetable.color + "; color: " + firetable.countcolor + "; } " +
-      "#fire { background-color: " + firetable.color + "; } " +
+      ".accent:not(#fire), .butt:not(.graybutt):not(#fire) { color: " + firetable.countcolor + "; } " +
       ".iconbutt.on { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
       "#themebox { background-color: " + firetable.color + "33; }</style>"
     );
 
-    // Rebuild festive lights with new color
-    $('.festiveLights').remove();
-    if (firetable.lights) {
-      var rgb = firetable.utilities.hexToRGB(firetable.color);
-      $("head").append(buildFestiveLightsCSS(rgb));
-    }
   });
 };

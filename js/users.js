@@ -67,6 +67,10 @@ firetable.actions.showLoginScreen = function () {
   var $shell = $('#appShell');
   if ($shell.length) { firetable.$appShell = $shell.detach(); }
 
+  // Re-run boot reveal next time the authenticated shell appears.
+  firetable.ui._hasRunBootReveal = false;
+  firetable.ui._isShellBooting = false;
+
   $("#cardCaseButton").hide();
   $("#loggedInName").hide();
   $("#logOutButton").hide().off();

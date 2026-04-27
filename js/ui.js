@@ -485,11 +485,69 @@ firetable.nav = {
   view: 'playlists',
   side: 'chat',
   mobileSection: 'view',
+  _isFading: false,
+  _fadeMs: 180,
 
   _validViews:   ['playlists', 'history', 'cards', 'discover'],
   _validSides:   ['chat', 'people'],
   _validMobile:  ['view', 'chat', 'people'],
   _viewTabMap:   { playlists: 'mm-playlists', history: 'mm-history', cards: 'mm-cards', discover: 'mm-discover' },
+  _mainPanels:   ['#queuebox', '#thehistoryWrap', '#cardsWrap', '#discover'],
+  _sidePanels:   ['#actualChat', '#usersbox'],
+
+  _collectVisiblePanels: function (selectors) {
+    var out = [];
+    selectors.forEach(function (sel) {
+      var $el = $(sel);
+      if ($el.length && $el.is(':visible')) out.push($el);
+    });
+    return out;
+  },
+
+  _clearFadeStyles: function (selectors) {
+    selectors.forEach(function (sel) {
+      $(sel).css({ opacity: '', transition: '' });
+    });
+  },
+
+  _withFade: function (selectors, mutator) {
+    var n = firetable.nav;
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion || n._isFading) {
+      mutator();
+      n.apply();
+      n._clearFadeStyles(selectors);
+      return;
+    }
+
+    var fadeOutPanels = n._collectVisiblePanels(selectors);
+    n._isFading = true;
+
+    fadeOutPanels.forEach(function ($el) {
+      $el.css({ transition: 'opacity ' + n._fadeMs + 'ms ease', opacity: 0 });
+    });
+
+    setTimeout(function () {
+      mutator();
+      n.apply();
+
+      var fadeInPanels = n._collectVisiblePanels(selectors);
+      fadeInPanels.forEach(function ($el) {
+        $el.css({ opacity: 0, transition: 'opacity ' + n._fadeMs + 'ms ease' });
+      });
+
+      requestAnimationFrame(function () {
+        fadeInPanels.forEach(function ($el) {
+          $el.css('opacity', 1);
+        });
+      });
+
+      setTimeout(function () {
+        n._clearFadeStyles(selectors);
+        n._isFading = false;
+      }, n._fadeMs + 30);
+    }, n._fadeMs);
+  },
 
   /** Persist current state to localStorage. */
   save: function () {
@@ -498,9 +556,9 @@ firetable.nav = {
     localStorage[STORAGE.navMobile] = firetable.nav.mobileSection;
   },
 
-  /** Restore state from URL path (backward compat) then localStorage. */
   restore: function () {
     var n = firetable.nav;
+
     // URL path takes priority for viewNav (handles old bookmarks / shared links)
     var pathMatch = location.pathname.match(/\/(playlists|history|cards|discover)\/?$/);
     if (pathMatch) {
@@ -523,36 +581,47 @@ firetable.nav = {
 
   /** Set the active content view. */
   setView: function (name) {
-    firetable.nav.view = name;
-    firetable.nav.mobileSection = 'view';
-    firetable.nav.save();
-    firetable.nav.apply();
+    var n = firetable.nav;
+    n._withFade(n._mainPanels, function () {
+      n.view = name;
+      n.mobileSection = 'view';
+      n.save();
+    });
   },
 
   /** Set the active side panel (chat or people). */
   setSide: function (name) {
-    firetable.nav.side = name;
-    firetable.nav.mobileSection = name; // 'chat' or 'people'
-    firetable.nav.save();
-    firetable.nav.apply();
+    var n = firetable.nav;
+    n._withFade(n._sidePanels, function () {
+      n.side = name;
+      n.mobileSection = name; // 'chat' or 'people'
+      n.save();
+    });
   },
 
   /** Handle a mini-mode tab click by its element ID. */
   setMobileTab: function (tabId) {
     var n = firetable.nav;
     var viewMap = { 'mm-playlists': 'playlists', 'mm-history': 'history', 'mm-cards': 'cards', 'mm-discover': 'discover' };
-    if (viewMap[tabId]) {
-      n.view = viewMap[tabId];
-      n.mobileSection = 'view';
-    } else if (tabId === 'mmchat') {
-      n.side = 'chat';
-      n.mobileSection = 'chat';
-    } else if (tabId === 'mmusrs') {
-      n.side = 'people';
-      n.mobileSection = 'people';
-    }
-    n.save();
-    n.apply();
+    var isMd = window.matchMedia('(min-width: 640px)').matches;
+    var isViewTab = !!viewMap[tabId];
+    var selectors = !isMd
+      ? n._mainPanels.concat(n._sidePanels)
+      : (isViewTab ? n._mainPanels : n._sidePanels);
+
+    n._withFade(selectors, function () {
+      if (viewMap[tabId]) {
+        n.view = viewMap[tabId];
+        n.mobileSection = 'view';
+      } else if (tabId === 'mmchat') {
+        n.side = 'chat';
+        n.mobileSection = 'chat';
+      } else if (tabId === 'mmusrs') {
+        n.side = 'people';
+        n.mobileSection = 'people';
+      }
+      n.save();
+    });
   },
 
   /** Apply the current nav state to the DOM based on viewport size. */
