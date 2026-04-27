@@ -1597,10 +1597,13 @@ html .ui-button.ui-state-disabled:active {
     position: relative;
     overflow: hidden;
     isolation: isolate;
-    background: linear-gradient(to bottom, color-mix(in srgb, transparent 85%, var(--color-accent)), color-mix(in srgb, transparent 66%, var(--color-accent)));
+    background: linear-gradient(to bottom, color-mix(in srgb, black 85%, var(--color-accent)), color-mix(in srgb, black 66%, var(--color-accent)));
     border-top-left-radius: 1.5rem;
     border-top-right-radius: 1.5rem;
-    box-shadow: inset 0 0 8rem -7rem white, 0 2rem 8rem color-mix(in srgb, var(--color-accent), transparent 85%), 0 0.5rem 1rem color-mix(in srgb, var(--color-accent), transparent 85%);
+    box-shadow: 
+        inset 0 -4rem 8rem -8rem white, 
+        0 0 10rem color-mix(in srgb, var(--color-accent), black 95%), 
+        0 0 2rem color-mix(in srgb, var(--color-accent), black 80%);
 
     &::before {
         content: "";
@@ -1721,7 +1724,7 @@ html .ui-button.ui-state-disabled:active {
 }
 #screenBox {
     position: absolute;
-    top: -100%;
+    top: -101%;
     width: 100%;
     height: 100%;
     z-index: 0;
@@ -2415,7 +2418,7 @@ a.importLinkCheck {
     background-color: var(--color-bg-s1);
     border-bottom-left-radius: 1.5rem;
     border-bottom-right-radius: 1.5rem;
-    box-shadow: 0 0.25rem 1rem -0.33rem black;
+    box-shadow: 0 0.25rem 0.75rem -0.33rem black;
     transition: background-color 1.5s ease;
 }
 

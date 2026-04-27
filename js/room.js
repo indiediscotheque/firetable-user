@@ -218,6 +218,18 @@ firetable.ui.setupRoomEvents = function () {
   var NOW_PLAYING_TEXT_FADE_MS = 180;
   var NOW_PLAYING_ALBUM_FLIP_MS = 560;
 
+  function applyDjActive(idx) {
+    for (var i = 0; i < 4; i++) {
+      if (i === idx) {
+        $("#avtr" + i).addClass("animate");
+        $("#djthing" + i).addClass("djActive");
+      } else {
+        $("#avtr" + i).removeClass("animate");
+        $("#djthing" + i).removeClass("djActive");
+      }
+    }
+  }
+
   function positionFyreAtActiveDJ() {
     var $fyre = $("#fyre");
     var $stage = $("#djStage");
@@ -800,16 +812,10 @@ firetable.ui.setupRoomEvents = function () {
       }
     });
 
-    // Highlight current DJ
-    for (var i = 0; i < 4; i++) {
-      if (i === firetable.playdex) {
-        $("#avtr" + i).addClass("animate");
-        $("#djthing" + i).addClass("djActive");
-      } else {
-        $("#avtr" + i).removeClass("animate");
-        $("#djthing" + i).removeClass("djActive");
-      }
-    }
+    // Highlight current DJ — use displayedPlaydex so re-renders during the
+    // deferred window don't prematurely switch the active highlight
+    var _activeIdx = (firetable.displayedPlaydex !== undefined) ? firetable.displayedPlaydex : firetable.playdex;
+    applyDjActive(_activeIdx);
 
     positionFyreAtActiveDJ();
     // Sync ghost useres in the user list whenever the deck changes
@@ -826,17 +832,18 @@ firetable.ui.setupRoomEvents = function () {
   // ── Spotlight (Active DJ Index) ──
   ftapi.events.on("spotlightStateChanged", function (data) {
     firetable.playdex = data;
-    for (var i = 0; i < 4; i++) {
-      if (i === data) {
-        $("#avtr" + i).addClass("animate");
-        $("#djthing" + i).addClass("djActive");
-      } else {
-        $("#avtr" + i).removeClass("animate");
-        $("#djthing" + i).removeClass("djActive");
-      }
-    }
 
-    positionFyreAtActiveDJ();
+    // Defer both avatar animation and djActive plaque switch until colorsChanged
+    // fires so they switch at the same moment the color transition starts.
+    // Also defer fyre repositioning so it doesn't flash to the new DJ before
+    // the visual highlight actually updates.
+    clearTimeout(firetable._djActiveTimer);
+    firetable._djActiveTimer = setTimeout(function () {
+      firetable.displayedPlaydex = firetable.playdex;
+      applyDjActive(firetable.displayedPlaydex);
+      positionFyreAtActiveDJ();
+      firetable._djActiveTimer = undefined;
+    }, 2000); // fallback if colorsChanged never follows
   });
 
   // ── Play Limit ──
@@ -872,14 +879,19 @@ firetable.ui.setupRoomEvents = function () {
       firetable.color = firetable.orange;
       firetable.countcolor = "#fff";
     }
-
+    // Apply deferred djActive switch — highlight changes as color transition starts
+    if (firetable._djActiveTimer !== undefined) {
+      clearTimeout(firetable._djActiveTimer);
+      firetable._djActiveTimer = undefined;
+      firetable.displayedPlaydex = firetable.playdex;
+      applyDjActive(firetable.displayedPlaydex);
+    }
     // Update custom color styles
     $('.customColorStyles').remove();
     $("head").append(
       "<style class='customColorStyles'>:root { --color-accent: " + firetable.color + "; } " +
       ":focus-visible { box-shadow: 0 0 0.5rem " + firetable.color + "; } " +
-      ".accent:not(#fire), .butt:not(.graybutt):not(#fire), .ui-slider-horizontal .ui-slider-range-min { background-color: " + firetable.color + "; color: " + firetable.countcolor + "; } " +
-      "#fire { background-color: " + firetable.color + "; } " +
+      ".accent:not(#fire), .butt:not(.graybutt):not(#fire) { color: " + firetable.countcolor + "; } " +
       ".iconbutt.on { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
       "#themebox { background-color: " + firetable.color + "33; }</style>"
     );
