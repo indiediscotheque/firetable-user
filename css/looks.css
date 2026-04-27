@@ -837,9 +837,13 @@ a.sociallogo[href] {
     display: contents;
 }
 
-/* Suppress flash during Firebase auth check */
-#mainGrid.pre-auth > * {
-    visibility: hidden;
+/* Whole-site fade-in after Firebase auth resolves */
+#mainGrid {
+    transition: opacity 600ms ease;
+}
+#mainGrid.pre-auth {
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* Mobile: show only the active content panel per tab */
