@@ -68,12 +68,11 @@
     --color-bg-t1: #222222;
     --color-bg-t2: #282828;
     --color-bg-t3: #2E2E2E;
-    --color-orange: #f4810b;
-    --color-orange-lite: #f6993c;
-    --color-orange66: #f4810b66;
-    --color-orange33: #f4810b33;
+    --color-orange: #cc9933;
+    --color-orange-lite: #eeaa22;
+    --color-orange66: #cc993366;
+    --color-orange33: #cc993333;
     --color-accent: var(--color-orange);
-    transition: --color-accent 1.5s ease;
     --color-text: #e3e3e3;
     --color-text-light: #fff;
     --color-text-muted: #888;
@@ -640,6 +639,10 @@ code {
     }
 }
 
+.pvbar.previewing .pvbarWrap:hover {
+    background-color: transparent;
+}
+
 .working [class*="material-symbols-"] {
     animation: spin 3s infinite linear;
 }
@@ -1106,7 +1109,7 @@ a.sociallogo[href] {
 }
 .prson.idle .prsnRole,
 .prson.ghost .prsnRole {
-    color: var(--color-orange);
+    color: #ee9900;
 }
 
 .imptcon {
@@ -1589,6 +1592,7 @@ html .ui-button.ui-state-disabled:active {
         "visual"
         "progress"
         "controls";
+    transition: --color-accent 1.5s ease;
 }
 
 /* ============================================
@@ -3074,11 +3078,11 @@ img.emoji,
     color: var(--color-text);
 }
 
-.hist-dj-avatar[data-label] {
+#thehistory .pv-dj-avatar[data-label] {
     overflow: visible;
 }
 
-.hist-dj-avatar[data-label]::after {
+#thehistory .pv-dj-avatar[data-label]::after {
     content: attr(data-label);
     position: absolute;
     right: 120%;
@@ -3095,7 +3099,7 @@ img.emoji,
     z-index: 100;
 }
 
-.hist-dj-avatar[data-label]:hover::after {
+#thehistory .pv-dj-avatar[data-label]:hover::after {
     opacity: 1;
 }
 
@@ -3178,10 +3182,6 @@ img.emoji,
     justify-content: center;
 }
 
-#thediscovers .pvbarWrap {
-    display: contents;
-}
-
 #thediscovers .qtxt {
     display: flex;
     flex-direction: column;
@@ -3254,7 +3254,7 @@ img.emoji,
     gap: 0.35rem;
 }
 
-#thediscovers .fresh-dj-avatar {
+#thediscovers .pv-dj-avatar {
     order: 3;
     width: 1.35rem;
     height: 1.35rem;
@@ -3265,11 +3265,11 @@ img.emoji,
     overflow: visible;
 }
 
-#thediscovers .fresh-dj-avatar[data-label] {
+#thediscovers .pv-dj-avatar[data-label] {
     position: relative;
 }
 
-#thediscovers .fresh-dj-avatar[data-label]::after {
+#thediscovers .pv-dj-avatar[data-label]::after {
     content: attr(data-label);
     position: absolute;
     right: 0;
@@ -3287,7 +3287,7 @@ img.emoji,
     z-index: 100;
 }
 
-#thediscovers .fresh-dj-avatar[data-label]:hover::after {
+#thediscovers .pv-dj-avatar[data-label]:hover::after {
     opacity: 1;
 }
 
