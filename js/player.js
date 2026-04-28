@@ -187,7 +187,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     clearTimeout(firetable.ptimeout);
     firetable.ptimeout = null;
     $("#pv" + firetable.preview).html("&#xE037;"); // play_arrow
-    $("#pvbar" + firetable.preview).css("background-image", "none");
+    $("#pvbar" + firetable.preview).css("background-image", "none").removeClass("previewing");
     clearInterval(firetable.movePvBar);
     firetable.movePvBar = null;
     firetable.preview = false;
@@ -198,7 +198,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     // ── Stop any existing preview ──
     if (firetable.preview) {
       $("#pv" + firetable.preview).html("&#xE037;");
-      $("#pvbar" + firetable.preview).css("background-image", "none");
+      $("#pvbar" + firetable.preview).css("background-image", "none").removeClass("previewing");
     }
 
     firetable.preview = id;
@@ -219,7 +219,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     firetable.ptimeout = setTimeout(function () {
       firetable.ptimeout = null;
       $("#pv" + firetable.preview).html("&#xE037;");
-      $("#pvbar" + firetable.preview).css("background-image", "none");
+      $("#pvbar" + firetable.preview).css("background-image", "none").removeClass("previewing");
       clearInterval(firetable.movePvBar);
       firetable.movePvBar = null;
       firetable.pvCount = 0;
@@ -230,6 +230,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     }, PREVIEW_DURATION);
 
     // ── Show pause icon + animate progress bar ──
+    $("#pvbar" + id).addClass("previewing");
     $("#pv" + id).html("&#xE034;"); // pause icon
     firetable.movePvBar = setInterval(function () {
       var pcnt = (firetable.pvCount / 29) * 100; // 29 = PREVIEW_DURATION/1000 - 1

@@ -29,9 +29,8 @@
  * @param {Object} data          - Track data from ftapi
  * @param {jQuery} $template     - Cloneable template element
  * @param {string} containerSel  - jQuery selector for the target container
- * @param {string} [artClass]    - CSS class for the album art element ('discart' or 'histart')
  */
-function renderHistoryItem(data, $template, containerSel, artClass) {
+function renderHistoryItem(data, $template, containerSel) {
   if (data.img === "img/idlogo.png" && ftconfigs.defaultAlbumArtUrl.length) {
     data.img = ftconfigs.defaultAlbumArtUrl;
   }
@@ -63,7 +62,7 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
   var titleText = firetable.ui.strip(data.title || "");
   var artistText = firetable.ui.strip(data.artist || "");
   var $histLink = $histItem.find('.histlink').attr('id', data.histID);
-  if (artClass === "discart") {
+  if (containerSel === "#thediscovers") {
     $histLink.html(
       '<span class="fresh-track-title">' + firetable.utilities.htmlEscape(titleText) + '</span>' +
       '<span class="fresh-track-artist">' + firetable.utilities.htmlEscape(artistText) + '</span>'
@@ -95,16 +94,10 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
 
   // Metadata
   $histItem.find('.histdj').text(data.dj);
-  if (artClass === "discart") {
-    $histItem.find('.fresh-dj-avatar')
-      .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
-      .attr('data-label', data.dj)
-      .attr('aria-label', data.dj);
-  } else {
-    $histItem.find('.hist-dj-avatar')
-      .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
-      .attr('data-label', data.dj);
-  }
+  $histItem.find('.pv-dj-avatar')
+    .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
+    .attr('data-label', data.dj)
+    .attr('aria-label', data.dj);
   $histItem.find('.histdate').text(firetable.utilities.format_date(data.when));
   $histItem.find('.histtime').text(firetable.utilities.format_time(data.when));
 
@@ -158,9 +151,7 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
   });
 
   // Album art
-  if (artClass) {
-    $histItem.find('.' + artClass).css('background-image', 'url(' + data.img + ')');
-  }
+  $histItem.find('.pv-art').css('background-image', 'url(' + data.img + ')');
   // Cache img by cid so playlist renderer can use it even without Firebase storage
   if (data.img && data.cid) {
     firetable.imgCache = firetable.imgCache || {};
@@ -183,7 +174,7 @@ function renderHistoryItem(data, $template, containerSel, artClass) {
       $dayGroup.prependTo('#thehistory');
     }
     var timeStr = firetable.utilities.format_time(data.when);
-    var $avatar = $histItem.find('.hist-dj-avatar').detach();
+    var $avatar = $histItem.find('.pv-dj-avatar').detach();
     var entryHour = new Date(data.when).getHours();
     var $entry = $('<div class="hist-entry" data-hour="' + entryHour + '"></div>');
     $('<span class="hist-timestamp">' + timeStr + '</span>').appendTo($entry);
@@ -323,7 +314,7 @@ firetable.ui.setupRoomEvents = function () {
   firetable._produceCache = firetable._produceCache || [];
   ftapi.events.on('newProduce', function (data) {
     firetable._produceCache.push(data);
-    renderHistoryItem(data, $discoverItem, "#thediscovers", "discart");
+    renderHistoryItem(data, $discoverItem, "#thediscovers");
   });
 
   // ── History (Your Play History) ──
@@ -351,7 +342,7 @@ firetable.ui.setupRoomEvents = function () {
 
   ftapi.events.on('newHistory', function (data) {
     firetable._historyCache.push(data);
-    renderHistoryItem(data, $historyItem, "#thehistory", "histart");
+    renderHistoryItem(data, $historyItem, "#thehistory");
     applyHistoryFilter();
   });
 
@@ -362,13 +353,13 @@ firetable.ui.setupRoomEvents = function () {
     if (firetable._produceCache && firetable._produceCache.length) {
       $('#thediscovers').empty();
       firetable._produceCache.forEach(function (data) {
-        renderHistoryItem(data, $discoverItem, "#thediscovers", "discart");
+        renderHistoryItem(data, $discoverItem, "#thediscovers");
       });
     }
     if (firetable._historyCache && firetable._historyCache.length) {
       $('#thehistory').empty();
       firetable._historyCache.forEach(function (data) {
-        renderHistoryItem(data, $historyItem, "#thehistory", "histart");
+        renderHistoryItem(data, $historyItem, "#thehistory");
       });
       applyHistoryFilter();
     }
