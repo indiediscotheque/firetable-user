@@ -21,7 +21,7 @@ var PREVIEW_DURATION = 30 * 1000;
 /** 16:9 aspect ratio used for the YouTube player sizing */
 var ASPECT_RATIO = 16 / 9;
 /** Default brand colour (firetable orange) */
-var COLOR_ORANGE = "#F4810B";
+var COLOR_ORANGE = "#cc9933";
 
 // ─── localStorage Keys ──────────────────────────────────────────────────────
 /**

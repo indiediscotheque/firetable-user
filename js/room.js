@@ -880,10 +880,9 @@ firetable.ui.setupRoomEvents = function () {
     // Update custom color styles
     $('.customColorStyles').remove();
     $("head").append(
-      "<style class='customColorStyles'>:root { --color-accent: " + firetable.color + "; } " +
-      ":focus-visible { box-shadow: 0 0 0.5rem " + firetable.color + "; } " +
-      ".accent:not(#fire), .butt:not(.graybutt):not(#fire) { color: " + firetable.countcolor + "; } " +
-      ".iconbutt.on { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
+      "<style class='customColorStyles'>#stage { --color-accent: " + firetable.color + "; } " +
+      "#stage .accent:not(#fire), #stage .butt:not(.graybutt):not(#fire) { color: " + firetable.countcolor + "; } " +
+      "#stage .iconbutt.on { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
       "#themebox { background-color: " + firetable.color + "33; }</style>"
     );
 

@@ -68,12 +68,11 @@
     --color-bg-t1: #222222;
     --color-bg-t2: #282828;
     --color-bg-t3: #2E2E2E;
-    --color-orange: #f4810b;
-    --color-orange-lite: #f6993c;
-    --color-orange66: #f4810b66;
-    --color-orange33: #f4810b33;
+    --color-orange: #cc9933;
+    --color-orange-lite: #eeaa22;
+    --color-orange66: #cc993366;
+    --color-orange33: #cc993333;
     --color-accent: var(--color-orange);
-    transition: --color-accent 1.5s ease;
     --color-text: #e3e3e3;
     --color-text-light: #fff;
     --color-text-muted: #888;
@@ -1110,7 +1109,7 @@ a.sociallogo[href] {
 }
 .prson.idle .prsnRole,
 .prson.ghost .prsnRole {
-    color: var(--color-orange);
+    color: #ee9900;
 }
 
 .imptcon {
@@ -1593,6 +1592,7 @@ html .ui-button.ui-state-disabled:active {
         "visual"
         "progress"
         "controls";
+    transition: --color-accent 1.5s ease;
 }
 
 /* ============================================
