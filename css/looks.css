@@ -188,7 +188,7 @@ button {
 }
 
 input::placeholder {
-    color: var(--color-text-subtle);
+    color: var(--color-text-muted);
 }
 
 select,
