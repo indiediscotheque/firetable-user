@@ -1437,4 +1437,26 @@ firetable.ui.init = function () {
 
   // Login form bindings
   firetable.ui.loginEventsInit();
+
+  // Remove .content-loading from each panel when its first real item arrives
+  [
+    { inner: '#mainqueue',    outer: '#queuebox' },
+    { inner: '#thehistory',   outer: '#thehistoryWrap' },
+    { inner: '#thediscovers', outer: '#discover' },
+  ].forEach(function (pair) {
+    var inner = document.querySelector(pair.inner);
+    var outer = document.querySelector(pair.outer);
+    if (!inner || !outer) return;
+    var obs = new MutationObserver(function (mutations) {
+      if (mutations.some(function (m) {
+        return Array.prototype.some.call(m.addedNodes, function (n) {
+          return n.nodeType === 1;
+        });
+      })) {
+        outer.classList.remove('content-loading');
+        obs.disconnect();
+      }
+    });
+    obs.observe(inner, { childList: true });
+  });
 };

@@ -456,7 +456,7 @@ firetable.ui.setupRoomEvents = function () {
     $("#playCount, #lastPlay, #firstPlay").text("");
     window.dispatchEvent(new Event('resize'));
     $("#cloud_with_rain, #fire").removeClass("on");
-    $("#timr").countdown("destroy");
+    $("#timr, #timrUp").countdown("destroy");
 
     // Fade the progress bar out, then reset it
     var $prg = $("#prgbar");
@@ -466,7 +466,7 @@ firetable.ui.setupRoomEvents = function () {
       firetable.moveBar = null;
     }
     setTimeout(function () {
-      $prg.css("background", "color-mix(in srgb, " + ftconfigs.accentColor + " 33%, black)");
+      $prg.css("background", "color-mix(in srgb, " + ftconfigs.accentColor + " 50%, black)");
       $prg.css("opacity", "1");
     }, 450);
 
@@ -604,12 +604,20 @@ firetable.ui.setupRoomEvents = function () {
       format: "MS"
     });
 
+    // ── Count-up timer (elapsed) ──
+    $("#timrUp").countdown({
+      since: new Date(data.started),
+      compact: true,
+      description: "",
+      format: "MS"
+    });
+
     // ── Progress bar ──
     firetable.moveBar = setInterval(function () {
       var now = Date.now();
       var sofar = now - firetable.song.started;
       var pcnt = (sofar / (firetable.song.duration * 1000)) * 100;
-      $("#prgbar").css("background", "linear-gradient(90deg, " + firetable.color + " " + pcnt + "%, color-mix(in srgb, " + firetable.color + " 33%, black) " + pcnt + "%)");
+      $("#prgbar").css("background", "linear-gradient(90deg, " + firetable.color + " " + pcnt + "%, color-mix(in srgb, " + firetable.color + " 50%, black) " + pcnt + "%)");
     }, PROGRESS_BAR_INTERVAL);
   });
 
@@ -882,7 +890,7 @@ firetable.ui.setupRoomEvents = function () {
     $("head").append(
       "<style class='customColorStyles'>#stage { --color-accent: " + firetable.color + "; } " +
       "#stage .accent:not(#fire), #stage .butt:not(.graybutt):not(#fire) { color: " + firetable.countcolor + "; } " +
-      "#stage .iconbutt.on { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
+      "#stage .iconbutt.on:not(.deckDepartureBtn) { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
       "#themebox { background-color: " + firetable.color + "33; }</style>"
     );
 

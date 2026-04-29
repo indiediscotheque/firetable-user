@@ -130,10 +130,10 @@ firetable.actions.applyCardFilters = function () {
       bVal = Number($b.data(sortBy));
       if (isNaN(aVal)) aVal = Number.POSITIVE_INFINITY;
       if (isNaN(bVal)) bVal = Number.POSITIVE_INFINITY;
-      if (aVal !== bVal) return aVal - bVal;
+      if (aVal !== bVal) return bVal - aVal;
     }
 
-    return String($a.data('cardkey') || '').localeCompare(String($b.data('cardkey') || ''));
+    return String($b.data('cardkey') || '').localeCompare(String($a.data('cardkey') || ''));
   });
 
   spots.forEach(function (spot) {
@@ -151,7 +151,9 @@ firetable.actions.applyCardFilters = function () {
  */
 firetable.actions.cardCase = function () {
   $("#cardsMain").html("");
+  $('#cardsWrap').addClass('content-loading');
   ftapi.lookup.cardCollection(function (data) {
+    $('#cardsWrap').removeClass('content-loading');
     if (!data) {
       var $empty = $('<p class="cardsEmpty"><span class="emoji">📭</span><br />You don\'t have any cards yet.</p>');
       $("#cardsMain").html($empty);
