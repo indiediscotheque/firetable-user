@@ -1238,13 +1238,13 @@ a.sociallogo[href] {
     --np-art-size: 4rem;
     --np-art-col: var(--np-art-size);
     --np-art-gap: var(--pad3);
-    grid-template-columns: var(--np-art-col) minmax(0, 1fr) auto;
+    grid-template-columns: var(--np-art-col) minmax(0, 1fr);
     column-gap: var(--np-art-gap);
     grid-template-rows: auto auto 1fr;
     grid-template-areas:
-        "art track timrvol"
-        "art artist timrvol"
-        "art plays timrvol";
+        "art track"
+        "art artist"
+        "art plays";
     margin-bottom: auto;
     padding: var(--pad4) var(--pad4) 2.5rem var(--pad4);
     transition: grid-template-columns 300ms ease, column-gap 300ms ease;
@@ -1308,17 +1308,6 @@ a.sociallogo[href] {
     color: white;
 }
 
-#timr {
-    grid-area: timrvol;
-    padding-top: 0.15em;
-    font-family: "Open Sans", helvetica, arial, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-align: right;
-    color: rgba(255, 255, 255, 0.66);
-}
-
 #artist {
     grid-area: artist;
     margin-bottom: var(--pad2);
@@ -1354,15 +1343,13 @@ a.sociallogo[href] {
 
 #track,
 #artist,
-#plays,
-#timr {
+#plays {
     transition: opacity 180ms ease, transform 180ms ease;
 }
 
 #nowplaying.is-transitioning #track,
 #nowplaying.is-transitioning #artist,
-#nowplaying.is-transitioning #plays,
-#nowplaying.is-transitioning #timr {
+#nowplaying.is-transitioning #plays {
     opacity: 0;
     transform: translateY(0.2rem);
 }
@@ -1399,12 +1386,11 @@ a.sociallogo[href] {
 }
 
 #volplace {
-    grid-area: timrvol;
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    margin-top: 2rem;
-    max-height: 3rem;
+    height: 5rem;
+    margin-bottom: auto;
 }
 
 #volstatus {
@@ -1620,10 +1606,11 @@ html .ui-button.ui-state-disabled:active {
     grid-area: stage;
     display: grid;
     grid-template-rows: 1fr auto auto;
+    grid-template-columns: var(--stage-side-w) 1fr var(--stage-side-w);
     grid-template-areas:
-        "visual"
-        "progress"
-        "controls";
+        "left    visual    right"
+        "progress progress progress"
+        "controls controls controls";
     transition: --color-accent 1.5s ease;
 }
 
@@ -1643,9 +1630,8 @@ html .ui-button.ui-state-disabled:active {
     position: relative;
     overflow: hidden;
     isolation: isolate;
+    aspect-ratio: 16 / 9;
     background: linear-gradient(to bottom, color-mix(in srgb, black 85%, var(--color-accent)), color-mix(in srgb, black 66%, var(--color-accent)));
-    border-top-left-radius: 1.5rem;
-    border-top-right-radius: 1.5rem;
     box-shadow: 
         inset 0 -4rem 8rem -8rem white, 
         0 0 10rem color-mix(in srgb, var(--color-accent), black 95%), 
@@ -2455,9 +2441,9 @@ a.importLinkCheck {
     z-index: 15;
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     max-width: 100vw;
-    padding: var(--pad2) var(--pad3);
+    padding: var(--pad2) var(--pad1);
     font-size: 1rem;
     text-align: center;
     color: #fff;
@@ -2471,9 +2457,22 @@ a.importLinkCheck {
 .themeLeft,
 .themeRight {
     display: flex;
+    flex-direction: column;
     align-items: center;
     flex-shrink: 0;
     gap: var(--pad2);
+}
+
+.themeTimr {
+    flex-shrink: 0;
+    font-family: "Open Sans", helvetica, arial, sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    min-width: 3.5rem;
 }
 
 .themeCenter {
@@ -2501,6 +2500,31 @@ a.importLinkCheck {
 .ticker-sep {
     padding: 0 0.5em;
     opacity: 0.4;
+}
+
+/* ── Stage side panels ── */
+:root {
+    --stage-side-w: 2.75rem;
+}
+
+#stageSideLeft,
+#stageSideRight {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 1.5rem var(--pad1) var(--pad3) var(--pad1);
+    background-color: var(--color-bg-t1);
+}
+
+#stageSideLeft  {
+    grid-area: left;
+    border-top-left-radius: 1.5rem;
+}
+#stageSideRight { 
+    grid-area: right;
+    border-top-right-radius: 1.5rem;
+    padding-top: 2rem;
 }
 
 /* ============================================
@@ -4391,7 +4415,6 @@ body.blog {
     }
 
     #djStage {
-        height: 30vh;
         min-height: 15rem;
     }
 

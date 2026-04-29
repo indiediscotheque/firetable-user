@@ -101,10 +101,6 @@
 		<div id="nowplaying">
 			<div id="albumArt"></div>
 			<div id="track">Loading firetable...</div>
-			<div id="timr"></div>
-			<div id="volplace">
-				<div id="slider"></div>
-			</div>
 			<div id="artist"></div>
 			<div id="plays">
 				<div id="playCount"></div>
@@ -116,29 +112,40 @@
 		<div id="prgbar"><div id="prgbarbar"></div></div>
 
 		<div id="themebox">
+			<div id="timrUp" class="themeTimr"></div>
+			<div class="themeCenter">
+				<div id="currentTheme"></div>
+			</div>
+			<div id="timr" class="themeTimr"></div>
+		</div>
+
+		<div id="stageSideLeft">
 			<div class="themeLeft">
-				<button role="button" class="butt accent iconbutt" id="fire" data-label="Fire!" aria-label="Fire!" tabindex="0">
-					<i class="material-symbols-outlined"> mode_heat </i>
+				<button role="button" class="butt graybutt iconbutt" id="grab" data-label="Add to playlist" aria-label="Add to playlist" tabindex="0">
+					<i class="material-symbols-outlined"> &#xE03B; </i>
 				</button>
 				<a target="_blank" role="button" class="butt graybutt iconbutt" id="songlink" data-label="Song link" aria-label="Song link" tabindex="0">
 					<i class="material-symbols-outlined"> link </i>
 				</a>
-				<button role="button" class="butt graybutt iconbutt" id="grab" data-label="Add to playlist" aria-label="Add to playlist" tabindex="0">
-					<i class="material-symbols-outlined"> &#xE03B; </i>
+				<button role="button" class="butt accent iconbutt" id="fire" data-label="Fire!" aria-label="Fire!" tabindex="0">
+					<i class="material-symbols-outlined"> mode_heat </i>
 				</button>
 			</div>
-			<div class="themeCenter">
-				<div id="currentTheme"></div>
+		</div>
+
+		<div id="stageSideRight">
+			<div id="volplace">
+				<div id="slider"></div>
 			</div>
 			<div class="themeRight">
-				<button role="button" class="butt graybutt iconbutt" id="reloadtrack" data-label="Reload audio" aria-label="Reload audio" tabindex="0">
-					<i class="material-symbols-outlined"> refresh </i>
+				<button role="button" class="butt graybutt iconbutt" id="volstatus" data-label="Mute" aria-label="Mute" tabindex="0">
+					<i class="material-symbols-outlined"> &#xE050; </i>
 				</button>
 				<button role="button" class="butt graybutt iconbutt" id="screenControl" data-label="Screen: synced" aria-label="Screen: synced" tabindex="0">
 					<i class="material-symbols-outlined">microwave</i>
 				</button>
-				<button role="button" class="butt graybutt iconbutt" id="volstatus" data-label="Mute" aria-label="Mute" tabindex="0">
-					<i class="material-symbols-outlined"> &#xE050; </i>
+				<button role="button" class="butt graybutt iconbutt" id="reloadtrack" data-label="Reload audio" aria-label="Reload audio" tabindex="0">
+					<i class="material-symbols-outlined"> refresh </i>
 				</button>
 			</div>
 		</div>
