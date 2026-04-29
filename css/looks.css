@@ -188,7 +188,7 @@ button {
 }
 
 input::placeholder {
-    color: var(--color-text-subtle);
+    color: var(--color-text-muted);
 }
 
 select,
@@ -1606,7 +1606,7 @@ html .ui-button.ui-state-disabled:active {
     grid-area: stage;
     display: grid;
     grid-template-rows: 1fr auto auto;
-    grid-template-columns: var(--stage-side-w) 1fr var(--stage-side-w);
+    grid-template-columns: auto 1fr auto;
     grid-template-areas:
         "left    visual    right"
         "progress progress progress"
@@ -2468,7 +2468,7 @@ a.importLinkCheck {
     font-family: "Open Sans", helvetica, arial, sans-serif;
     font-size: 0.75rem;
     font-weight: 400;
-    line-height: 1;
+    line-height: 1.25;
     letter-spacing: 0.1em;
     text-align: center;
     color: rgba(255, 255, 255, 0.5);
@@ -2503,9 +2503,6 @@ a.importLinkCheck {
 }
 
 /* ── Stage side panels ── */
-:root {
-    --stage-side-w: 2.75rem;
-}
 
 #stageSideLeft,
 #stageSideRight {
@@ -2513,7 +2510,7 @@ a.importLinkCheck {
     flex-direction: column;
     justify-content: flex-end;
     align-items: center;
-    padding: 1.5rem var(--pad1) var(--pad3) var(--pad1);
+    padding: 1.5rem var(--pad3) var(--pad3) var(--pad3);
     background-color: var(--color-bg-t1);
 }
 
@@ -4345,8 +4342,8 @@ body.blog {
     }
 
     #deck {
-        margin-left: var(--pad4);
-        margin-right: var(--pad4);
+        margin-left: var(--pad3);
+        margin-right: var(--pad3);
         gap: var(--pad3);
     }
 
