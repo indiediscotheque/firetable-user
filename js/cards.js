@@ -151,7 +151,9 @@ firetable.actions.applyCardFilters = function () {
  */
 firetable.actions.cardCase = function () {
   $("#cardsMain").html("");
+  $('#cardsWrap').addClass('content-loading');
   ftapi.lookup.cardCollection(function (data) {
+    $('#cardsWrap').removeClass('content-loading');
     if (!data) {
       var $empty = $('<p class="cardsEmpty"><span class="emoji">📭</span><br />You don\'t have any cards yet.</p>');
       $("#cardsMain").html($empty);

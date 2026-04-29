@@ -187,6 +187,10 @@ button {
     box-shadow: var(--shadow-drop);
 }
 
+input::placeholder {
+    color: var(--color-text-subtle);
+}
+
 select,
 button {
     cursor: pointer;
@@ -847,6 +851,34 @@ a.sociallogo[href] {
 #mainGrid.pre-auth {
     opacity: 0;
     pointer-events: none;
+}
+
+/* ── Content-area loading spinner (visible after 500 ms if data hasn't arrived) ── */
+.content-loading {
+    position: relative !important;
+}
+.content-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    animation:
+        content-loading-appear 0.3s ease 0.5s forwards,
+        content-loading-spin   0.8s linear  0.5s infinite;
+}
+@keyframes content-loading-appear {
+    to { opacity: 1; }
+}
+@keyframes content-loading-spin {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to   { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 /* Mobile: show only the active content panel per tab */
@@ -3612,10 +3644,6 @@ img.emoji,
     line-height: 2;
 }
 
-.cardFilterInput::placeholder {
-    color: var(--color-text-subtle);
-}
-
 .cardFilterInput:focus,
 .cardFilterSelect:focus {
     outline: none;
@@ -3649,12 +3677,43 @@ img.emoji,
 }
 
 #cardsMain .caseCardSpot {
+    /* keep layout stable but don't hide the spot — the spinner lives here */
+}
+
+/* Canvas fades in once the card has finished painting */
+#cardsMain .caseCardSpot canvas {
     opacity: 0;
     transform: translateY(0.35rem);
     transition: opacity 220ms ease, transform 220ms ease;
 }
 
+/* Spinner shown while the card canvas is still painting */
+#cardsMain .caseCardSpot:not(.is-rendered)::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin: -0.875rem 0 0 -0.875rem;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: card-spot-spin 0.8s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+@keyframes card-spot-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
 #cardsMain .caseCardSpot.is-rendered {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+#cardsMain .caseCardSpot.is-rendered canvas {
     opacity: 1;
     transform: translateY(0);
 }
