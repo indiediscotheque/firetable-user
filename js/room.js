@@ -882,7 +882,7 @@ firetable.ui.setupRoomEvents = function () {
     $("head").append(
       "<style class='customColorStyles'>#stage { --color-accent: " + firetable.color + "; } " +
       "#stage .accent:not(#fire), #stage .butt:not(.graybutt):not(#fire) { color: " + firetable.countcolor + "; } " +
-      "#stage .iconbutt.on { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
+      "#stage .iconbutt.on:not(.deckDepartureBtn) { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
       "#themebox { background-color: " + firetable.color + "33; }</style>"
     );
 
