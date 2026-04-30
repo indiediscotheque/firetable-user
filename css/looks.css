@@ -1460,6 +1460,10 @@ a.sociallogo[href] {
     padding: var(--pad3);
 }
 
+.ft-popover-box .butt {
+    padding: 0.45em 0.75em;
+}
+
 #socialPopover .ft-popover-box {
     display: flex;
     flex-direction: column;
@@ -2408,25 +2412,30 @@ a.importLinkCheck {
     gap: var(--pad1);
 }
 
-.deleteSongPromptActions button {
-    width: 100%;
-}
-
+.deleteSongPromptActions button,
 .shuffleQueuePromptActions button {
     width: 100%;
 }
 
-.deleteSongPromptActions .deleteSongPrimary {
-    font-size: 1rem;
-    font-weight: 700;
-    background-color: #b1272e;
-    color: #fff;
-}
-
+.deleteSongPromptActions .deleteSongPrimary,
 .shuffleQueuePromptActions .shuffleQueuePrimary {
     font-size: 1rem;
-    font-weight: 700;
-    background: color-mix(in srgb, var(--color-accent) 50%, black);
+}
+
+.giftCardPromptBox {
+    width: min(13rem, 90vw);
+}
+
+.giftCardPromptMsg {
+    font-size: 0.875rem;
+    margin: 0 0 var(--pad2);
+    text-align: center;
+}
+
+.giftCardPromptActions {
+    display: flex;
+    justify-content: center;
+    gap: var(--pad3);
 }
 
 #queuelist .pvbar.deleting .deletesong {
@@ -3746,40 +3755,34 @@ img.emoji,
     border: 1px solid #333;
 }
 
-span.cardShareChat,
-span.cardGiftChat,
-span.cardViewLarger {
+/* ── Card action overlay ── */
+.caseCardSpot .cardActions {
     position: absolute;
-    font-size: 0.875rem;
-    background-color: #000;
-    padding: 0.5rem;
-    border-radius: var(--radius-md);
-    display: none;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--pad2);
+    padding: var(--pad3);
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease;
 }
 
-span.cardShareChat {
-    top: 25%;
+.caseCardSpot:hover .cardActions {
+    opacity: 1;
+    pointer-events: auto;
 }
 
-span.cardGiftChat {
-    top: 42%;
-}
-
-span.cardViewLarger {
-    top: 59%;
-}
-
-span.cardViewLarger:hover,
-span.cardGiftChat:hover,
-span.cardShareChat:hover {
-    background-color: var(--color-accent);
-    color: #000;
-}
-
-.caseCardSpot:hover .cardShareChat,
-.caseCardSpot:hover .cardGiftChat,
-.caseCardSpot:hover .cardViewLarger {
-    display: block;
+.caseCardSpot .cardActions .butt {
+    width: 100%;
+    padding: 0.5em;
+    font-size: 0.75rem;
+    letter-spacing: 0;
+    color: white;
 }
 
 /* ── View Larger modal ── */
