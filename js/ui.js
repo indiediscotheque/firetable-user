@@ -1087,7 +1087,14 @@ firetable.ui.setupMiscEvents = function () {
       }
       firetable.stealTarget = null;
       var cuteid = ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
-      if (!dest || dest === "0") firetable.actions.bumpSongInQueue(cuteid);
+      if (!dest || dest === "0") {
+        ftapi.actions.moveTrackToTop(cuteid, ftapi.queueRef, firetable.preview, function(changePV) {
+          if (changePV) firetable.preview = changePV;
+        });
+      } else {
+        var plRef = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + String(dest) + "/list");
+        ftapi.actions.moveTrackToTop(cuteid, plRef);
+      }
       $("#stealContain").hide();
       // Show "added" feedback if the source button was inside a search result row
       if ($sourceBtn) {

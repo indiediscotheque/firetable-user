@@ -474,49 +474,27 @@ ftapi.actions = {
     });
     return newTrack.key;
   },
-  moveTrackToTop: function(trackID, preview, pvChangeCallback) {
-    // this is a stupid way of doing this,
-    // but i couldn't find a way to re-order a fb ref
-    // or add to the top of it (fb has a push() but no unshift() equivalent)
-    if (!ftapi.queue) return false;
-    var okdata = ftapi.queue;
-    var qtemp = [];
-    var ids = [];
-    var indx = false;
-    var countr = 0;
-    for (var key in okdata) {
-      if (okdata.hasOwnProperty(key)) {
-        var thisone = okdata[key];
-        var obj = {
-          data: thisone,
-          key: key
-        };
-        qtemp.push(obj);
-        ids.push(key);
-        if (key == trackID) indx = countr;
-        countr++;
-      }
-    }
-    var newobj = {};
-    if (indx) {
-      var thingo = qtemp[indx];
-      qtemp.splice(indx, 1); //take song out of temp array
-      qtemp.unshift(thingo); //add it to the top
+  moveTrackToTop: function(trackID, ref, preview, pvChangeCallback) {
+    // Firebase has no unshift() equivalent, so we read, rotate, and write back.
+    if (!ref) ref = ftapi.queueRef;
+    ref.once('value', function(snap) {
+      var data = snap.val();
+      if (!data) return;
+      var keys = Object.keys(data);
+      var idx = keys.indexOf(trackID);
+      if (idx <= 0) return; // already at top or not found
+      var rotated = keys.slice();
+      rotated.splice(idx, 1);
+      rotated.unshift(trackID);
       var changePv = false;
-      //now we have to rebuild the object keeping the oldkeys in the same order
-      //we have to do it this way (i think) because firebase orders based on its ids
-      for (var i = 0; i < qtemp.length; i++) {
-        var theid = ids[i];
-        if (preview) {
-          if (preview == qtemp[i].key) {
-            changePv = theid;
-          }
-        }
-        newobj[theid] = qtemp[i].data;
+      var newobj = {};
+      for (var i = 0; i < keys.length; i++) {
+        if (preview && preview === rotated[i]) changePv = keys[i];
+        newobj[keys[i]] = data[rotated[i]];
       }
-      if (changePv) pvChangeCallback(changePv);
-      ftapi.queueRef.set(newobj); //send it off to firebase!
-    }
+      if (changePv && pvChangeCallback) pvChangeCallback(changePv);
+      ref.set(newobj);
+    });
   },
   moveTrackToBottom: function(trackID, callback) {
     var theTrack = ftapi.queue[trackID];
