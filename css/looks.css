@@ -2568,9 +2568,11 @@ a.importLinkCheck {
     position: relative;
     display: flex;
     gap: var(--pad2);
-    margin: var(--pad3);
+    margin: var(--pad1) var(--pad2);
+    padding: var(--pad2);
     color: var(--color-text);
     word-break: break-word;
+    border-radius: var(--radius-md);
 }
 
 .newChat .ft-avatar {
@@ -2594,6 +2596,12 @@ a.importLinkCheck {
 .nowplayn {
     position: relative;
     background-color: transparent;
+
+    .material-symbols-outlined {
+        position: absolute;
+        left: 1.25rem;
+        color: var(--color-text-dim);
+    }
 }
 
 .newChat.nowplayn,
@@ -2748,25 +2756,8 @@ a.importLinkCheck {
     transform: rotate(45deg);
 }
 
-.badoop::before {
-    content: "";
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    position: absolute;
-    z-index: 1;
-    top: calc(var(--pad3) * -1);
-    left: calc(var(--pad3) * -1);
-    bottom: calc(var(--pad3) * -1);
-    width: 0;
-    padding: 0.2rem;
-    font-size: 1.2rem;
-    font-weight: 700;
-    line-height: 3.2;
-    color: #777;
-    background-color: #444;
-    border-top-right-radius: var(--radius-pill);
-    border-bottom-right-radius: var(--radius-pill);
+.badoop {
+    background-color: color-mix(in srgb, var(--color-orange) 8%, transparent);
 }
 
 .chatTime {
@@ -3138,6 +3129,7 @@ img.emoji,
 
 .histlink {
     color: var(--color-text);
+    text-wrap: balance;
 }
 
 #thehistory .pv-dj-avatar[data-label] {
@@ -4223,7 +4215,7 @@ body.blog {
 
     #mainGrid.mmusrs  #usersbox   { display: flex; }
 
-    .newChat { margin-left: var(--pad2); }
+    /* .newChat { margin-left: var(--pad2); } */
 }
 
 /* ── max 799px: touch-only users list ── */
@@ -4334,10 +4326,6 @@ body.blog {
 
     #queuebox {
         padding-top: var(--pad4);
-    }
-
-    #newchatForm {
-        padding-right: var(--pad4);
     }
 
     #actualChat {
@@ -4490,11 +4478,15 @@ body.blog {
     }
 
     .newChat {
-        margin-inline: var(--pad4);
+        margin-inline: var(--pad3);
+    }
+
+    #newchatForm {
+        padding-right: var(--pad3);
     }
 
     .nowplayn {
-        padding-left: calc(var(--pad5) - var(--pad4));
+        padding-left: calc(1.75rem + var(--pad2) * 2);
     }
 
     #pickEmoji {

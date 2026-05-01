@@ -244,15 +244,16 @@ firetable.ui.setupChatEvents = function () {
     }
 
     // ── @-mention detection ──
-    var badoop = false;
-    if (chatData.txt.match("@" + you, 'i') || chatData.txt.match(/\@everyone/)) {
+    // Mention styling should apply even for older messages loaded from history,
+    // but sound/desktop alerts should only fire for recent messages.
+    var hasMention = !!(chatData.txt.match("@" + you, 'i') || chatData.txt.match(/\@everyone/));
+    if (hasMention) {
       var timeSinceMessage = Date.now() - chatData.time;
       if (timeSinceMessage < 10 * 1000) {
         firetable.utilities.playSound("sound");
         if (firetable.desktopNotifyMentions) {
           firetable.utilities.desktopNotify(chatData, namebo);
         }
-        badoop = true;
       }
     }
 
@@ -273,7 +274,7 @@ firetable.ui.setupChatEvents = function () {
     var txtOut = firetable.ui.formatChatText(chatData.txt);
     if (chatData.hidden) txtOut = "[message removed]";
 
-    if (chatData.id === firetable.lastChatPerson && !badoop) {
+    if (chatData.id === firetable.lastChatPerson && !hasMention) {
       // ── Group with previous message from same user ──
       $("#chat" + firetable.lastChatId + " .chatContent").append(
         '<div id="chattxt' + chatData.chatID + '" class="chatText"></div>'
@@ -302,7 +303,7 @@ firetable.ui.setupChatEvents = function () {
       $chatthing.find('.chatTime')
         .attr('id', "chatTime" + chatData.chatID)
         .html(firetable.utilities.format_time(chatData.time));
-      if (badoop) $chatthing.addClass('badoop');
+      if (hasMention) $chatthing.addClass('badoop');
 
       $chatthing.find(".chatText").html(txtOut).attr('id', "chattxt" + chatData.chatID);
       $chatthing.find(".chatName").text(namebo);
