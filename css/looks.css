@@ -1460,6 +1460,10 @@ a.sociallogo[href] {
     padding: var(--pad3);
 }
 
+.ft-popover-box .butt {
+    padding: 0.45em 0.75em;
+}
+
 #socialPopover .ft-popover-box {
     display: flex;
     flex-direction: column;
@@ -2408,25 +2412,30 @@ a.importLinkCheck {
     gap: var(--pad1);
 }
 
-.deleteSongPromptActions button {
-    width: 100%;
-}
-
+.deleteSongPromptActions button,
 .shuffleQueuePromptActions button {
     width: 100%;
 }
 
-.deleteSongPromptActions .deleteSongPrimary {
-    font-size: 1rem;
-    font-weight: 700;
-    background-color: #b1272e;
-    color: #fff;
-}
-
+.deleteSongPromptActions .deleteSongPrimary,
 .shuffleQueuePromptActions .shuffleQueuePrimary {
     font-size: 1rem;
-    font-weight: 700;
-    background: color-mix(in srgb, var(--color-accent) 50%, black);
+}
+
+.giftCardPromptBox {
+    width: min(13rem, 90vw);
+}
+
+.giftCardPromptMsg {
+    font-size: 0.875rem;
+    margin: 0 0 var(--pad2);
+    text-align: center;
+}
+
+.giftCardPromptActions {
+    display: flex;
+    justify-content: center;
+    gap: var(--pad3);
 }
 
 #queuelist .pvbar.deleting .deletesong {
@@ -2543,7 +2552,6 @@ a.importLinkCheck {
 
 #chats {
     margin: 0 auto;
-    max-width: 54ch;
 }
 
 #newchat {
@@ -2553,20 +2561,23 @@ a.importLinkCheck {
 #newchatForm {
     grid-column: 2/3;
     width: 100%;
+    padding-right: var(--pad3);
 }
 
 .newChat {
     position: relative;
     display: flex;
     gap: var(--pad2);
-    margin: var(--pad3);
+    margin: var(--pad1) var(--pad2);
+    padding: var(--pad1) var(--pad3);
     color: var(--color-text);
     word-break: break-word;
+    border-radius: var(--radius-md);
 }
 
 .newChat .ft-avatar {
     position: sticky;
-    top: 1rem;
+    top: 0.75rem;
     z-index: 2;
     margin-top: 0.125rem;
     width: 1.75rem;
@@ -2584,7 +2595,14 @@ a.importLinkCheck {
 
 .nowplayn {
     position: relative;
+    padding-left: calc(1.75rem + var(--pad2) * 3);
     background-color: transparent;
+
+    .material-symbols-outlined {
+        position: absolute;
+        left: 1.5rem;
+        color: var(--color-text-dim);
+    }
 }
 
 .newChat.nowplayn,
@@ -2616,6 +2634,7 @@ a.importLinkCheck {
 }
 
 .chatContent .utitle {
+    order: 2;
     flex: 0 0 auto;
     font-size: 1em;
     margin-left: 0.25em;
@@ -2630,18 +2649,20 @@ a.importLinkCheck {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 0;
+    gap: var(--pad1);
 }
 
 .chatHead::after {
     content: "";
+    order: 3;
     flex: 1;
     height: 1px;
     background: rgba(255, 255, 255, 0.1);
-    margin-left: var(--pad1);
+    margin-left: 0;
 }
 
 .chatName {
+    order: 1;
     flex: 0 0 auto;
     font-size: 0.75rem;
     font-weight: 500;
@@ -2739,33 +2760,17 @@ a.importLinkCheck {
     transform: rotate(45deg);
 }
 
-.badoop::before {
-    content: "";
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    position: absolute;
-    z-index: 1;
-    top: calc(var(--pad3) * -1);
-    left: calc(var(--pad3) * -1);
-    bottom: calc(var(--pad3) * -1);
-    width: 0;
-    padding: 0.2rem;
-    font-size: 1.2rem;
-    font-weight: 700;
-    line-height: 3.2;
-    color: #777;
-    background-color: #444;
-    border-top-right-radius: var(--radius-pill);
-    border-bottom-right-radius: var(--radius-pill);
+.badoop {
+    background-color: color-mix(in srgb, var(--color-orange) 8%, transparent);
 }
 
 .chatTime {
+    order: 4;
     position: relative;
     z-index: 2;
     font-size: 0.66rem;
     font-weight: 400;
-    line-height: 1.8;
+    line-height: 1;
     color: rgba(255, 255, 255, 0.47);
     text-align: right;
     white-space: nowrap;
@@ -2789,7 +2794,7 @@ a.importLinkCheck {
 
 #pickEmoji {
     grid-column: 1/2;
-    margin-left: var(--pad3);
+    margin-left: var(--pad4);
 }
 
 #pickerResults {
@@ -3129,6 +3134,7 @@ img.emoji,
 
 .histlink {
     color: var(--color-text);
+    text-wrap: balance;
 }
 
 #thehistory .pv-dj-avatar[data-label] {
@@ -3746,40 +3752,34 @@ img.emoji,
     border: 1px solid #333;
 }
 
-span.cardShareChat,
-span.cardGiftChat,
-span.cardViewLarger {
+/* ── Card action overlay ── */
+.caseCardSpot .cardActions {
     position: absolute;
-    font-size: 0.875rem;
-    background-color: #000;
-    padding: 0.5rem;
-    border-radius: var(--radius-md);
-    display: none;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--pad2);
+    padding: var(--pad3);
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease;
 }
 
-span.cardShareChat {
-    top: 25%;
+.caseCardSpot:hover .cardActions {
+    opacity: 1;
+    pointer-events: auto;
 }
 
-span.cardGiftChat {
-    top: 42%;
-}
-
-span.cardViewLarger {
-    top: 59%;
-}
-
-span.cardViewLarger:hover,
-span.cardGiftChat:hover,
-span.cardShareChat:hover {
-    background-color: var(--color-accent);
-    color: #000;
-}
-
-.caseCardSpot:hover .cardShareChat,
-.caseCardSpot:hover .cardGiftChat,
-.caseCardSpot:hover .cardViewLarger {
-    display: block;
+.caseCardSpot .cardActions .butt {
+    width: 100%;
+    padding: 0.5em;
+    font-size: 0.75rem;
+    letter-spacing: 0;
+    color: white;
 }
 
 /* ── View Larger modal ── */
@@ -4220,7 +4220,7 @@ body.blog {
 
     #mainGrid.mmusrs  #usersbox   { display: flex; }
 
-    .newChat { margin-left: var(--pad2); }
+    /* .newChat { margin-left: var(--pad2); } */
 }
 
 /* ── max 799px: touch-only users list ── */
@@ -4333,10 +4333,6 @@ body.blog {
         padding-top: var(--pad4);
     }
 
-    #newchatForm {
-        padding-right: var(--pad4);
-    }
-
     #actualChat {
         max-width: 28rem;
     }
@@ -4359,7 +4355,7 @@ body.blog {
     #mainGrid.mmchat,
     #mainGrid.mmusrs {
         grid-template-rows: auto 1fr;
-        grid-template-columns: min-content 20vw min-content 30vw;
+        grid-template-columns: min-content 20vw min-content auto;
         grid-template-areas:
             "head people stage chat"
             "head people view  chat";
@@ -4484,18 +4480,6 @@ body.blog {
     }
     #allUsers .prsnNameRole {
         justify-content: flex-end;
-    }
-
-    .newChat {
-        margin-inline: var(--pad4);
-    }
-
-    .nowplayn {
-        padding-left: calc(var(--pad5) - var(--pad4));
-    }
-
-    #pickEmoji {
-        margin-left: var(--pad4);
     }
 
     #usersStats {

@@ -29,6 +29,28 @@ $(document)
   .off('input.cardFilters change.cardFilters')
   .on('input.cardFilters change.cardFilters', '#cardFilterRow input, #cardFilterRow select', function () {
     firetable.actions.applyCardFilters();
+  })
+  .off('click.giftCardConfirm')
+  .on('click.giftCardConfirm', '#giftCardPopover .giftCardConfirm', function () {
+    var popoverEl = document.getElementById('giftCardPopover');
+    firetable.actions.giftCard($(popoverEl).data('cardid'));
+    popoverEl.hidePopover();
+  })
+  .off('click.giftCardCancel')
+  .on('click.giftCardCancel', '#giftCardPopover .giftCardCancel', function () {
+    document.getElementById('giftCardPopover').hidePopover();
+  })
+  .off('keydown.giftCardKeys')
+  .on('keydown.giftCardKeys', '#giftCardPopover', function (e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      this.hidePopover();
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      $(this).find('.giftCardConfirm').trigger('click');
+    }
   });
 
 /**
@@ -168,9 +190,11 @@ firetable.actions.cardCase = function () {
       $("#cardsMain").append(
         '<span id="caseCardSpot' + key + '" class="caseCardSpot">' +
         '<canvas width="225" height="300" class="caseCard" id="cardMaker' + key + '"></canvas>' +
-        '<span role="button" onclick="firetable.actions.giftCard(\'' + key + '\')" class="cardGiftChat">Gift to DJ</span>' +
-        '<span role="button" onclick="firetable.actions.chatCard(\'' + key + '\')" class="cardShareChat">Share In Chat</span>' +
-        '<span role="button" onclick="firetable.actions.viewLargerCard(\'' + key + '\')" class="cardViewLarger">View Larger</span>' +
+        '<div class="cardActions">' +
+        '<button type="button" class="butt graybutt cardShareChat" onclick="firetable.actions.chatCard(\'' + key + '\')" >Share In Chat</button>' +
+        '<button type="button" class="butt graybutt cardGiftChat" onclick="firetable.actions.giftCardPrompt(\'' + key + '\', this)">Gift to DJ</button>' +
+        '<button type="button" class="butt graybutt cardViewLarger" onclick="firetable.actions.viewLargerCard(\'' + key + '\')">View Larger</button>' +
+        '</div>' +
         '</span>'
       );
 
@@ -226,6 +250,33 @@ firetable.actions.viewLargerCard = function (cardid) {
   dest.getContext('2d').drawImage(srcCanvas, 0, 0);
   $('#overlay').addClass('show');
   $('#cardViewLargerModal').addClass('show');
+};
+
+/**
+ * Show the gift-card confirmation popover.
+ * @param {string} cardid    - Card key
+ * @param {HTMLElement} anchorEl - Element to anchor the popover to
+ */
+firetable.actions.giftCardPrompt = function (cardid, anchorEl) {
+  var popoverEl = document.getElementById('giftCardPopover');
+  if (!popoverEl) {
+    firetable.actions.giftCard(cardid);
+    return;
+  }
+
+  if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
+
+  var djName = (firetable.song && firetable.song.djname) ? firetable.song.djname : 'the DJ';
+  var $popover = $(popoverEl);
+  $popover.data('cardid', cardid);
+  popoverEl.querySelector('.giftCardPromptMsg').textContent = 'Gift this card to ' + djName + '?';
+
+  popoverEl.style.visibility = 'hidden';
+  popoverEl.showPopover();
+  firetable.ui.positionPopover(anchorEl, popoverEl, document.getElementById('giftCardArrow')).then(function () {
+    var primaryBtn = popoverEl.querySelector('.giftCardConfirm');
+    if (primaryBtn) primaryBtn.focus();
+  });
 };
 
 /**

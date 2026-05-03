@@ -693,7 +693,7 @@ firetable.ui.getViewFromPath = function () {
 firetable.ui.updateScreenBtn = function (val) {
   var icons  = { on: 'capture', off: 'cancel_presentation', sync: 'microwave' };
   var titles = { on: 'Screen: always on', off: 'Screen: disabled', sync: 'Screen: synced' };
-  $('#screenControl').find('.material-symbols-filled').text(icons[val] || 'microwave');
+  $('#screenControl').find('[class*="material-symbols-"]').text(icons[val] || 'microwave');
   $('#screenControl').attr('data-label', titles[val] || 'Screen: synced').attr('aria-label', titles[val] || 'Screen: synced');
   var isOn = (val === 'on') || (val === 'sync' && firetable.screenSyncPos);
   $('#screenControl').toggleClass('on', isOn);
@@ -1087,7 +1087,14 @@ firetable.ui.setupMiscEvents = function () {
       }
       firetable.stealTarget = null;
       var cuteid = ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
-      if (!dest || dest === "0") firetable.actions.bumpSongInQueue(cuteid);
+      if (!dest || dest === "0") {
+        ftapi.actions.moveTrackToTop(cuteid, ftapi.queueRef, firetable.preview, function(changePV) {
+          if (changePV) firetable.preview = changePV;
+        });
+      } else {
+        var plRef = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + String(dest) + "/list");
+        ftapi.actions.moveTrackToTop(cuteid, plRef);
+      }
       $("#stealContain").hide();
       // Show "added" feedback if the source button was inside a search result row
       if ($sourceBtn) {

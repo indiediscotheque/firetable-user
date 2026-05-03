@@ -92,7 +92,7 @@ firetable.actions.removeDupesFromQueue = function () {
  * @param {string} songid - Track key in the playlist
  */
 firetable.actions.bumpSongInQueue = function (songid) {
-  ftapi.actions.moveTrackToTop(songid, firetable.preview, function (changePV) {
+  ftapi.actions.moveTrackToTop(songid, ftapi.queueRef, firetable.preview, function (changePV) {
     if (changePV) firetable.preview = changePV;
   });
 };
