@@ -2552,7 +2552,6 @@ a.importLinkCheck {
 
 #chats {
     margin: 0 auto;
-    max-width: 54ch;
 }
 
 #newchat {
@@ -2562,6 +2561,7 @@ a.importLinkCheck {
 #newchatForm {
     grid-column: 2/3;
     width: 100%;
+    padding-right: var(--pad3);
 }
 
 .newChat {
@@ -2569,7 +2569,7 @@ a.importLinkCheck {
     display: flex;
     gap: var(--pad2);
     margin: var(--pad1) var(--pad2);
-    padding: var(--pad2);
+    padding: var(--pad1) var(--pad3);
     color: var(--color-text);
     word-break: break-word;
     border-radius: var(--radius-md);
@@ -2577,7 +2577,7 @@ a.importLinkCheck {
 
 .newChat .ft-avatar {
     position: sticky;
-    top: 1rem;
+    top: 0.75rem;
     z-index: 2;
     margin-top: 0.125rem;
     width: 1.75rem;
@@ -2595,11 +2595,12 @@ a.importLinkCheck {
 
 .nowplayn {
     position: relative;
+    padding-left: calc(1.75rem + var(--pad2) * 3);
     background-color: transparent;
 
     .material-symbols-outlined {
         position: absolute;
-        left: 1.25rem;
+        left: 1.5rem;
         color: var(--color-text-dim);
     }
 }
@@ -2633,6 +2634,7 @@ a.importLinkCheck {
 }
 
 .chatContent .utitle {
+    order: 2;
     flex: 0 0 auto;
     font-size: 1em;
     margin-left: 0.25em;
@@ -2647,18 +2649,20 @@ a.importLinkCheck {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 0;
+    gap: var(--pad1);
 }
 
 .chatHead::after {
     content: "";
+    order: 3;
     flex: 1;
     height: 1px;
     background: rgba(255, 255, 255, 0.1);
-    margin-left: var(--pad1);
+    margin-left: 0;
 }
 
 .chatName {
+    order: 1;
     flex: 0 0 auto;
     font-size: 0.75rem;
     font-weight: 500;
@@ -2761,11 +2765,12 @@ a.importLinkCheck {
 }
 
 .chatTime {
+    order: 4;
     position: relative;
     z-index: 2;
     font-size: 0.66rem;
     font-weight: 400;
-    line-height: 1.8;
+    line-height: 1;
     color: rgba(255, 255, 255, 0.47);
     text-align: right;
     white-space: nowrap;
@@ -2789,7 +2794,7 @@ a.importLinkCheck {
 
 #pickEmoji {
     grid-column: 1/2;
-    margin-left: var(--pad3);
+    margin-left: var(--pad4);
 }
 
 #pickerResults {
@@ -4350,7 +4355,7 @@ body.blog {
     #mainGrid.mmchat,
     #mainGrid.mmusrs {
         grid-template-rows: auto 1fr;
-        grid-template-columns: min-content 20vw min-content 30vw;
+        grid-template-columns: min-content 20vw min-content auto;
         grid-template-areas:
             "head people stage chat"
             "head people view  chat";
@@ -4475,22 +4480,6 @@ body.blog {
     }
     #allUsers .prsnNameRole {
         justify-content: flex-end;
-    }
-
-    .newChat {
-        margin-inline: var(--pad3);
-    }
-
-    #newchatForm {
-        padding-right: var(--pad3);
-    }
-
-    .nowplayn {
-        padding-left: calc(1.75rem + var(--pad2) * 2);
-    }
-
-    #pickEmoji {
-        margin-left: var(--pad4);
     }
 
     #usersStats {

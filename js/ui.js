@@ -693,7 +693,7 @@ firetable.ui.getViewFromPath = function () {
 firetable.ui.updateScreenBtn = function (val) {
   var icons  = { on: 'capture', off: 'cancel_presentation', sync: 'microwave' };
   var titles = { on: 'Screen: always on', off: 'Screen: disabled', sync: 'Screen: synced' };
-  $('#screenControl').find('.material-symbols-filled').text(icons[val] || 'microwave');
+  $('#screenControl').find('[class*="material-symbols-"]').text(icons[val] || 'microwave');
   $('#screenControl').attr('data-label', titles[val] || 'Screen: synced').attr('aria-label', titles[val] || 'Screen: synced');
   var isOn = (val === 'on') || (val === 'sync' && firetable.screenSyncPos);
   $('#screenControl').toggleClass('on', isOn);
