@@ -379,6 +379,7 @@ firetable.ui.setupRoomEvents = function () {
   // ── Theme ──
   function checkThemeTicker() {
     var el = document.getElementById("currentTheme");
+    if (!el) return;
     var container = el.parentElement;
     el.classList.remove('is-ticker');
     if (el.scrollWidth > container.offsetWidth) {

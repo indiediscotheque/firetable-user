@@ -2487,7 +2487,7 @@ a.importLinkCheck {
 .themeCenter {
     flex: 1;
     width: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 @keyframes theme-ticker {
@@ -2509,6 +2509,36 @@ a.importLinkCheck {
 .ticker-sep {
     padding: 0 0.5em;
     opacity: 0.4;
+}
+
+#djlistpickerWrap {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    position: relative;
+}
+
+#djlistpickerLabel {
+    position: absolute;
+    left: 1em;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+#djlistpicker {
+    width: 100%;
+    height: auto;
+    padding-block: 0.5em;
+    padding-inline: 7em 2rem;
+    font-size: 0.8rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: transparent;
+    border-top-color: rgba(255,255,255,0.1);
+    border-radius: var(--radius-md);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* ── Stage side panels ── */
@@ -4335,6 +4365,10 @@ body.blog {
 
     #actualChat {
         max-width: 28rem;
+    }
+
+    #djlistpickerWrap {
+        margin-inline: var(--pad4);
     }
 
     #deck {

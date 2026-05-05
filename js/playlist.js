@@ -18,6 +18,26 @@
 
 firetable.actions = firetable.actions || {};
 
+// ─── Switch View List ─────────────────────────────────────────────────────────
+// Rebind the local queue listener to a different playlist so the queue panel
+// shows and edits that playlist, WITHOUT saving to Firebase (does not change
+// which playlist the DJ bot draws from).
+
+firetable.actions.switchViewList = function (listID) {
+  ftapi.queueRef.off("value", ftapi.queueBind);
+  if (listID == "0") {
+    ftapi.queueRef = firebase.app("firetable").database().ref("queues/" + ftapi.uid);
+  } else {
+    ftapi.queueRef = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + listID + "/list");
+  }
+  ftapi.queueBind = ftapi.queueRef.on('value', function (dataSnapshot) {
+    var data = dataSnapshot.val();
+    if (!data) data = {};
+    ftapi.queue = data;
+    ftapi.events.emit("playlistChanged", data, listID);
+  });
+};
+
 // ─── Queue Track ─────────────────────────────────────────────────────────────
 
 /**
@@ -293,6 +313,7 @@ firetable.actions.mergeLists = function (source, dest, sourceName) {
     var newname = firetable.utilities.format_date(Date.now()) + " Copy of " + sourceName;
     dest = ftapi.actions.createList(newname);
     $("#listpicker").append('<option id="pdopt' + dest + '" value="' + dest + '">' + newname + '</option>');
+    $("#djlistpicker").append('<option value="' + dest + '">' + newname + '</option>');
   }
   ftapi.actions.mergeLists(source, dest, function () {
     $("#mergeCompleted").show();
@@ -526,6 +547,7 @@ firetable.actions.importList = function (id, name, type) {
             firetable.debug && console.log(finalList);
             var listid = ftapi.actions.createList(name);
             $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + name + '</option>');
+            $("#djlistpicker").append('<option value="' + listid + '">' + name + '</option>');
             for (var i = 0; i < finalList.length; i++) {
               var goodTitle = finalList[i].snippet.title;
               if (goodTitle !== "Private video" && goodTitle !== "Deleted video") {
@@ -543,6 +565,7 @@ firetable.actions.importList = function (id, name, type) {
       firetable.debug && console.log('sc tracks:', listinfo.tracks);
       var listid = ftapi.actions.createList(name);
       $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + name + '</option>');
+      $("#djlistpicker").append('<option value="' + listid + '">' + name + '</option>');
       for (var i = 0; i < listinfo.tracks.length; i++) {
         var goodTitle;
         if (listinfo.tracks[i].title) {
@@ -570,6 +593,7 @@ firetable.actions.dubtrackImport = function () {
   var listid = ftapi.actions.createList(firetable.dtImportName);
   var name = firetable.dtImportName;
   $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + name + '</option>');
+  $("#djlistpicker").append('<option value="' + listid + '">' + name + '</option>');
 
   var trackarray = firetable.dtImportList;
   for (var e = 0; e < trackarray.length; e++) {
@@ -879,8 +903,10 @@ firetable.ui.setupPlaylistEvents = function () {
     if (val) {
       var listid = ftapi.actions.createList(val);
       $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + val + '</option>');
+      $("#djlistpicker").append('<option value="' + listid + '">' + val + '</option>');
       $("#listpicker").val(listid).change();
-      ftapi.actions.switchList(listid);
+      $("#djlistpicker").val(listid);
+      ftapi.actions.switchDjList(listid);
     }
   });
 
@@ -888,11 +914,16 @@ firetable.ui.setupPlaylistEvents = function () {
   $("#pldeleteButton").bind("click", function () {
     var val = $("#deletepicker").val();
     firetable.debug && console.log('playlist delete:', val);
-    if (ftapi.users[ftapi.uid] && ftapi.users[ftapi.uid].selectedList === val) {
+    if ($("#listpicker").val() === val) {
       $("#listpicker").val("0").change();
+    }
+    if (ftapi.selectedListThing === val) {
+      ftapi.actions.switchDjList("0");
+      $("#djlistpicker").val("0");
     }
     ftapi.actions.deleteList(val);
     $("#pdopt" + val).remove();
+    $("#djlistpicker option[value='" + val + "']").remove();
     $("#overlay").removeClass('show');
   });
 
