@@ -113,16 +113,32 @@ firetable.actions.loggedIn = function (user) {
 
   // Load all playlists into the picker
   ftapi.lookup.allLists(function (allPlaylists) {
+    var viewListStorageKey = "firetable.viewList." + ftapi.uid;
     $("#listpicker").off("change");
-    $("#listpicker").html('<option value="1">Add/Delete Playlist</option><option value="0">Default Queue</option>');
+    $("#listpicker").html('<option value="1">Add/Delete Playlist</option><option value="0">Default Playlist</option>');
+    $("#djlistpicker").off("change");
+    $("#djlistpicker").html('<option value="0">Default Playlist</option>');
     for (var key in allPlaylists) {
       if (allPlaylists.hasOwnProperty(key)) {
         $("#listpicker").append('<option id="pdopt' + key + '" value="' + key + '">' + allPlaylists[key].name + '</option>');
+        $("#djlistpicker").append('<option value="' + key + '">' + allPlaylists[key].name + '</option>');
       }
     }
 
     ftapi.lookup.selectedList(function (selectedList) {
-      $("#listpicker").val(selectedList).change();
+      var safeSelected = (selectedList && selectedList !== "1") ? selectedList : "0";
+      var viewSelected = "0";
+      try {
+        var storedViewSelected = localStorage.getItem(viewListStorageKey);
+        if (storedViewSelected && storedViewSelected !== "1" && $("#listpicker option[value='" + storedViewSelected + "']").length) {
+          viewSelected = storedViewSelected;
+        } else if ($("#listpicker option[value='" + safeSelected + "']").length) {
+          viewSelected = safeSelected;
+        }
+      } catch (e) {
+        if ($("#listpicker option[value='" + safeSelected + "']").length) viewSelected = safeSelected;
+      }
+
       $("#listpicker").change(function () {
         var val = $("#listpicker").val();
         if (val === "1") {
@@ -131,25 +147,27 @@ firetable.actions.loggedIn = function (user) {
           $("#cancelqsearch").hide();
           $("#qControlButtons").hide();
           $("#plmanager").css("display", "flex");
-        } else if (val !== ftapi.selectedListThing) {
-          // Switch to selected playlist
-          $("#mainqueuestuff, #filterMachine").css("display", "block");
-          $("#searchMachine").css("display", "none");
-          $("#addbox").css("display", "none");
-          $("#cancelqsearch").hide();
-          $("#qControlButtons").show();
-          $("#plmanager").css("display", "none");
-          ftapi.actions.switchList(val);
         } else {
-          // Already on this playlist
+          // Switch the view/edit list (does not affect DJ queue)
           $("#mainqueuestuff, #filterMachine").css("display", "block");
           $("#searchMachine").css("display", "none");
           $("#addbox").css("display", "none");
           $("#cancelqsearch").hide();
           $("#qControlButtons").show();
           $("#plmanager").css("display", "none");
+          try {
+            localStorage.setItem(viewListStorageKey, val);
+          } catch (e) {}
+          firetable.actions.switchViewList(val);
         }
       });
+      $("#djlistpicker").change(function () {
+        ftapi.actions.switchDjList($(this).val());
+      });
+
+      // Initialize both pickers after handlers are attached.
+      $("#djlistpicker").val(safeSelected);
+      $("#listpicker").val(viewSelected).trigger("change");
     });
   });
 

@@ -417,6 +417,12 @@ ftapi.actions = {
       });
     });
   },
+  // Save which playlist the DJ bot should draw from, without changing the local queue view.
+  switchDjList: function(listID) {
+    var uref = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/selectedList");
+    uref.set(listID);
+    ftapi.selectedListThing = listID;
+  },
   switchList: function(listID) {
     var uref = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/selectedList");
     uref.set(listID);
