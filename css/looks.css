@@ -2534,7 +2534,7 @@ a.importLinkCheck {
     padding-block: 0.5em;
     padding-inline: 7em 2rem;
     font-size: 0.8rem;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
     border-color: transparent;
     border-top-color: rgba(255,255,255,0.1);
     border-radius: var(--radius-md);
