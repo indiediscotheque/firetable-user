@@ -2551,12 +2551,33 @@ a.importLinkCheck {
 
 #newchat {
     width: 100%;
+    /* Match dark input appearance */
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.85);
+    border-bottom-color: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    color: var(--color-text-light);
+    padding: var(--pad1) var(--pad3);
+    /* Auto-grow */
+    resize: none;
+    line-height: 1.4;
+    min-height: 2rem;
+    max-height: 8rem;
+    overflow-y: hidden;
+    field-sizing: content;
+}
+
+#newchat::placeholder {
+    color: var(--color-text-muted);
 }
 
 #newchatForm {
     grid-column: 2/3;
     width: 100%;
     padding-right: var(--pad3);
+    display: flex;
+    align-items: flex-end;
 }
 
 .newChat {
@@ -2691,6 +2712,45 @@ a.importLinkCheck {
     color: rgba(255, 255, 255, 0.8);
 }
 
+.chatText strong {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.chatText em {
+    font-style: italic;
+}
+
+.chatText s {
+    opacity: 0.55;
+}
+
+.chatText.is-collapsed {
+    max-height: calc(7 * 1.4 * 0.8125rem);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+}
+
+.chat-expand-btn {
+    display: block;
+    margin-top: 0.15rem;
+    padding: 0;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--color-accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+    height: auto;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.chat-expand-btn:hover {
+    text-decoration: underline;
+}
+
 .chatText.deleteMe:hover {
     background-color: var(--color-bg-t2);
 }
@@ -2781,9 +2841,11 @@ a.importLinkCheck {
     position: relative;
     display: grid;
     grid-template-columns: auto 1fr;
+    align-items: end;
     justify-items: center;
     gap: 0.5rem;
-    height: var(--height-footer);
+    min-height: var(--height-footer);
+    padding-block: 0.5rem;
     padding-right: var(--pad3);
 }
 
