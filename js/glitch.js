@@ -48,7 +48,10 @@ function setup(useThis) {
   if (!useThis) useThis = firetable.scImg;
   background(0);
 
-  var cnv = createCanvas($('#djStage').outerWidth(), $('#djStage').outerHeight());
+  var $screenFrame = $('#screenFrame');
+  var frameW = $screenFrame.outerWidth() || $('#djStage').outerWidth();
+  var frameH = $screenFrame.outerHeight() || $('#djStage').outerHeight();
+  var cnv = createCanvas(frameW, frameH);
   cnv.parent('scScreen');
 
   loadImage(useThis, function (img) {

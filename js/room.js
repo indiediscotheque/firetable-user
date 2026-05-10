@@ -96,8 +96,8 @@ function renderHistoryItem(data, $template, containerSel) {
   $histItem.find('.histdj').text(data.dj);
   $histItem.find('.pv-dj-avatar')
     .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
-    .attr('data-label', data.dj)
     .attr('aria-label', data.dj);
+  $histItem.find('.dj-avatar-tip').attr('label', data.dj);
   $histItem.find('.histdate').text(firetable.utilities.format_date(data.when));
   $histItem.find('.histtime').text(firetable.utilities.format_time(data.when));
 
@@ -174,7 +174,7 @@ function renderHistoryItem(data, $template, containerSel) {
       $dayGroup.prependTo('#thehistory');
     }
     var timeStr = firetable.utilities.format_time(data.when);
-    var $avatar = $histItem.find('.pv-dj-avatar').detach();
+    var $avatar = $histItem.find('.dj-avatar-tip').detach();
     var entryHour = new Date(data.when).getHours();
     var $entry = $('<div class="hist-entry" data-hour="' + entryHour + '"></div>');
     $('<span class="hist-timestamp">' + timeStr + '</span>').appendTo($entry);
@@ -709,10 +709,12 @@ firetable.ui.setupRoomEvents = function () {
   ftapi.events.on("tableChanged", function (data) {
     firetable.tableData = data;
     var html = "";
+    var isSelfOnDeck = false;
     if (data) {
       var countr = 0;
       for (var key in data) {
         if (data.hasOwnProperty(key)) {
+          if (data[key].id === ftapi.uid) isSelfOnDeck = true;
           // "ghost" user is on the deck but has disconnected (status=false).
           var isGhost = !!(ftapi.users !== null && typeof ftapi.users === 'object' &&
                           !ftapi.users[data[key].id]);
@@ -758,7 +760,8 @@ firetable.ui.setupRoomEvents = function () {
       }
       // Fill empty spots
       if (countr < 4) {
-        html += '<div class="spot empty"><div class="djplaque"><button class="butt graybutt small addmeButt" role="button">Step up</button></div></div>';
+        var stepUpBtn = isSelfOnDeck ? '&nbsp;' : '<button class="butt graybutt small addmeButt" role="button">Step up</button>';
+        html += '<div class="spot empty"><div class="djplaque">' + stepUpBtn + '</div></div>';
         countr++;
         for (var i = countr; i < 4; i++) {
           html += '<div class="spot empty"><div class="djplaque">&nbsp;</div></div>';

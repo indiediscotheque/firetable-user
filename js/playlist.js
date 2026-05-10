@@ -812,6 +812,12 @@ firetable.ui.setupPlaylistEvents = function () {
 
       if (!ftapi.isMod) $newli.find('.edittags, .closeeditor').hide();
 
+      // External track link
+      var trackUrl = String(thisone.type) === String(MEDIA_YOUTUBE)
+        ? 'https://www.youtube.com/watch?v=' + thisone.cid
+        : SC_API_TRACK_URL + thisone.cid;
+      $newli.find('.tracklink-btn').attr('href', trackUrl);
+
       // Add-to-playlist button
       $newli.find('.histeal').on('click', function () {
         var $btn = $(this);

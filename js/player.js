@@ -18,9 +18,12 @@
  * Creates the YT.Player instance inside #playerArea.
  */
 function onYouTubeIframeAPIReady() {
+  var $screenFrame = $('#screenFrame');
+  var frameH = $screenFrame.outerHeight() || $('#djStage').outerHeight();
+  var frameW = $screenFrame.outerWidth() || (frameH * ASPECT_RATIO);
   player = new YT.Player('playerArea', {
-    width: $('#djStage').outerHeight() * ASPECT_RATIO,
-    height: $('#djStage').outerHeight(),
+    width: frameW,
+    height: frameH,
     playerVars: {
       autoplay: 1,
       controls: 0

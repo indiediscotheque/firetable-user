@@ -190,19 +190,38 @@ firetable.ui.strip = function (html) {
 
 /**
  * Process raw chat text through the full formatting pipeline:
- * strip HTML → inline images → linkify → emoji → backtick code
+ * strip HTML → protect code spans → inline markdown → images → links → emoji → restore code
  * @param {string} rawTxt - Unprocessed chat text
  * @returns {string} Formatted HTML string safe for insertion
  */
 firetable.ui.formatChatText = function (rawTxt) {
   var txt = firetable.ui.strip(rawTxt);
+
+  // Extract inline code spans first so their content is immune to markdown
+  var codeSpans = [];
+  txt = txt.replace(/`([^`\n]+)`/g, function (_, inner) {
+    codeSpans.push('<code>' + inner + '</code>');
+    return '\x01' + (codeSpans.length - 1) + '\x01';
+  });
+
+  // Inline markdown — bold before italic so ** is consumed before *
+  txt = txt.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  txt = txt.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  txt = txt.replace(/~~([^~\n]+)~~/g, '<s>$1</s>');
+
+  // Existing pipeline
   txt = firetable.ui.showImages(txt);
   txt = firetable.ui.textToLinks(txt);
   txt = firetable.utilities.emojiShortnamestoUnicode(txt);
-  // Backtick → <code> blocks
-  txt = txt.replace(/\`(.*?)\`/g, function (x) {
-    return "<code>" + x.replace(/\`/g, "") + "</code>";
+
+  // Newlines → <br> (for bot/system messages)
+  txt = txt.replace(/\n/g, '<br>');
+
+  // Restore code spans
+  txt = txt.replace(/\x01(\d+)\x01/g, function (_, i) {
+    return codeSpans[parseInt(i, 10)];
   });
+
   return txt;
 };
 
@@ -214,6 +233,22 @@ firetable.ui.formatChatText = function (rawTxt) {
  */
 firetable.ui.setupChatEvents = function () {
   var $chatTemplate = $('#chatKEY').remove();
+
+  // ── Chat Collapse: hide messages longer than 7 lines behind "show more" ──
+  function maybeCollapseChat(el) {
+    if (!el) return;
+    var $el = $(el);
+    var brCount = ($el.html().match(/<br>/gi) || []).length;
+    if (brCount < 7) return;
+    $el.addClass('is-collapsed');
+    var $btn = $('<button class="chat-expand-btn" type="button">show more</button>');
+    $btn.insertAfter($el);
+    $btn.on('click', function () {
+      var collapsed = $el.hasClass('is-collapsed');
+      $el.toggleClass('is-collapsed', !collapsed);
+      $btn.text(collapsed ? 'show less' : 'show more');
+    });
+  }
 
   // ── Incoming Chat Messages ──
   ftapi.events.on("newChat", function (chatData) {
@@ -290,6 +325,7 @@ firetable.ui.setupChatEvents = function () {
         });
       }
       twemoji.parse(document.getElementById("chattxt" + chatData.chatID));
+      maybeCollapseChat(document.getElementById("chattxt" + chatData.chatID));
 
     } else {
       // ── New message block (different user or @-mention break) ──
@@ -313,6 +349,7 @@ firetable.ui.setupChatEvents = function () {
       firetable.utilities.chatAt($chatthing.find('.chatName'));
       twemoji.parse($chatthing.find(".chatText")[0]);
       $chatthing.appendTo("#chats");
+      maybeCollapseChat($chatthing.find('.chatText')[0]);
 
       if (canDelete()) {
         $chatthing.find(".chatText").addClass("deleteMe");
@@ -369,9 +406,22 @@ firetable.ui.setupChatEvents = function () {
     $(this).closest('.chatText').toggleClass('hideImg');
   });
 
+  // ── Chat Input: Auto-grow textarea fallback (for browsers without field-sizing: content) ──
+  function growChatInput() {
+    var el = document.getElementById('newchat');
+    if (!el) return;
+    el.style.height = 'auto';
+    var maxH = 128; // matches max-height: 8rem
+    var newH = Math.min(el.scrollHeight, maxH);
+    el.style.height = newH + 'px';
+    el.style.overflowY = el.scrollHeight > maxH ? 'auto' : 'hidden';
+  }
+  $("#newchat").on('input', growChatInput);
+
   // ── Chat Input: Send Message + Slash Commands ──
-  $("#newchat").bind("keypress", function (e) {
-    if (e.key === "Enter") {
+  $("#newchat").bind("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       var txt = $("#newchat").val();
       if (txt === "") return;
 
@@ -438,10 +488,14 @@ firetable.ui.setupChatEvents = function () {
         ftapi.actions.sendChat(txt);
       }
 
-      $("#newchat").val("");
+      $("#newchat").val("").trigger('input');
       $("#emojiPicker").slideUp();
       $("#pickEmoji").removeClass("on");
       firetable.utilities.exitAtLand();
+
+    } else if (e.key === "Enter" && e.shiftKey) {
+      // Shift+Enter: insert newline (textarea handles this natively — just don't prevent it)
+      return;
 
     } else if (e.key === "@") {
       // ── @-mention autocomplete trigger ──
