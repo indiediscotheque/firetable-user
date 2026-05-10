@@ -84,9 +84,12 @@ firetable.init = function () {
   // ── Window Resize Handler (debounced) ──
   $(window).resize(firetable.utilities.debounce(function () {
     $("#thehistory").css('top', $('#stage').outerHeight() + $('#topbar').outerHeight());
+    var $screenFrame = $('#screenFrame');
+    var frameW = $screenFrame.outerWidth() || $('#djStage').outerWidth();
+    var frameH = $screenFrame.outerHeight() || $('#djStage').outerHeight();
     $('#playerArea, #scScreen')
-      .width($('#djStage').outerWidth())
-      .height($('#djStage').outerHeight());
+      .width(frameW)
+      .height(frameH);
     setup(); // Re-create the p5.js canvas at the new size
   }, 500));
 

@@ -1234,33 +1234,27 @@ a.sociallogo[href] {
     grid-area: visual;
     align-self: start;
     position: relative;
-    display: grid;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pad3);
     --np-art-size: 4rem;
-    --np-art-col: var(--np-art-size);
-    --np-art-gap: var(--pad3);
-    grid-template-columns: var(--np-art-col) minmax(0, 1fr);
-    column-gap: var(--np-art-gap);
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas:
-        "art track"
-        "art artist"
-        "art plays";
+    overflow: hidden;
     margin-bottom: auto;
     padding: var(--pad4) var(--pad4) 2.5rem var(--pad4);
-    transition: grid-template-columns 300ms ease, column-gap 300ms ease;
+    transition: gap 300ms ease;
 }
 
 #albumArt {
-    grid-area: art;
+    flex-shrink: 0;
     position: relative;
     margin: 0 0 0 var(--pad1);
     width: var(--np-art-size);
-    height: var(--np-art-size);
+    aspect-ratio: 1;
     perspective: 700px;
     transform-style: preserve-3d;
     --album-art-front: none;
     --album-art-back: none;
-    transition: opacity 300ms ease, transform 300ms ease;
+    transition: opacity 300ms ease, transform 300ms ease, margin-left 300ms ease;
 }
 
 #albumArt::before,
@@ -1301,15 +1295,25 @@ a.sociallogo[href] {
     transition: none;
 }
 
+#npText {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
 #track {
-    grid-area: track;
     font-size: 1.125rem;
     line-height: 1.1;
     color: white;
+    line-clamp: 2;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 #artist {
-    grid-area: artist;
     margin-bottom: var(--pad2);
     font-size: 0.875rem;
     font-weight: 500;
@@ -1327,7 +1331,7 @@ a.sociallogo[href] {
 }
 
 #plays {
-    grid-area: plays;
+    display: none;
 }
 
 #playCount,
@@ -1621,13 +1625,16 @@ html .ui-button.ui-state-disabled:active {
 /* ============================================
    The Stage
    ============================================ */
-#djStage > div:not(#screenBox):not(#ft-eq) {
+#djStage > div:not(#screenBox):not(#stageBackdrop):not(#ft-eq) {
     position: relative;
     z-index: 2;
 }
 
 #djStage {
+    --stage-max-height: 33vh;
     grid-area: visual;
+    justify-self: stretch;
+    container-type: inline-size;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -1635,23 +1642,25 @@ html .ui-button.ui-state-disabled:active {
     overflow: hidden;
     isolation: isolate;
     aspect-ratio: 16 / 9;
+    width: 100%;
+    max-height: var(--stage-max-height);
     background: linear-gradient(to bottom, color-mix(in srgb, black 85%, var(--color-accent)), color-mix(in srgb, black 66%, var(--color-accent)));
     box-shadow: 
         inset 0 -4rem 8rem -8rem white, 
         0 0 10rem color-mix(in srgb, var(--color-accent), black 95%), 
         0 0 2rem color-mix(in srgb, var(--color-accent), black 80%);
+}
 
-    &::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image: url(../img/idlogo2.png);
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: cover;
-        pointer-events: none;
-        opacity: 0.05;
-    }
+#stageBackdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-image: url(../img/idlogo2.png);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    pointer-events: none;
+    opacity: 0.14;
 }
 
 /* Tunable fyre compositing mode for stronger integration with stage colors. */
@@ -1760,12 +1769,24 @@ html .ui-button.ui-state-disabled:active {
 }
 #screenBox {
     position: absolute;
-    top: -101%;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
     width: 100%;
     height: 100%;
-    z-index: 0;
-    transition: top 2s ease-in-out;
+    z-index: 1;
+    transform: translateY(-101%);
+    transition: transform 2s ease-in-out;
     pointer-events: none;
+}
+
+#screenFrame {
+    position: relative;
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
 }
 
 #scScreen,
@@ -2549,7 +2570,7 @@ a.importLinkCheck {
     flex-direction: column;
     justify-content: flex-end;
     align-items: center;
-    padding: 1.5rem var(--pad3) var(--pad3) var(--pad3);
+    padding: var(--pad2);
     background-color: var(--color-bg-t1);
 }
 
@@ -2560,7 +2581,6 @@ a.importLinkCheck {
 #stageSideRight { 
     grid-area: right;
     border-top-right-radius: 1.5rem;
-    padding-top: 2rem;
 }
 
 /* ============================================
@@ -4274,17 +4294,17 @@ body.blog {
 @media only screen and (min-width: 800px) {
     body.screen #albumArt {
         opacity: 0;
-        transform: translateX(-1.5rem);
+        transform: translateX(-1rem);
+        margin-left: calc(-1 * var(--np-art-size) - var(--pad1));
         pointer-events: none;
     }
 
     body.screen #nowplaying {
-        --np-art-col: 0rem;
-        --np-art-gap: 0rem;
+        gap: 0;
     }
 
     body.screen #screenBox {
-        top: 0;
+        transform: translateY(0);
     }
 
     #mainGrid,
@@ -4357,6 +4377,11 @@ body.blog {
 
     #roomlogo {
         margin-bottom: 0.5rem;
+    }
+
+    #stageSideLeft,
+    #stageSideRight {
+        padding: var(--pad3);
     }
 
     #queuebox {
@@ -4451,11 +4476,29 @@ body.blog {
 
     #nowplaying {
         --np-art-size: 6.5rem;
-        --np-art-col: 6.5rem;
     }
 
     .djplaque {
         justify-content: space-between;
+    }
+
+    #track {
+        line-clamp: unset;
+        overflow: visible;
+        display: block;
+        -webkit-line-clamp: unset;
+        -webkit-box-orient: unset;
+    }
+    
+    #plays {
+        display: block;
+    }
+
+    #deck {
+        margin-left: auto;
+        margin-right: auto;
+        width: 100%;
+        max-width: 36rem;
     }
 
     #allUsersWrap {
