@@ -2188,6 +2188,17 @@ ul.lightrope li {
     font-size: 0.82em;
 }
 
+#queuelist .tracklink-btn {
+    font-size: 1.2rem;
+    color: var(--color-text);
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+#queuelist .tracklink-btn:hover {
+    color: var(--color-text-light);
+}
+
 #listpickerWrap {
     flex: 1;
 }
