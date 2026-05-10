@@ -709,10 +709,12 @@ firetable.ui.setupRoomEvents = function () {
   ftapi.events.on("tableChanged", function (data) {
     firetable.tableData = data;
     var html = "";
+    var isSelfOnDeck = false;
     if (data) {
       var countr = 0;
       for (var key in data) {
         if (data.hasOwnProperty(key)) {
+          if (data[key].id === ftapi.uid) isSelfOnDeck = true;
           // "ghost" user is on the deck but has disconnected (status=false).
           var isGhost = !!(ftapi.users !== null && typeof ftapi.users === 'object' &&
                           !ftapi.users[data[key].id]);
@@ -758,7 +760,8 @@ firetable.ui.setupRoomEvents = function () {
       }
       // Fill empty spots
       if (countr < 4) {
-        html += '<div class="spot empty"><div class="djplaque"><button class="butt graybutt small addmeButt" role="button">Step up</button></div></div>';
+        var stepUpBtn = isSelfOnDeck ? '&nbsp;' : '<button class="butt graybutt small addmeButt" role="button">Step up</button>';
+        html += '<div class="spot empty"><div class="djplaque">' + stepUpBtn + '</div></div>';
         countr++;
         for (var i = countr; i < 4; i++) {
           html += '<div class="spot empty"><div class="djplaque">&nbsp;</div></div>';

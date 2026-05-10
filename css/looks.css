@@ -1699,6 +1699,12 @@ html .ui-button.ui-state-disabled:active {
     border: none;
 }
 
+.addmeButt:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 #prgbar {
     grid-area: progress;
     position: relative;

@@ -950,7 +950,17 @@ firetable.ui.tooltip = (function () {
       // Mod/supermod actions
       var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
       var isMod = ownUser && (ownUser.mod || ownUser.supermod);
+      var isOnDeck = !!(firetable.tableData && (function () {
+        for (var k in firetable.tableData) {
+          if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userid) return true;
+        }
+      })());
+      var $deckBtn = $userTip.find('.utt-deck-btn');
       $userTip.toggleClass('can-add-to-deck', !!(isMod && !isSelf));
+      $deckBtn
+        .toggleClass('is-disabled', isOnDeck)
+        .attr('aria-disabled', isOnDeck ? 'true' : 'false')
+        .attr('title', isOnDeck ? 'Already on deck' : 'Add to deck');
 
       // Resolve card count
       if (_cardCountCache.hasOwnProperty(userid)) {
@@ -979,6 +989,7 @@ firetable.ui.tooltip = (function () {
         userTipEl.hidePopover();
       })
       .on('click', '[data-action="add-to-deck"]', function () {
+        if ($(this).hasClass('is-disabled')) return;
         var uid = $userTip.attr('data-for');
         var userData = uid && ftapi.users && ftapi.users[uid];
         if (userData && userData.username) {
