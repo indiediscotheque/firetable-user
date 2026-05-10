@@ -765,62 +765,7 @@ a.sociallogo[href] {
     color: white;
 }
 
-.header_icon[data-label] {
-    position: relative;
-}
 
-.header_icon[data-label]::after {
-    content: attr(data-label);
-    position: absolute;
-    left: calc(100% + 0.75rem);
-    top: 50%;
-    transform: translateY(-50%);
-    padding: 0.2rem 0.5rem;
-    font-size: 0.7rem;
-    font-family: var(--font-family);
-    white-space: nowrap;
-    color: var(--color-text-light);
-    background: var(--color-bg-t2);
-    border-radius: var(--radius-sm);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 150ms ease;
-    z-index: 100;
-}
-
-.header_icon[data-label]:hover::after {
-    opacity: 1;
-}
-
-.iconbutt[data-label] {
-    position: relative;
-}
-
-.iconbutt[data-label]::after {
-    content: attr(data-label);
-    position: absolute;
-    bottom: calc(100% + 0.5rem);
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 0.2rem 0.5rem;
-    font-size: 0.7rem;
-    font-family: var(--font-family);
-    font-weight: 400;
-    text-transform: none;
-    letter-spacing: 0;
-    white-space: nowrap;
-    color: var(--color-text-light);
-    background: var(--color-bg-t2);
-    border-radius: var(--radius-sm);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 150ms ease;
-    z-index: 100;
-}
-
-.iconbutt[data-label]:hover::after {
-    opacity: 1;
-}
 
 /* ============================================
    Main Grid Layout
@@ -3187,30 +3132,7 @@ img.emoji,
     text-wrap: balance;
 }
 
-#thehistory .pv-dj-avatar[data-label] {
-    overflow: visible;
-}
 
-#thehistory .pv-dj-avatar[data-label]::after {
-    content: attr(data-label);
-    position: absolute;
-    right: 120%;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.7rem;
-    font-family: var(--font-family);
-    white-space: nowrap;
-    color: var(--color-text-light);
-    background: var(--color-bg-t2);
-    border-radius: var(--radius-sm);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 150ms ease;
-    z-index: 100;
-}
-
-#thehistory .pv-dj-avatar[data-label]:hover::after {
-    opacity: 1;
-}
 
 /* ============================================
    Card Case
@@ -3374,31 +3296,7 @@ img.emoji,
     overflow: visible;
 }
 
-#thediscovers .pv-dj-avatar[data-label] {
-    position: relative;
-}
 
-#thediscovers .pv-dj-avatar[data-label]::after {
-    content: attr(data-label);
-    position: absolute;
-    right: 0;
-    bottom: calc(100% + 0.4rem);
-    padding: 0.2rem 0.5rem;
-    font-size: 0.7rem;
-    font-family: var(--font-family);
-    white-space: nowrap;
-    color: var(--color-text-light);
-    background: var(--color-bg-t2);
-    border-radius: var(--radius-sm);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 150ms ease;
-    z-index: 100;
-}
-
-#thediscovers .pv-dj-avatar[data-label]:hover::after {
-    opacity: 1;
-}
 
 #thediscovers .histdj,
 #thediscovers .histdate,
@@ -4283,11 +4181,7 @@ body.blog {
     .miniLoginInvisible { display: none !important; }
     .miniLoginNavOnly { display: block !important; }
 
-    .header_icon[data-label]::after {
-        left: 50%;
-        top: calc(100% + 0.5rem);
-        transform: translateX(-50%);
-    }
+
 }
 
 /* ── 800px: 3-column layout, header becomes vertical sidebar ── */

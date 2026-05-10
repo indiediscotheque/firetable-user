@@ -96,8 +96,8 @@ function renderHistoryItem(data, $template, containerSel) {
   $histItem.find('.histdj').text(data.dj);
   $histItem.find('.pv-dj-avatar')
     .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
-    .attr('data-label', data.dj)
     .attr('aria-label', data.dj);
+  $histItem.find('.dj-avatar-tip').attr('label', data.dj);
   $histItem.find('.histdate').text(firetable.utilities.format_date(data.when));
   $histItem.find('.histtime').text(firetable.utilities.format_time(data.when));
 
@@ -174,7 +174,7 @@ function renderHistoryItem(data, $template, containerSel) {
       $dayGroup.prependTo('#thehistory');
     }
     var timeStr = firetable.utilities.format_time(data.when);
-    var $avatar = $histItem.find('.pv-dj-avatar').detach();
+    var $avatar = $histItem.find('.dj-avatar-tip').detach();
     var entryHour = new Date(data.when).getHours();
     var $entry = $('<div class="hist-entry" data-hour="' + entryHour + '"></div>');
     $('<span class="hist-timestamp">' + timeStr + '</span>').appendTo($entry);
