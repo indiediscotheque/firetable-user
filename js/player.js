@@ -31,8 +31,13 @@ function onYouTubeIframeAPIReady() {
     videoId: '5mGuCdlCcNM', // placeholder video
     events: {
       onReady: onPlayerReady,
-      onStateChange: function () {
-        $('#reloadtrack').removeClass('on working');
+      onStateChange: function (event) {
+        // Only clear the reload spinner once the video actually starts playing,
+        // not on intermediate states like UNSTARTED(-1) or BUFFERING(3) which
+        // fire almost instantly and would kill the animation before it renders.
+        if (event.data === YT.PlayerState.PLAYING) {
+          $('#reloadtrack').removeClass('on working');
+        }
       }
     }
   });
