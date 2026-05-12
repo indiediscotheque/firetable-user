@@ -947,6 +947,11 @@ a.sociallogo[href] {
     flex-direction: column;
     padding: var(--pad4);
 }
+@media only screen and (hover: hover) {
+    #allUsers {
+        padding-right: 0;
+    }
+}
 
 #allUsers > * {
     display: flex;
@@ -2561,6 +2566,11 @@ a.importLinkCheck {
     padding-inline: var(--pad2);
     overflow: auto;
 }
+@media only screen and (hover: hover) {
+    #chatsWrap {
+        padding-inline-end: 0;
+    }
+}
 
 #chats {
     margin: 0 auto;
@@ -3041,7 +3051,9 @@ img.emoji,
     flex-direction: column;
     gap: var(--pad1);
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0 var(--pad2) 0 var(--pad3);
+    @media only screen and (hover: hover) { padding-right: 0; }
 
     .pvbar {
         flex: 1;
@@ -3221,6 +3233,11 @@ img.emoji,
     overflow: auto;
     padding: 1rem;
 }
+@media only screen and (hover: hover) {
+    #cardsWrap {
+        padding-right: 0;
+    }
+}
 
 /* ============================================
    Discover
@@ -3264,6 +3281,11 @@ img.emoji,
     padding: var(--pad3);
     width: 100%;
     box-sizing: border-box;
+}
+@media only screen and (hover: hover) {
+    #thediscovers {
+        padding-right: 0;
+    }
 }
 
 #thediscovers .pvbar {
@@ -3362,6 +3384,15 @@ img.emoji,
     gap: 0.35rem;
 }
 
+#thehistory .pv-dj-avatar {
+    width: 1.35rem;
+    height: 1.35rem;
+    background-size: auto 140%;
+    background-position: center 60%;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
 #thediscovers .pv-dj-avatar {
     order: 3;
     width: 1.35rem;
@@ -3408,6 +3439,11 @@ img.emoji,
     overflow: auto;
     max-width: 40rem;
     height: 100%;
+}
+@media only screen and (hover: hover) {
+    #login {
+        padding-right: 0;
+    }
 }
 
 #login h4 {
