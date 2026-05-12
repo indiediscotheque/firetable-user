@@ -3193,13 +3193,14 @@ img.emoji,
         background: var(--color-text-dim);
     }
 
-    /* Timeline node avatar */
-    & > .ft-avatar {
+    /* Timeline node avatar — targets the ft-tooltip wrapper */
+    & > .dj-avatar-tip {
         position: absolute;
         left: calc(var(--hist-avatar-size) / -2);
         width: var(--hist-avatar-size);
         height: var(--hist-avatar-size);
         border: 2px solid var(--color-border);
+        border-radius: 50%;
         z-index: 1;
     }
 }
@@ -3385,12 +3386,10 @@ img.emoji,
 }
 
 #thehistory .pv-dj-avatar {
-    width: 1.35rem;
-    height: 1.35rem;
+    width: 100%;
+    height: 100%;
     background-size: auto 140%;
     background-position: center 60%;
-    flex-shrink: 0;
-    overflow: visible;
 }
 
 #thediscovers .pv-dj-avatar {
