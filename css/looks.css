@@ -3969,14 +3969,45 @@ body.disconnected #logOutButton {
 /* ============================================
    About Page
    ============================================ */
-body.blog {
-    overflow: auto;
+html#about,
+html#about body {
+    height: auto;
+    margin: 0;
 }
+html#about body {
+    display: flex;
+    flex-direction: column;
+    padding: var(--pad5) max(calc(50vw - 20rem), var(--pad4));
+    overflow: auto;
 
-#blog {
-    flex: 1;
-    padding: var(--pad5);
-    background-color: var(--color-bg-t2);
+    header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: var(--pad3);
+        background-color: var(--color-bg);
+
+        img {
+            width: 3rem;
+        }
+    }
+
+    section {
+        flex: 1;
+        width: 100%;
+        max-width: 40rem;
+    }
+
+    h3 {
+        margin-bottom: var(--pad2);
+    }
+
+    p {
+        margin-top: var(--pad2);
+        margin-bottom: var(--pad4);
+        line-height: 1.6;
+    }
 }
 
 /* ============================================
