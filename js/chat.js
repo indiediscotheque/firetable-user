@@ -292,6 +292,16 @@ firetable.ui.setupChatEvents = function () {
       }
     }
 
+    // ── Filter bot messages ──
+    // Historical bot messages (loaded on fresh connect) are skipped entirely —
+    // they were directed at a specific user in the moment and aren't useful history.
+    // Live bot messages are shown only if they @-mention the current user.
+    var isHostBot = !!(ftapi.users[chatData.id] && ftapi.users[chatData.id].hostbot);
+    if (isHostBot) {
+      var isHistorical = chatData.time && (Date.now() - chatData.time) > 30000;
+      if (isHistorical || !hasMention) return;
+    }
+
     // ── Check if we can delete this message (mod powers) ──
     var canDelete = function () {
       try {
@@ -380,7 +390,7 @@ firetable.ui.setupChatEvents = function () {
     // Canvases (card shares), avatar background-images, and twemoji nodes all
     // hold memory that never gets freed without this.
     var MAX_CHAT_MESSAGES = 200;
-    var $allChats = $('#chats').children();
+    var $allChats = $('#chats .newChat');
     if ($allChats.length > MAX_CHAT_MESSAGES) {
       $allChats.slice(0, $allChats.length - MAX_CHAT_MESSAGES).remove();
       // Invalidate grouping state so the next message always starts a fresh block
