@@ -142,12 +142,21 @@ firetable.ui = firetable.ui || {};
  * @returns {string} Text with URLs wrapped in anchor tags
  */
 firetable.ui.textToLinks = function (text, themeBox) {
-  var re = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-  if (firetable.showImages && !themeBox) {
-    // Exclude image URLs — those are rendered inline by showImages()
-    re = /(https?:\/\/(?![/|.|\w|\s|-]*(?:jpe?g|png|gif))[^" ]+)/g;
-  }
-  return text.replace(re, '<a href="$1" target="_blank" tabindex="-1">$1</a>');
+  if (typeof linkifyStr !== 'function') return text;
+  return linkifyStr(text, {
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    attributes: { tabindex: '-1' },
+    validate: {
+      url: function (url) {
+        // If showImages is on (and not themeBox), skip image URLs — showImages() handles those
+        if (firetable.showImages && !themeBox) {
+          return !/\.(jpe?g|png|gif)(\?.*)?$/i.test(url);
+        }
+        return true;
+      }
+    }
+  });
 };
 
 /**
