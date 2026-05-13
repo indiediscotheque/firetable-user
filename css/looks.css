@@ -2565,9 +2565,6 @@ a.importLinkCheck {
     height: 100%;
     padding-inline: var(--pad2);
     overflow: auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
 }
 @media only screen and (hover: hover) {
     #chatsWrap {
@@ -2577,40 +2574,6 @@ a.importLinkCheck {
 
 #chats {
     margin: 0 auto;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    flex: 1;
-}
-
-#chatZeroState {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 2rem var(--pad2);
-    color: var(--color-text-dim);
-    user-select: none;
-    pointer-events: none;
-
-    .chat-zero-icon {
-        font-size: 2.5rem;
-        opacity: 0.35;
-    }
-
-    .chat-zero-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        opacity: 0.45;
-    }
-}
-
-#chats:has(.newChat) #chatZeroState {
-    display: none;
 }
 
 #newchat {
