@@ -26,6 +26,23 @@ class FtTooltip extends HTMLElement {
 
   connectedCallback() {
     this._render();
+
+    // Suppress tooltip when focus arrives via pointer (mouse/touch click).
+    // Cleared on focusout so keyboard focus on the same element later still works.
+    this.addEventListener('pointerdown', () => {
+      this.setAttribute('data-pointer-active', '');
+    });
+    this.addEventListener('focusout', () => {
+      this.removeAttribute('data-pointer-active');
+    });
+    // Safety: if pointer press lands on a non-focusable child, focusout never fires.
+    this.addEventListener('pointerup', () => {
+      setTimeout(() => {
+        if (!this.contains(document.activeElement)) {
+          this.removeAttribute('data-pointer-active');
+        }
+      }, 100);
+    });
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
@@ -107,10 +124,11 @@ class FtTooltip extends HTMLElement {
         }
 
         /* ── Visibility ── */
-        :host(:hover) .tip,
-        :host(:focus-within) .tip {
-          opacity: 1;
-        }
+        :host(:hover) .tip { opacity: 1; }
+
+        /* Show on keyboard focus, but not when clicked with a pointer
+           (data-pointer-active is set on pointerdown, cleared on focusout) */
+        :host(:focus-within:not([data-pointer-active])) .tip { opacity: 1; }
 
         /* Don't show if empty */
         .tip:empty {

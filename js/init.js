@@ -105,6 +105,8 @@ firetable.init = function () {
       var vol = firetable.utilities.getEffectiveVolume();
       firetable.scwidget.setVolume(vol);
       if (firetable.scSeek) firetable.scwidget.seekTo(firetable.scSeek);
+      // Clear reload spinner once SC audio actually starts playing
+      $('#reloadtrack').removeClass('on working');
     });
 
     // If a SC song was already loaded before the widget was ready, start it now

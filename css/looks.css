@@ -773,6 +773,7 @@ a.sociallogo[href] {
 #mainGrid {
     grid-area: main;
     flex: 1;
+    min-height: 0;
     display: grid;
     grid-template-rows: auto auto auto 1fr;
     grid-template-columns: 1fr;
@@ -906,13 +907,8 @@ a.sociallogo[href] {
     grid-area: content;
     display: flex;
     flex-direction: column;
-    width: 100%;
+    min-height: 0;
     overflow: hidden;
-}
-
-.usersWrap {
-    max-width: 18rem;
-    overflow: auto;
 }
 
 #usersStats {
@@ -969,7 +965,7 @@ a.sociallogo[href] {
 #allUsersWrap {
     flex: 1;
     min-height: 0;
-    width: 100%;
+    max-width: 18rem;
     overflow: auto;
     display: flex;
     flex-direction: column;
@@ -2561,6 +2557,11 @@ a.importLinkCheck {
     padding-inline: var(--pad2);
     overflow: auto;
 }
+@media only screen and (hover: hover) {
+    #chatsWrap {
+        padding-inline-end: 0;
+    }
+}
 
 #chats {
     margin: 0 auto;
@@ -2575,7 +2576,7 @@ a.importLinkCheck {
     border-bottom-color: rgba(255, 255, 255, 0.15);
     border-radius: var(--radius-md);
     color: var(--color-text-light);
-    padding: var(--pad1) var(--pad3);
+    padding: var(--pad1) 0.66rem;
     /* Auto-grow */
     resize: none;
     line-height: 1.4;
@@ -2592,7 +2593,6 @@ a.importLinkCheck {
 #newchatForm {
     grid-column: 2/3;
     width: 100%;
-    padding-right: var(--pad3);
     display: flex;
     align-items: flex-end;
 }
@@ -2630,11 +2630,20 @@ a.importLinkCheck {
     position: relative;
     padding-left: calc(1.75rem + var(--pad2) * 3);
     background-color: transparent;
+    display: flex;
+    align-items: baseline;
+    gap: var(--pad2);
 
     .material-symbols-outlined {
         position: absolute;
-        left: 1.5rem;
+        left: 1.25rem;
         color: var(--color-text-dim);
+    }
+
+    .npmsg-time {
+        margin-left: auto;
+        margin-top: 0.2rem;
+        flex-shrink: 0;
     }
 }
 
@@ -2778,7 +2787,7 @@ a.importLinkCheck {
 
 .chatText a {
     position: relative;
-    display: block;
+    display: inline-block;
 }
 
 .chatText .inlineImage {
@@ -2858,17 +2867,16 @@ a.importLinkCheck {
     position: relative;
     display: grid;
     grid-template-columns: auto 1fr;
-    align-items: end;
+    align-items: center;
     justify-items: center;
     gap: 0.5rem;
     min-height: var(--height-footer);
-    padding-block: 0.5rem;
-    padding-right: var(--pad3);
+    padding: 0 var(--pad3) var(--pad3) 0;
 }
 
 #pickEmoji {
     grid-column: 1/2;
-    margin-left: var(--pad4);
+    margin-left: var(--pad3);
 }
 
 #pickerResults {
@@ -2999,6 +3007,13 @@ img.emoji,
     letter-spacing: 0;
 }
 
+#atPicker .butt[aria-selected="true"],
+#atPicker .butt:focus {
+    background-color: var(--color-accent);
+    color: #fff;
+    outline: none;
+}
+
 #atPicker i {
     margin: 0.25rem;
     padding: 0.25em 0.5em;
@@ -3043,7 +3058,9 @@ img.emoji,
     flex-direction: column;
     gap: var(--pad1);
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0 var(--pad2) 0 var(--pad3);
+    @media only screen and (hover: hover) { padding-right: 0; }
 
     .pvbar {
         flex: 1;
@@ -3183,13 +3200,14 @@ img.emoji,
         background: var(--color-text-dim);
     }
 
-    /* Timeline node avatar */
-    & > .ft-avatar {
+    /* Timeline node avatar — targets the ft-tooltip wrapper */
+    & > .dj-avatar-tip {
         position: absolute;
         left: calc(var(--hist-avatar-size) / -2);
         width: var(--hist-avatar-size);
         height: var(--hist-avatar-size);
         border: 2px solid var(--color-border);
+        border-radius: 50%;
         z-index: 1;
     }
 }
@@ -3222,6 +3240,11 @@ img.emoji,
     display: none;
     overflow: auto;
     padding: 1rem;
+}
+@media only screen and (hover: hover) {
+    #cardsWrap {
+        padding-right: 0;
+    }
 }
 
 /* ============================================
@@ -3266,6 +3289,11 @@ img.emoji,
     padding: var(--pad3);
     width: 100%;
     box-sizing: border-box;
+}
+@media only screen and (hover: hover) {
+    #thediscovers {
+        padding-right: 0;
+    }
 }
 
 #thediscovers .pvbar {
@@ -3364,6 +3392,13 @@ img.emoji,
     gap: 0.35rem;
 }
 
+#thehistory .pv-dj-avatar {
+    width: 100%;
+    height: 100%;
+    background-size: auto 140%;
+    background-position: center 60%;
+}
+
 #thediscovers .pv-dj-avatar {
     order: 3;
     width: 1.35rem;
@@ -3410,6 +3445,11 @@ img.emoji,
     overflow: auto;
     max-width: 40rem;
     height: 100%;
+}
+@media only screen and (hover: hover) {
+    #login {
+        padding-right: 0;
+    }
 }
 
 #login h4 {
@@ -3935,14 +3975,45 @@ body.disconnected #logOutButton {
 /* ============================================
    About Page
    ============================================ */
-body.blog {
-    overflow: auto;
+html#about,
+html#about body {
+    height: auto;
+    margin: 0;
 }
+html#about body {
+    display: flex;
+    flex-direction: column;
+    padding: var(--pad5) max(calc(50vw - 20rem), var(--pad4));
+    overflow: auto;
 
-#blog {
-    flex: 1;
-    padding: var(--pad5);
-    background-color: var(--color-bg-t2);
+    header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: var(--pad3);
+        background-color: var(--color-bg);
+
+        img {
+            width: 3rem;
+        }
+    }
+
+    section {
+        flex: 1;
+        width: 100%;
+        max-width: 40rem;
+    }
+
+    h3 {
+        margin-bottom: var(--pad2);
+    }
+
+    p {
+        margin-top: var(--pad2);
+        margin-bottom: var(--pad4);
+        line-height: 1.6;
+    }
 }
 
 /* ============================================
@@ -4246,8 +4317,6 @@ body.blog {
     #mainGrid.mmchat  #actualChat { display: flex; }
 
     #mainGrid.mmusrs  #usersbox   { display: flex; }
-
-    /* .newChat { margin-left: var(--pad2); } */
 }
 
 /* ── max 799px: touch-only users list ── */
@@ -4474,10 +4543,6 @@ body.blog {
         max-width: 36rem;
     }
 
-    #allUsersWrap {
-        align-self: flex-end;
-    }
-
     #usersWaitlist {
         display: none;
         flex-direction: column;
@@ -4536,6 +4601,8 @@ body.blog {
         justify-content: flex-start;
         padding: var(--pad3) var(--pad4);
     }
+
+    .newChat { margin-right: 0; }
 }
 
 @media only screen and (min-width: 1370px) {
