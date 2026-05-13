@@ -773,6 +773,7 @@ a.sociallogo[href] {
 #mainGrid {
     grid-area: main;
     flex: 1;
+    min-height: 0;
     display: grid;
     grid-template-rows: auto auto auto 1fr;
     grid-template-columns: 1fr;
@@ -906,13 +907,8 @@ a.sociallogo[href] {
     grid-area: content;
     display: flex;
     flex-direction: column;
-    width: 100%;
+    min-height: 0;
     overflow: hidden;
-}
-
-.usersWrap {
-    max-width: 18rem;
-    overflow: auto;
 }
 
 #usersStats {
@@ -947,11 +943,6 @@ a.sociallogo[href] {
     flex-direction: column;
     padding: var(--pad4);
 }
-@media only screen and (hover: hover) {
-    #allUsers {
-        padding-right: 0;
-    }
-}
 
 #allUsers > * {
     display: flex;
@@ -974,7 +965,7 @@ a.sociallogo[href] {
 #allUsersWrap {
     flex: 1;
     min-height: 0;
-    width: 100%;
+    max-width: 18rem;
     overflow: auto;
     display: flex;
     flex-direction: column;
@@ -4550,10 +4541,6 @@ html#about body {
         margin-right: auto;
         width: 100%;
         max-width: 36rem;
-    }
-
-    #allUsersWrap {
-        align-self: flex-end;
     }
 
     #usersWaitlist {
