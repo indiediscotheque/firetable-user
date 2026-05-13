@@ -514,23 +514,38 @@ firetable.ui.setupChatEvents = function () {
         firetable.utilities.initAtLand();
         $('#atPicker').addClass('show');
         for (var i = 0; i < firetable.atUsersFiltered.length; i++) {
-          $('<div class="atPickerThing"><button class="butt graybutt" role="button">@' +
-            firetable.atUsersFiltered[i] + '</button></div>').appendTo('#atPicker');
+          var $item = $('<div class="atPickerThing"><button class="butt graybutt" role="option" aria-selected="false">@' +
+            firetable.atUsersFiltered[i] + '</button></div>');
+          if (i === 0) $item.find('.butt').attr('aria-selected', 'true');
+          $item.appendTo('#atPicker');
         }
       }
 
     } else if (firetable.atLand) {
       // ── @-mention: filter as user types ──
-      if (e.key === " " || e.key === "Spacebar") {
+      // Ignore pure modifier keys (Shift, Control, Alt, Meta, CapsLock, etc.)
+      if (e.key.length > 1 && !e.key.match(/^[0-9a-zA-Z_]$/)) {
+        return;
+      } else if (e.key === " " || e.key === "Spacebar") {
         firetable.utilities.exitAtLand();
-      } else if (!e.key.match(/[0-9a-zA-Z_]/)) {
-        firetable.atString += e.key;
-        $('#atPicker').html('');
-        $('<div class="atPickerThing"><i>Usernames cannot contain "' + e.key + '"</i></div>').appendTo('#atPicker');
+      } else if (!e.key.match(/^[0-9a-zA-Z_]$/)) {
+        firetable.utilities.exitAtLand();
       } else {
         firetable.atString += e.key;
         firetable.utilities.updateAtLand();
       }
+    }
+  });
+
+  // ── @-mention: dismiss picker when input loses focus ──
+  $("#newchat").on('blur', function () {
+    if (firetable.atLand) {
+      // Small delay so click on a picker button registers before we tear it down
+      setTimeout(function () {
+        if (!$('#atPicker').is(':focus-within') && !$('#atPicker .butt:focus').length) {
+          firetable.utilities.exitAtLand();
+        }
+      }, 150);
     }
   });
 
@@ -551,17 +566,17 @@ firetable.ui.setupChatEvents = function () {
     }
   });
 
-  // ── @-mention: Tab to auto-complete ──
+  // ── @-mention: Tab to auto-complete (selects the highlighted item) ──
   $("#newchat").bind("keydown", function (e) {
+    if (!firetable.atLand) return;
     if (e.key === "Tab") {
-      if (firetable.atUsersFiltered.length === 1) {
-        $("#newchat").one("blur", function () {
-          $("#newchat").focus().val($("#newchat").val());
-        });
-        firetable.utilities.chooseAt(firetable.atUsersFiltered[0]);
-      } else {
-        firetable.utilities.exitAtLand();
-      }
+      e.preventDefault();
+      var $active = $('#atPicker .butt[aria-selected="true"]').first();
+      var name = $active.length
+        ? $active.text().replace('@', '')
+        : (firetable.atUsersFiltered[0] || null);
+      if (name) firetable.utilities.chooseAt(name);
+      else firetable.utilities.exitAtLand();
     }
   });
 
@@ -576,22 +591,42 @@ firetable.ui.setupChatEvents = function () {
     }, 250);
   });
 
-  // ── @-mention: arrow keys within dropdown ──
-  $(document).on('keyup', '#atPicker .butt:focus', function (e) {
+  // ── @-mention: arrow keys move aria-selected highlight (focus stays on input) ──
+  $(document).on('keydown', '#atPicker .butt', function (e) {
     if (e.key === "ArrowUp") {
-      var $prev = $('#atPicker .butt:focus').parent().prev();
-      if ($prev.length) {
-        $prev.find('.butt').focus();
-      } else {
-        $('#atPicker .butt:last').focus();
-      }
+      var $prev = $(this).closest('.atPickerThing').prev('.atPickerThing');
+      var $target = $prev.length ? $prev.find('.butt') : $('#atPicker .butt').last();
+      $('#atPicker .butt').attr('aria-selected', 'false');
+      $target.attr('aria-selected', 'true').focus();
     } else if (e.key === "ArrowDown") {
-      var $next = $('#atPicker .butt:focus').parent().next();
-      if ($next.length) {
-        $next.find('.butt').focus();
-      } else {
-        $('#atPicker .butt:first').focus();
-      }
+      var $next = $(this).closest('.atPickerThing').next('.atPickerThing');
+      var $target2 = $next.length ? $next.find('.butt') : $('#atPicker .butt').first();
+      $('#atPicker .butt').attr('aria-selected', 'false');
+      $target2.attr('aria-selected', 'true').focus();
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      firetable.utilities.chooseAt($(this).text().replace('@', ''));
+      $('#newchat').focus();
+    } else if (e.key === "Escape") {
+      firetable.utilities.exitAtLand();
+      $('#newchat').focus();
+    }
+  });
+
+  // ── @-mention: arrow keys from input move selection into picker ──
+  $(document).on('keydown', '#newchat', function (e) {
+    if (!firetable.atLand) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      var $first = $('#atPicker .butt[aria-selected="true"]').first();
+      if (!$first.length) $first = $('#atPicker .butt').first();
+      $first.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      var $last = $('#atPicker .butt').last();
+      if ($last.length) $last.focus();
+    } else if (e.key === "Escape") {
+      firetable.utilities.exitAtLand();
     }
   });
 

@@ -3016,6 +3016,13 @@ img.emoji,
     letter-spacing: 0;
 }
 
+#atPicker .butt[aria-selected="true"],
+#atPicker .butt:focus {
+    background-color: var(--color-accent);
+    color: #fff;
+    outline: none;
+}
+
 #atPicker i {
     margin: 0.25rem;
     padding: 0.25em 0.5em;
