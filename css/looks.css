@@ -2676,11 +2676,20 @@ a.importLinkCheck {
     position: relative;
     padding-left: calc(1.75rem + var(--pad2) * 3);
     background-color: transparent;
+    display: flex;
+    align-items: baseline;
+    gap: var(--pad2);
 
     .material-symbols-outlined {
         position: absolute;
-        left: 1.5rem;
+        left: 1.25rem;
         color: var(--color-text-dim);
+    }
+
+    .npmsg-time {
+        margin-left: auto;
+        margin-top: 0.2rem;
+        flex-shrink: 0;
     }
 }
 
