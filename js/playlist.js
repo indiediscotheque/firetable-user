@@ -526,36 +526,34 @@ firetable.actions.importList = function (id, name, type) {
     var finalList = [];
 
     var fetchPage = function (pageToken) {
-      youtubeAPIReady(function () {
-        var params = {
-          playlistId: id,
-          maxResults: IMPORT_PAGE_SIZE,
-          part: "snippet"
-        };
-        if (pageToken) params.pageToken = pageToken;
+      var params = {
+        playlistId: id,
+        maxResults: IMPORT_PAGE_SIZE,
+        part: "snippet"
+      };
+      if (pageToken) params.pageToken = pageToken;
 
-        gapi.client.youtube.playlistItems.list(params).execute(function (response) {
-          if (response.items && response.items.length) {
-            for (var idx = 0; idx < response.items.length; idx++) {
-              finalList.push(response.items[idx]);
+      ytAPI('playlistItems', params, function (response) {
+        if (response.items && response.items.length) {
+          for (var idx = 0; idx < response.items.length; idx++) {
+            finalList.push(response.items[idx]);
+          }
+        }
+        if (response.nextPageToken) {
+          fetchPage(response.nextPageToken);
+        } else {
+          // All pages fetched — create the list
+          firetable.debug && console.log(finalList);
+          var listid = ftapi.actions.createList(name);
+          $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + name + '</option>');
+          $("#djlistpicker").append('<option value="' + listid + '">' + name + '</option>');
+          for (var i = 0; i < finalList.length; i++) {
+            var goodTitle = finalList[i].snippet.title;
+            if (goodTitle !== "Private video" && goodTitle !== "Deleted video") {
+              ftapi.actions.addToList(MEDIA_YOUTUBE, goodTitle, finalList[i].snippet.resourceId.videoId, listid);
             }
           }
-          if (response.nextPageToken) {
-            fetchPage(response.nextPageToken);
-          } else {
-            // All pages fetched — create the list
-            firetable.debug && console.log(finalList);
-            var listid = ftapi.actions.createList(name);
-            $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + name + '</option>');
-            $("#djlistpicker").append('<option value="' + listid + '">' + name + '</option>');
-            for (var i = 0; i < finalList.length; i++) {
-              var goodTitle = finalList[i].snippet.title;
-              if (goodTitle !== "Private video" && goodTitle !== "Deleted video") {
-                ftapi.actions.addToList(MEDIA_YOUTUBE, goodTitle, finalList[i].snippet.resourceId.videoId, listid);
-              }
-            }
-          }
-        });
+        }
       });
     };
     fetchPage(); // start with first page
