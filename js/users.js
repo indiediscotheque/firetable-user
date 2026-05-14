@@ -39,8 +39,7 @@ firetable.actions.logIn = function (email, password) {
 
 /** Sign out. */
 firetable.actions.logOut = function () {
-  $("#overlay").removeClass('show');
-  $(".modalThing").removeClass('show');
+  document.querySelectorAll("dialog[open]").forEach(function (d) { d.close(); });
   ftapi.actions.logOut();
   firetable.debug && console.log("logout");
 };
@@ -115,7 +114,7 @@ firetable.actions.loggedIn = function (user) {
   ftapi.lookup.allLists(function (allPlaylists) {
     var viewListStorageKey = "firetable.viewList." + ftapi.uid;
     $("#listpicker").off("change");
-    $("#listpicker").html('<option value="1">Add/Delete Playlist</option><option value="0">Default Playlist</option>');
+    $("#listpicker").html('<option value="0">Default Playlist</option>');
     $("#djlistpicker").off("change");
     $("#djlistpicker").html('<option value="0">Default Playlist</option>');
     for (var key in allPlaylists) {
@@ -141,25 +140,20 @@ firetable.actions.loggedIn = function (user) {
 
       $("#listpicker").change(function () {
         var val = $("#listpicker").val();
-        if (val === "1") {
-          // Show playlist manager
-          $("#mainqueuestuff, #filterMachine, #searchMachine, #addbox").css("display", "none");
-          $("#cancelqsearch").hide();
-          $("#qControlButtons").hide();
-          $("#plmanager").css("display", "flex");
-        } else {
-          // Switch the view/edit list (does not affect DJ queue)
-          $("#mainqueuestuff, #filterMachine").css("display", "block");
-          $("#searchMachine").css("display", "none");
-          $("#addbox").css("display", "none");
-          $("#cancelqsearch").hide();
-          $("#qControlButtons").show();
-          $("#plmanager").css("display", "none");
-          try {
-            localStorage.setItem(viewListStorageKey, val);
-          } catch (e) {}
-          firetable.actions.switchViewList(val);
-        }
+        $("#plDeleteLauncher").prop("disabled", !val || val === "0");
+        // Switch the view/edit list (does not affect DJ queue)
+        $("#mainqueuestuff, #filterMachine").css("display", "block");
+        $("#searchMachine").css("display", "none");
+        $("#addbox").css("display", "none");
+        $("#cancelqsearch").hide();
+        $("#qControlButtons").show();
+        $("#plmanager").css("display", "none");
+        $("#listpickerWrap").show();
+        $("#plAddLauncher i").text("add");
+        try {
+          localStorage.setItem(viewListStorageKey, val);
+        } catch (e) {}
+        firetable.actions.switchViewList(val);
       });
       $("#djlistpicker").change(function () {
         ftapi.actions.switchDjList($(this).val());

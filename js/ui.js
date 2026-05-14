@@ -1162,9 +1162,7 @@ firetable.ui.setupMiscEvents = function () {
   $(".openModal").bind("click", function () {
     var modalContentID = $(this).attr('data-modal');
     var targetTab = $(this).attr('data-tab');
-    $(".modalThing").removeClass('show');
-    $("#overlay").addClass('show');
-    $("#" + modalContentID).addClass('show');
+    document.getElementById(modalContentID).showModal();
     if (targetTab) {
       var $modal = $("#" + modalContentID);
       $modal.find('.tab').removeClass('on');
@@ -1182,19 +1180,15 @@ firetable.ui.setupMiscEvents = function () {
     $('#' + targetTab).addClass('active');
   });
   $(".closeModal").bind("click", function () {
-    $("#overlay").removeClass('show');
-    $(".modalThing").removeClass('show');
-    $("#deletepicker").html("");
+    var dlg = $(this).closest("dialog")[0];
+    if (dlg) dlg.close();
     $("#plMachine").val("");
   });
-  $("#overlay").bind("click", function () {
-    $("#overlay").removeClass('show');
-    $(".modalThing").removeClass('show');
-    $("#deletepicker").html("");
-    $("#plMachine").val("");
-  });
-  $(".modalThing").bind("click", function (e) {
-    e.stopPropagation();
+  $("dialog").on("click", function (e) {
+    if (e.target === this) {
+      this.close();
+      $("#plMachine").val("");
+    }
   });
 
   // ── Card Case panel ──
