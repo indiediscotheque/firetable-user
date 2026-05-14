@@ -4006,6 +4006,19 @@ html#about body {
         max-width: 40rem;
     }
 
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25em;
+        margin-bottom: var(--pad4);
+        color: var(--color-text-muted);
+        mix-blend-mode: normal;
+
+        &:hover {
+            color: var(--color-text);
+        }
+    }
+
     h3 {
         margin-bottom: var(--pad2);
     }
