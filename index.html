@@ -280,14 +280,21 @@
 				<div id="queueControls">
 					<div id="listpickerWrap">
 						<select id="listpicker">
-							<option value="1">Add/Delete Playlist</option>
 							<option value="0">Default Playlist</option>
 						</select>
+						<div id="plmanager">
+							<input type="text" placeholder="Name your playlist, hit Enter" id="plmaker" />
+						</div>
 					</div>
 					<div id="qControlButtons">
 						<ft-tooltip label="Find tracks">
 							<button role="button" class="butt graybutt iconbutt" id="addToQueueBttn" aria-label="Find tracks">
 								<i class="material-symbols-outlined"> search </i>
+							</button>
+						</ft-tooltip>
+						<ft-tooltip label="Delete playlist">
+							<button role="button" class="butt graybutt iconbutt" id="plDeleteLauncher" aria-label="Delete playlist">
+								<i class="material-symbols-outlined">delete</i>
 							</button>
 						</ft-tooltip>
 						<ft-tooltip label="Merge playlists">
@@ -298,6 +305,11 @@
 						<ft-tooltip label="Shuffle list">
 							<button role="button" class="butt graybutt iconbutt" id="shuffleQueue" aria-label="Shuffle list">
 								<i class="material-symbols-outlined"> shuffle </i>
+							</button>
+						</ft-tooltip>
+						<ft-tooltip label="New / Import playlist">
+							<button role="button" class="butt graybutt iconbutt" id="plAddLauncher" aria-label="New or Import playlist">
+								<i class="material-symbols-outlined">add</i>
 							</button>
 						</ft-tooltip>
 					</div>
@@ -369,18 +381,6 @@
 						</div>
 
 					</div>
-				</div>
-				<div id="plmanager">
-					<input type="text" placeholder="Choose a playlist name then hit enter" id="plmaker" />
-					<div class="ortxt">or...</div>
-					<button role="button" class="butt graybutt openModal" data-modal="importPromptBox"
-						id="plimportLauncher">
-						Import A Playlist
-					</button>
-					<button role="button" class="butt graybutt openModal" data-modal="deletePromptBox"
-						id="pldeleteLauncher">
-						Delete A Playlist
-					</button>
 				</div>
 				<div id="addbox">
 					<div id="searchResults" class="scroll-view">
@@ -513,25 +513,35 @@
 		</div>
 	</div>
 
-	<div id="overlay">
+	<div id="plAddPopover">
+		<button role="button" class="butt graybutt" id="plAddCreate">
+			<i class="material-symbols-outlined">library_add</i> Create Playlist
+		</button>
+		<button role="button" class="butt graybutt" id="plAddImport">
+			<i class="material-symbols-outlined">download</i> Import Playlist
+		</button>
+	</div>
 
-		<div class="modalThing" id="deletePromptBox">
+	<dialog id="deletePromptBox">
+		<div class="modalBox">
 			<div class="modalHeader">
-				<h2>Playlist Deletion Zone</h2>
+				<h2>Delete Playlist</h2>
 				<button role="button" class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined">close</i></button>
 			</div>
-				<div class="modalContent">
-				So you want to delete a playlist huh? This action is <strong>irreversible.</strong><br /> If you're
-				super sure you want to do this, pick a playlist to delete below.
-				<br /><br />
-				<div class="inputline">
-					<select placeholder="Pick a Playlist To Delete" id="deletepicker"></select>
-					<button role="button" class="butt redbutt" id="pldeleteButton">Delete This Playlist</button>
+			<div class="modalContent">
+				<p>This is <strong>irreversible.</strong> All tracks in this playlist will be permanently deleted.</p>
+				<p>Type the playlist name &#8220;<strong id="deleteConfirmTarget"></strong>&#8221; to confirm:</p>
+				<input type="text" id="deleteConfirmInput" placeholder="Type playlist name here" autocomplete="off" />
+				<div class="modal-actions">
+					<button role="button" class="butt graybutt closeModal" id="deleteCancelButton">Cancel</button>
+					<button role="button" class="butt redbutt" id="pldeleteButton" disabled>Delete</button>
 				</div>
 			</div>
 		</div>
+	</dialog>
 
-		<div class="modalThing" id="cardsBox">
+	<dialog id="cardsBox">
+		<div class="modalBox">
 			<div class="modalHeader">
 				<h2>Your Card Case</h2>
 				<button role="button" class="butt graybutt iconbutt closeModal"><i class="material-symbols-outlined" title="Close"> close </i></button>
@@ -540,13 +550,17 @@
 				<div id="cardsMain">loading your cards...</div>
 			</div>
 		</div>
+	</dialog>
 
-		<div class="modalThing" id="cardViewLargerModal">
+	<dialog id="cardViewLargerModal">
+		<div class="modalBox">
 			<button role="button" class="butt graybutt iconbutt closeModal" id="cardViewLargerClose" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
 			<canvas id="cardViewLargerCanvas" width="225" height="300"></canvas>
 		</div>
+	</dialog>
 
-		<div class="modalThing" id="accountSettingsBox">
+	<dialog id="accountSettingsBox">
+		<div class="modalBox">
 			<div class="tabs" id="accountSettingsTabs">
 				<button class="tab on" data-tab="profile-tab">Profile</button>
 				<button class="tab" data-tab="settings-tab">Settings</button>
@@ -631,8 +645,10 @@
 				</div>
 			</div>
 		</div>
+	</dialog>
 
-		<div class="modalThing" id="importPromptBox">
+	<dialog id="importPromptBox">
+		<div class="modalBox">
 			<div class="modalHeader">
 				<h2>Playlist Import Machine</h2>
 				<button role="button" class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined">close</i></button>
@@ -658,8 +674,7 @@
 				</div>
 			</div>
 		</div>
-
-	</div>
+	</dialog>
 
 	<div id="socialPopover" popover="auto" class="ft-popover">
 		<div id="socialArrow" class="ft-arrow"></div>

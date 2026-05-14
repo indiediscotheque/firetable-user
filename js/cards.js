@@ -248,8 +248,7 @@ firetable.actions.viewLargerCard = function (cardid) {
   dest.width  = srcCanvas.width;
   dest.height = srcCanvas.height;
   dest.getContext('2d').drawImage(srcCanvas, 0, 0);
-  $('#overlay').addClass('show');
-  $('#cardViewLargerModal').addClass('show');
+  document.getElementById('cardViewLargerModal').showModal();
 };
 
 /**

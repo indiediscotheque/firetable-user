@@ -518,7 +518,7 @@ firetable.actions.scGet = function (type, q, callback) {
  * @param {number} type - MEDIA_YOUTUBE (1) or MEDIA_SOUNDCLOUD (2)
  */
 firetable.actions.importList = function (id, name, type) {
-  $("#overlay").removeClass('show');
+  document.querySelectorAll("dialog[open]").forEach(function (d) { d.close(); });
   $("#importResults").html("");
   $("#plMachine").val("");
 
@@ -911,16 +911,33 @@ firetable.ui.setupPlaylistEvents = function () {
       $("#listpicker").val(listid).change();
       $("#djlistpicker").val(listid);
       ftapi.actions.switchDjList(listid);
+      $(this).val('');
+      exitCreateMode();
     }
   });
 
+  function enterCreateMode() {
+    $("#listpicker").hide();
+    $("#plmanager").css("display", "flex");
+    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").closest("ft-tooltip").hide();
+    $("#plAddLauncher i").text("close");
+    $("#mainqueuestuff, #filterMachine").css("display", "none");
+    $("#plmaker").focus();
+  }
+
+  function exitCreateMode() {
+    $("#plmanager").css("display", "none");
+    $("#listpicker").show();
+    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").closest("ft-tooltip").show();
+    $("#plAddLauncher i").text("add");
+    $("#mainqueuestuff, #filterMachine").css("display", "block");
+  }
+
   // ── Delete playlist ──
   $("#pldeleteButton").bind("click", function () {
-    var val = $("#deletepicker").val();
+    var val = $("#listpicker").val();
+    if (!val || val === "0") return;
     firetable.debug && console.log('playlist delete:', val);
-    if ($("#listpicker").val() === val) {
-      $("#listpicker").val("0").change();
-    }
     if (ftapi.selectedListThing === val) {
       ftapi.actions.switchDjList("0");
       $("#djlistpicker").val("0");
@@ -928,29 +945,73 @@ firetable.ui.setupPlaylistEvents = function () {
     ftapi.actions.deleteList(val);
     $("#pdopt" + val).remove();
     $("#djlistpicker option[value='" + val + "']").remove();
-    $("#overlay").removeClass('show');
+    $("#listpicker").val("0").change();
+    document.getElementById("deletePromptBox").close();
+    $("#deleteConfirmInput").val('');
+    $("#pldeleteButton").prop('disabled', true);
   });
 
-  // ── Import launcher ──
-  $("#plimportLauncher").bind("click", function () {
-    $("#overlay").addClass('show');
-    $(".modalThing").removeClass('show');
-    $('#importPromptBox').addClass('show');
+  // ── Delete confirm input live check ──
+  $("#deleteConfirmInput").bind("input", function () {
+    var target = $("#deleteConfirmTarget").text();
+    $("#pldeleteButton").prop('disabled', $(this).val() !== target);
   });
 
   // ── Delete launcher ──
-  $("#pldeleteLauncher").bind("click", function () {
-    ftapi.lookup.allLists(function (allPlaylists) {
-      $("#deletepicker").html("");
-      for (var key in allPlaylists) {
-        if (allPlaylists.hasOwnProperty(key)) {
-          $("#deletepicker").append('<option value="' + key + '">' + allPlaylists[key].name + '</option>');
-        }
-      }
-      $("#overlay").addClass('show');
-      $(".modalThing").removeClass('show');
-      $('#deletePromptBox').addClass('show');
+  $("#plDeleteLauncher").bind("click", function () {
+    var val = $("#listpicker").val();
+    if (!val || val === "0") {
+      return; // nothing to delete
+    }
+    var name = $("#listpicker option:selected").text();
+    $("#deleteConfirmTarget").text(name);
+    $("#deleteConfirmInput").val('');
+    $("#pldeleteButton").prop('disabled', true);
+    document.getElementById("deletePromptBox").showModal();
+  });
+
+  // ── Add-new popover toggle ──
+  $("#plAddLauncher").bind("click", function (e) {
+    e.stopPropagation();
+    // If we're in create mode, this button acts as cancel
+    if ($("#plmanager").is(":visible")) {
+      $("#plmaker").val('');
+      exitCreateMode();
+      return;
+    }
+    var $pop = $("#plAddPopover");
+    if ($pop.hasClass('show')) {
+      $pop.removeClass('show');
+      return;
+    }
+    // Show first so outerWidth() is measurable, then position
+    $pop.addClass('show');
+    var btn = $(this);
+    var btnOffset = btn.offset();
+    $pop.css({
+      top: btnOffset.top + btn.outerHeight() + 4,
+      left: btnOffset.left + btn.outerWidth() - $pop.outerWidth()
     });
+  });
+
+  $(document).bind("click.plAddPopover", function () {
+    $("#plAddPopover").removeClass('show');
+  });
+
+  $("#plAddPopover").bind("click", function (e) {
+    e.stopPropagation();
+  });
+
+  // ── Popover: Create Playlist ──
+  $("#plAddCreate").bind("click", function () {
+    $("#plAddPopover").removeClass('show');
+    enterCreateMode();
+  });
+
+  // ── Popover: Import Playlist ──
+  $("#plAddImport").bind("click", function () {
+    $("#plAddPopover").removeClass('show');
+    document.getElementById("importPromptBox").showModal();
   });
 
   // ── Dubtrack import file select ──
