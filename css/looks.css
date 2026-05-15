@@ -1951,7 +1951,7 @@ ul.lightrope li {
     display: none;
     flex-direction: column;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #queuebox.drop-ready #queuelist {
