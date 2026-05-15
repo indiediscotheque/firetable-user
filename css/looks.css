@@ -2278,6 +2278,10 @@ ul.lightrope li {
     }
 }
 
+#importPromptBox .modalContent {
+    flex-direction: column;
+}
+
 #deletePromptBox .modalContent {
     flex-direction: column;
     gap: var(--pad2);
@@ -3595,6 +3599,7 @@ dialog::backdrop {
     background-color: var(--color-bg-s2);
     color: var(--color-text);
     overflow: hidden;
+    border-radius: 1rem;
 }
 
 .modalHeader {
@@ -3962,12 +3967,15 @@ input.tagMachine,
 #importSources {
     padding: 0;
     background: none;
+    flex-shrink: 0;
 }
 
 #importContent,
 #importDubContent {
     padding: var(--pad2) var(--pad3);
     background-color: var(--color-bg-t2);
+    flex: 1;
+    overflow: auto;
 }
 
 #dubimportButton {
