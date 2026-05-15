@@ -308,7 +308,7 @@
 							</button>
 						</ft-tooltip>
 						<ft-tooltip label="New / Import playlist">
-							<button role="button" class="butt graybutt iconbutt" id="plAddLauncher" aria-label="New or Import playlist">
+							<button role="button" class="butt graybutt iconbutt" id="plAddLauncher" aria-label="New or Import playlist" aria-haspopup="menu" aria-expanded="false">
 								<i class="material-symbols-outlined">add</i>
 							</button>
 						</ft-tooltip>
@@ -513,11 +513,11 @@
 		</div>
 	</div>
 
-	<div id="plAddPopover">
-		<button role="button" class="butt graybutt" id="plAddCreate">
+	<div id="plAddPopover" role="menu" aria-label="Playlist options">
+		<button role="menuitem" class="butt graybutt" id="plAddCreate">
 			<i class="material-symbols-outlined">library_add</i> Create Playlist
 		</button>
-		<button role="button" class="butt graybutt" id="plAddImport">
+		<button role="menuitem" class="butt graybutt" id="plAddImport">
 			<i class="material-symbols-outlined">download</i> Import Playlist
 		</button>
 	</div>
@@ -529,7 +529,7 @@
 				<button role="button" class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined">close</i></button>
 			</div>
 			<div class="modalContent">
-				<p>This is <strong>irreversible.</strong> All tracks in this playlist will be permanently deleted.</p>
+				<p>This is <strong>irreversible.</strong> This playlist will be permanently deleted.</p>
 				<p>Type the playlist name &#8220;<strong id="deleteConfirmTarget"></strong>&#8221; to confirm:</p>
 				<input type="text" id="deleteConfirmInput" placeholder="Type playlist name here" autocomplete="off" />
 				<div class="modal-actions">
@@ -656,21 +656,11 @@
 			<div class="modalContent">
 				<div id="importSources" class="tabs">
 					<button role="button" class="tab on" id="ytimportchoice">Youtube</button><button role="button"
-						class="tab" id="scimportchoice">Soundcloud</button><button role="button" class="tab"
-						id="dtimportchoice">Dubtrack</button>
+						class="tab" id="scimportchoice">Soundcloud</button>
 				</div>
 				<div id="importContent">
 					<input type="text" placeholder="Search Playlists" id="plMachine"></input>
 					<div id="importResults"></div>
-				</div>
-				<div id="importDubContent">
-					<div>
-						Select an "interactive webpage" .html file from <a target="_blank"
-							href="https://exporter.dubtrack.net">Dubtrack</a>.
-					</div>
-					<input name='myFileDubList' id="dubtrackimportfile" type="file">
-					<div id="importDubResults"></div>
-					<div id="dubimportButton"><button id="importDubGo">Import Selected List</button></div>
 				</div>
 			</div>
 		</div>

@@ -3606,7 +3606,7 @@ dialog::backdrop {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--pad4);
+    padding: var(--pad3) var(--pad3) var(--pad3) var(--pad4);
     color: var(--color-text-light);
     background-color: var(--color-bg-t1);
 }
@@ -3946,10 +3946,6 @@ dialog::backdrop {
     aspect-ratio: 225 / 300;
 }
 
-#importDubContent {
-    display: none;
-}
-
 input.tagMachine,
 #supercopSearch,
 #changeUsername {
@@ -3970,17 +3966,11 @@ input.tagMachine,
     flex-shrink: 0;
 }
 
-#importContent,
-#importDubContent {
+#importContent {
     padding: var(--pad2) var(--pad3);
     background-color: var(--color-bg-t2);
     flex: 1;
     overflow: auto;
-}
-
-#dubimportButton {
-    margin-top: 0.625rem;
-    display: none;
 }
 
 #byId {
