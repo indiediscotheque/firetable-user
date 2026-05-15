@@ -924,6 +924,7 @@ firetable.ui.setupPlaylistEvents = function () {
     $("#listpicker").hide();
     $("#plmanager").css("display", "flex");
     $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").closest("ft-tooltip").hide();
+    $("#plAddLauncher").closest("ft-tooltip").attr("label", "Cancel Create Playlist");
     $("#plAddLauncher i").text("close");
     $("#mainqueuestuff, #filterMachine").css("display", "none");
     $("#plmaker").focus();
@@ -933,6 +934,7 @@ firetable.ui.setupPlaylistEvents = function () {
     $("#plmanager").css("display", "none");
     $("#listpicker").show();
     $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").closest("ft-tooltip").show();
+    $("#plAddLauncher").closest("ft-tooltip").attr("label", "New / Import playlist");
     $("#plAddLauncher i").text("add");
     $("#mainqueuestuff, #filterMachine").css("display", "block");
   }
