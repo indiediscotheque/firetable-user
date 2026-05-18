@@ -498,8 +498,14 @@ firetable.ui.setupRoomEvents = function () {
     var nextArtist = firetable.ui.strip(data.artist);
 
     animateNowPlayingChange(function () {
-      $("#track").text(nextTitle);
-      $("#artist").text(nextArtist);
+      // Re-read from firetable.song at callback time so any tagUpdate correction
+      // that arrived during the 180ms animation delay isn't overwritten.
+      // Falls back to nextTitle/nextArtist on the synchronous first-paint path
+      // where firetable.song hasn't been set to the new song yet.
+      var displayTitle  = (firetable.song && firetable.song.cid === data.cid) ? firetable.song.title  : nextTitle;
+      var displayArtist = (firetable.song && firetable.song.cid === data.cid) ? firetable.song.artist : nextArtist;
+      $("#track").text(displayTitle);
+      $("#artist").text(displayArtist);
       $("#songlink").attr("href", data.url);
       setNowPlayingAlbumArt(displayImage, true);
     });
@@ -661,15 +667,13 @@ firetable.ui.setupRoomEvents = function () {
 
     var html = '';
     var hasEntries = false;
+    var selfInWaitlist = false;
     if (data) {
       var countr = 1;
       for (var key in data) {
         if (data.hasOwnProperty(key)) {
           hasEntries = true;
           var userId = data[key].id;
-          var removeMe = data[key].removeAfter
-            ? '<span class="removemeIcon material-symbols-filled">departure_board</span>' : '';
-
           // Look up role icon from live user data
           var userInfo = ftapi.users && ftapi.users[userId];
           var roleicon = 'person';
@@ -680,11 +684,30 @@ firetable.ui.setupRoomEvents = function () {
             if (userInfo.hostbot)  { roleicon = 'smart_toy';    roleiconclass = 'material-symbols-filled'; }
           }
 
-          html += '<div class="waitlist-item">' +
-            '<span class="waitlist-pos">' + countr + '</span>' +
+          var isSelf = userId === ftapi.uid;
+          if (isSelf) selfInWaitlist = true;
+          var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
+          var isMod = ownUser && (ownUser.mod || ownUser.supermod);
+          var isHostbot = !!(userInfo && userInfo.hostbot);
+          var showDeparture = (isSelf || isMod) && !isHostbot;
+          var removeAfterValue = data[key].removeAfter;
+          var wlName = firetable.utilities.htmlEscape(data[key].name);
+          var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + wlName + ' step down after their next play';
+          var departureTitleOn  = isSelf ? "Don't step down after your next play" : "Don't have " + wlName + ' step down after their next play';
+          var departureBtn = showDeparture
+            ? '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="' + (removeAfterValue ? departureTitleOn : departureTitleOff) + '"><i class="material-symbols-filled">departure_board</i></button>'
+            : '';
+
+          var posEl = showDeparture
+            ? '<button class="waitlist-pos" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="Remove from waitlist"><span class="wl-pos-num">' + countr + '</span><i class="material-symbols-filled wl-pos-icon">close</i></button>'
+            : '<span class="waitlist-pos">' + countr + '</span>';
+
+          html += '<div class="waitlist-item" data-userid="' + userId + '">' +
+            posEl +
             '<span class="waitlist-name">' +
-            firetable.utilities.htmlEscape(data[key].name) + removeMe +
+            wlName +
             '</span>' +
+            departureBtn +
             '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
             '<div class="ft-avatar" style="background-image:url(' +
             firetable.utilities.avatarURL(userId, data[key].name) +
@@ -698,10 +721,41 @@ firetable.ui.setupRoomEvents = function () {
       }
     }
     var $wl = $('#usersWaitlist');
+    var wlLabel = '<div class="waitlist-label">Up next <span class="material-symbols-filled">queue_music</span></div>';
+    var isSelfOnDeck = !!(ftapi.uid && firetable.tableData && (function () {
+      for (var k in firetable.tableData) {
+        if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === ftapi.uid) return true;
+      }
+    })());
+    var showJoinBtn = !!(ftapi.uid && !selfInWaitlist && !isSelfOnDeck);
     if (hasEntries) {
-      $wl.html('<div class="waitlist-label"><span class="material-symbols-filled">queue_music</span> Up next</div>' + html).addClass('has-entries');
+      var addMeRow = '';
+      if (showJoinBtn) {
+        var selfData = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
+        var selfRoleicon = 'person';
+        var selfRoleiconclass = 'material-symbols-filled';
+        if (selfData) {
+          if (selfData.mod)      { selfRoleicon = 'shield';       selfRoleiconclass = 'material-symbols-filled-outlined'; }
+          if (selfData.supermod) { selfRoleicon = 'local_police'; selfRoleiconclass = 'material-symbols-filled'; }
+        }
+        var selfName = selfData && selfData.username ? firetable.utilities.htmlEscape(selfData.username) : '';
+        addMeRow = '<div class="waitlist-item waitlist-addme-row">' +
+          '<span class="waitlist-pos">' + countr + '</span>' +
+          '<span class="waitlist-name">' + selfName + '</span>' +
+          '<button class="iconbutt deckDepartureBtn" disabled title="Step down after your next play"><i class="material-symbols-filled">departure_board</i></button>' +
+          '<span class="' + selfRoleiconclass + ' prsnRole">' + selfRoleicon + '</span>' +
+          '<div class="ft-avatar" title="Join the DJ Waitlist"></div>' +
+          '</div>';
+      }
+      $wl.html(wlLabel + html + addMeRow).addClass('has-entries');
     } else {
-      $wl.removeClass('has-entries').empty();
+      $wl.html(
+        wlLabel +
+        '<div class="waitlist-empty">' +
+        '<span class="waitlist-empty-msg">Less than 5 DJs = no need to wait!</span>' +
+        (showJoinBtn ? '<button class="butt graybutt small wlAddMeBtn">Play <span class="material-symbols-filled">queue_music</span></button>' : '') +
+        '</div>'
+      ).removeClass('has-entries');
     }
   });
 
@@ -722,14 +776,16 @@ firetable.ui.setupRoomEvents = function () {
           var isSelf = data[key].id === ftapi.uid;
           var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
           var isMod = ownUser && (ownUser.mod || ownUser.supermod);
+          var isHostbot = !!(ftapi.users && ftapi.users[data[key].id] && ftapi.users[data[key].id].hostbot);
           var showBtn = isSelf || isMod;
+          var showDeparture = showBtn && !isHostbot;
           var btnIcon = isSelf ? 'close' : 'person_remove';
           var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
           var actionBtn = showBtn
             ? '<button class="iconbutt deckRemoveBtn" data-userid="' + data[key].id + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
             : '';
           var departureIndicator;
-          if (showBtn) {
+          if (showDeparture) {
             var isSelfDj = data[key].id === ftapi.uid;
             var djDisplayName = firetable.utilities.htmlEscape(data[key].name);
             // Use pending state if a bot command is in-flight, else use Firebase value
@@ -761,7 +817,7 @@ firetable.ui.setupRoomEvents = function () {
       }
       // Fill empty spots
       if (countr < 4) {
-        var stepUpBtn = isSelfOnDeck ? '&nbsp;' : '<button class="butt graybutt small addmeButt" role="button">Step up</button>';
+        var stepUpBtn = isSelfOnDeck ? '&nbsp;' : '<button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button>';
         html += '<div class="spot empty"><div class="djplaque">' + stepUpBtn + '</div></div>';
         countr++;
         for (var i = countr; i < 4; i++) {
@@ -769,7 +825,7 @@ firetable.ui.setupRoomEvents = function () {
         }
       }
     } else {
-      html += '<div class="spot empty"><div class="djplaque"><button class="butt graybutt small addmeButt" role="button">Step up</button></div></div>';
+      html += '<div class="spot empty"><div class="djplaque"><button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button></div></div>';
       for (var i = 0; i < 3; i++) {
         html += '<div class="spot empty"><div class="djplaque">&nbsp;</div></div>';
       }
@@ -778,6 +834,42 @@ firetable.ui.setupRoomEvents = function () {
     $("#deck").off('click.addme').on('click.addme', '.addmeButt', function () {
       ftapi.actions.sendBotCommand("!addme");
     });
+    $('#usersWaitlist').off('click.wladdme').on('click.wladdme', '.waitlist-addme-row .ft-avatar', function () {
+      ftapi.actions.sendBotCommand('!addme');
+    });
+    $('#usersWaitlist').off('click.wlremove').on('click.wlremove', 'button.waitlist-pos', function () {
+      var $btn = $(this);
+      var wlKey = $btn.data('wlkey');
+      var userId = $btn.data('userid');
+      var djName = $btn.data('djname');
+      var isSelf = userId === ftapi.uid;
+      if (isSelf) {
+        ftapi.actions.sendBotCommand('!removeme');
+      } else {
+        firebase.app('firetable').database().ref('waitlist/' + wlKey).remove();
+      }
+    });
+
+    $('#usersWaitlist').off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
+      var $btn = $(this);
+      var wlKey = $btn.data('wlkey');
+      var userId = $btn.data('userid');
+      var djName = $btn.data('djname');
+      var isSelf = userId === ftapi.uid;
+      var isOn = $btn.hasClass('on');
+      var newIsOn = !isOn;
+      $btn.toggleClass('on', newIsOn);
+      var newTitle = newIsOn
+        ? (isSelf ? "Don't step down after your next play" : "Don't have " + djName + ' step down after their next play')
+        : (isSelf ? 'Step down after your next play'       : 'Have ' + djName + ' step down after their next play');
+      $btn.attr('title', newTitle);
+      if (isSelf) {
+        ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
+      } else {
+        firebase.app('firetable').database().ref('waitlist/' + wlKey + '/removeAfter').set(newIsOn ? true : null);
+      }
+    });
+
     $("#deck").off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
       var $btn = $(this);
       var tableKey = $btn.data('tablekey');

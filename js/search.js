@@ -235,18 +235,7 @@ firetable.ui.setupSearchEvents = function () {
     firetable.debug && console.log("sc import");
     firetable.importSelectsChoice = MEDIA_SOUNDCLOUD;
   });
-  $("#dtimportchoice").bind("click", function () {
-    firetable.debug && console.log("dt import");
-    firetable.importSelectsChoice = 3; // Dubtrack
-  });
   $("#importSources .tab").bind("click", function () {
-    if (firetable.importSelectsChoice === 3) {
-      $("#importDubContent").show();
-      $("#importContent").hide();
-    } else {
-      $("#importDubContent").hide();
-      $("#importContent").show();
-    }
     $(this).siblings().removeClass('on');
     $(this).addClass('on');
   });

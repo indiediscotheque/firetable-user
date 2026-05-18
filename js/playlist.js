@@ -10,7 +10,6 @@
  * - Queue from link (YouTube/SoundCloud URL drag-and-drop)
  * - SoundCloud URL resolution (resolveSCLink, scGet)
  * - Import playlist from YouTube/SoundCloud (importList)
- * - Dubtrack import (dubtrackImport, dubtrackImportFileSelect)
  * - List CRUD (create, delete, switch)
  * - playlistChanged event handler
  * - Tag editing (editTagsPrompt)
@@ -902,6 +901,11 @@ firetable.ui.setupPlaylistEvents = function () {
 
   // ── Create new playlist ──
   $("#plmaker").bind("keyup", function (e) {
+    if (e.key === 'Escape') {
+      $(this).val('');
+      exitCreateMode();
+      return;
+    }
     if (e.which !== 13) return;
     var val = $(this).val();
     if (val) {
@@ -920,6 +924,7 @@ firetable.ui.setupPlaylistEvents = function () {
     $("#listpicker").hide();
     $("#plmanager").css("display", "flex");
     $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").closest("ft-tooltip").hide();
+    $("#plAddLauncher").closest("ft-tooltip").attr("label", "Cancel Create Playlist");
     $("#plAddLauncher i").text("close");
     $("#mainqueuestuff, #filterMachine").css("display", "none");
     $("#plmaker").focus();
@@ -929,6 +934,7 @@ firetable.ui.setupPlaylistEvents = function () {
     $("#plmanager").css("display", "none");
     $("#listpicker").show();
     $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").closest("ft-tooltip").show();
+    $("#plAddLauncher").closest("ft-tooltip").attr("label", "New / Import playlist");
     $("#plAddLauncher i").text("add");
     $("#mainqueuestuff, #filterMachine").css("display", "block");
   }
@@ -971,6 +977,25 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   // ── Add-new popover toggle ──
+  function openPlAddMenu() {
+    var $pop = $("#plAddPopover");
+    var btn = $("#plAddLauncher");
+    $pop.addClass('show');
+    btn.attr('aria-expanded', 'true');
+    var btnOffset = btn.offset();
+    $pop.css({
+      top: btnOffset.top + btn.outerHeight() + 4,
+      left: btnOffset.left + btn.outerWidth() - $pop.outerWidth()
+    });
+    $pop.find('[role=menuitem]').first().focus();
+  }
+
+  function closePlAddMenu(returnFocus) {
+    $("#plAddPopover").removeClass('show');
+    $("#plAddLauncher").attr('aria-expanded', 'false');
+    if (returnFocus) $("#plAddLauncher").focus();
+  }
+
   $("#plAddLauncher").bind("click", function (e) {
     e.stopPropagation();
     // If we're in create mode, this button acts as cancel
@@ -981,21 +1006,39 @@ firetable.ui.setupPlaylistEvents = function () {
     }
     var $pop = $("#plAddPopover");
     if ($pop.hasClass('show')) {
-      $pop.removeClass('show');
+      closePlAddMenu(true);
       return;
     }
     // Show first so outerWidth() is measurable, then position
-    $pop.addClass('show');
-    var btn = $(this);
-    var btnOffset = btn.offset();
-    $pop.css({
-      top: btnOffset.top + btn.outerHeight() + 4,
-      left: btnOffset.left + btn.outerWidth() - $pop.outerWidth()
-    });
+    openPlAddMenu();
+  });
+
+  $("#plAddPopover").bind("keydown", function (e) {
+    var $items = $(this).find('[role=menuitem]');
+    var $focused = $items.filter(':focus');
+    var idx = $items.index($focused);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      $items.eq((idx + 1) % $items.length).focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      $items.eq((idx - 1 + $items.length) % $items.length).focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      $items.first().focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      $items.last().focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closePlAddMenu(true);
+    } else if (e.key === 'Tab') {
+      closePlAddMenu(false);
+    }
   });
 
   $(document).bind("click.plAddPopover", function () {
-    $("#plAddPopover").removeClass('show');
+    closePlAddMenu(false);
   });
 
   $("#plAddPopover").bind("click", function (e) {
@@ -1004,19 +1047,15 @@ firetable.ui.setupPlaylistEvents = function () {
 
   // ── Popover: Create Playlist ──
   $("#plAddCreate").bind("click", function () {
-    $("#plAddPopover").removeClass('show');
+    closePlAddMenu(false);
     enterCreateMode();
   });
 
   // ── Popover: Import Playlist ──
   $("#plAddImport").bind("click", function () {
-    $("#plAddPopover").removeClass('show');
+    closePlAddMenu(false);
     document.getElementById("importPromptBox").showModal();
   });
-
-  // ── Dubtrack import file select ──
-  $('#dubtrackimportfile').bind('change', firetable.ui.dubtrackImportFileSelect);
-  $("#importDubGo").bind("click", firetable.actions.dubtrackImport);
 
   // ── Merge lists UI ──
   function closeMergeContain() {

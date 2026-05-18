@@ -122,14 +122,8 @@ var firetable = {
   // ── Search Source Toggle ──
   /** @type {number}  1 = YouTube, 2 = SoundCloud — tracks the "Add" search toggle */
   searchSelectsChoice: MEDIA_YOUTUBE,
-  /** @type {number}  1 = YouTube, 2 = SoundCloud, 3 = Dubtrack — tracks the "Import" toggle */
+  /** @type {number}  1 = YouTube, 2 = SoundCloud — tracks the "Import" toggle */
   importSelectsChoice: MEDIA_YOUTUBE,
-
-  // ── Dubtrack Import ──
-  /** @type {string|null}  Name parsed from Dubtrack export file */
-  dtImportName: null,
-  /** @type {Array}  Track list parsed from Dubtrack export file */
-  dtImportList: [],
 
   // ── Chat State ──
   /** @type {string|false}  UID of the last person who sent a chat (for message grouping) */

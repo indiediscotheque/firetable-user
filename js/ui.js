@@ -693,8 +693,10 @@ firetable.ui.getViewFromPath = function () {
 firetable.ui.updateScreenBtn = function (val) {
   var icons  = { on: 'capture', off: 'cancel_presentation', sync: 'microwave' };
   var titles = { on: 'Screen: always on', off: 'Screen: disabled', sync: 'Screen: synced' };
+  var title = titles[val] || 'Screen: synced';
   $('#screenControl').find('[class*="material-symbols-"]').text(icons[val] || 'microwave');
-  $('#screenControl').attr('data-label', titles[val] || 'Screen: synced').attr('aria-label', titles[val] || 'Screen: synced');
+  $('#screenControl').attr('aria-label', title);
+  $('#screenControlTip').attr('label', title);
   var isOn = (val === 'on') || (val === 'sync' && firetable.screenSyncPos);
   $('#screenControl').toggleClass('on', isOn);
 };
@@ -1015,8 +1017,12 @@ firetable.ui.tooltip = (function () {
         userTipEl.hidePopover();
       });
 
-    $('#allUsersWrap').on('click.ft-usertip', '.prson', function () {
-      var uid = $(this).attr('data-userid');
+    $('#allUsersWrap').on('click.ft-usertip', '.prson .ft-avatar', function () {
+      var uid = $(this).closest('.prson').attr('data-userid');
+      if (uid) showUserTip(this, uid);
+    });
+    $('#usersWaitlist').on('click.ft-usertip', '.waitlist-item .ft-avatar', function () {
+      var uid = $(this).closest('.waitlist-item').attr('data-userid');
       if (uid) showUserTip(this, uid);
     });
   }
