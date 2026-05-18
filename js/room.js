@@ -498,8 +498,14 @@ firetable.ui.setupRoomEvents = function () {
     var nextArtist = firetable.ui.strip(data.artist);
 
     animateNowPlayingChange(function () {
-      $("#track").text(nextTitle);
-      $("#artist").text(nextArtist);
+      // Re-read from firetable.song at callback time so any tagUpdate correction
+      // that arrived during the 180ms animation delay isn't overwritten.
+      // Falls back to nextTitle/nextArtist on the synchronous first-paint path
+      // where firetable.song hasn't been set to the new song yet.
+      var displayTitle  = (firetable.song && firetable.song.cid === data.cid) ? firetable.song.title  : nextTitle;
+      var displayArtist = (firetable.song && firetable.song.cid === data.cid) ? firetable.song.artist : nextArtist;
+      $("#track").text(displayTitle);
+      $("#artist").text(displayArtist);
       $("#songlink").attr("href", data.url);
       setNowPlayingAlbumArt(displayImage, true);
     });
