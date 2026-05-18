@@ -1017,8 +1017,12 @@ firetable.ui.tooltip = (function () {
         userTipEl.hidePopover();
       });
 
-    $('#allUsersWrap').on('click.ft-usertip', '.prson', function () {
-      var uid = $(this).attr('data-userid');
+    $('#allUsersWrap').on('click.ft-usertip', '.prson .ft-avatar', function () {
+      var uid = $(this).closest('.prson').attr('data-userid');
+      if (uid) showUserTip(this, uid);
+    });
+    $('#usersWaitlist').on('click.ft-usertip', '.waitlist-item .ft-avatar', function () {
+      var uid = $(this).closest('.waitlist-item').attr('data-userid');
       if (uid) showUserTip(this, uid);
     });
   }

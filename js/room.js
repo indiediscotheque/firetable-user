@@ -667,9 +667,6 @@ firetable.ui.setupRoomEvents = function () {
         if (data.hasOwnProperty(key)) {
           hasEntries = true;
           var userId = data[key].id;
-          var removeMe = data[key].removeAfter
-            ? '<span class="removemeIcon material-symbols-filled">departure_board</span>' : '';
-
           // Look up role icon from live user data
           var userInfo = ftapi.users && ftapi.users[userId];
           var roleicon = 'person';
@@ -680,11 +677,28 @@ firetable.ui.setupRoomEvents = function () {
             if (userInfo.hostbot)  { roleicon = 'smart_toy';    roleiconclass = 'material-symbols-filled'; }
           }
 
-          html += '<div class="waitlist-item">' +
-            '<span class="waitlist-pos">' + countr + '</span>' +
+          var isSelf = userId === ftapi.uid;
+          var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
+          var isMod = ownUser && (ownUser.mod || ownUser.supermod);
+          var showDeparture = isSelf || isMod;
+          var removeAfterValue = data[key].removeAfter;
+          var wlName = firetable.utilities.htmlEscape(data[key].name);
+          var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + wlName + ' step down after their next play';
+          var departureTitleOn  = isSelf ? "Don't step down after your next play" : "Don't have " + wlName + ' step down after their next play';
+          var departureBtn = showDeparture
+            ? '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="' + (removeAfterValue ? departureTitleOn : departureTitleOff) + '"><i class="material-symbols-filled">departure_board</i></button>'
+            : '';
+
+          var posEl = showDeparture
+            ? '<button class="waitlist-pos" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="Remove from waitlist"><span class="wl-pos-num">' + countr + '</span><i class="material-symbols-filled wl-pos-icon">close</i></button>'
+            : '<span class="waitlist-pos">' + countr + '</span>';
+
+          html += '<div class="waitlist-item" data-userid="' + userId + '">' +
+            posEl +
             '<span class="waitlist-name">' +
-            firetable.utilities.htmlEscape(data[key].name) + removeMe +
+            wlName +
             '</span>' +
+            departureBtn +
             '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
             '<div class="ft-avatar" style="background-image:url(' +
             firetable.utilities.avatarURL(userId, data[key].name) +
@@ -778,6 +792,39 @@ firetable.ui.setupRoomEvents = function () {
     $("#deck").off('click.addme').on('click.addme', '.addmeButt', function () {
       ftapi.actions.sendBotCommand("!addme");
     });
+    $('#usersWaitlist').off('click.wlremove').on('click.wlremove', 'button.waitlist-pos', function () {
+      var $btn = $(this);
+      var wlKey = $btn.data('wlkey');
+      var userId = $btn.data('userid');
+      var djName = $btn.data('djname');
+      var isSelf = userId === ftapi.uid;
+      if (isSelf) {
+        ftapi.actions.sendBotCommand('!removeme');
+      } else {
+        firebase.app('firetable').database().ref('waitlist/' + wlKey).remove();
+      }
+    });
+
+    $('#usersWaitlist').off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
+      var $btn = $(this);
+      var wlKey = $btn.data('wlkey');
+      var userId = $btn.data('userid');
+      var djName = $btn.data('djname');
+      var isSelf = userId === ftapi.uid;
+      var isOn = $btn.hasClass('on');
+      var newIsOn = !isOn;
+      $btn.toggleClass('on', newIsOn);
+      var newTitle = newIsOn
+        ? (isSelf ? "Don't step down after your next play" : "Don't have " + djName + ' step down after their next play')
+        : (isSelf ? 'Step down after your next play'       : 'Have ' + djName + ' step down after their next play');
+      $btn.attr('title', newTitle);
+      if (isSelf) {
+        ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
+      } else {
+        firebase.app('firetable').database().ref('waitlist/' + wlKey + '/removeAfter').set(newIsOn ? true : null);
+      }
+    });
+
     $("#deck").off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
       var $btn = $(this);
       var tableKey = $btn.data('tablekey');

@@ -961,7 +961,7 @@ a.sociallogo[href] {
     align-items: center;
     gap: var(--pad2);
     padding: var(--pad1) 0;
-    cursor: pointer;
+    min-width: 0;
 }
 
 #allUsers #userKEY.prson {
@@ -1017,10 +1017,31 @@ a.sociallogo[href] {
     gap: var(--pad2);
     font-size: 0.875rem;
 
-    & .ft-avatar     { order: 0; width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
-    & .prsnRole      { order: 1; }
-    & .waitlist-name { order: 2; }
-    & .waitlist-pos  { order: 3; margin-left: auto;}
+    & .ft-avatar          { order: 0; width: 2rem; height: 2rem; flex-shrink: 0; }
+    & .prsnRole           { order: 1; }
+    & .waitlist-name      { order: 2; flex: 1; }
+    & .deckDepartureBtn   { order: 3; }
+    & .waitlist-pos       { order: 4; }
+}
+
+.waitlist-item .deckDepartureBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+
+    &:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
+    &.on    { color: white; }
+    & i     { font-size: 0.9rem; pointer-events: none; }
 }
 
 .waitlist-pos {
@@ -1032,21 +1053,56 @@ a.sociallogo[href] {
     flex-shrink: 0;
 }
 
-.waitlist-name {
-    flex: 1;
+button.waitlist-pos {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    border-radius: var(--radius-sm);
+    transition: background 0.1s, color 0.1s;
+    width: 1rem;
+    height: 1.5rem;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    justify-content: center;
+    flex-shrink: 0;
+
+    & .wl-pos-num {
+        transition: opacity 0.1s;
+    }
+
+    & .wl-pos-icon {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        opacity: 0;
+        transition: opacity 0.1s;
+        pointer-events: none;
+    }
+
+    &:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.12);
+
+        & .wl-pos-num  { opacity: 0; }
+        & .wl-pos-icon { opacity: 1; }
+    }
+}
+
+.waitlist-name {
+    flex: 1;
+    min-width: 0;
     font-weight: 500;
     color: var(--color-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-
-    & .removemeIcon {
-        font-size: 1rem;
-        color: var(--color-text-muted);
-    }
 }
 .prson.idlething .imptcon {
     overflow: auto;
@@ -1075,11 +1131,13 @@ a.sociallogo[href] {
 }
 
 .prsnName {
+    flex: 1;
     font-weight: 300;
     color: var(--color-text);
     white-space: nowrap;
-    overflow-x: hidden;
+    overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .prsnRole {
@@ -1155,6 +1213,17 @@ a.sociallogo[href] {
     width: 2rem;
     height: 2rem;
     background-position: 50% 72%;
+}
+
+#allUsers .prson .ft-avatar,
+.waitlist-item .ft-avatar {
+    cursor: pointer;
+    transition: filter 0.15s, box-shadow 0.15s;
+
+    &:hover {
+        filter: brightness(1.15);
+        box-shadow: 0 0 0 2px rgba(123, 123, 123, 0.25);
+    }
 }
 
 .blockon {
@@ -4393,7 +4462,7 @@ html#about body {
 
 /* ── max 799px: touch-only users list ── */
 @media only screen and (max-width: 799px) {
-    #allUsersWrap .prson {
+    #allUsersWrap .prson .ft-avatar {
         cursor: none;
         pointer-events: none;
     }
@@ -4633,7 +4702,7 @@ html#about body {
 
     .waitlist-item {
         display: grid;
-        grid-template-columns: auto 1fr auto auto;
+        grid-template-columns: auto 1fr auto auto auto;
         align-items: center;
         gap: var(--pad2);
 
@@ -4654,8 +4723,8 @@ html#about body {
     }
 
     .waitlist-item .ft-avatar {
-        width: 1.5rem;
-        height: 1.5rem;
+        width: 2rem;
+        height: 2rem;
     }
 
     #allUsers {
@@ -4664,6 +4733,7 @@ html#about body {
     #allUsers .prson {
         align-self: end;
         flex-direction: row-reverse;
+        max-width: 100%;
     }
     #allUsers .prsnNameRole {
         justify-content: flex-end;
