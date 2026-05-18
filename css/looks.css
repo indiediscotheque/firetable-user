@@ -1952,6 +1952,7 @@ ul.lightrope li {
     flex-direction: column;
     position: relative;
     overflow: visible;
+    min-height: 0;
 }
 
 #queuebox.drop-ready #queuelist {
@@ -2618,7 +2619,7 @@ a.importLinkCheck {
 
 #chatsWrap {
     flex: 1;
-    height: 100%;
+    min-height: 0;
     padding-inline: var(--pad2);
     overflow: auto;
 }

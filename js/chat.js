@@ -135,10 +135,9 @@ firetable.ui = firetable.ui || {};
 
 /**
  * Convert URLs in text to clickable <a> links.
- * When showImages is enabled and themeBox is false, image URLs are excluded
- * (they get handled separately by showImages()).
- * @param {string} text - Raw text
- * @param {boolean} [themeBox=false] - True when processing theme text (always linkify all)
+ * Image URLs are included here — showImages() will upgrade them to embeds afterward.
+ * @param {string} text - Raw plain text
+ * @param {boolean} [themeBox=false] - unused, kept for API compat
  * @returns {string} Text with URLs wrapped in anchor tags
  */
 firetable.ui.textToLinks = function (text, themeBox) {
@@ -146,45 +145,30 @@ firetable.ui.textToLinks = function (text, themeBox) {
   return linkifyStr(text, {
     target: '_blank',
     rel: 'noopener noreferrer',
-    attributes: { tabindex: '-1' },
-    validate: {
-      url: function (url) {
-        // If showImages is on (and not themeBox), skip image URLs — showImages() handles those
-        if (firetable.showImages && !themeBox) {
-          return !/\.(jpe?g|png|gif)(\?.*)?$/i.test(url);
-        }
-        return true;
-      }
-    }
+    attributes: { tabindex: '-1' }
   });
 };
 
 /**
- * Find image URLs in chat text and replace them with inline <img> tags.
+ * Find image links in already-linkified chat HTML and replace them with inline <img> embeds.
+ * Must run after textToLinks() so image URLs have already been wrapped in <a> tags.
  * Auto-scrolls chat if user was already at the bottom when the image loads.
- * @param {string} chatTxt - Chat message text
- * @returns {string} Text with image URLs replaced by inline images
+ * @param {string} chatTxt - Chat text after linkification
+ * @returns {string} Text with image anchors replaced by inline images
  */
 firetable.ui.showImages = function (chatTxt) {
   if (!firetable.showImages) return chatTxt;
 
-  var imageUrlRegex = /((http(s?):)([/|.|\w|\s|-])*\.(?:jpe?g|gif|png))/g;
-  if (chatTxt.search(imageUrlRegex) >= 0) {
-    chatTxt = chatTxt.replace(imageUrlRegex, function (imageUrl) {
-      // Pre-load image to auto-scroll after it renders
-      var chatImage = new Image();
-      chatImage.onload = function () {
-        if (firetable.utilities.isChatPrettyMuchAtBottom()) {
-          firetable.utilities.scrollToBottom();
-        }
-      };
-      chatImage.src = imageUrl;
-      return '<a class="inlineImgLink" href="' + imageUrl + '" target="_blank" tabindex="-1">' +
-             '<img src="' + imageUrl + '" class="inlineImage" />' +
-             '<span role="button" class="hideImage">&times;</span></a>';
-    });
-  }
-  return chatTxt;
+  var imageAnchorRegex = /<a\b([^>]*)\bhref="((?:https?:\/\/)[^"]+\.(?:jpe?g|gif|png)(?:[?#][^"]*)?)"([^>]*)>[^<]*<\/a>/gi;
+  return chatTxt.replace(imageAnchorRegex, function (_, _before, imageUrl) {
+    var onload = "if(firetable.utilities.isChatPrettyMuchAtBottom())firetable.utilities.scrollToBottom();";
+    var onerror = "var w=this.closest('.inlineImgLink');if(w)w.style.display='none';";
+    return '<a class="inlineImgLink" href="' + imageUrl + '" target="_blank" tabindex="-1">' +
+           '<img src="' + imageUrl + '" class="inlineImage"' +
+           ' onload="' + onload + '"' +
+           ' onerror="' + onerror + '" />' +
+           '<span role="button" class="hideImage">&times;</span></a>';
+  });
 };
 
 /**
@@ -219,8 +203,8 @@ firetable.ui.formatChatText = function (rawTxt) {
   txt = txt.replace(/~~([^~\n]+)~~/g, '<s>$1</s>');
 
   // Existing pipeline
-  txt = firetable.ui.showImages(txt);
-  txt = firetable.ui.textToLinks(txt);
+  txt = firetable.ui.textToLinks(txt);  // linkify all URLs (plain text input)
+  txt = firetable.ui.showImages(txt);   // upgrade image links to embeds
   txt = firetable.utilities.emojiShortnamestoUnicode(txt);
 
   // Newlines → <br> (for bot/system messages)
