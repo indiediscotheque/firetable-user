@@ -667,6 +667,7 @@ firetable.ui.setupRoomEvents = function () {
 
     var html = '';
     var hasEntries = false;
+    var selfInWaitlist = false;
     if (data) {
       var countr = 1;
       for (var key in data) {
@@ -684,6 +685,7 @@ firetable.ui.setupRoomEvents = function () {
           }
 
           var isSelf = userId === ftapi.uid;
+          if (isSelf) selfInWaitlist = true;
           var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
           var isMod = ownUser && (ownUser.mod || ownUser.supermod);
           var isHostbot = !!(userInfo && userInfo.hostbot);
@@ -719,10 +721,41 @@ firetable.ui.setupRoomEvents = function () {
       }
     }
     var $wl = $('#usersWaitlist');
+    var wlLabel = '<div class="waitlist-label">Up next <span class="material-symbols-filled">queue_music</span></div>';
+    var isSelfOnDeck = !!(ftapi.uid && firetable.tableData && (function () {
+      for (var k in firetable.tableData) {
+        if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === ftapi.uid) return true;
+      }
+    })());
+    var showJoinBtn = !!(ftapi.uid && !selfInWaitlist && !isSelfOnDeck);
     if (hasEntries) {
-      $wl.html('<div class="waitlist-label"><span class="material-symbols-filled">queue_music</span> Up next</div>' + html).addClass('has-entries');
+      var addMeRow = '';
+      if (showJoinBtn) {
+        var selfData = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
+        var selfRoleicon = 'person';
+        var selfRoleiconclass = 'material-symbols-filled';
+        if (selfData) {
+          if (selfData.mod)      { selfRoleicon = 'shield';       selfRoleiconclass = 'material-symbols-filled-outlined'; }
+          if (selfData.supermod) { selfRoleicon = 'local_police'; selfRoleiconclass = 'material-symbols-filled'; }
+        }
+        var selfName = selfData && selfData.username ? firetable.utilities.htmlEscape(selfData.username) : '';
+        addMeRow = '<div class="waitlist-item waitlist-addme-row">' +
+          '<span class="waitlist-pos">' + countr + '</span>' +
+          '<span class="waitlist-name">' + selfName + '</span>' +
+          '<button class="iconbutt deckDepartureBtn" disabled title="Step down after your next play"><i class="material-symbols-filled">departure_board</i></button>' +
+          '<span class="' + selfRoleiconclass + ' prsnRole">' + selfRoleicon + '</span>' +
+          '<div class="ft-avatar" title="Join the DJ Waitlist"></div>' +
+          '</div>';
+      }
+      $wl.html(wlLabel + html + addMeRow).addClass('has-entries');
     } else {
-      $wl.removeClass('has-entries').empty();
+      $wl.html(
+        wlLabel +
+        '<div class="waitlist-empty">' +
+        '<span class="waitlist-empty-msg">Less than 5 DJs = no need to wait!</span>' +
+        (showJoinBtn ? '<button class="butt graybutt small wlAddMeBtn">Play <span class="material-symbols-filled">queue_music</span></button>' : '') +
+        '</div>'
+      ).removeClass('has-entries');
     }
   });
 
@@ -784,7 +817,7 @@ firetable.ui.setupRoomEvents = function () {
       }
       // Fill empty spots
       if (countr < 4) {
-        var stepUpBtn = isSelfOnDeck ? '&nbsp;' : '<button class="butt graybutt small addmeButt" role="button">Step up</button>';
+        var stepUpBtn = isSelfOnDeck ? '&nbsp;' : '<button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button>';
         html += '<div class="spot empty"><div class="djplaque">' + stepUpBtn + '</div></div>';
         countr++;
         for (var i = countr; i < 4; i++) {
@@ -792,7 +825,7 @@ firetable.ui.setupRoomEvents = function () {
         }
       }
     } else {
-      html += '<div class="spot empty"><div class="djplaque"><button class="butt graybutt small addmeButt" role="button">Step up</button></div></div>';
+      html += '<div class="spot empty"><div class="djplaque"><button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button></div></div>';
       for (var i = 0; i < 3; i++) {
         html += '<div class="spot empty"><div class="djplaque">&nbsp;</div></div>';
       }
@@ -800,6 +833,9 @@ firetable.ui.setupRoomEvents = function () {
     $("#deck").html(html);
     $("#deck").off('click.addme').on('click.addme', '.addmeButt', function () {
       ftapi.actions.sendBotCommand("!addme");
+    });
+    $('#usersWaitlist').off('click.wladdme').on('click.wladdme', '.waitlist-addme-row .ft-avatar', function () {
+      ftapi.actions.sendBotCommand('!addme');
     });
     $('#usersWaitlist').off('click.wlremove').on('click.wlremove', 'button.waitlist-pos', function () {
       var $btn = $(this);

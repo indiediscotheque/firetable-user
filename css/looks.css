@@ -970,29 +970,32 @@ a.sociallogo[href] {
 
 #allUsersWrap {
     flex: 1;
-    align-self: flex-end;
     min-height: 0;
-    max-width: 18rem;
     overflow: auto;
     display: flex;
     flex-direction: column;
 }
 
 #usersWaitlist {
-    display: none;
+    display: flex;
     flex-direction: column;
     gap: var(--pad2);
     flex-shrink: 0;
     padding: var(--pad2) var(--pad4);
     border-bottom: 1px solid var(--color-border);
 
-    &.has-entries {
-        display: flex;
-
-        + #allUsers {
-            padding-top: var(--pad2);
-        }
+    + #allUsers {
+        padding-top: var(--pad2);
     }
+}
+
+.waitlist-empty {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pad3);
+    padding: var(--pad2) 0;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
 }
 
 .waitlist-label {
@@ -1024,6 +1027,44 @@ a.sociallogo[href] {
     & .waitlist-pos       { order: 4; }
 }
 
+.waitlist-addme-row {
+    & .waitlist-name,
+    & .prsnRole,
+    & .deckDepartureBtn {
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+
+    &:has(.ft-avatar:hover) .waitlist-name,
+    &:has(.ft-avatar:hover) .prsnRole,
+    &:has(.ft-avatar:hover) .deckDepartureBtn {
+        opacity: 0.5;
+    }
+
+    & .deckDepartureBtn {
+        pointer-events: none;
+    }
+
+    & .ft-avatar {
+        cursor: pointer;
+        background-image: none !important;
+        position: relative;
+
+        &::after {
+            content: 'add';
+            font-family: 'Material Symbols Outlined';
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 1.2rem;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+    }
+}
+
 .waitlist-item .deckDepartureBtn {
     display: flex;
     align-items: center;
@@ -1049,8 +1090,16 @@ a.sociallogo[href] {
     font-weight: 700;
     color: var(--color-text-muted);
     width: 1rem;
-    text-align: left;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+}
+
+.waitlist-empty-msg {
+    text-wrap: balance;
+    font-style: italic;
 }
 
 button.waitlist-pos {
@@ -1761,10 +1810,16 @@ html .ui-button.ui-state-disabled:active {
     display: none;
 }
 
-.addmeButt {
-    display: inline-block;
-    background-color: transparent;
+.addmeButt,
+.wlAddMeBtn {
+    display: flex;
+    align-items: center;
+    gap: .25em;
     border: none;
+
+    .material-symbols-filled {
+        font-size: 1.25em;
+    }
 }
 
 .addmeButt:disabled {
@@ -4685,15 +4740,11 @@ html#about body {
     }
 
     #usersWaitlist {
-        display: none;
+        display: flex;
         flex-direction: column;
         gap: var(--pad2) 0;
         padding: var(--pad4) var(--pad4) var(--pad2);
         border-bottom: 1px solid var(--color-border);
-
-        &.has-entries {
-            display: flex;
-        }
     }
 
     .waitlist-label {
@@ -4725,6 +4776,10 @@ html#about body {
     .waitlist-item .ft-avatar {
         width: 2rem;
         height: 2rem;
+    }
+
+    .waitlist-empty-msg {
+        text-align: right;
     }
 
     #allUsers {
