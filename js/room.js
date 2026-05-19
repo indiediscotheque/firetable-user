@@ -721,7 +721,7 @@ firetable.ui.setupRoomEvents = function () {
       }
     }
     var $wl = $('#usersWaitlist');
-    var wlLabel = '<div class="waitlist-label">Up next <span class="material-symbols-filled">queue_music</span></div>';
+    var wlLabel = '<div class="waitlist-label">DJ Waitlist <span class="material-symbols-filled">queue_music</span></div>';
     var isSelfOnDeck = !!(ftapi.uid && firetable.tableData && (function () {
       for (var k in firetable.tableData) {
         if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === ftapi.uid) return true;
