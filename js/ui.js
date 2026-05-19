@@ -696,7 +696,7 @@ firetable.ui.updateScreenBtn = function (val) {
   var title = titles[val] || 'Screen: synced';
   $('#screenControl').find('[class*="material-symbols-"]').text(icons[val] || 'microwave');
   $('#screenControl').attr('aria-label', title);
-  $('#screenControlTip').attr('label', title);
+  $('#screenControlTip').text(title);
   var isOn = (val === 'on') || (val === 'sync' && firetable.screenSyncPos);
   $('#screenControl').toggleClass('on', isOn);
 };
@@ -774,6 +774,23 @@ firetable.ui.tooltip = (function () {
       $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
       hide();
     });
+
+    // ── History / Discover: title-based tooltips ──
+    $('#thehistoryWrap, #thediscovers').on('mouseenter.ft-tooltip', '[title]', function () {
+      var $el = $(this), text = $el.attr('title');
+      $el.attr('data-ft-title', text).removeAttr('title');
+      show(this, text);
+    }).on('mouseleave.ft-tooltip', '[data-ft-title]', function () {
+      var $el = $(this);
+      $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
+      hide();
+    });
+
+    // ── History / Discover: DJ avatar name tooltip ──
+    $('#thehistoryWrap, #thediscovers').on('mouseenter.ft-tooltip', '.dj-avatar-tip[aria-label]', function () {
+      var text = $(this).attr('aria-label');
+      if (text) show(this, text);
+    }).on('mouseleave.ft-tooltip', '.dj-avatar-tip', hide);
 
     // ── User list: title-based tooltips (for blocked icon etc.) ──
     $('#allUsersWrap').on('mouseenter.ft-tooltip', '[title]', function () {

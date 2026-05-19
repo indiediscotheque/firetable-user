@@ -3381,7 +3381,7 @@ img.emoji,
         background: var(--color-text-dim);
     }
 
-    /* Timeline node avatar — targets the ft-tooltip wrapper */
+    /* Timeline node avatar */
     & > .dj-avatar-tip {
         position: absolute;
         left: calc(var(--hist-avatar-size) / -2);
@@ -3574,8 +3574,6 @@ img.emoji,
 }
 
 #thehistory .pv-dj-avatar {
-    width: 100%;
-    height: 100%;
     background-size: auto 140%;
     background-position: center 60%;
 }
@@ -4200,6 +4198,64 @@ html#about body {
         margin-top: var(--pad2);
         margin-bottom: var(--pad4);
         line-height: 1.6;
+    }
+}
+
+/* ============================================
+   CSS Anchor Positioning Tooltips (.ft-tip)
+   ============================================ */
+.ft-tip {
+    position: fixed;
+    position-area: top center;
+    margin-block-end: 0.5rem;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    font-family: var(--font-family, sans-serif);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.4;
+    white-space: nowrap;
+    color: var(--color-text-light);
+    background: var(--color-bg-t2);
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 150ms ease;
+    position-visibility: anchors-visible;
+
+    &:empty { display: none; }
+
+    &[data-placement="bottom"] {
+        position-area: bottom center;
+        margin-block-end: 0;
+        margin-block-start: 0.5rem;
+    }
+    &[data-placement="left"] {
+        position-area: center left;
+        margin-block-end: 0;
+        margin-inline-end: 0.6rem;
+    }
+    &[data-placement="right"] {
+        position-area: center right;
+        margin-block-end: 0;
+        margin-inline-start: 0.75rem;
+    }
+}
+
+/* Show on hover or keyboard focus of the preceding sibling */
+:hover + .ft-tip,
+:focus-visible + .ft-tip {
+    opacity: 1;
+}
+
+/* On narrow screens, right-placed tips flip to below */
+@media (max-width: 799px) {
+    .ft-tip[data-placement="right"] {
+        position-area: bottom center;
+        margin-inline-start: 0;
+        margin-block-start: 0.5rem;
     }
 }
 

@@ -923,8 +923,8 @@ firetable.ui.setupPlaylistEvents = function () {
   function enterCreateMode() {
     $("#listpicker").hide();
     $("#plmanager").css("display", "flex");
-    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").closest("ft-tooltip").hide();
-    $("#plAddLauncher").closest("ft-tooltip").attr("label", "Cancel Create Playlist");
+    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").hide().next(".ft-tip").hide();
+    $("#plAddLauncher").next(".ft-tip").text("Cancel Create Playlist");
     $("#plAddLauncher i").text("close");
     $("#mainqueuestuff, #filterMachine").css("display", "none");
     $("#plmaker").focus();
@@ -933,8 +933,8 @@ firetable.ui.setupPlaylistEvents = function () {
   function exitCreateMode() {
     $("#plmanager").css("display", "none");
     $("#listpicker").show();
-    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").closest("ft-tooltip").show();
-    $("#plAddLauncher").closest("ft-tooltip").attr("label", "New / Import playlist");
+    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").show().next(".ft-tip").show();
+    $("#plAddLauncher").next(".ft-tip").text("New / Import playlist");
     $("#plAddLauncher i").text("add");
     $("#mainqueuestuff, #filterMachine").css("display", "block");
   }
