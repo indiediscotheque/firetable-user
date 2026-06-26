@@ -4717,6 +4717,10 @@ html#about body {
     .chatText {
         grid-column: 1 / 2;
     }
+
+    #cardsWrap {
+        padding-top: var(--pad4);
+    }
 }
 
 /* ── 1024px: 4-column layout, all panels always visible ── */
