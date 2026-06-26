@@ -679,6 +679,10 @@ code {
     color: #fff;
 }
 
+#topbarUtils {
+    display: contents; /* transparent to parent flex layout below 800px */
+}
+
 .ftlogo {
     margin-right: 0.5rem;
     color: var(--color-accent);
@@ -720,7 +724,7 @@ a.sociallogo[href] {
 }
 
 #loggedInUser {
-    margin-left: var(--pad2);
+    margin-top: 0;
     cursor: pointer;
     text-decoration: none;
 }
@@ -735,7 +739,7 @@ a.sociallogo[href] {
 }
 
 .header_icon {
-    margin: 0.5rem 0.2rem 0 0.2rem;
+    margin: 0 0.2rem;
     padding: 0;
     height: auto;
     font-size: 0;
@@ -3213,7 +3217,7 @@ img.emoji,
 
     #histFilterBar {
         flex-shrink: 0;
-        padding: var(--pad3);
+        padding: var(--pad4) var(--pad3) var(--pad3) var(--pad3);
     }
 
     #histFilter {
@@ -3240,7 +3244,7 @@ img.emoji,
     gap: var(--pad1);
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 0 var(--pad2) 0 var(--pad3);
+    padding: 0 var(--pad2) var(--pad6) var(--pad3);
     @media only screen and (hover: hover) { padding-right: 0; }
 
     .pvbar {
@@ -3467,7 +3471,7 @@ img.emoji,
     display: flex;
     flex-wrap: wrap;
     gap: var(--pad2);
-    padding: var(--pad3);
+    padding: var(--pad4) var(--pad3) var(--pad6) var(--pad3);
     width: 100%;
     box-sizing: border-box;
 }
@@ -3484,7 +3488,7 @@ img.emoji,
     min-width: 10rem;
     max-width: 15rem;
     padding: var(--pad2);
-    background-color: var(--color-bg-t1);
+    background: linear-gradient(to top,var(--color-bg), var(--color-bg-t2));
     border-radius: var(--radius-md);
     box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.25);
 }
@@ -4598,14 +4602,14 @@ html#about body {
         grid-template-rows: auto auto 1fr;
         grid-template-columns: auto minmax(28rem, 1fr) minmax(18rem, 24rem);
         grid-template-areas:
-            "head .     nav"
+            "head stage nav"
             "head stage chat"
             "head view  chat";
     }
 
     #mainGrid.mmusrs {
         grid-template-areas:
-            "head .      nav"
+            "head stage  nav"
             "head stage  people"
             "head view   people";
     }
@@ -4620,6 +4624,7 @@ html#about body {
     }
 
     #mainGrid.login #topbar {
+        display: flex;
         flex-direction: row;
         align-items: center;
         padding: var(--pad1) var(--pad3);
@@ -4630,15 +4635,35 @@ html#about body {
     }
 
     #topbar {
-        flex-direction: column;
-        justify-content: center;
-        padding-top: var(--pad2);
-        padding-bottom: var(--pad4);
+        display: grid;
+        grid-template-rows: subgrid;
+        grid-template-columns: 1fr;
+        padding-top: 0;
+        padding-bottom: 0;
+        justify-items: center;
     }
 
     #viewnav {
+        display: flex;
         flex-direction: column;
         margin-left: 0;
+        margin-top: var(--pad3);
+        grid-row: 3;
+        grid-column: 1;
+        align-self: start;
+    }
+
+    #topbarUtils {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        grid-row: 3;
+        grid-column: 1;
+        align-self: end;
+    }
+
+    #topbarUtils .flexpacer {
+        display: none;
     }
 
     .header_icon {
@@ -4657,11 +4682,13 @@ html#about body {
     }
 
     #loggedInUser {
-        margin-top: 0.5rem;
+        margin-bottom: 1.5rem;
     }
 
     #roomlogo {
-        margin-bottom: 0.5rem;
+        grid-row: 1;
+        align-self: start;
+        margin-block: 0.5rem;
     }
 
     #stageSideLeft,
@@ -4724,6 +4751,7 @@ html#about body {
     }
 
     #mainGrid.login #topbar {
+        display: flex;
         flex-direction: row;
     }
 
@@ -4808,6 +4836,14 @@ html#about body {
     }
 
     .newChat { margin-right: 0; }
+
+    #viewnav {
+        grid-row: 2;
+    }
+
+    #topbarUtils {
+        grid-row: 2;
+    }
 }
 
 @media only screen and (min-width: 1370px) {
