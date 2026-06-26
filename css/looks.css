@@ -679,20 +679,15 @@ code {
     color: #fff;
 }
 
+#topbarUtils {
+    display: contents; /* transparent to parent flex layout below 800px */
+}
+
 .ftlogo {
     margin-right: 0.5rem;
     color: var(--color-accent);
     font-size: 1.25rem;
     font-weight: 700;
-}
-
-#idtitle {
-    display: none;
-    margin-top: 0.5em;
-    font-size: 1rem;
-    color: #fff;
-    font-weight: 100;
-    margin-right: 1rem;
 }
 
 a.sociallogo {
@@ -729,7 +724,7 @@ a.sociallogo[href] {
 }
 
 #loggedInUser {
-    margin-left: var(--pad2);
+    margin-top: 0;
     cursor: pointer;
     text-decoration: none;
 }
@@ -744,7 +739,7 @@ a.sociallogo[href] {
 }
 
 .header_icon {
-    margin: 0.5rem 0.2rem 0 0.2rem;
+    margin: 0 0.2rem;
     padding: 0;
     height: auto;
     font-size: 0;
@@ -985,7 +980,7 @@ a.sociallogo[href] {
     border-bottom: 1px solid var(--color-border);
 
     + #allUsers {
-        padding-top: var(--pad2);
+        padding-top: var(--pad3);
     }
 }
 
@@ -1020,11 +1015,11 @@ a.sociallogo[href] {
     gap: var(--pad2);
     font-size: 0.875rem;
 
-    & .ft-avatar          { order: 0; width: 2rem; height: 2rem; flex-shrink: 0; }
-    & .prsnRole           { order: 1; }
-    & .waitlist-name      { order: 2; flex: 1; }
-    & .deckDepartureBtn   { order: 3; }
-    & .waitlist-pos       { order: 4; }
+    & .ft-avatar          { order: 4; width: 2rem; height: 2rem; flex-shrink: 0; }
+    & .prsnRole           { order: 3; }
+    & .waitlist-name      { order: 1; flex: 1; }
+    & .deckDepartureBtn   { order: 2; }
+    & .waitlist-pos       { order: 0; }
 }
 
 .waitlist-addme-row {
@@ -3222,7 +3217,7 @@ img.emoji,
 
     #histFilterBar {
         flex-shrink: 0;
-        padding: var(--pad3);
+        padding: var(--pad4) var(--pad3) var(--pad3) var(--pad3);
     }
 
     #histFilter {
@@ -3249,7 +3244,7 @@ img.emoji,
     gap: var(--pad1);
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 0 var(--pad2) 0 var(--pad3);
+    padding: 0 var(--pad2) var(--pad6) var(--pad3);
     @media only screen and (hover: hover) { padding-right: 0; }
 
     .pvbar {
@@ -3390,7 +3385,7 @@ img.emoji,
         background: var(--color-text-dim);
     }
 
-    /* Timeline node avatar — targets the ft-tooltip wrapper */
+    /* Timeline node avatar */
     & > .dj-avatar-tip {
         position: absolute;
         left: calc(var(--hist-avatar-size) / -2);
@@ -3476,7 +3471,7 @@ img.emoji,
     display: flex;
     flex-wrap: wrap;
     gap: var(--pad2);
-    padding: var(--pad3);
+    padding: var(--pad4) var(--pad3) var(--pad6) var(--pad3);
     width: 100%;
     box-sizing: border-box;
 }
@@ -3493,7 +3488,7 @@ img.emoji,
     min-width: 10rem;
     max-width: 15rem;
     padding: var(--pad2);
-    background-color: var(--color-bg-t1);
+    background: linear-gradient(to top,var(--color-bg), var(--color-bg-t2));
     border-radius: var(--radius-md);
     box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.25);
 }
@@ -3583,8 +3578,6 @@ img.emoji,
 }
 
 #thehistory .pv-dj-avatar {
-    width: 100%;
-    height: 100%;
     background-size: auto 140%;
     background-position: center 60%;
 }
@@ -4213,6 +4206,64 @@ html#about body {
 }
 
 /* ============================================
+   CSS Anchor Positioning Tooltips (.ft-tip)
+   ============================================ */
+.ft-tip {
+    position: fixed;
+    position-area: top center;
+    margin-block-end: 0.5rem;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    font-family: var(--font-family, sans-serif);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.4;
+    white-space: nowrap;
+    color: var(--color-text-light);
+    background: var(--color-bg-t2);
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 150ms ease;
+    position-visibility: anchors-visible;
+
+    &:empty { display: none; }
+
+    &[data-placement="bottom"] {
+        position-area: bottom center;
+        margin-block-end: 0;
+        margin-block-start: 0.5rem;
+    }
+    &[data-placement="left"] {
+        position-area: center left;
+        margin-block-end: 0;
+        margin-inline-end: 0.6rem;
+    }
+    &[data-placement="right"] {
+        position-area: center right;
+        margin-block-end: 0;
+        margin-inline-start: 0.75rem;
+    }
+}
+
+/* Show on hover or keyboard focus of the preceding sibling */
+:hover + .ft-tip,
+:focus-visible + .ft-tip {
+    opacity: 1;
+}
+
+/* On narrow screens, right-placed tips flip to below */
+@media (max-width: 799px) {
+    .ft-tip[data-placement="right"] {
+        position-area: bottom center;
+        margin-inline-start: 0;
+        margin-block-start: 0.5rem;
+    }
+}
+
+/* ============================================
    Floating UI Tooltip
    ============================================ */
 #ft-tooltip {
@@ -4551,14 +4602,14 @@ html#about body {
         grid-template-rows: auto auto 1fr;
         grid-template-columns: auto minmax(28rem, 1fr) minmax(18rem, 24rem);
         grid-template-areas:
-            "head .     nav"
+            "head stage nav"
             "head stage chat"
             "head view  chat";
     }
 
     #mainGrid.mmusrs {
         grid-template-areas:
-            "head .      nav"
+            "head stage  nav"
             "head stage  people"
             "head view   people";
     }
@@ -4573,6 +4624,7 @@ html#about body {
     }
 
     #mainGrid.login #topbar {
+        display: flex;
         flex-direction: row;
         align-items: center;
         padding: var(--pad1) var(--pad3);
@@ -4583,15 +4635,35 @@ html#about body {
     }
 
     #topbar {
-        flex-direction: column;
-        justify-content: center;
-        padding-top: var(--pad2);
-        padding-bottom: var(--pad4);
+        display: grid;
+        grid-template-rows: subgrid;
+        grid-template-columns: 1fr;
+        padding-top: 0;
+        padding-bottom: 0;
+        justify-items: center;
     }
 
     #viewnav {
+        display: flex;
         flex-direction: column;
         margin-left: 0;
+        margin-top: var(--pad3);
+        grid-row: 3;
+        grid-column: 1;
+        align-self: start;
+    }
+
+    #topbarUtils {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        grid-row: 3;
+        grid-column: 1;
+        align-self: end;
+    }
+
+    #topbarUtils .flexpacer {
+        display: none;
     }
 
     .header_icon {
@@ -4610,11 +4682,13 @@ html#about body {
     }
 
     #loggedInUser {
-        margin-top: 0.5rem;
+        margin-bottom: 1.5rem;
     }
 
     #roomlogo {
-        margin-bottom: 0.5rem;
+        grid-row: 1;
+        align-self: start;
+        margin-block: 0.5rem;
     }
 
     #stageSideLeft,
@@ -4643,6 +4717,10 @@ html#about body {
     .chatText {
         grid-column: 1 / 2;
     }
+
+    #cardsWrap {
+        padding-top: var(--pad4);
+    }
 }
 
 /* ── 1024px: 4-column layout, all panels always visible ── */
@@ -4652,10 +4730,10 @@ html#about body {
     #mainGrid.mmchat,
     #mainGrid.mmusrs {
         grid-template-rows: auto 1fr;
-        grid-template-columns: min-content 20vw min-content auto;
+        grid-template-columns: min-content min-content 20vw auto;
         grid-template-areas:
-            "head people stage chat"
-            "head people view  chat";
+            "head stage  people chat"
+            "head view   people chat";
     }
 
     /* At 1024px: chat/people panels always visible regardless of nav class.
@@ -4677,6 +4755,7 @@ html#about body {
     }
 
     #mainGrid.login #topbar {
+        display: flex;
         flex-direction: row;
     }
 
@@ -4743,55 +4822,16 @@ html#about body {
         display: flex;
         flex-direction: column;
         gap: var(--pad2) 0;
-        padding: var(--pad4) var(--pad4) var(--pad2);
+        padding: var(--pad4) var(--pad4) var(--pad3);
         border-bottom: 1px solid var(--color-border);
     }
 
     .waitlist-label {
-        justify-content: flex-end;
-    }
-
-    .waitlist-item {
-        display: grid;
-        grid-template-columns: auto 1fr auto auto auto;
-        align-items: center;
-        gap: var(--pad2);
-
-        & > * { order: 0 !important; }
-    }
-
-    .waitlist-pos {
-        justify-self: start;
-    }
-
-    .waitlist-name {
-        justify-content: flex-end;
-        text-align: right;
-    }
-
-    .waitlist-item .prsnRole {
-        justify-self: center;
-    }
-
-    .waitlist-item .ft-avatar {
-        width: 2rem;
-        height: 2rem;
-    }
-
-    .waitlist-empty-msg {
-        text-align: right;
+        justify-content: flex-start;
     }
 
     #allUsers {
         padding-top: var(--pad5);
-    }
-    #allUsers .prson {
-        align-self: end;
-        flex-direction: row-reverse;
-        max-width: 100%;
-    }
-    #allUsers .prsnNameRole {
-        justify-content: flex-end;
     }
 
     #usersStats {
@@ -4800,6 +4840,14 @@ html#about body {
     }
 
     .newChat { margin-right: 0; }
+
+    #viewnav {
+        grid-row: 2;
+    }
+
+    #topbarUtils {
+        grid-row: 2;
+    }
 }
 
 @media only screen and (min-width: 1370px) {

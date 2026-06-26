@@ -35,7 +35,6 @@ firetable.init = function () {
   firetable.started = true;
 
   // ── Room Branding ──
-  $("#idtitle").text(ftconfigs.roomName);
   $("#welcomeName").text(ftconfigs.roomName);
 
   if (ftconfigs.avatarset) firetable.avatarset = ftconfigs.avatarset;
