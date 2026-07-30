@@ -144,6 +144,10 @@
 					<i class="material-symbols-outlined"> &#xE03B; </i>
 				</button>
 				<span id="tip-grab" role="tooltip" class="ft-tip" style="position-anchor: --tip-grab">Add to playlist</span>
+				<button id="skipTrigger" type="button" role="button" class="butt graybutt iconbutt" aria-label="Skip options" popovertarget="skipPopover" tabindex="0" style="anchor-name: --tip-skipTrigger" aria-describedby="tip-skipTrigger">
+					<i class="material-symbols-outlined">skip_next</i>
+				</button>
+				<span id="tip-skipTrigger" role="tooltip" class="ft-tip" style="position-anchor: --tip-skipTrigger">Skip options</span>
 				<a target="_blank" role="button" class="butt graybutt iconbutt" id="songlink" aria-label="Song link" tabindex="0" style="anchor-name: --tip-songlink" aria-describedby="tip-songlink">
 					<i class="material-symbols-outlined"> link </i>
 				</a>
@@ -654,6 +658,16 @@
 			<a title="Soundcloud" target="_blank" class="header_icon sociallogo soundcloud">
 				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M7 17.939h-1v-8.068c.308-.231.639-.429 1-.566v8.634zm3 0h1v-9.224c-.229.265-.443.548-.621.857l-.379-.184v8.551zm-2 0h1v-8.848c-.508-.079-.623-.05-1-.01v8.858zm-4 0h1v-7.02c-.312.458-.555.971-.692 1.535l-.308-.182v5.667zm-3-5.25c-.606.547-1 1.354-1 2.268 0 .914.394 1.721 1 2.268v-4.536zm18.879-.671c-.204-2.837-2.404-5.079-5.117-5.079-1.022 0-1.964.328-2.762.877v10.123h9.089c1.607 0 2.911-1.393 2.911-3.106 0-2.233-2.168-3.772-4.121-2.815zm-16.879-.027c-.302-.024-.526-.03-1 .122v5.689c.446.143.636.138 1 .138v-5.949z"/></svg>
 			</a>
+		</div>
+	</div>
+
+	<div id="skipPopover" popover="auto" class="ft-popover">
+		<div id="skipArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box skipPromptBox">
+			<div class="skipPromptActions">
+				<button type="button" class="butt skipNowAction">Skip Now</button>
+				<button type="button" class="butt graybutt skipVoteAction">Vote To Skip</button>
+			</div>
 		</div>
 	</div>
 

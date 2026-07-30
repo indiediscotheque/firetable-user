@@ -1101,6 +1101,34 @@ firetable.ui.setupMiscEvents = function () {
     }
   });
 
+  // ── Skip popover ──
+  var skipPopoverEl = document.getElementById('skipPopover');
+  if (skipPopoverEl) {
+    skipPopoverEl.addEventListener('toggle', function (e) {
+      var btn = document.getElementById('skipTrigger');
+      if (!btn) return;
+      if (e.newState === 'open') {
+        btn.classList.add('on');
+        skipPopoverEl.style.visibility = 'hidden';
+        firetable.ui.positionPopover(btn, skipPopoverEl, document.getElementById('skipArrow'));
+      } else {
+        btn.classList.remove('on');
+      }
+    });
+  }
+
+  $(document)
+    .off('click.skipNowAction')
+    .on('click.skipNowAction', '#skipPopover .skipNowAction', function () {
+      ftapi.actions.sendBotCommand('!skip');
+      if (skipPopoverEl && skipPopoverEl.matches(':popover-open')) skipPopoverEl.hidePopover();
+    })
+    .off('click.skipVoteAction')
+    .on('click.skipVoteAction', '#skipPopover .skipVoteAction', function () {
+      ftapi.actions.sendBotCommand('!skipvote');
+      if (skipPopoverEl && skipPopoverEl.matches(':popover-open')) skipPopoverEl.hidePopover();
+    });
+
   /** Stealpicker — add song to selected playlist (from #grab or histeal) */
   $("#stealpicker").change(function () {
     var dest = $("#stealpicker").val();

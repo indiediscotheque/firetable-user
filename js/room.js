@@ -686,10 +686,8 @@ firetable.ui.setupRoomEvents = function () {
 
           var isSelf = userId === ftapi.uid;
           if (isSelf) selfInWaitlist = true;
-          var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
-          var isMod = ownUser && (ownUser.mod || ownUser.supermod);
           var isHostbot = !!(userInfo && userInfo.hostbot);
-          var showDeparture = (isSelf || isMod) && !isHostbot;
+          var showDeparture = isSelf && !isHostbot;
           var removeAfterValue = data[key].removeAfter;
           var wlName = firetable.utilities.htmlEscape(data[key].name);
           var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + wlName + ' step down after their next play';
@@ -778,7 +776,7 @@ firetable.ui.setupRoomEvents = function () {
           var isMod = ownUser && (ownUser.mod || ownUser.supermod);
           var isHostbot = !!(ftapi.users && ftapi.users[data[key].id] && ftapi.users[data[key].id].hostbot);
           var showBtn = isSelf || isMod;
-          var showDeparture = showBtn && !isHostbot;
+          var showDeparture = isSelf && !isHostbot;
           var btnIcon = isSelf ? 'close' : 'person_remove';
           var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
           var actionBtn = showBtn
