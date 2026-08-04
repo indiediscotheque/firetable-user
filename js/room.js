@@ -209,25 +209,13 @@ firetable.ui.setupRoomEvents = function () {
   var NOW_PLAYING_TEXT_FADE_MS = 180;
   var NOW_PLAYING_ALBUM_FLIP_MS = 560;
 
-  function applyDjActive(idx) {
-    for (var i = 0; i < 4; i++) {
-      if (i === idx) {
-        $("#avtr" + i).addClass("animate");
-        $("#djthing" + i).addClass("djActive");
-      } else {
-        $("#avtr" + i).removeClass("animate");
-        $("#djthing" + i).removeClass("djActive");
-      }
-    }
-  }
-
   function positionFyreAtActiveDJ() {
     var $fyre = $("#fyre");
     var $stage = $("#djStage");
     if (!$fyre.length || !$stage.length) return;
 
-    var $activeSpot = $("#deck .spot").eq(firetable.playdex);
-    if (!$activeSpot.length || $activeSpot.hasClass("empty")) {
+    var $activeSpot = $("#deck .spot:not(.empty)").first();
+    if (!$activeSpot.length) {
       $fyre.hide();
       return;
     }
@@ -247,6 +235,150 @@ firetable.ui.setupRoomEvents = function () {
     if (firetable.fyreStage && typeof firetable.fyreStage.onResize === "function") {
       firetable.fyreStage.onResize();
     }
+  }
+
+  function renderDeckAndQueue(data, activeIdx) {
+    var deckHtml = '';
+    var onDeckDjs = [];
+    var isSelfOnDeck = false;
+
+    if (data) {
+      var countr = 0;
+      for (var key in data) {
+        if (!data.hasOwnProperty(key)) continue;
+        var dj = data[key];
+        if (dj.id === ftapi.uid) isSelfOnDeck = true;
+
+        var isGhost = !!(ftapi.users !== null && typeof ftapi.users === 'object' && !ftapi.users[dj.id]);
+        var isSelf = dj.id === ftapi.uid;
+        var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
+        var isMod = ownUser && (ownUser.mod || ownUser.supermod);
+        var isHostbot = !!(ftapi.users && ftapi.users[dj.id] && ftapi.users[dj.id].hostbot);
+        var showBtn = isSelf || isMod;
+        var showDeparture = isSelf && !isHostbot;
+        var btnIcon = isSelf ? 'close' : 'person_remove';
+        var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
+        var actionBtn = showBtn
+          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + dj.id + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
+          : '';
+        var departureIndicator;
+        if (showDeparture) {
+          var djDisplayName = firetable.utilities.htmlEscape(dj.name);
+          var hasPending = _pendingDeparture.hasOwnProperty(dj.id);
+          var removeAfterValue = hasPending ? _pendingDeparture[dj.id] : dj.removeAfter;
+          if (hasPending && !!dj.removeAfter === !!_pendingDeparture[dj.id]) {
+            delete _pendingDeparture[dj.id];
+          }
+          var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + djDisplayName + ' step down after their next play';
+          var departureTitleOn  = isSelf ? "Don't step down after your next play" : "Don't have " + djDisplayName + ' step down after their next play';
+          var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
+          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + dj.id + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
+        } else if (dj.removeAfter) {
+          departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down after this song">departure_board</span>';
+        } else {
+          departureIndicator = '';
+        }
+
+        if (countr === activeIdx) {
+          deckHtml = '<div id="spt0" class="spot' + (isGhost ? ' ghost' : '') + '">' +
+            '<div class="avtr animate" id="avtr0" style="background-image: url(' +
+            firetable.utilities.avatarURL(dj.id, dj.name) + ');"></div>' +
+            '<div id="djthing0" class="djplaque djActive">' +
+            '<div class="djname">' + firetable.utilities.htmlEscape(dj.name) + '</div>' +
+            departureIndicator + actionBtn +
+            '<div class="playcount">' + dj.plays + '/<span id="plimit0">' + firetable.playlimit + '</span></div>' +
+            '</div></div>';
+        } else {
+          onDeckDjs.push({ tableKey: key, id: dj.id, name: dj.name, plays: dj.plays });
+        }
+        countr++;
+      }
+
+      // Sort by Firebase table key: push keys are lexicographically time-ordered,
+      // so a DJ who re-joined (newer key) appears after those already waiting.
+      onDeckDjs.sort(function (a, b) {
+        return a.tableKey < b.tableKey ? -1 : a.tableKey > b.tableKey ? 1 : 0;
+      });
+
+      if (!deckHtml) {
+        var stepUpBtn = isSelfOnDeck
+          ? '&nbsp;'
+          : '<button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button>';
+        deckHtml = '<div class="spot empty"><div class="djplaque">' + stepUpBtn + '</div></div>';
+      }
+    } else {
+      deckHtml = '<div class="spot empty"><div class="djplaque"><button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button></div></div>';
+    }
+
+    // Always render exactly 3 on-deck slots to the right of the active DJ;
+    var ondeckHtml = '<div class="on-deck">';
+    for (var s = 0; s < 3; s++) {
+      var odj = onDeckDjs[s];
+      if (odj) {
+        ondeckHtml += '<button class="ondeck-slot" data-djid="' + odj.id + '" data-plays="' + (odj.plays || 0) + '" aria-label="' +
+          firetable.utilities.htmlEscape(odj.name) + '">' +
+          '<div class="ft-avatar" style="background-image: url(' +
+          firetable.utilities.avatarURL(odj.id, odj.name, '40x40') + ')"></div>' +
+          '</button>';
+      } else {
+        ondeckHtml += '<button class="ondeck-slot empty" aria-label="Add to DJ list"' + (isSelfOnDeck ? ' disabled' : '') + '></button>';
+      }
+    }
+    ondeckHtml += '</div>';
+
+    $("#deck").html(deckHtml);
+    $("#ondeck").html(ondeckHtml);
+    $("#deckQueue").empty();
+
+    firetable.ui.applyDeckPlacement && firetable.ui.applyDeckPlacement();
+
+    $("#deck").off('click.addme').on('click.addme', '.addmeButt', function () {
+      ftapi.actions.sendBotCommand("!addme");
+    });
+    $("#ondeck").off('click.addme').on('click.addme', '.ondeck-slot.empty', function () {
+      ftapi.actions.sendBotCommand("!addme");
+    });
+    $("#deck").off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
+      var $btn = $(this);
+      var tableKey = $btn.data('tablekey');
+      var userId = $btn.data('userid');
+      var djName = $btn.data('djname');
+      var isSelf = userId === ftapi.uid;
+      var isOn = $btn.hasClass('on');
+      var newIsOn = !isOn;
+      $btn.toggleClass('on', newIsOn);
+      var newTitle = newIsOn
+        ? (isSelf ? 'You are taking the bus after your next play'           : djName + ' is taking the bus after their next play')
+        : (isSelf ? 'You will not be taking the bus after your next play' : djName + ' will not be taking the bus after their next play');
+      $btn.attr('title', newTitle);
+      if (isSelf) {
+        _pendingDeparture[userId] = newIsOn ? true : null;
+        ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
+      } else {
+        _pendingDeparture[userId] = newIsOn ? true : null;
+        firebase.app("firetable").database().ref("table/" + tableKey + "/removeAfter").set(newIsOn ? true : null);
+      }
+    });
+    $("#deck").off('click.remove').on('click.remove', '.deckRemoveBtn', function () {
+      var userId = $(this).data('userid');
+      if (userId === ftapi.uid) {
+        ftapi.actions.sendBotCommand("!removeme");
+      } else {
+        var djName = firetable.tableData && (function () {
+          for (var k in firetable.tableData) {
+            if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userId)
+              return firetable.tableData[k].name;
+          }
+        })();
+        if (djName) ftapi.actions.sendBotCommand("!remove " + djName);
+      }
+    });
+
+    positionFyreAtActiveDJ();
+  }
+
+  function applyDjActive(idx) {
+    renderDeckAndQueue(firetable.tableData, idx);
   }
 
   function toCssBackgroundImage(url) {
@@ -750,8 +882,8 @@ firetable.ui.setupRoomEvents = function () {
       $wl.html(
         wlLabel +
         '<div class="waitlist-empty">' +
-        '<span class="waitlist-empty-msg">Less than 5 DJs = no need to wait!</span>' +
-        (showJoinBtn ? '<button class="butt graybutt small wlAddMeBtn">Play <span class="material-symbols-filled">queue_music</span></button>' : '') +
+        '<span class="waitlist-empty-msg">Less than 4 DJs = no need to wait!</span>' +
+        (ftapi.uid && !selfInWaitlist ? '<button class="butt graybutt small wlAddMeBtn"' + (isSelfOnDeck ? ' disabled' : '') + '>Play <span class="material-symbols-filled">queue_music</span></button>' : '') +
         '</div>'
       ).removeClass('has-entries');
     }
@@ -761,85 +893,16 @@ firetable.ui.setupRoomEvents = function () {
   var _pendingDeparture = {}; // userId -> true|null while bot command is in-flight
   ftapi.events.on("tableChanged", function (data) {
     firetable.tableData = data;
-    var html = "";
-    var isSelfOnDeck = false;
-    if (data) {
-      var countr = 0;
-      for (var key in data) {
-        if (data.hasOwnProperty(key)) {
-          if (data[key].id === ftapi.uid) isSelfOnDeck = true;
-          // "ghost" user is on the deck but has disconnected (status=false).
-          var isGhost = !!(ftapi.users !== null && typeof ftapi.users === 'object' &&
-                          !ftapi.users[data[key].id]);
-          var isSelf = data[key].id === ftapi.uid;
-          var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
-          var isMod = ownUser && (ownUser.mod || ownUser.supermod);
-          var isHostbot = !!(ftapi.users && ftapi.users[data[key].id] && ftapi.users[data[key].id].hostbot);
-          var showBtn = isSelf || isMod;
-          var showDeparture = isSelf && !isHostbot;
-          var btnIcon = isSelf ? 'close' : 'person_remove';
-          var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
-          var actionBtn = showBtn
-            ? '<button class="iconbutt deckRemoveBtn" data-userid="' + data[key].id + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
-            : '';
-          var departureIndicator;
-          if (showDeparture) {
-            var isSelfDj = data[key].id === ftapi.uid;
-            var djDisplayName = firetable.utilities.htmlEscape(data[key].name);
-            // Use pending state if a bot command is in-flight, else use Firebase value
-            var hasPending = _pendingDeparture.hasOwnProperty(data[key].id);
-            var removeAfterValue = hasPending ? _pendingDeparture[data[key].id] : data[key].removeAfter;
-            // Clear pending once Firebase has caught up
-            if (hasPending && !!data[key].removeAfter === !!_pendingDeparture[data[key].id]) {
-              delete _pendingDeparture[data[key].id];
-            }
-            var departureTitleOff = isSelfDj ? `Step down after your next play` : 'Have ' + djDisplayName + ' step down after their next play';
-            var departureTitleOn  = isSelfDj ? `Don't step down after your next play` : `Don't have ` + djDisplayName + ' step down after their next play';
-            var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
-            departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + data[key].id + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
-          } else if (data[key].removeAfter) {
-            departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down after this song">departure_board</span>';
-          } else {
-            departureIndicator = '';
-          }
-          html += '<div id="spt' + countr + '" class="spot' + (isGhost ? ' ghost' : '') + '">' +
-            '<div class="avtr" id="avtr' + countr + '" style="background-image: url(' +
-            firetable.utilities.avatarURL(data[key].id, data[key].name) + ');"></div>' +
-            '<div id="djthing' + countr + '" class="djplaque">' +
-            '<div class="djname">' + data[key].name + '</div>' +
-            departureIndicator + actionBtn +
-            '<div class="playcount">' + data[key].plays + '/<span id="plimit' + countr + '">' +
-            firetable.playlimit + '</span></div></div></div>';
-          countr++;
-        }
-      }
-      // Fill empty spots
-      if (countr < 4) {
-        var stepUpBtn = isSelfOnDeck ? '&nbsp;' : '<button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button>';
-        html += '<div class="spot empty"><div class="djplaque">' + stepUpBtn + '</div></div>';
-        countr++;
-        for (var i = countr; i < 4; i++) {
-          html += '<div class="spot empty"><div class="djplaque">&nbsp;</div></div>';
-        }
-      }
-    } else {
-      html += '<div class="spot empty"><div class="djplaque"><button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button></div></div>';
-      for (var i = 0; i < 3; i++) {
-        html += '<div class="spot empty"><div class="djplaque">&nbsp;</div></div>';
-      }
-    }
-    $("#deck").html(html);
-    $("#deck").off('click.addme').on('click.addme', '.addmeButt', function () {
-      ftapi.actions.sendBotCommand("!addme");
-    });
-    $('#usersWaitlist').off('click.wladdme').on('click.wladdme', '.waitlist-addme-row .ft-avatar', function () {
+    var _activeIdx = (firetable.displayedPlaydex !== undefined) ? firetable.displayedPlaydex : firetable.playdex;
+    renderDeckAndQueue(data, _activeIdx);
+
+    $('#usersWaitlist').off('click.wladdme').on('click.wladdme', '.waitlist-addme-row .ft-avatar, .wlAddMeBtn', function () {
       ftapi.actions.sendBotCommand('!addme');
     });
     $('#usersWaitlist').off('click.wlremove').on('click.wlremove', 'button.waitlist-pos', function () {
       var $btn = $(this);
       var wlKey = $btn.data('wlkey');
       var userId = $btn.data('userid');
-      var djName = $btn.data('djname');
       var isSelf = userId === ftapi.uid;
       if (isSelf) {
         ftapi.actions.sendBotCommand('!removeme');
@@ -847,7 +910,6 @@ firetable.ui.setupRoomEvents = function () {
         firebase.app('firetable').database().ref('waitlist/' + wlKey).remove();
       }
     });
-
     $('#usersWaitlist').off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
       var $btn = $(this);
       var wlKey = $btn.data('wlkey');
@@ -868,52 +930,11 @@ firetable.ui.setupRoomEvents = function () {
       }
     });
 
-    $("#deck").off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
-      var $btn = $(this);
-      var tableKey = $btn.data('tablekey');
-      var userId = $btn.data('userid');
-      var djName = $btn.data('djname');
-      var isSelf = userId === ftapi.uid;
-      var isOn = $btn.hasClass('on');
-      var newIsOn = !isOn;
-      // Optimistic UI update
-      $btn.toggleClass('on', newIsOn);
-      var newTitle = newIsOn
-        ? (isSelf ? 'You are taking the bus after your next play'           : djName + ' is taking the bus after their next play')
-        : (isSelf ? 'You will not be taking the bus after your next play' : djName + ' will not be taking the bus after their next play');
-      $btn.attr('title', newTitle);
-      if (isSelf) {
-        // Record pending state so re-renders don't clobber UI while bot processes the command
-        _pendingDeparture[userId] = newIsOn ? true : null;
-        ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
-      } else {
-        _pendingDeparture[userId] = newIsOn ? true : null;
-        firebase.app("firetable").database().ref("table/" + tableKey + "/removeAfter").set(newIsOn ? true : null);
-      }
-    });
-    $("#deck").off('click.remove').on('click.remove', '.deckRemoveBtn', function () {
-      var userId = $(this).data('userid');
-      if (userId === ftapi.uid) {
-        ftapi.actions.sendBotCommand("!removeme");
-      } else {
-        var djName = firetable.tableData && (function () {
-          for (var k in firetable.tableData) {
-            if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userId)
-              return firetable.tableData[k].name;
-          }
-        })();
-        if (djName) ftapi.actions.sendBotCommand("!remove " + djName);
-      }
-    });
-
-    // Highlight current DJ — use displayedPlaydex so re-renders during the
-    // deferred window don't prematurely switch the active highlight
-    var _activeIdx = (firetable.displayedPlaydex !== undefined) ? firetable.displayedPlaydex : firetable.playdex;
-    applyDjActive(_activeIdx);
-
-    positionFyreAtActiveDJ();
-    // Sync ghost useres in the user list whenever the deck changes
     if (firetable.ui && firetable.ui.syncGhostUsers) firetable.ui.syncGhostUsers();
+    // Re-render the waitlist UI so the Play button reflects updated deck membership
+    if (firetable.waitlistData !== undefined) {
+      ftapi.events.emit('waitlistChanged', firetable.waitlistData);
+    }
   });
 
   // Re-render deck when user data arrives (mod status affects button visibility)
@@ -943,9 +964,11 @@ firetable.ui.setupRoomEvents = function () {
   // ── Play Limit ──
   ftapi.events.on("playLimitChanged", function (data) {
     firetable.playlimit = data;
-    for (var i = 0; i < 4; i++) {
-      $("#plimit" + i).text(data);
-    }
+    $("#plimit0").text(data);
+    $("#deckQueue .deckqueue-plays").each(function () {
+      var plays = $(this).text().split('/')[0];
+      $(this).text(plays + '/' + data);
+    });
   });
 
   // ── Ban List ──

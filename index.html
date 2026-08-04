@@ -107,6 +107,42 @@
 			</ul>
 			<div id="fyre"></div>
 			<div id="deck"></div>
+			<div id="ondeck"></div>
+			<div id="stageTopRight">
+				<button role="button" class="butt graybutt iconbutt" id="screenControl" aria-label="Screen: synced" tabindex="0" style="anchor-name: --tip-screenControl" aria-describedby="screenControlTip">
+					<i class="material-symbols-outlined">microwave</i><!-- updated by updateScreenBtn on init -->
+				</button>
+				<span id="screenControlTip" role="tooltip" class="ft-tip" style="position-anchor: --tip-screenControl">Screen: synced</span>
+				<div id="volplace">
+					<div id="slider"></div>
+				</div>
+				<button role="button" class="butt graybutt iconbutt" id="volstatus" aria-label="Mute" tabindex="0" style="anchor-name: --tip-volstatus" aria-describedby="tip-volstatus">
+					<i class="material-symbols-outlined"> &#xE050; </i>
+				</button>
+				<span id="tip-volstatus" role="tooltip" class="ft-tip" style="position-anchor: --tip-volstatus">Mute</span>
+				<button role="button" class="butt graybutt iconbutt" id="reloadtrack" aria-label="Reload audio" tabindex="0" style="anchor-name: --tip-reloadtrack" aria-describedby="tip-reloadtrack">
+					<i class="material-symbols-outlined"> refresh </i>
+				</button>
+				<span id="tip-reloadtrack" role="tooltip" class="ft-tip" style="position-anchor: --tip-reloadtrack">Reload audio</span>
+			</div>
+			<div id="stageActions">
+				<button role="button" class="butt accent iconbutt" id="fire" aria-label="Fire!" tabindex="0" style="anchor-name: --tip-fire" aria-describedby="tip-fire">
+					<i class="material-symbols-outlined"> mode_heat </i>
+				</button>
+				<span id="tip-fire" role="tooltip" class="ft-tip" style="position-anchor: --tip-fire">Fire!</span>
+				<button role="button" class="butt graybutt iconbutt" id="grab" aria-label="Add to playlist" tabindex="0" style="anchor-name: --tip-grab" aria-describedby="tip-grab">
+					<i class="material-symbols-outlined"> &#xE03B; </i>
+				</button>
+				<span id="tip-grab" role="tooltip" class="ft-tip" style="position-anchor: --tip-grab">Add to playlist</span>
+				<a target="_blank" role="button" class="butt graybutt iconbutt" id="songlink" aria-label="Song link" tabindex="0" style="anchor-name: --tip-songlink" aria-describedby="tip-songlink">
+					<i class="material-symbols-outlined"> link </i>
+				</a>
+				<span id="tip-songlink" role="tooltip" class="ft-tip" style="position-anchor: --tip-songlink">Song link</span>
+				<button id="skipTrigger" type="button" role="button" class="butt graybutt iconbutt" aria-label="Skip options" popovertarget="skipPopover" tabindex="0" style="anchor-name: --tip-skipTrigger" aria-describedby="tip-skipTrigger">
+					<i class="material-symbols-outlined">skip_next</i>
+				</button>
+				<span id="tip-skipTrigger" role="tooltip" class="ft-tip" style="position-anchor: --tip-skipTrigger">Skip options</span>
+			</div>
 		</div>
 
 		<div id="nowplaying">
@@ -133,51 +169,12 @@
 					<select id="djlistpicker">
 						<option value="0">Default Playlist</option>
 					</select>
+					<div id="deckQueue"></div>
 				</div>
 			</div>
 			<div id="timr" class="themeTimr"></div>
 		</div>
 
-		<div id="stageSideLeft">
-			<div class="themeLeft">
-				<button role="button" class="butt graybutt iconbutt" id="grab" aria-label="Add to playlist" tabindex="0" style="anchor-name: --tip-grab" aria-describedby="tip-grab">
-					<i class="material-symbols-outlined"> &#xE03B; </i>
-				</button>
-				<span id="tip-grab" role="tooltip" class="ft-tip" style="position-anchor: --tip-grab">Add to playlist</span>
-				<button id="skipTrigger" type="button" role="button" class="butt graybutt iconbutt" aria-label="Skip options" popovertarget="skipPopover" tabindex="0" style="anchor-name: --tip-skipTrigger" aria-describedby="tip-skipTrigger">
-					<i class="material-symbols-outlined">skip_next</i>
-				</button>
-				<span id="tip-skipTrigger" role="tooltip" class="ft-tip" style="position-anchor: --tip-skipTrigger">Skip options</span>
-				<a target="_blank" role="button" class="butt graybutt iconbutt" id="songlink" aria-label="Song link" tabindex="0" style="anchor-name: --tip-songlink" aria-describedby="tip-songlink">
-					<i class="material-symbols-outlined"> link </i>
-				</a>
-				<span id="tip-songlink" role="tooltip" class="ft-tip" style="position-anchor: --tip-songlink">Song link</span>
-				<button role="button" class="butt accent iconbutt" id="fire" aria-label="Fire!" tabindex="0" style="anchor-name: --tip-fire" aria-describedby="tip-fire">
-					<i class="material-symbols-outlined"> mode_heat </i>
-				</button>
-				<span id="tip-fire" role="tooltip" class="ft-tip" style="position-anchor: --tip-fire">Fire!</span>
-			</div>
-		</div>
-
-		<div id="stageSideRight">
-			<div id="volplace">
-				<div id="slider"></div>
-			</div>
-			<div class="themeRight">
-				<button role="button" class="butt graybutt iconbutt" id="volstatus" aria-label="Mute" tabindex="0" style="anchor-name: --tip-volstatus" aria-describedby="tip-volstatus">
-					<i class="material-symbols-outlined"> &#xE050; </i>
-				</button>
-				<span id="tip-volstatus" role="tooltip" class="ft-tip" style="position-anchor: --tip-volstatus">Mute</span>
-				<button role="button" class="butt graybutt iconbutt" id="screenControl" aria-label="Screen: synced" tabindex="0" style="anchor-name: --tip-screenControl" aria-describedby="screenControlTip">
-					<i class="material-symbols-outlined">microwave</i><!-- updated by updateScreenBtn on init -->
-				</button>
-				<span id="screenControlTip" role="tooltip" class="ft-tip" style="position-anchor: --tip-screenControl">Screen: synced</span>
-				<button role="button" class="butt graybutt iconbutt" id="reloadtrack" aria-label="Reload audio" tabindex="0" style="anchor-name: --tip-reloadtrack" aria-describedby="tip-reloadtrack">
-					<i class="material-symbols-outlined"> refresh </i>
-				</button>
-				<span id="tip-reloadtrack" role="tooltip" class="ft-tip" style="position-anchor: --tip-reloadtrack">Reload audio</span>
-			</div>
-		</div>
 		</section>
 
 		<div id="appShell">
@@ -734,6 +731,7 @@
 		<div class="utt-actions">
 			<button class="utt-icon-btn utt-at-btn" data-action="chat-at" title="@ in chat"><i class="material-symbols-outlined">alternate_email</i></button>
 			<button class="utt-icon-btn utt-deck-btn" data-action="add-to-deck" title="Add to deck"><i class="material-symbols-outlined">add_2</i></button>
+			<button class="utt-icon-btn utt-stepdown-btn" data-action="step-down" title="Step down from deck"><i class="material-symbols-outlined">logout</i></button>
 			<button class="utt-icon-btn utt-block-btn" data-action="toggle-block" title="Block"><i class="material-symbols-outlined">block</i></button>
 		</div>
 	</div>
