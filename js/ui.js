@@ -792,6 +792,16 @@ firetable.ui.tooltip = (function () {
       if (text) show(this, text);
     }).on('mouseleave.ft-tooltip', '.dj-avatar-tip', hide);
 
+    // ── On-deck DJ avatars: name + play count tooltip ──
+    $(document).on('mouseenter.ft-tooltip', '#deck .ondeck-slot:not(.empty), #ondeck .ondeck-slot:not(.empty)', function () {
+      var $el   = $(this);
+      var name  = $el.attr('aria-label') || '';
+      var plays = parseInt($el.data('plays'), 10);
+      var limit = firetable.playlimit;
+      var text  = name + (plays ? ' \u00b7 ' + plays + '/' + (limit || '?') : '');
+      if (text) show(this, text);
+    }).on('mouseleave.ft-tooltip', '#deck .ondeck-slot:not(.empty), #ondeck .ondeck-slot:not(.empty)', hide);
+
     // ── User list: title-based tooltips (for blocked icon etc.) ──
     $('#allUsersWrap').on('mouseenter.ft-tooltip', '[title]', function () {
       var $el = $(this), text = $el.attr('title');
@@ -909,21 +919,14 @@ firetable.ui.tooltip = (function () {
 
       var facts = [];
 
+      // Name always at the top
+      facts.push({ label: 'Name', val: firetable.utilities.htmlEscape(userData.username || '') });
+
       if (userData.joined) {
         facts.push({ label: 'Joined', val: firetable.utilities.format_date(userData.joined) });
       }
 
       facts.push({ label: 'Role', val: role });
-
-      // Session plays (if currently on the deck)
-      if (firetable.tableData) {
-        for (var k in firetable.tableData) {
-          if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userid) {
-            facts.push({ label: 'Session plays', val: firetable.tableData[k].plays });
-            break;
-          }
-        }
-      }
 
       // Audio broadcasting
       if (userData.idle && userData.idle.audio === 2) {
@@ -932,6 +935,16 @@ firetable.ui.tooltip = (function () {
 
       // Cards (async — placeholder first)
       facts.push({ label: 'Cards', val: '<span class="utt-cards-val">…</span>' });
+
+      // Session plays last (if currently on the deck)
+      if (firetable.tableData) {
+        for (var k in firetable.tableData) {
+          if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userid) {
+            facts.push({ label: 'Session plays', val: firetable.tableData[k].plays });
+            break;
+          }
+        }
+      }
 
       var factsHtml = facts.map(function (f) {
         return '<div class="utt-fact' + (f.cls ? ' ' + f.cls : '') + '"><span class="utt-label">' + f.label + '</span><span class="utt-val">' + f.val + '</span></div>';
@@ -976,6 +989,7 @@ firetable.ui.tooltip = (function () {
       })());
       var $deckBtn = $userTip.find('.utt-deck-btn');
       $userTip.toggleClass('can-add-to-deck', !!(isMod && !isSelf));
+      $userTip.toggleClass('can-step-down', !!(isSelf && isOnDeck));
       $deckBtn
         .toggleClass('is-disabled', isOnDeck)
         .attr('aria-disabled', isOnDeck ? 'true' : 'false')
@@ -1016,6 +1030,10 @@ firetable.ui.tooltip = (function () {
           userTipEl.hidePopover();
         }
       })
+      .on('click', '[data-action="step-down"]', function () {
+        ftapi.actions.sendBotCommand('!removeme');
+        userTipEl.hidePopover();
+      })
       .on('click', '[data-action="toggle-block"]', function () {
         if ($(this).hasClass('is-disabled')) return;
         var uid = $userTip.attr('data-for');
@@ -1040,6 +1058,10 @@ firetable.ui.tooltip = (function () {
     });
     $('#usersWaitlist').on('click.ft-usertip', '.waitlist-item .ft-avatar', function () {
       var uid = $(this).closest('.waitlist-item').attr('data-userid');
+      if (uid) showUserTip(this, uid);
+    });
+    $(document).on('click.ft-usertip', '#deck .ondeck-slot:not(.empty), #ondeck .ondeck-slot:not(.empty)', function () {
+      var uid = $(this).data('djid');
       if (uid) showUserTip(this, uid);
     });
   }
@@ -1100,6 +1122,34 @@ firetable.ui.setupMiscEvents = function () {
       $("#stealContain").hide();
     }
   });
+
+  // ── Skip popover ──
+  var skipPopoverEl = document.getElementById('skipPopover');
+  if (skipPopoverEl) {
+    skipPopoverEl.addEventListener('toggle', function (e) {
+      var btn = document.getElementById('skipTrigger');
+      if (!btn) return;
+      if (e.newState === 'open') {
+        btn.classList.add('on');
+        skipPopoverEl.style.visibility = 'hidden';
+        firetable.ui.positionPopover(btn, skipPopoverEl, document.getElementById('skipArrow'));
+      } else {
+        btn.classList.remove('on');
+      }
+    });
+  }
+
+  $(document)
+    .off('click.skipNowAction')
+    .on('click.skipNowAction', '#skipPopover .skipNowAction', function () {
+      ftapi.actions.sendBotCommand('!skip');
+      if (skipPopoverEl && skipPopoverEl.matches(':popover-open')) skipPopoverEl.hidePopover();
+    })
+    .off('click.skipVoteAction')
+    .on('click.skipVoteAction', '#skipPopover .skipVoteAction', function () {
+      ftapi.actions.sendBotCommand('!skipvote');
+      if (skipPopoverEl && skipPopoverEl.matches(':popover-open')) skipPopoverEl.hidePopover();
+    });
 
   /** Stealpicker — add song to selected playlist (from #grab or histeal) */
   $("#stealpicker").change(function () {
@@ -1501,4 +1551,40 @@ firetable.ui.init = function () {
     });
     obs.observe(inner, { childList: true });
   });
+
+  // ── Deck placement: move #ondeck to People tab when stage is narrow ──
+  (function () {
+    var stageEl  = document.getElementById('djStage');
+    var deckEl   = document.getElementById('deck');  // stays in stage always
+    var peopleEl = document.getElementById('usersbox');
+    if (!stageEl || !deckEl || !peopleEl) return;
+
+    firetable.ui._deckIsNarrow = false;
+
+    firetable.ui.applyDeckPlacement = function () {
+      var ondeckEl = document.getElementById('ondeck');
+      if (!ondeckEl) return;
+      if (firetable.ui._deckIsNarrow) {
+        peopleEl.prepend(ondeckEl);
+        // Measure stageActions' right edge relative to the stage so the active
+        // DJ can be CSS-centered in the space to the right of those buttons.
+        var actionsEl = document.getElementById('stageActions');
+        if (actionsEl) {
+          var offset = actionsEl.getBoundingClientRect().right -
+                       stageEl.getBoundingClientRect().left;
+          stageEl.style.setProperty('--stageactions-right', offset + 'px');
+        }
+      } else {
+        deckEl.parentNode.insertBefore(ondeckEl, deckEl.nextSibling);
+        stageEl.style.removeProperty('--stageactions-right');
+      }
+    };
+
+    new ResizeObserver(function (entries) {
+      var narrow = entries[0].contentRect.width < 520;
+      if (narrow === firetable.ui._deckIsNarrow) return;
+      firetable.ui._deckIsNarrow = narrow;
+      firetable.ui.applyDeckPlacement();
+    }).observe(stageEl);
+  }());
 };

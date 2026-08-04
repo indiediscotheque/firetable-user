@@ -1301,7 +1301,8 @@ button.waitlist-pos {
     --np-art-size: 4rem;
     overflow: hidden;
     margin-bottom: auto;
-    padding: var(--pad4) var(--pad4) 2.5rem var(--pad4);
+    margin-right: var(--pad5);
+    padding: var(--pad4) 0 2.5rem var(--pad4);
     transition: gap 300ms ease;
 }
 
@@ -1455,7 +1456,7 @@ button.waitlist-pos {
     align-items: flex-start;
     justify-content: center;
     height: 5rem;
-    margin-bottom: auto;
+    margin-block: auto;
 }
 
 #volstatus {
@@ -1583,7 +1584,7 @@ button.waitlist-pos {
 /* Vertical volume slider */
 .ui-slider-vertical {
     width: 0.1875rem;
-    height: 5rem;
+    height: 6rem;
     background-color: rgba(204, 204, 204, 0.2);
 }
 
@@ -1618,23 +1619,31 @@ button.waitlist-pos {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 0.625rem;
+    pointer-events: none;
+}
+
+#volplace::before {
+    width: 1.25rem;
     background-image: repeating-linear-gradient(
         to bottom,
         rgba(255,255,255,0.35) 0px,
         rgba(255,255,255,0.35) 1px,
         transparent 1px,
-        transparent 5px
+        transparent calc(11% - 1px)
     );
-    pointer-events: none;
-}
-
-#volplace::before {
-    left: 0;
 }
 
 #volplace::after {
-    right: 0;
+    width: 1rem;
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(6% - 1px),
+        rgba(255,255,255,0.25) calc(6% - 1px),
+        rgba(255,255,255,0.25) 6%,
+        transparent 6%,
+        transparent calc(11% - 1px)
+    );
 }
 
 /* Hide volume slider on touch devices where OS controls volume (not the browser) */
@@ -1671,18 +1680,18 @@ html .ui-button.ui-state-disabled:active {
     grid-area: stage;
     display: grid;
     grid-template-rows: 1fr auto auto;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: 1fr;
     grid-template-areas:
-        "left    visual    right"
-        "progress progress progress"
-        "controls controls controls";
+        "visual"
+        "progress"
+        "controls";
     transition: --color-accent 1.5s ease;
 }
 
 /* ============================================
    The Stage
    ============================================ */
-#djStage > div:not(#screenBox):not(#stageBackdrop):not(#ft-eq) {
+#djStage > div:not(#screenBox):not(#stageBackdrop):not(#ft-eq):not(#stageActions):not(#stageTopRight):not(#ondeck) {
     position: relative;
     z-index: 2;
 }
@@ -1701,6 +1710,8 @@ html .ui-button.ui-state-disabled:active {
     aspect-ratio: 16 / 9;
     width: 100%;
     max-height: var(--stage-max-height);
+    border-top-left-radius: 1.5rem;
+    border-top-right-radius: 1.5rem;
     background: linear-gradient(to bottom, color-mix(in srgb, black 85%, var(--color-accent)), color-mix(in srgb, black 66%, var(--color-accent)));
     box-shadow: 
         inset 0 -4rem 8rem -8rem white, 
@@ -1728,15 +1739,100 @@ html .ui-button.ui-state-disabled:active {
 #deck {
     grid-area: deck;
     display: flex;
+    align-items: flex-end;
     justify-content: center;
     gap: var(--pad1);
-    padding-inline: var(--pad1);
+    padding-inline: var(--pad2);
     max-width: 100vw;
+}
+
+#usersbox > #ondeck {
+    padding: var(--pad4) var(--pad3) var(--pad2) var(--pad3);
+    max-width: 100%;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+    & .on-deck {
+        justify-content: flex-start;
+    }
 }
 
 #deck.dance .avtr:not(.animate) {
     transform-origin: bottom;
     animation: MoveSideSide 2s linear infinite;
+}
+
+@container (width < 520px) {
+    #deck {
+        padding-inline-start: var(--stageactions-right, 0px);
+    }
+}
+
+#djStage > #ondeck {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 3;
+}
+
+.on-deck {
+    flex: 1;
+    display: flex;
+    align-items: start;
+    justify-content: center;
+    gap: var(--pad2);
+    padding-inline: var(--pad3);
+}
+
+.ondeck-slot {
+    all: unset;
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--pad2);
+
+    & .ft-avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+    }
+
+    &:hover .ft-avatar,
+    &:focus-visible .ft-avatar {
+        outline: 2px solid rgba(255, 255, 255, 0.15);
+        outline-offset: 0;
+    }
+}
+
+.ondeck-slot.empty {
+    background: rgba(255, 255, 255, 0.08);
+
+    &::after {
+        content: 'add';
+        font-family: 'Material Symbols Outlined';
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        font-size: 1.1rem;
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.14);
+
+        &::after {
+            color: rgba(255, 255, 255, 0.55);
+        }
+    }
+}
+
+.deck-spacer {
+    flex: 1;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .spot {
@@ -1767,6 +1863,12 @@ html .ui-button.ui-state-disabled:active {
 
 .avtr.animate {
     animation: MoveUpDown 1s linear infinite;
+}
+
+@container (width >= 420px) {
+    .avtr {
+        display: block;
+    }
 }
 
 .djplaque {
@@ -1841,9 +1943,10 @@ html .ui-button.ui-state-disabled:active {
     inset: 0;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     width: 100%;
     height: 100%;
+    background: #000;
     z-index: 1;
     transform: translateY(-101%);
     transition: transform 2s ease-in-out;
@@ -2008,6 +2111,28 @@ ul.lightrope li {
 :root {
     /* the only thing needed is a grainy/noisy background image */
     --glitter: url("/img/fire-noise.png");
+}
+
+#stageTopRight {
+    position: absolute;
+    top: var(--pad3);
+    right: var(--pad3);
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--pad2);
+}
+
+#stageActions {
+    position: absolute;
+    bottom: var(--pad3);
+    left: var(--pad3);
+    z-index: 3;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--pad2);
 }
 
 #fyre {
@@ -2576,6 +2701,20 @@ a.importLinkCheck {
     gap: var(--pad1);
 }
 
+.skipPromptBox {
+    width: min(14rem, 90vw);
+}
+
+.skipPromptActions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pad1);
+}
+
+.skipPromptActions button {
+    width: 100%;
+}
+
 .deleteSongPromptActions button,
 .shuffleQueuePromptActions button {
     width: 100%;
@@ -2680,6 +2819,8 @@ a.importLinkCheck {
     align-items: center;
     flex: 1;
     position: relative;
+    gap: var(--pad2);
+    overflow: hidden;
 }
 
 #djlistpickerLabel {
@@ -2693,7 +2834,8 @@ a.importLinkCheck {
 }
 
 #djlistpicker {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     height: auto;
     padding-block: 0.5em;
     padding-inline: 7em 2rem;
@@ -2705,25 +2847,31 @@ a.importLinkCheck {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* ── Stage side panels ── */
-
-#stageSideLeft,
-#stageSideRight {
+#deckQueue {
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+    flex-direction: row;
     align-items: center;
-    padding: var(--pad2);
-    background-color: var(--color-bg-t1);
+    gap: var(--pad2);
+    flex-shrink: 0;
 }
 
-#stageSideLeft  {
-    grid-area: left;
-    border-top-left-radius: 1.5rem;
-}
-#stageSideRight { 
-    grid-area: right;
-    border-top-right-radius: 1.5rem;
+.deckqueue-chip {
+    all: unset;
+    cursor: pointer;
+    border-radius: 50%;
+    display: block;
+
+    & .ft-avatar {
+        width: 2rem;
+        height: 2rem;
+        display: block;
+    }
+
+    &:hover .ft-avatar,
+    &:focus-visible .ft-avatar {
+        outline: 2px solid rgba(255, 255, 255, 0.5);
+        outline-offset: 2px;
+    }
 }
 
 /* ============================================
@@ -4471,6 +4619,14 @@ html#about body {
     display: flex;
 }
 
+/* Step down: hidden unless self is on deck */
+.utt-stepdown-btn {
+    display: none;
+}
+#ft-user-tip.can-step-down .utt-stepdown-btn {
+    display: flex;
+}
+
 /* Block button: hidden for self, disabled for protected roles */
 .utt-block-btn {
     display: none;
@@ -4482,8 +4638,8 @@ html#about body {
     color: var(--color-accent, #e05);
 }
 
-/* Hide whole actions row for self */
-#ft-user-tip.is-self .utt-actions {
+/* Hide whole actions row for self unless they can step down */
+#ft-user-tip.is-self:not(.can-step-down) .utt-actions {
     display: none;
 }
 
@@ -4596,6 +4752,24 @@ html#about body {
         transform: translateY(0);
     }
 
+    body.screen #stageBackdrop {
+        display: none;
+    }
+
+    body.screen #screenover {
+        display: none;
+    }
+
+    body.screen #screenBox::after {
+        content: '';
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 60%;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent);
+        pointer-events: none;
+        z-index: 2;
+    }
+
     #mainGrid,
     #mainGrid.mmqueue,
     #mainGrid.mmchat {
@@ -4647,10 +4821,11 @@ html#about body {
         display: flex;
         flex-direction: column;
         margin-left: 0;
-        margin-top: var(--pad3);
+        margin-top: var(--pad4);
         grid-row: 3;
         grid-column: 1;
         align-self: start;
+        gap: var(--pad1);
     }
 
     #topbarUtils {
@@ -4691,11 +4866,6 @@ html#about body {
         margin-block: 0.5rem;
     }
 
-    #stageSideLeft,
-    #stageSideRight {
-        padding: var(--pad3);
-    }
-
     #queuebox {
         padding-top: var(--pad4);
     }
@@ -4706,12 +4876,6 @@ html#about body {
 
     #djlistpickerWrap {
         margin-inline: var(--pad4);
-    }
-
-    #deck {
-        margin-left: var(--pad3);
-        margin-right: var(--pad3);
-        gap: var(--pad3);
     }
 
     .chatText {
@@ -4787,10 +4951,6 @@ html#about body {
         min-height: 15rem;
     }
 
-    .avtr {
-        display: block;
-    }
-
     #nowplaying {
         --np-art-size: 6.5rem;
     }
@@ -4812,10 +4972,7 @@ html#about body {
     }
 
     #deck {
-        margin-left: auto;
-        margin-right: auto;
-        width: 100%;
-        max-width: 36rem;
+        gap: var(--pad2);
     }
 
     #usersWaitlist {
