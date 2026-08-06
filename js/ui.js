@@ -1,0 +1,1590 @@
+/**
+ * ui.js — Miscellaneous UI bindings, settings, modals, and the LinkGrabber.
+ *
+ * This module contains:
+ * - firetable.ui.hidePlayerControls / showPlayerControls
+ * - firetable.ui.LinkGrabber (drag-and-drop link detection)
+ * - firetable.ui.usertab1 / usertab2
+ * - firetable.ui.loginEventsInit / loginEventsDestroy / loginLinkToggle
+ * - firetable.ui.initSettings(): restore settings from localStorage
+ * - firetable.ui.setupMiscEvents(): modals, sortable, volume, grab, settings toggles, etc.
+ * - firetable.ui.init(): orchestrator that calls all setup*Events functions
+ *
+ * Depends on: constants.js, state.js, helpers.js, player.js
+ */
+
+// ─── Player Controls Visibility ──────────────────────────────────────────────
+
+// ─── Floating UI Popover Positioning ─────────────────────────────────────────
+firetable.ui.positionPopover = function (anchorEl, floatingEl, arrowEl, preferredPlacement) {
+  var ARROW_SIZE = 8; // px — must match .ft-arrow width/height in CSS
+
+  // Reset to known origin before computePosition measures the element
+  floatingEl.style.top  = '0';
+  floatingEl.style.left = '0';
+
+  // When a preferred placement is given, use flip() to respect it but fall
+  // back to the opposite side if there's no space.
+  // Otherwise use autoPlacement() to always pick the side with most space.
+  var options = {
+    strategy: 'fixed',
+    middleware: [
+      FloatingUIDOM.offset(ARROW_SIZE),
+      preferredPlacement
+        ? FloatingUIDOM.flip()
+        : FloatingUIDOM.autoPlacement({ padding: 8 }),
+      FloatingUIDOM.shift({ padding: 8 }),
+      arrowEl ? FloatingUIDOM.arrow({ element: arrowEl, padding: 8 }) : null
+    ]
+  };
+  if (preferredPlacement) {
+    options.placement = preferredPlacement;
+  }
+
+  return FloatingUIDOM.computePosition(anchorEl, floatingEl, options).then(function (pos) {
+    floatingEl.style.left = pos.x + 'px';
+    floatingEl.style.top  = pos.y + 'px';
+
+    if (arrowEl && pos.middlewareData.arrow) {
+      var ax = pos.middlewareData.arrow.x;
+      var ay = pos.middlewareData.arrow.y;
+      // staticSide is the edge the arrow pokes out of — opposite the placement side
+      var staticSide = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' }[pos.placement.split('-')[0]];
+      Object.assign(arrowEl.style, {
+        left:   ax != null ? ax + 'px' : '',
+        top:    ay != null ? ay + 'px' : '',
+        right:  '',
+        bottom: '',
+        [staticSide]: -(ARROW_SIZE / 2) + 'px'
+      });
+    }
+
+    floatingEl.style.visibility = 'visible';
+  });
+};
+
+/**
+ * Hide player/preview controls (when media playback is disabled).
+ */
+firetable.ui.hidePlayerControls = function () {
+  $("head").append(
+    "<style class='playerControlsHider'>" +
+    ".previewicon { display: none !important; } " +
+    "div#playerControls { display: none !important; } " +
+    "</style>"
+  );
+};
+
+/**
+ * Show player/preview controls (re-enables media playback UI).
+ */
+firetable.ui.showPlayerControls = function () {
+  $(".playerControlsHider").remove();
+};
+
+// ─── User Tabs (All Users / Waitlist) ────────────────────────────────────────
+
+/** Show the "All Users" panel, hide the "Waitlist" panel */
+firetable.ui.usertab1 = function () {
+  $("#allusersWrap").css("display", "block");
+  $("#justwaitWrap").css("display", "none");
+  $("#usertabs").find(".on").removeClass("on");
+  $("#label1").addClass("on");
+};
+
+/** Show the "Waitlist" panel, hide the "All Users" panel */
+firetable.ui.usertab2 = function () {
+  $("#usertabs").find(".on").removeClass("on");
+  $("#label2").addClass("on");
+  $("#allusersWrap").css("display", "none");
+  $("#justwaitWrap").css("display", "block");
+};
+
+// ─── LinkGrabber (Drag-and-Drop Track Detection) ─────────────────────────────
+
+/**
+ * Handles URL drops onto the playlist panel and forwards supported links
+ * (YouTube/SoundCloud) to queueFromLink(). Listeners are attached directly
+ * to #queuebox so dragover preventDefault fires for the whole panel regardless
+ * of which child element the cursor is over.
+ */
+firetable.ui.LinkGrabber = {
+  _el: null,
+  _capture: true,
+  // External-window drags can report an unreliable drop target/point; armed
+  // remembers that the user was recently over queuebox so we still accept drop.
+  _armed: false,
+
+  setReady: function (active) {
+    var el = firetable.ui.LinkGrabber._el;
+    if (!el) return;
+    firetable.ui.LinkGrabber._armed = !!active;
+    el.classList.toggle("drop-ready", !!active);
+  },
+
+  normalizeCandidateUrl: function (link) {
+    var out = String(link || "").trim();
+    out = out.replace(/^["'<>\s]+|["'<>\s]+$/g, "");
+    if (!out) return "";
+
+    if (/^\/\//.test(out)) return "https:" + out;
+    if (/^https?:\/\//i.test(out)) return out;
+    if (/^(www\.|(?:m\.)?youtube\.com\/|youtu\.be\/|soundcloud\.com\/)/i.test(out)) {
+      return "https://" + out;
+    }
+    return out;
+  },
+
+  extractFromRawText: function (raw) {
+    var found = [], seen = {};
+    (raw || []).forEach(function (text) {
+      var matches = String(text || "").match(/(?:https?:\/\/|www\.|(?:m\.)?youtube\.com\/|youtu\.be\/|soundcloud\.com\/)[^\s"'<>]+/gi) || [];
+      matches.forEach(function (link) {
+        link = link.replace(/[),.;\]]+$/g, "").trim();
+        link = firetable.ui.LinkGrabber.normalizeCandidateUrl(link);
+        if (link && !seen[link]) { seen[link] = true; found.push(link); }
+      });
+    });
+    return found;
+  },
+
+  extractLinks: function (dt) {
+    if (!dt) return [];
+    var raw = [];
+    var dataByType = function (type) {
+      try {
+        return dt.getData(type) || "";
+      } catch (err) {
+        return "";
+      }
+    };
+
+    var uriList = dataByType("text/uri-list");
+    var plain   = dataByType("text/plain");
+    var html    = dataByType("text/html");
+    var urlType = dataByType("URL");
+    var mozUrl  = dataByType("text/x-moz-url");
+    var pubUrl  = dataByType("public.url");
+
+    if (uriList) {
+      uriList.split(/\r?\n/).forEach(function (row) {
+        row = row.trim();
+        if (row && row.charAt(0) !== "#") raw.push(row);
+      });
+    }
+    if (plain)   raw.push(plain);
+    if (html)    raw.push(html);
+    if (urlType) raw.push(urlType);
+    if (mozUrl)  raw.push(mozUrl);
+    if (pubUrl)  raw.push(pubUrl);
+
+    // Try all advertised types because browsers differ in drag payload keys.
+    if (dt.types && dt.types.length) {
+      Array.prototype.forEach.call(dt.types, function (type) {
+        if (!type) return;
+        var lower = String(type).toLowerCase();
+        if (lower.indexOf("url") === -1 && lower.indexOf("text") === -1) return;
+        var val = dataByType(type);
+        if (val) raw.push(val);
+      });
+    }
+
+    return firetable.ui.LinkGrabber.extractFromRawText(raw);
+  },
+
+  extractLinksFromItems: function (dt, done) {
+    // Some browsers expose dropped text only through dataTransfer.items.
+    var items = dt && dt.items;
+    if (!items || !items.length) return done([]);
+
+    var pending = 0;
+    var raw = [];
+    var finalize = function () {
+      if (pending > 0) return;
+      done(firetable.ui.LinkGrabber.extractFromRawText(raw));
+    };
+
+    Array.prototype.forEach.call(items, function (item) {
+      if (!item || item.kind !== "string" || typeof item.getAsString !== "function") return;
+      pending += 1;
+      item.getAsString(function (value) {
+        if (value) raw.push(value);
+        pending -= 1;
+        finalize();
+      });
+    });
+
+    finalize();
+  },
+
+  queueLinks: function (links) {
+    links.forEach(function (link) {
+      firetable.actions.queueFromLink(link);
+    });
+  },
+
+  isEventInQueueBox: function (event) {
+    var el = firetable.ui.LinkGrabber._el;
+    if (!el || !event) return false;
+
+    // Try path + target + pointer hit-test because engines disagree here
+    // during cross-window drag/drop.
+    if (typeof event.composedPath === "function") {
+      var path = event.composedPath();
+      if (path && path.indexOf(el) !== -1) return true;
+    }
+
+    var target = event.target;
+    if (target && (target === el || el.contains(target))) return true;
+
+    var x = event.clientX;
+    var y = event.clientY;
+    if (typeof x !== "number" || typeof y !== "number") return false;
+
+    var hit = document.elementFromPoint(x, y);
+    if (hit && (hit === el || el.contains(hit))) return true;
+
+    var rect = el.getBoundingClientRect();
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  },
+
+  processDrop: function (event) {
+    var links = firetable.ui.LinkGrabber.extractLinks(event.dataTransfer);
+    if (links.length) {
+      firetable.ui.LinkGrabber.queueLinks(links);
+      return;
+    }
+
+    firetable.ui.LinkGrabber.extractLinksFromItems(event.dataTransfer, function (itemLinks) {
+      if (itemLinks.length) firetable.ui.LinkGrabber.queueLinks(itemLinks);
+      firetable.debug && console.log("DRAG+DROP item links:", itemLinks);
+    });
+  },
+
+  evt_drag_over: function (event) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    firetable.ui.LinkGrabber.setReady(true);
+  },
+
+  evt_drag_enter: function () {
+    firetable.ui.LinkGrabber.setReady(true);
+  },
+
+  evt_drag_leave: function (event) {
+    // only remove highlight when leaving the queuebox itself (not a child)
+    var el = firetable.ui.LinkGrabber._el;
+    if (!el) return;
+    if (event.relatedTarget && el.contains(event.relatedTarget)) return;
+
+    var x = event.clientX;
+    var y = event.clientY;
+    if (typeof x === "number" && typeof y === "number") {
+      var rect = el.getBoundingClientRect();
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return;
+    }
+
+    firetable.ui.LinkGrabber.setReady(false);
+  },
+
+  evt_drop: function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    firetable.ui.LinkGrabber.setReady(false);
+
+    firetable.ui.LinkGrabber.processDrop(event);
+  },
+
+  evt_doc_drag_over: function (event) {
+    // Keep browser from treating URL drop as navigation (new-tab/open-page).
+    event.preventDefault();
+    var inQueue = firetable.ui.LinkGrabber.isEventInQueueBox(event);
+    if (event.dataTransfer) event.dataTransfer.dropEffect = inQueue ? "copy" : "none";
+    firetable.ui.LinkGrabber.setReady(inQueue);
+  },
+
+  evt_doc_drop: function (event) {
+    // Must be blocked globally for same reason as dragover above.
+    event.preventDefault();
+    event.stopPropagation();
+    var inQueue = firetable.ui.LinkGrabber.isEventInQueueBox(event);
+
+    // Some external drags report unreliable drop coordinates/target.
+    // `_armed` preserves intent if cursor was just over queuebox.
+    if (!inQueue && !firetable.ui.LinkGrabber._armed) {
+      firetable.ui.LinkGrabber.setReady(false);
+      return;
+    }
+    firetable.ui.LinkGrabber.evt_drop(event);
+  },
+
+  /** Attach listeners directly on #queuebox */
+  start: function () {
+    var el = document.getElementById("queuebox");
+    if (!el) return;
+    firetable.ui.LinkGrabber._el = el;
+    el.addEventListener("dragover",  firetable.ui.LinkGrabber.evt_drag_over,  firetable.ui.LinkGrabber._capture);
+    el.addEventListener("dragenter", firetable.ui.LinkGrabber.evt_drag_enter, firetable.ui.LinkGrabber._capture);
+    el.addEventListener("dragleave", firetable.ui.LinkGrabber.evt_drag_leave, firetable.ui.LinkGrabber._capture);
+    el.addEventListener("drop",      firetable.ui.LinkGrabber.evt_drop,       firetable.ui.LinkGrabber._capture);
+    document.addEventListener("dragover", firetable.ui.LinkGrabber.evt_doc_drag_over, true);
+    document.addEventListener("drop", firetable.ui.LinkGrabber.evt_doc_drop, true);
+  },
+
+  stop: function () {
+    var el = firetable.ui.LinkGrabber._el;
+    if (!el) return;
+    el.removeEventListener("dragover",  firetable.ui.LinkGrabber.evt_drag_over,  firetable.ui.LinkGrabber._capture);
+    el.removeEventListener("dragenter", firetable.ui.LinkGrabber.evt_drag_enter, firetable.ui.LinkGrabber._capture);
+    el.removeEventListener("dragleave", firetable.ui.LinkGrabber.evt_drag_leave, firetable.ui.LinkGrabber._capture);
+    el.removeEventListener("drop",      firetable.ui.LinkGrabber.evt_drop,       firetable.ui.LinkGrabber._capture);
+    document.removeEventListener("dragover", firetable.ui.LinkGrabber.evt_doc_drag_over, true);
+    document.removeEventListener("drop", firetable.ui.LinkGrabber.evt_doc_drop, true);
+    firetable.ui.LinkGrabber.setReady(false);
+    firetable.ui.LinkGrabber._el = null;
+  }
+};
+
+// ─── Settings Initialization ─────────────────────────────────────────────────
+
+/**
+ * Restore user settings from localStorage and apply them to the UI.
+ * Called once during firetable.ui.init().
+ */
+firetable.ui.initSettings = function () {
+
+  // ── Disable Media Playback ──
+  var disableMediaPlayback = localStorage[STORAGE.disableMedia];
+  if (typeof disableMediaPlayback == "undefined") {
+    localStorage[STORAGE.disableMedia] = false;
+    firetable.disableMediaPlayback = false;
+    $("#mediaDisableToggle").prop("checked", false);
+  } else {
+    disableMediaPlayback = JSON.parse(disableMediaPlayback);
+    firetable.disableMediaPlayback = disableMediaPlayback;
+    $("#mediaDisableToggle").prop("checked", disableMediaPlayback);
+    if (disableMediaPlayback) firetable.ui.hidePlayerControls();
+  }
+
+  // ── Show Inline Images ──
+  var showImages = localStorage[STORAGE.showImages];
+  if (typeof showImages == "undefined") {
+    localStorage[STORAGE.showImages] = false;
+    firetable.showImages = false;
+    $("#showImagesToggle").prop("checked", false);
+  } else {
+    showImages = JSON.parse(showImages);
+    firetable.showImages = showImages;
+    $("#showImagesToggle").prop("checked", showImages);
+  }
+
+  // ── Show Avatars ──
+  var showAvatars = localStorage[STORAGE.showAvatars];
+  if (typeof showAvatars == "undefined") {
+    localStorage[STORAGE.showAvatars] = true;
+    firetable.showAvatars = true;
+    $("#showAvatarsToggle").prop("checked", true);
+  } else {
+    showAvatars = JSON.parse(showAvatars);
+    firetable.showAvatars = showAvatars;
+    $("#showAvatarsToggle").prop("checked", showAvatars);
+    if (showAvatars == false) {
+      document.getElementById("actualChat").classList.add("avatarsOff");
+    }
+  }
+
+  // ── Show Song Announcements ──
+  var showSongAnnouncements = localStorage[STORAGE.showSongAnnouncements];
+  if (typeof showSongAnnouncements == "undefined") {
+    localStorage[STORAGE.showSongAnnouncements] = true;
+    firetable.showSongAnnouncements = true;
+    $("#showSongAnnouncementsToggle").prop("checked", true);
+  } else {
+    showSongAnnouncements = JSON.parse(showSongAnnouncements);
+    firetable.showSongAnnouncements = showSongAnnouncements;
+    $("#showSongAnnouncementsToggle").prop("checked", showSongAnnouncements);
+  }
+
+  // ── Chat Sound (Badoop) ──
+  var playBadoop = localStorage[STORAGE.badoop];
+  if (typeof playBadoop == "undefined") {
+    localStorage[STORAGE.badoop] = true;
+    firetable.playBadoop = true;
+    $("#badoopToggle").prop("checked", true);
+  } else {
+    playBadoop = JSON.parse(playBadoop);
+    firetable.playBadoop = playBadoop;
+    $("#badoopToggle").prop("checked", playBadoop);
+  }
+
+  // ── Desktop Notifications for Mentions ──
+  var dtnmt = localStorage[STORAGE.notifyMentions];
+  if (typeof dtnmt == "undefined") {
+    localStorage[STORAGE.notifyMentions] = false;
+    firetable.desktopNotifyMentions = false;
+    $("#desktopNotifyMentionsToggle").prop("checked", false);
+  } else {
+    dtnmt = JSON.parse(dtnmt);
+    firetable.desktopNotifyMentions = dtnmt;
+    $("#desktopNotifyMentionsToggle").prop("checked", dtnmt);
+  }
+
+  // ── Screen Control (on/off/sync) ──
+  var screenControl = localStorage[STORAGE.screenControl];
+  if (typeof screenControl == "undefined") {
+    localStorage[STORAGE.screenControl] = "sync";
+    firetable.screenControl = "sync";
+  } else {
+    firetable.screenControl = screenControl;
+    if (screenControl == "on") {
+      firetable.utilities.screenDown();
+    } else if (screenControl == "off") {
+      firetable.utilities.screenUp();
+    } else if (screenControl == "sync") {
+      if (firetable.screenSyncPos) firetable.utilities.screenDown();
+      else firetable.utilities.screenUp();
+    }
+  }
+  firetable.ui.updateScreenBtn(firetable.screenControl);
+
+  // ── Avatar Style ──
+  var savedAvatarStyle = localStorage[STORAGE.avatarStyle];
+  if (savedAvatarStyle) {
+    firetable.avatarStyle = savedAvatarStyle;
+    $("#avatarStylePicker").val(savedAvatarStyle);
+  }
+
+  firetable.ui.applySongAnnouncementVisibility();
+};
+
+/**
+ * Toggle visibility of song announcement rows in chat based on user setting.
+ */
+firetable.ui.applySongAnnouncementVisibility = function () {
+  var el = document.getElementById("actualChat");
+  if (!el) return;
+  el.classList.toggle("songAnnouncementsOff", firetable.showSongAnnouncements === false);
+};
+
+// ─── Miscellaneous UI Event Bindings ─────────────────────────────────────────
+
+/**
+ * Bind all remaining UI events that don't belong in chat/search/playlist/users/room:
+ * modals, settings toggles, grab, volume, mini-mode, emoji picker, etc.
+ * Called once from firetable.ui.init().
+ */
+
+// ─── Navigation State ─────────────────────────────────────────────────────────
+// Tracks three independent pieces of state:
+//   view         – which content view is active (playlists|history|cards|discover)
+//   side         – which side panel is active at medium (chat|people)
+//   mobileSection – which group shows on mobile (view|chat|people)
+// All three are persisted to localStorage so refresh restores the exact state.
+
+firetable.nav = {
+  view: 'playlists',
+  side: 'chat',
+  mobileSection: 'view',
+  _isFading: false,
+  _fadeMs: 180,
+
+  _validViews:   ['playlists', 'history', 'cards', 'discover'],
+  _validSides:   ['chat', 'people'],
+  _validMobile:  ['view', 'chat', 'people'],
+  _viewTabMap:   { playlists: 'mm-playlists', history: 'mm-history', cards: 'mm-cards', discover: 'mm-discover' },
+  _mainPanels:   ['#queuebox', '#thehistoryWrap', '#cardsWrap', '#discover'],
+  _sidePanels:   ['#actualChat', '#usersbox'],
+
+  _collectVisiblePanels: function (selectors) {
+    var out = [];
+    selectors.forEach(function (sel) {
+      var $el = $(sel);
+      if ($el.length && $el.is(':visible')) out.push($el);
+    });
+    return out;
+  },
+
+  _clearFadeStyles: function (selectors) {
+    selectors.forEach(function (sel) {
+      $(sel).css({ opacity: '', transition: '' });
+    });
+  },
+
+  _withFade: function (selectors, mutator) {
+    var n = firetable.nav;
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion || n._isFading) {
+      mutator();
+      n.apply();
+      n._clearFadeStyles(selectors);
+      return;
+    }
+
+    var fadeOutPanels = n._collectVisiblePanels(selectors);
+    n._isFading = true;
+
+    fadeOutPanels.forEach(function ($el) {
+      $el.css({ transition: 'opacity ' + n._fadeMs + 'ms ease', opacity: 0 });
+    });
+
+    setTimeout(function () {
+      mutator();
+      n.apply();
+
+      var fadeInPanels = n._collectVisiblePanels(selectors);
+      fadeInPanels.forEach(function ($el) {
+        $el.css({ opacity: 0, transition: 'opacity ' + n._fadeMs + 'ms ease' });
+      });
+
+      requestAnimationFrame(function () {
+        fadeInPanels.forEach(function ($el) {
+          $el.css('opacity', 1);
+        });
+      });
+
+      setTimeout(function () {
+        n._clearFadeStyles(selectors);
+        n._isFading = false;
+      }, n._fadeMs + 30);
+    }, n._fadeMs);
+  },
+
+  /** Persist current state to localStorage. */
+  save: function () {
+    localStorage[STORAGE.navView]   = firetable.nav.view;
+    localStorage[STORAGE.navSide]   = firetable.nav.side;
+    localStorage[STORAGE.navMobile] = firetable.nav.mobileSection;
+  },
+
+  restore: function () {
+    var n = firetable.nav;
+
+    // URL path takes priority for viewNav (handles old bookmarks / shared links)
+    var pathMatch = location.pathname.match(/\/(playlists|history|cards|discover)\/?$/);
+    if (pathMatch) {
+      n.view = pathMatch[1];
+      n.mobileSection = 'view';
+      // Clean up the URL so it doesn't look like we still do path-based routing
+      history.replaceState(null, '', location.pathname.replace(/\/(playlists|history|cards|discover)\/?$/, '/'));
+    } else {
+      var sv = localStorage[STORAGE.navView];
+      if (sv && n._validViews.indexOf(sv) !== -1) n.view = sv;
+    }
+    var ss = localStorage[STORAGE.navSide];
+    if (ss && n._validSides.indexOf(ss) !== -1) n.side = ss;
+
+    var sm = localStorage[STORAGE.navMobile];
+    if (sm && n._validMobile.indexOf(sm) !== -1) n.mobileSection = sm;
+
+    n.save();
+  },
+
+  /** Set the active content view. */
+  setView: function (name) {
+    var n = firetable.nav;
+    n._withFade(n._mainPanels, function () {
+      n.view = name;
+      n.mobileSection = 'view';
+      n.save();
+    });
+  },
+
+  /** Set the active side panel (chat or people). */
+  setSide: function (name) {
+    var n = firetable.nav;
+    n._withFade(n._sidePanels, function () {
+      n.side = name;
+      n.mobileSection = name; // 'chat' or 'people'
+      n.save();
+    });
+  },
+
+  /** Handle a mini-mode tab click by its element ID. */
+  setMobileTab: function (tabId) {
+    var n = firetable.nav;
+    var viewMap = { 'mm-playlists': 'playlists', 'mm-history': 'history', 'mm-cards': 'cards', 'mm-discover': 'discover' };
+    var isMd = window.matchMedia('(min-width: 640px)').matches;
+    var isViewTab = !!viewMap[tabId];
+    var selectors = !isMd
+      ? n._mainPanels.concat(n._sidePanels)
+      : (isViewTab ? n._mainPanels : n._sidePanels);
+
+    n._withFade(selectors, function () {
+      if (viewMap[tabId]) {
+        n.view = viewMap[tabId];
+        n.mobileSection = 'view';
+      } else if (tabId === 'mmchat') {
+        n.side = 'chat';
+        n.mobileSection = 'chat';
+      } else if (tabId === 'mmusrs') {
+        n.side = 'people';
+        n.mobileSection = 'people';
+      }
+      n.save();
+    });
+  },
+
+  /** Apply the current nav state to the DOM based on viewport size. */
+  apply: function () {
+    var n    = firetable.nav;
+    var $g   = $('#mainGrid');
+    var isLg = window.matchMedia('(min-width: 1024px)').matches;
+    var isMd = window.matchMedia('(min-width: 640px)').matches;
+
+    // ── View class (always) ──
+    $g.removeClass('view-playlists view-history view-cards view-discover')
+      .addClass('view-' + n.view);
+
+    // ── Header buttons (visible at 640px+) ──
+    $('#playlists').toggleClass('on',    n.view === 'playlists');
+    $('#history').toggleClass('on',      n.view === 'history');
+    $('#cardcase').toggleClass('on',     n.view === 'cards');
+    $('#discover-nav').toggleClass('on', n.view === 'discover');
+
+    // ── Layout classes ──
+    $g.removeClass('mmqueue mmchat mmusrs');
+
+    if (isLg) {
+      // 1024px+: chat AND people always visible (CSS overrides).
+      // Still set a layout class so resizing down transitions smoothly.
+      $g.addClass(n.side === 'people' ? 'mmusrs' : 'mmchat');
+    } else if (isMd) {
+      // 640px–1023px: side panel = chat or people
+      $g.addClass(n.side === 'people' ? 'mmusrs' : 'mmchat');
+      // Mini-mode shows only Chat / People tabs at this size
+      $('#minimodeoptions .tab').removeClass('on');
+      $('#mmusrs').toggleClass('on', n.side === 'people');
+      $('#mmchat').toggleClass('on',  n.side === 'chat');
+    } else {
+      // Mobile: one panel at a time
+      if (n.mobileSection === 'people') {
+        $g.addClass('mmusrs');
+      } else if (n.mobileSection === 'chat') {
+        $g.addClass('mmchat');
+      } else {
+        $g.addClass('mmqueue');
+      }
+      // Mini-mode shows all 6 tabs
+      $('#minimodeoptions .tab').removeClass('on');
+      if (n.mobileSection === 'people') {
+        $('#mmusrs').addClass('on');
+      } else if (n.mobileSection === 'chat') {
+        $('#mmchat').addClass('on');
+      } else {
+        $('#' + n._viewTabMap[n.view]).addClass('on');
+      }
+    }
+
+    if (n.view === 'cards') firetable.actions.cardCase();
+  }
+};
+
+// ── Backward-compat wrapper so any remaining showView calls still work ──
+firetable.ui.showView = function (name) {
+  firetable.nav.setView(name);
+};
+firetable.ui.syncNavState = function () {
+  firetable.nav.apply();
+};
+firetable.ui.getViewFromPath = function () {
+  return firetable.nav.view;
+};
+
+firetable.ui.updateScreenBtn = function (val) {
+  var icons  = { on: 'capture', off: 'cancel_presentation', sync: 'microwave' };
+  var titles = { on: 'Screen: always on', off: 'Screen: disabled', sync: 'Screen: synced' };
+  var title = titles[val] || 'Screen: synced';
+  $('#screenControl').find('[class*="material-symbols-"]').text(icons[val] || 'microwave');
+  $('#screenControl').attr('aria-label', title);
+  $('#screenControlTip').text(title);
+  var isOn = (val === 'on') || (val === 'sync' && firetable.screenSyncPos);
+  $('#screenControl').toggleClass('on', isOn);
+};
+
+// ─── Floating UI Tooltip ─────────────────────────────────────────────────────
+firetable.ui.tooltip = (function () {
+  var tipEl;
+
+  function show(anchor, text) {
+    tipEl.textContent = text;
+    tipEl.style.visibility = 'hidden';
+    tipEl.classList.add('is-visible');
+    FloatingUIDOM.computePosition(anchor, tipEl, {
+      placement: 'top',
+      strategy: 'fixed',
+      middleware: [
+        FloatingUIDOM.offset(6),
+        FloatingUIDOM.flip(),
+        FloatingUIDOM.shift({ padding: 8 })
+      ]
+    }).then(function (pos) {
+      tipEl.style.left = pos.x + 'px';
+      tipEl.style.top  = pos.y + 'px';
+      tipEl.style.visibility = 'visible';
+    });
+  }
+
+  function hide() {
+    tipEl.classList.remove('is-visible');
+  }
+
+  function bind() {
+    tipEl = document.getElementById('ft-tooltip');
+
+    // ── Deck: DJ name on plaque hover ──
+    $(document).on('mouseenter.ft-tooltip', '#deck .djname', function () {
+      var playcount = $(this).siblings('.playcount').text().trim();
+      if (playcount) show(this, playcount);
+    }).on('mouseleave.ft-tooltip', '#deck .djname', hide);
+
+    // ── Deck icon buttons + departure indicator: title-based ──
+    $('#deck').on('mouseenter.ft-tooltip', '[title]', function () {
+      var $el = $(this), text = $el.attr('title');
+      $el.attr('data-ft-title', text).removeAttr('title');
+      show(this, text);
+    }).on('mouseleave.ft-tooltip', '[data-ft-title]', function () {
+      var $el = $(this);
+      $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
+      hide();
+    });
+
+    // ── Themebox buttons ──
+    $('#themebox').on('mouseenter.ft-tooltip', '[title]', function () {
+      var $el = $(this), text = $el.attr('title');
+      $el.attr('data-ft-title', text).removeAttr('title');
+      show(this, text);
+    }).on('mouseleave.ft-tooltip', '[data-ft-title]', function () {
+      var $el = $(this);
+      $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
+      hide();
+    });
+
+    // ── Queue list: overflow-only title tooltip for track names ──
+    $('#queuelist').on('mouseenter.ft-tooltip', '.listwords', function () {
+      if (this.scrollWidth > this.offsetWidth) show(this, $(this).text().trim());
+    }).on('mouseleave.ft-tooltip', '.listwords', hide);
+
+    // ── Queue list: title-based tooltips for song action buttons ──
+    $('#queuelist').on('mouseenter.ft-tooltip', '[title]', function () {
+      var $el = $(this), text = $el.attr('title');
+      $el.attr('data-ft-title', text).removeAttr('title');
+      show(this, text);
+    }).on('mouseleave.ft-tooltip', '[data-ft-title]', function () {
+      var $el = $(this);
+      $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
+      hide();
+    });
+
+    // ── History / Discover: title-based tooltips ──
+    $('#thehistoryWrap, #thediscovers').on('mouseenter.ft-tooltip', '[title]', function () {
+      var $el = $(this), text = $el.attr('title');
+      $el.attr('data-ft-title', text).removeAttr('title');
+      show(this, text);
+    }).on('mouseleave.ft-tooltip', '[data-ft-title]', function () {
+      var $el = $(this);
+      $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
+      hide();
+    });
+
+    // ── History / Discover: DJ avatar name tooltip ──
+    $('#thehistoryWrap, #thediscovers').on('mouseenter.ft-tooltip', '.dj-avatar-tip[aria-label]', function () {
+      var text = $(this).attr('aria-label');
+      if (text) show(this, text);
+    }).on('mouseleave.ft-tooltip', '.dj-avatar-tip', hide);
+
+    // ── On-deck DJ avatars: name + play count tooltip ──
+    $(document).on('mouseenter.ft-tooltip', '#deck .ondeck-slot:not(.empty), #ondeck .ondeck-slot:not(.empty)', function () {
+      var $el   = $(this);
+      var name  = $el.attr('aria-label') || '';
+      var plays = parseInt($el.data('plays'), 10);
+      var limit = firetable.playlimit;
+      var text  = name + (plays ? ' \u00b7 ' + plays + '/' + (limit || '?') : '');
+      if (text) show(this, text);
+    }).on('mouseleave.ft-tooltip', '#deck .ondeck-slot:not(.empty), #ondeck .ondeck-slot:not(.empty)', hide);
+
+    // ── User list: title-based tooltips (for blocked icon etc.) ──
+    $('#allUsersWrap').on('mouseenter.ft-tooltip', '[title]', function () {
+      var $el = $(this), text = $el.attr('title');
+      $el.attr('data-ft-title', text).removeAttr('title');
+      show(this, text);
+    }).on('mouseleave.ft-tooltip', '[data-ft-title]', function () {
+      var $el = $(this);
+      $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
+      hide();
+    });
+
+    // ── User list: rich user info tooltip on .prson hover ──
+    var userTipEl = document.getElementById('ft-user-tip');
+    var userTipArrowEl = document.getElementById('ft-user-tip-arrow');
+    var userTipTooltipEl = document.getElementById('ft-user-tip-tooltip');
+    var $userTip  = $(userTipEl);
+    var _cardCountCache = {};
+    var _currentAnchorEl = null;
+
+    function setUserTipTailSide(anchorEl) {
+      if (!anchorEl || !userTipEl) return;
+
+      var anchorRect = anchorEl.getBoundingClientRect();
+      var popRect = userTipEl.getBoundingClientRect();
+      var anchorCx = anchorRect.left + (anchorRect.width / 2);
+      var anchorCy = anchorRect.top + (anchorRect.height / 2);
+      var popCx = popRect.left + (popRect.width / 2);
+      var popCy = popRect.top + (popRect.height / 2);
+      var dx = popCx - anchorCx;
+      var dy = popCy - anchorCy;
+      var side = 'left';
+
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        side = dx >= 0 ? 'left' : 'right';
+      } else {
+        side = dy >= 0 ? 'top' : 'bottom';
+      }
+
+      userTipEl.classList.remove('tail-left', 'tail-right', 'tail-top', 'tail-bottom');
+      userTipEl.classList.add('tail-' + side);
+    }
+
+    // Clear anchor-name when the popover is dismissed (light-dismiss or Escape)
+    userTipEl.addEventListener('toggle', function (e) {
+      if (e.newState === 'closed' && _currentAnchorEl) {
+        _currentAnchorEl.style.removeProperty('anchor-name');
+        _currentAnchorEl = null;
+      }
+      if (e.newState === 'closed') {
+        userTipTooltipEl.classList.remove('is-visible');
+        userTipTooltipEl.removeAttribute('data-anchor');
+        $(userTipEl).find('[data-ft-title]').each(function () {
+          var $btn = $(this);
+          $btn.attr('title', $btn.attr('data-ft-title')).removeAttr('data-ft-title');
+        });
+      }
+    });
+
+    // ── User tip action buttons: deterministic JS-positioned tooltips ──
+    function positionUserTipTooltip(anchorBtn) {
+      if (!anchorBtn) return;
+      var rect = anchorBtn.getBoundingClientRect();
+      userTipTooltipEl.style.left = (rect.left + (rect.width / 2)) + 'px';
+      userTipTooltipEl.style.top = rect.top + 'px';
+    }
+
+    $(userTipEl).on('mouseenter.ft-tooltip-internal', '.utt-icon-btn', function () {
+      var $el = $(this);
+      var text = $el.attr('data-ft-title') || $el.attr('title');
+      if (!text) return;
+      if ($el.attr('title')) {
+        $el.attr('data-ft-title', text).removeAttr('title');
+      }
+      userTipTooltipEl.textContent = text;
+      positionUserTipTooltip(this);
+      userTipTooltipEl.classList.add('is-visible');
+    }).on('mouseleave.ft-tooltip-internal', '.utt-icon-btn', function () {
+      var $el = $(this);
+      if ($el.attr('data-ft-title')) {
+        $el.attr('title', $el.attr('data-ft-title')).removeAttr('data-ft-title');
+      }
+      userTipTooltipEl.classList.remove('is-visible');
+      userTipTooltipEl.style.left = '';
+      userTipTooltipEl.style.top = '';
+    });
+
+    function showUserTip(anchorEl, userid) {
+      var userData = ftapi.users && ftapi.users[userid];
+      if (!userData) return;
+
+      function getBlockActionState(targetUser, targetUid) {
+        var isCurrentlyBlocked = !!(ftapi.blockedUsers && ftapi.blockedUsers[targetUid]);
+        if (isCurrentlyBlocked) {
+          return { canToggle: true, title: 'Unblock' };
+        }
+        if (targetUid === ftapi.uid) {
+          return { canToggle: false, title: 'You cannot block yourself.' };
+        }
+        if (targetUser.hostbot) {
+          return { canToggle: false, title: 'You cannot block the room bot.' };
+        }
+        if (targetUser.supermod) {
+          return { canToggle: false, title: 'You cannot block a supermod.' };
+        }
+        if (targetUser.mod) {
+          return { canToggle: false, title: 'You cannot block a moderator.' };
+        }
+        return { canToggle: true, title: 'Block' };
+      }
+
+      var role = userData.hostbot  ? 'Bot'
+               : userData.supermod ? 'Supermod'
+               : userData.mod      ? 'Mod'
+               : 'Member';
+
+      var facts = [];
+
+      // Name always at the top
+      facts.push({ label: 'Name', val: firetable.utilities.htmlEscape(userData.username || '') });
+
+      if (userData.joined) {
+        facts.push({ label: 'Joined', val: firetable.utilities.format_date(userData.joined) });
+      }
+
+      facts.push({ label: 'Role', val: role });
+
+      // Audio broadcasting
+      if (userData.idle && userData.idle.audio === 2) {
+        facts.push({ label: 'Audio', val: 'Broadcasting' });
+      }
+
+      // Cards (async — placeholder first)
+      facts.push({ label: 'Cards', val: '<span class="utt-cards-val">…</span>' });
+
+      // Session plays last (if currently on the deck)
+      if (firetable.tableData) {
+        for (var k in firetable.tableData) {
+          if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userid) {
+            facts.push({ label: 'Session plays', val: firetable.tableData[k].plays });
+            break;
+          }
+        }
+      }
+
+      var factsHtml = facts.map(function (f) {
+        return '<div class="utt-fact' + (f.cls ? ' ' + f.cls : '') + '"><span class="utt-label">' + f.label + '</span><span class="utt-val">' + f.val + '</span></div>';
+      }).join('');
+
+      $userTip.find('.utt-facts').html(factsHtml);
+      $userTip.attr('data-for', userid);
+
+      // Set CSS anchor on the clicked .prson element for CSS anchor positioning
+      if (_currentAnchorEl) _currentAnchorEl.style.removeProperty('anchor-name');
+      _currentAnchorEl = anchorEl;
+      anchorEl.style.setProperty('anchor-name', '--ft-user-anchor');
+
+      userTipEl.showPopover();
+      requestAnimationFrame(function () {
+        setUserTipTailSide(anchorEl);
+      });
+
+      // Suppress interaction hints for blocked users and own user
+      var isBlocked = !!(ftapi.blockedUsers && ftapi.blockedUsers[userid]);
+      var isSelf = userid === ftapi.uid;
+      var blockAction = getBlockActionState(userData, userid);
+      $userTip.toggleClass('is-blocked', isBlocked);
+      $userTip.toggleClass('is-self', isSelf);
+      $userTip.toggleClass('can-block', !isSelf);
+      $userTip.find('.utt-at-btn')
+        .toggleClass('is-disabled', isBlocked)
+        .attr('aria-disabled', isBlocked ? 'true' : 'false')
+        .attr('title', isBlocked ? 'Cannot @ mention blocked users. Unblock them first.' : '@ in chat');
+      $userTip.find('.utt-block-btn')
+        .toggleClass('is-disabled', !blockAction.canToggle)
+        .attr('aria-disabled', blockAction.canToggle ? 'false' : 'true')
+        .attr('title', blockAction.title);
+
+      // Mod/supermod actions
+      var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
+      var isMod = ownUser && (ownUser.mod || ownUser.supermod);
+      var isOnDeck = !!(firetable.tableData && (function () {
+        for (var k in firetable.tableData) {
+          if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userid) return true;
+        }
+      })());
+      var $deckBtn = $userTip.find('.utt-deck-btn');
+      $userTip.toggleClass('can-add-to-deck', !!(isMod && !isSelf));
+      $userTip.toggleClass('can-step-down', !!(isSelf && isOnDeck));
+      $deckBtn
+        .toggleClass('is-disabled', isOnDeck)
+        .attr('aria-disabled', isOnDeck ? 'true' : 'false')
+        .attr('title', isOnDeck ? 'Already on deck' : 'Add to deck');
+
+      // Resolve card count
+      if (_cardCountCache.hasOwnProperty(userid)) {
+        $userTip.find('.utt-cards-val').text(_cardCountCache[userid]);
+      } else {
+        firebase.app("firetable").database().ref("cards")
+          .orderByChild('owner').equalTo(userid)
+          .once("value")
+          .then(function (snap) {
+            var count = snap.numChildren();
+            _cardCountCache[userid] = count;
+            if ($userTip.attr('data-for') === userid) {
+              $userTip.find('.utt-cards-val').text(count);
+            }
+          });
+      }
+    }
+
+    $(userTipEl)
+      .on('click', '[data-action="chat-at"]', function () {
+        if ($(this).hasClass('is-disabled')) return;
+        var uid = $userTip.attr('data-for');
+        var userData = uid && ftapi.users && ftapi.users[uid];
+        if (!userData || !userData.username) return;
+        $('#newchat').val(function (i, val) { return val + '@' + userData.username + ' '; }).focus();
+        userTipEl.hidePopover();
+      })
+      .on('click', '[data-action="add-to-deck"]', function () {
+        if ($(this).hasClass('is-disabled')) return;
+        var uid = $userTip.attr('data-for');
+        var userData = uid && ftapi.users && ftapi.users[uid];
+        if (userData && userData.username) {
+          ftapi.actions.sendBotCommand('!add ' + userData.username);
+          userTipEl.hidePopover();
+        }
+      })
+      .on('click', '[data-action="step-down"]', function () {
+        ftapi.actions.sendBotCommand('!removeme');
+        userTipEl.hidePopover();
+      })
+      .on('click', '[data-action="toggle-block"]', function () {
+        if ($(this).hasClass('is-disabled')) return;
+        var uid = $userTip.attr('data-for');
+        var userData = uid && ftapi.users && ftapi.users[uid];
+        if (!userData || !userData.username) return;
+        var isCurrentlyBlocked = !!(ftapi.blockedUsers && ftapi.blockedUsers[uid]);
+        if (isCurrentlyBlocked) {
+          ftapi.actions.unblockUser(userData.username, function () {});
+          $userTip.removeClass('is-blocked').removeClass('no-interact');
+          $userTip.find('.utt-block-btn').attr('title', 'Block');
+        } else {
+          ftapi.actions.blockUser(userData.username, function () {});
+          $userTip.addClass('is-blocked').addClass('no-interact');
+          $userTip.find('.utt-block-btn').attr('title', 'Unblock');
+        }
+        userTipEl.hidePopover();
+      });
+
+    $('#allUsersWrap').on('click.ft-usertip', '.prson .ft-avatar', function () {
+      var uid = $(this).closest('.prson').attr('data-userid');
+      if (uid) showUserTip(this, uid);
+    });
+    $('#usersWaitlist').on('click.ft-usertip', '.waitlist-item .ft-avatar', function () {
+      var uid = $(this).closest('.waitlist-item').attr('data-userid');
+      if (uid) showUserTip(this, uid);
+    });
+    $(document).on('click.ft-usertip', '#deck .ondeck-slot:not(.empty), #ondeck .ondeck-slot:not(.empty)', function () {
+      var uid = $(this).data('djid');
+      if (uid) showUserTip(this, uid);
+    });
+  }
+
+  return { bind: bind, show: show, hide: hide };
+})();
+
+firetable.ui.setupMiscEvents = function () {
+
+  // ── Floating UI tooltips ──
+  firetable.ui.tooltip.bind();
+
+  // ── Mini mode discover/login tabs (pre-login only) ──
+  $("#minidiscover").bind("click", function () {
+    firetable.nav.setView('discover');
+  });
+  $("#minijoin").bind("click", function () {
+    firetable.nav.setView('playlists');
+  });
+
+  // ── Mini-mode tabs ──
+  $("#minimodeoptions .tab").bind("click", function () {
+    firetable.nav.setMobileTab($(this).attr('id'));
+  });
+
+  // ── Re-apply nav state when crossing breakpoints ──
+  window.matchMedia('(min-width: 640px)').addEventListener('change', function () {
+    firetable.nav.apply();
+  });
+  window.matchMedia('(min-width: 1024px)').addEventListener('change', function () {
+    firetable.nav.apply();
+  });
+
+  // ── Grab (steal to another playlist) ──
+  $("#grab").bind("click", function () {
+    var isHidden = $("#stealContain").is(":hidden");
+    if (isHidden) {
+      ftapi.lookup.allLists(function (allPlaylists) {
+        $("#stealpicker").html(
+          '<option value="-1">Where to?</option>' +
+          '<option value="0">Default Queue</option>'
+        );
+        for (var key in allPlaylists) {
+          if (allPlaylists.hasOwnProperty(key)) {
+            $("#stealpicker").append(
+              '<option value="' + key + '">' + allPlaylists[key].name + '</option>'
+            );
+          }
+        }
+        $('#grab').addClass('on');
+        var stealContainEl = document.getElementById('stealContain');
+        stealContainEl.style.visibility = 'hidden';
+        $("#stealContain").show();
+        firetable.ui.positionPopover(document.getElementById('grab'), stealContainEl, document.getElementById('stealArrow'));
+      });
+    } else {
+      $('#grab').removeClass('on');
+      $("#stealContain").hide();
+    }
+  });
+
+  // ── Skip popover ──
+  var skipPopoverEl = document.getElementById('skipPopover');
+  if (skipPopoverEl) {
+    skipPopoverEl.addEventListener('toggle', function (e) {
+      var btn = document.getElementById('skipTrigger');
+      if (!btn) return;
+      if (e.newState === 'open') {
+        btn.classList.add('on');
+        skipPopoverEl.style.visibility = 'hidden';
+        firetable.ui.positionPopover(btn, skipPopoverEl, document.getElementById('skipArrow'));
+      } else {
+        btn.classList.remove('on');
+      }
+    });
+  }
+
+  $(document)
+    .off('click.skipNowAction')
+    .on('click.skipNowAction', '#skipPopover .skipNowAction', function () {
+      ftapi.actions.sendBotCommand('!skip');
+      if (skipPopoverEl && skipPopoverEl.matches(':popover-open')) skipPopoverEl.hidePopover();
+    })
+    .off('click.skipVoteAction')
+    .on('click.skipVoteAction', '#skipPopover .skipVoteAction', function () {
+      ftapi.actions.sendBotCommand('!skipvote');
+      if (skipPopoverEl && skipPopoverEl.matches(':popover-open')) skipPopoverEl.hidePopover();
+    });
+
+  /** Stealpicker — add song to selected playlist (from #grab or histeal) */
+  $("#stealpicker").change(function () {
+    var dest = $("#stealpicker").val();
+    if (dest == "-1") return;
+    var src = firetable.stealTarget || (firetable.song && firetable.song.cid != 0 && {
+      cid: firetable.song.cid,
+      type: firetable.song.type,
+      title: firetable.song.artist + " - " + firetable.song.title,
+      img: (firetable.imgCache && firetable.imgCache[firetable.song.cid]) || ''
+    });
+    if (src) {
+      var $sourceBtn = firetable.stealSourceBtn;
+      if ($sourceBtn) {
+        $sourceBtn.removeClass('on');
+        firetable.stealSourceBtn = null;
+      } else {
+        $("#grab").removeClass('on');
+      }
+      var isNowPlaying = !!(firetable.song && firetable.song.cid != 0 &&
+        String(src.cid) === String(firetable.song.cid) &&
+        String(src.type) === String(firetable.song.type));
+      firetable.stealTarget = null;
+      var cuteid = ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
+      // Now-playing track goes to the bottom (Firebase push already appends there).
+      // Any other source (history, discover, search) goes to the top.
+      if (!isNowPlaying) {
+        if (!dest || dest === "0") {
+          ftapi.actions.moveTrackToTop(cuteid, ftapi.queueRef, firetable.preview, function(changePV) {
+            if (changePV) firetable.preview = changePV;
+          });
+        } else {
+          var plRef = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + String(dest) + "/list");
+          ftapi.actions.moveTrackToTop(cuteid, plRef);
+        }
+      }
+      $("#stealContain").hide();
+      // Show "added" feedback if the source button was inside a search result row
+      if ($sourceBtn) {
+        var $fb = $sourceBtn.closest('.pvbar').find('.search-feedback');
+        if ($fb.length) {
+          $fb.text('added').addClass('visible');
+          setTimeout(function () { $fb.removeClass('visible'); }, 2000);
+        }
+      }
+    }
+  });
+
+  // ── Close steal popover when clicking outside it ──
+  $(document).on('click', function (e) {
+    if ($("#stealContain").is(':hidden')) return;
+    if (!$(e.target).closest('#stealContain, .histeal, .queuetrack, #grab').length) {
+      if (firetable.stealSourceBtn) {
+        firetable.stealSourceBtn.removeClass('on');
+        firetable.stealSourceBtn = null;
+      } else {
+        $("#grab").removeClass('on');
+      }
+      firetable.stealTarget = null;
+      $("#stealContain").hide();
+    }
+  });
+
+  $(window).on('popstate', function () {
+    firetable.nav.restore();
+    firetable.nav.apply();
+  });
+
+  $("#history").bind("click", function () { firetable.nav.setView('history'); });
+
+  // ── Playlists button toggle ──
+  $("#playlists").bind("click", function () { firetable.nav.setView('playlists'); });
+
+  // ── Reload Track ──
+  $("#reloadtrack").bind("click", firetable.actions.reloadtrack);
+
+  // ── Volume ──
+  $("#volstatus").bind("click", function () {
+    firetable.actions.muteToggle();
+  });
+
+  // ── Modals ──
+  $(".openModal").bind("click", function () {
+    var modalContentID = $(this).attr('data-modal');
+    var targetTab = $(this).attr('data-tab');
+    document.getElementById(modalContentID).showModal();
+    if (targetTab) {
+      var $modal = $("#" + modalContentID);
+      $modal.find('.tab').removeClass('on');
+      $modal.find('.tabPanel').removeClass('active');
+      $modal.find('.tab[data-tab="' + targetTab + '"]').addClass('on');
+      $('#' + targetTab).addClass('active');
+    }
+  });
+  // ── Modal tab switching ──
+  $('#accountSettingsTabs').on('click', '.tab', function () {
+    var targetTab = $(this).attr('data-tab');
+    $('#accountSettingsTabs .tab').removeClass('on');
+    $(this).addClass('on');
+    $('#accountSettingsBox .tabPanel').removeClass('active');
+    $('#' + targetTab).addClass('active');
+  });
+  $(".closeModal").bind("click", function () {
+    var dlg = $(this).closest("dialog")[0];
+    if (dlg) dlg.close();
+    $("#plMachine").val("");
+  });
+  $("dialog").on("click", function (e) {
+    if (e.target === this) {
+      this.close();
+      $("#plMachine").val("");
+    }
+  });
+
+  // ── Card Case panel ──
+  $("#cardcase").bind("click", function () { firetable.nav.setView('cards'); });
+
+  // ── Discover / Fresh Produce panel ──
+  $("#discover-nav").bind("click", function () { firetable.nav.setView('discover'); });
+
+  // ── Emoji Picker ──
+  $("#pickerNav").on("click", "span", function () {
+    try {
+      firetable.emojis.sec($(this)[0].id);
+    } catch (s) { /* ignore */ }
+  });
+  $("#pickEmoji").bind("click", function () {
+    if ($("#emojiPicker").is(":hidden")) {
+      $(this).addClass('on');
+      $("#emojiPicker").slideDown(function () {
+        $('#pickerSearch').focus();
+      });
+      if (!firetable.pickerInit) {
+        (async function () {
+          twemoji.parse(document.getElementById("pickerResults"));
+          return true;
+        })();
+      }
+    } else {
+      $(this).removeClass('on');
+      $("#emojiPicker").slideUp(function () {
+        $('#pickerSearch').val('').trigger('change');
+        $('#newchat').focus();
+      });
+    }
+  });
+  $("#pickerSearch").on("change paste keyup", function () {
+    firetable.emojis.niceSearch($("#pickerSearch").val());
+  });
+  $("#pickerResults").on("click", "span", function () {
+    try {
+      var oldval = $("#newchat").val();
+      var newval = oldval + ":" + $(this).attr("title").trim() + ":";
+      $("#newchat").focus().val(newval);
+    } catch (s) { /* ignore */ }
+  });
+
+  // Close picker on Escape or click outside
+  function closeEmojiPicker() {
+    if (!$("#emojiPicker").is(":hidden")) {
+      $("#pickEmoji").removeClass('on');
+      $("#emojiPicker").slideUp(function () {
+        $('#pickerSearch').val('').trigger('change');
+        $('#newchat').focus();
+      });
+    }
+  }
+  $(document).on("keydown.emojiPicker", function (e) {
+    if (e.key === "Escape") closeEmojiPicker();
+  });
+  $(document).on("click.emojiPicker", function (e) {
+    if (!$(e.target).closest("#emojiPicker, #pickEmoji").length) closeEmojiPicker();
+  });
+
+  // ── Settings Toggles ──
+  $('#badoopToggle').change(function () {
+    firetable.debug && console.log("badoop " + (this.checked ? "on" : "off"));
+    localStorage[STORAGE.badoop] = this.checked;
+    firetable.playBadoop = this.checked;
+  });
+  $('#showImagesToggle').change(function () {
+    firetable.debug && console.log("show images " + (this.checked ? "on" : "off"));
+    localStorage[STORAGE.showImages] = this.checked;
+    firetable.showImages = this.checked;
+    var imageUrlRegex = /((http(s?):)([/|.|\w|\s|-])*\.(?:jpe?g|gif|png))/g;
+    if (this.checked) {
+      // Convert plain image links → inline images
+      $('#actualChat a[href]').not('.inlineImgLink').each(function () {
+        var url = $(this).attr('href');
+        if (url && imageUrlRegex.test(url)) {
+          var $img = $('<a class="inlineImgLink" target="_blank" tabindex="-1">' +
+            '<img src="' + url + '" class="inlineImage" />' +
+            '<span role="button" class="hideImage">&times;</span></a>').attr('href', url);
+          $(this).replaceWith($img);
+        }
+        imageUrlRegex.lastIndex = 0;
+      });
+    } else {
+      // Convert inline images → plain links
+      $('#actualChat a.inlineImgLink').each(function () {
+        var url = $(this).attr('href');
+        var $link = $('<a target="_blank" tabindex="-1"></a>').attr('href', url).text(url);
+        $(this).replaceWith($link);
+      });
+    }
+    firetable.utilities.scrollToBottom();
+  });
+  $('#mediaDisableToggle').change(function () {
+    firetable.debug && console.log("media disable " + (this.checked ? "on" : "off"));
+    localStorage[STORAGE.disableMedia] = this.checked;
+    firetable.disableMediaPlayback = this.checked;
+    if (this.checked) {
+      if (firetable.scLoaded) firetable.scwidget.pause();
+      if (firetable.ytLoaded) player.stopVideo();
+      firetable.ui.hidePlayerControls();
+    } else {
+      firetable.ui.showPlayerControls();
+      firetable.actions.reloadtrack();
+    }
+  });
+  $('#showAvatarsToggle').change(function () {
+    firetable.debug && console.log("show avatars " + (this.checked ? "on" : "off"));
+    localStorage[STORAGE.showAvatars] = this.checked;
+    firetable.showAvatars = this.checked;
+    if (this.checked) {
+      document.getElementById("actualChat").classList.remove("avatarsOff");
+    } else {
+      document.getElementById("actualChat").classList.add("avatarsOff");
+    }
+  });
+  $('#showSongAnnouncementsToggle').change(function () {
+    var wasAtBottom = firetable.utilities.isChatPrettyMuchAtBottom();
+    firetable.debug && console.log("show song announcements " + (this.checked ? "on" : "off"));
+    localStorage[STORAGE.showSongAnnouncements] = this.checked;
+    firetable.showSongAnnouncements = this.checked;
+    firetable.ui.applySongAnnouncementVisibility();
+    if (this.checked && wasAtBottom) {
+      firetable.utilities.scrollToBottom();
+    }
+  });
+  $('#desktopNotifyMentionsToggle').change(function () {
+    firetable.debug && console.log("dtnm " + (this.checked ? "on" : "off"));
+    localStorage[STORAGE.notifyMentions] = this.checked;
+    firetable.desktopNotifyMentions = this.checked;
+    if (this.checked && Notification && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+  });
+  // ── Screen Control button (cycles: sync → on → off) ──
+  $('#screenControl').on('click', function () {
+    var next = { sync: 'on', on: 'off', off: 'sync' };
+    var val = next[firetable.screenControl] || 'sync';
+    localStorage[STORAGE.screenControl] = val;
+    firetable.screenControl = val;
+    firetable.ui.updateScreenBtn(val);
+    if (val == 'off') {
+      firetable.utilities.screenUp();
+    } else if (val == 'on') {
+      firetable.utilities.screenDown();
+    } else if (val == 'sync') {
+      if (firetable.screenSyncPos) firetable.utilities.screenDown();
+      else firetable.utilities.screenUp();
+    }
+  });
+
+  // ── Avatar style picker ──
+  $('#avatarStylePicker').on('change', function () {
+    var val = $(this).val();
+    firetable.avatarStyle = val;
+    localStorage[STORAGE.avatarStyle] = val;
+    firebase.app("firetable").database().ref("users/" + ftapi.uid + "/avatarStyle").set(val)
+      .catch(function (err) { console.error("[firetable] Avatar style save failed:", err); });
+    $("#loggedInUser .ft-avatar").css("background-image",
+      "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname, null, val) + ")");
+  });
+
+  // ── Cancel Search / Return to Queue ──
+  $("#cancelqsearch").bind("click", function () {
+    $("#mainqueuestuff").css("display", "block");
+    $("#filterMachine").css("display", "block");
+    $("#searchMachine").css("display", "none");
+    $("#cancelqsearch").hide();
+    $("#qControlButtons").show();
+    $("#addbox").css("display", "none");
+    firetable.utilities.cancelSearchPreview();
+  });
+
+  // ── Add to Queue button (opens search panel) ──
+  $("#addToQueueBttn").bind("click", function () {
+    $("#mainqueuestuff").css("display", "none");
+    $("#filterMachine").css("display", "none");
+    $("#searchMachine").css("display", "block");
+    $("#addbox").css("display", "flex");
+    $("#cancelqsearch").show();
+    $("#qControlButtons").hide();
+    $("#plmanager").css("display", "none");
+  });
+};
+
+// ─── Last.fm Token Check ─────────────────────────────────────────────────────
+
+/**
+ * Check for a Last.fm auth token in the URL and exchange it for a session key.
+ * Also sets up the scrobble toggle link based on existing session.
+ * Called once from firetable.ui.init().
+ */
+firetable.ui.checkLastfmToken = function () {
+  var thingo = localStorage[STORAGE.lastfmSession];
+  if (thingo == "false") thingo = false;
+  if (thingo) {
+    firetable.lastfm.sk = thingo;
+    $("#scrobtoggle").html(
+      '<a onclick="firetable.lastfm.killSession()" href="#">Disconnect Lastfm Scrobbling</a>'
+    );
+  } else {
+    $("#scrobtoggle").html(
+      '<a href="http://www.last.fm/api/auth/?api_key=' + firetable.lastfm.key +
+      '&cb=' + window.location.href + '">Set up last.fm scrobbling</a>'
+    );
+  }
+
+  // Check if URL contains a token param (redirect from Last.fm auth)
+  var pattern = /[?&]token=/;
+  var URL = location.search;
+  if (pattern.test(URL) && !firetable.lastfm.sk) {
+    var queries = {};
+    $.each(document.location.search.substr(1).split('&'), function (c, q) {
+      var i = q.split('=');
+      queries[i[0].toString()] = i[1].toString();
+    });
+
+    var params = {
+      api_key: firetable.lastfm.key,
+      token: queries.token,
+      method: "auth.getSession"
+    };
+    var sig = firetable.lastfm.getApiSignature(params);
+    params.api_sig = sig;
+
+    var request_url = LASTFM_API_URL + '?' + serialize(params) + "&format=json";
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', request_url, true);
+    xhr.onload = function () { firetable.lastfm.newSession(xhr); };
+    xhr.onerror = firetable.lastfm._onAjaxError;
+    xhr.send();
+  }
+
+};
+
+// ─── Master UI Initializer ──────────────────────────────────────────────────
+
+/**
+ * Main UI initialization — called once after firetable.init() sets up Firebase + APIs.
+ * Orchestrates all sub-setup functions and restores persisted settings.
+ */
+firetable.ui.init = function () {
+  // Restore settings from localStorage
+  firetable.ui.initSettings();
+
+  // Check for Last.fm auth token / setup scrobble link
+  firetable.ui.checkLastfmToken();
+
+  // Initialize all event groups
+  firetable.ui.setupChatEvents();
+  firetable.ui.setupSearchEvents();
+  firetable.ui.setupPlaylistEvents();
+  firetable.ui.setupUserEvents();
+  firetable.ui.setupRoomEvents();
+  firetable.ui.setupMiscEvents();
+
+  // Restore nav state from URL / localStorage and apply to DOM
+  firetable.nav.restore();
+  firetable.nav.apply();
+
+  // Start drag-and-drop link detection
+  firetable.ui.LinkGrabber.start();
+
+  // Login form bindings
+  firetable.ui.loginEventsInit();
+
+  // Remove .content-loading from each panel when its first real item arrives
+  [
+    { inner: '#mainqueue',    outer: '#queuebox' },
+    { inner: '#thehistory',   outer: '#thehistoryWrap' },
+    { inner: '#thediscovers', outer: '#discover' },
+  ].forEach(function (pair) {
+    var inner = document.querySelector(pair.inner);
+    var outer = document.querySelector(pair.outer);
+    if (!inner || !outer) return;
+    var obs = new MutationObserver(function (mutations) {
+      if (mutations.some(function (m) {
+        return Array.prototype.some.call(m.addedNodes, function (n) {
+          return n.nodeType === 1;
+        });
+      })) {
+        outer.classList.remove('content-loading');
+        obs.disconnect();
+      }
+    });
+    obs.observe(inner, { childList: true });
+  });
+
+  // ── Deck placement: move #ondeck to People tab when stage is narrow ──
+  (function () {
+    var stageEl  = document.getElementById('djStage');
+    var deckEl   = document.getElementById('deck');  // stays in stage always
+    var peopleEl = document.getElementById('usersbox');
+    if (!stageEl || !deckEl || !peopleEl) return;
+
+    firetable.ui._deckIsNarrow = false;
+
+    firetable.ui.applyDeckPlacement = function () {
+      var ondeckEl = document.getElementById('ondeck');
+      if (!ondeckEl) return;
+      if (firetable.ui._deckIsNarrow) {
+        peopleEl.prepend(ondeckEl);
+        // Measure stageActions' right edge relative to the stage so the active
+        // DJ can be CSS-centered in the space to the right of those buttons.
+        var actionsEl = document.getElementById('stageActions');
+        if (actionsEl) {
+          var offset = actionsEl.getBoundingClientRect().right -
+                       stageEl.getBoundingClientRect().left;
+          stageEl.style.setProperty('--stageactions-right', offset + 'px');
+        }
+      } else {
+        deckEl.parentNode.insertBefore(ondeckEl, deckEl.nextSibling);
+        stageEl.style.removeProperty('--stageactions-right');
+      }
+    };
+
+    new ResizeObserver(function (entries) {
+      var narrow = entries[0].contentRect.width < 520;
+      if (narrow === firetable.ui._deckIsNarrow) return;
+      firetable.ui._deckIsNarrow = narrow;
+      firetable.ui.applyDeckPlacement();
+    }).observe(stageEl);
+  }());
+};
