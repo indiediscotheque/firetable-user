@@ -355,18 +355,19 @@ code {
 .tabs {
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 2%;
     width: 100%;
     overflow: hidden;
 }
 
 .tab {
-    flex: 1 1 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     height: auto;
     min-height: 2.5rem;
-    padding: 0.5em;
+    padding: var(--pad1) 2%;
     font-size: 0.7rem;
     font-weight: 700;
     line-height: 1;
@@ -658,16 +659,6 @@ code {
 }
 
 
-#viewnav {
-    display: flex;
-    align-items: center;
-    margin-left: var(--pad3);
-}
-
-#viewnav .header_icon [class*="material-symbols-"] {
-    font-size: 1.75rem;
-}
-
 /* ============================================
    Top Bar / Site Header
    ============================================ */
@@ -675,12 +666,9 @@ code {
     grid-area: head;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: var(--pad1) var(--pad3);
     color: #fff;
-}
-
-#topbarUtils {
-    display: contents; /* transparent to parent flex layout below 800px */
 }
 
 .ftlogo {
@@ -723,6 +711,12 @@ a.sociallogo[href] {
     background-position: center;
 }
 
+#topbarUtils {
+    display: flex;
+    gap: 0.33rem;
+    align-items: center;
+}
+
 #loggedInUser {
     margin-top: 0;
     cursor: pointer;
@@ -747,10 +741,6 @@ a.sociallogo[href] {
     background: none;
     border: 0;
     box-shadow: none;
-
-    &#cardcase i {
-        transform: rotate(180deg);
-    }
 }
 
 .header_icon [class*="material-symbols-"] {
@@ -761,12 +751,6 @@ a.sociallogo[href] {
 .header_icon:hover [class*="material-symbols-"] {
     color: white;
 }
-
-.header_icon.on [class*="material-symbols-"] {
-    color: white;
-}
-
-
 
 /* ============================================
    Main Grid Layout
@@ -870,11 +854,6 @@ a.sociallogo[href] {
     color: transparent;
 }
 
-#mainGrid.login #loggedInUser,
-#mainGrid.login #viewnav {
-    display: none;
-}
-
 /* On very short viewports (landscape mobile) hide the login form, show just the stage */
 @media only screen and (max-height: 400px) {
     #mainGrid.login {
@@ -886,19 +865,16 @@ a.sociallogo[href] {
     #mainGrid.login #login { display: none; }
 }
 
-/* Mobile: view selector lives in the mini-nav, not the header */
-#playlists,
-#history,
-#cardcase,
-#discover-nav {
-    display: none;
-}
-
 /* ============================================
    MiniMode Nav
    ============================================ */
 #minimodeoptions {
     grid-area: nav;
+}
+
+#sidepanel-tabs {
+    grid-area: sidenav;
+    display: none;
 }
 
 /* ============================================
@@ -976,7 +952,7 @@ a.sociallogo[href] {
     flex-direction: column;
     gap: var(--pad2);
     flex-shrink: 0;
-    padding: var(--pad2) var(--pad4);
+    padding: var(--pad3) var(--pad4) var(--pad2) var(--pad4);
     border-bottom: 1px solid var(--color-border);
 
     + #allUsers {
@@ -1001,7 +977,7 @@ a.sociallogo[href] {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--color-text-muted);
+    color: rgba(255, 255, 255, 0.66);
     margin-bottom: 0.1rem;
 
     & [class*="material-symbols-"] {
@@ -1713,10 +1689,6 @@ html .ui-button.ui-state-disabled:active {
     border-top-left-radius: 1.5rem;
     border-top-right-radius: 1.5rem;
     background: linear-gradient(to bottom, color-mix(in srgb, black 85%, var(--color-accent)), color-mix(in srgb, black 66%, var(--color-accent)));
-    box-shadow: 
-        inset 0 -4rem 8rem -8rem white, 
-        0 0 10rem color-mix(in srgb, var(--color-accent), black 95%), 
-        0 0 2rem color-mix(in srgb, var(--color-accent), black 80%);
 }
 
 #stageBackdrop {
@@ -1728,7 +1700,7 @@ html .ui-button.ui-state-disabled:active {
     background-position: center;
     background-size: cover;
     pointer-events: none;
-    opacity: 0.14;
+    opacity: 0.05;
 }
 
 /* Tunable fyre compositing mode for stronger integration with stage colors. */
@@ -1747,7 +1719,7 @@ html .ui-button.ui-state-disabled:active {
 }
 
 #usersbox > #ondeck {
-    padding: var(--pad4) var(--pad3) var(--pad2) var(--pad3);
+    padding: var(--pad2) var(--pad3);
     max-width: 100%;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
@@ -1780,7 +1752,7 @@ html .ui-button.ui-state-disabled:active {
     align-items: start;
     justify-content: center;
     gap: var(--pad2);
-    padding-inline: var(--pad3);
+    padding-inline: var(--pad2);
 }
 
 .ondeck-slot {
@@ -1850,7 +1822,6 @@ html .ui-button.ui-state-disabled:active {
 }
 
 .avtr {
-    display: none;
     position: absolute;
     z-index: 0;
     bottom: 1.4rem;
@@ -1863,12 +1834,6 @@ html .ui-button.ui-state-disabled:active {
 
 .avtr.animate {
     animation: MoveUpDown 1s linear infinite;
-}
-
-@container (width >= 420px) {
-    .avtr {
-        display: block;
-    }
 }
 
 .djplaque {
@@ -2197,6 +2162,7 @@ ul.lightrope li {
     position: relative;
     overflow: visible;
     min-height: 0;
+    min-width: 0;
 }
 
 #queuebox.drop-ready #queuelist {
@@ -2376,7 +2342,7 @@ ul.lightrope li {
 #mainqueue .previewicon {
     position: absolute;
     z-index: 1;
-    left: 0.2rem;
+    left: 0;
 }
 
 #queuelist .pvbar,
@@ -2397,8 +2363,8 @@ ul.lightrope li {
 #queuelist .q-art,
 #searchResults .q-art {
     flex-shrink: 0;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2rem;
+    height: 2rem;
     background-size: cover;
     background-position: center;
     background-color: var(--color-bg-t2);
@@ -2421,6 +2387,7 @@ ul.lightrope li {
 #searchResults .listwords {
     flex: 1;
     margin-left: var(--pad3);
+    font-size: 0.875rem;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
@@ -2445,6 +2412,7 @@ ul.lightrope li {
 
 #listpickerWrap {
     flex: 1;
+    min-width: 0;
 }
 
 #listpicker {
@@ -3066,7 +3034,7 @@ a.importLinkCheck {
 .chatText {
     position: relative;
     width: 100%;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 300;
     color: rgba(255, 255, 255, 0.8);
 }
@@ -3365,7 +3333,7 @@ img.emoji,
 
     #histFilterBar {
         flex-shrink: 0;
-        padding: var(--pad4) var(--pad3) var(--pad3) var(--pad3);
+        padding: 0 var(--pad3) var(--pad3) var(--pad3);
     }
 
     #histFilter {
@@ -3373,11 +3341,9 @@ img.emoji,
         padding: var(--pad2) var(--pad3);
         color: var(--color-text);
         font-size: 0.875rem;
-        background: var(--color-bg-s2);
-        border: 1px solid var(--color-border);
+        background: color-mix(var(--color-bg-s2) 85%, black);
         border-radius: var(--radius-md);
         outline: none;
-        box-sizing: border-box;
 
         &:focus-visible {
             border-color: var(--color-accent);
@@ -3572,7 +3538,7 @@ img.emoji,
     grid-area: content;
     display: none;
     overflow: auto;
-    padding: 1rem;
+    padding: 0 1rem 1rem 1rem;
 }
 @media only screen and (hover: hover) {
     #cardsWrap {
@@ -3619,7 +3585,7 @@ img.emoji,
     display: flex;
     flex-wrap: wrap;
     gap: var(--pad2);
-    padding: var(--pad4) var(--pad3) var(--pad6) var(--pad3);
+    padding: 0 var(--pad3) var(--pad6) var(--pad3);
     width: 100%;
     box-sizing: border-box;
 }
@@ -4669,35 +4635,30 @@ html#about body {
     #cardsWrap,
     #discover   { grid-area: view; }
 
-    /* Header view buttons are now visible */
-    #playlists,
-    #history,
-    #cardcase,
-    #discover-nav { display: block; }
-
-    /* Mini-nav view tabs are redundant at this size */
-    #mm-playlists,
-    #mm-history,
-    #mm-cards,
-    #mm-discover { display: none; }
+    /* Sidepanel tab bar: show at 640px+; hide chat/people from minimodeoptions */
+    #sidepanel-tabs { display: flex; }
+    #mmchat, #mmusrs { display: none; }
 
     /* Grid templates */
     #mainGrid,
     #mainGrid.mmqueue,
-    #mainGrid.mmchat {
-        grid-template-rows: auto auto 1fr;
+    #mainGrid.mmchat,
+    #mainGrid.mmusrs {
+        grid-template-rows: auto auto auto 1fr;
         grid-template-columns: 3fr 2fr;
         grid-template-areas:
-            "head  nav"
-            "stage chat"
-            "view  chat";
+            "head     sidenav"
+            "stage    chat"
+            "nav      chat"
+            "view     chat";
     }
 
     #mainGrid.mmusrs {
         grid-template-areas:
-            "head  nav"
-            "stage people"
-            "view  people";
+            "head     sidenav"
+            "stage    people"
+            "nav      people"
+            "view     people";
     }
 
     #mainGrid.login {
@@ -4720,6 +4681,11 @@ html#about body {
     #mainGrid.mmchat  #actualChat { display: flex; }
 
     #mainGrid.mmusrs  #usersbox   { display: flex; }
+
+    #minimodeoptions {
+        padding-top: var(--pad2);
+        padding-inline: var(--pad3);
+    }
 }
 
 /* ── max 799px: touch-only users list ── */
@@ -4735,169 +4701,28 @@ html#about body {
 
 }
 
-/* ── 800px: 3-column layout, header becomes vertical sidebar ── */
-@media only screen and (min-width: 800px) {
-    body.screen #albumArt {
-        opacity: 0;
-        transform: translateX(-1rem);
-        margin-left: calc(-1 * var(--np-art-size) - var(--pad1));
-        pointer-events: none;
-    }
-
-    body.screen #nowplaying {
-        gap: 0;
-    }
-
-    body.screen #screenBox {
-        transform: translateY(0);
-    }
-
-    body.screen #stageBackdrop {
-        display: none;
-    }
-
-    body.screen #screenover {
-        display: none;
-    }
-
-    body.screen #screenBox::after {
-        content: '';
-        position: absolute;
-        inset: 0 0 auto 0;
-        height: 60%;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent);
-        pointer-events: none;
-        z-index: 2;
-    }
-
-    #mainGrid,
-    #mainGrid.mmqueue,
-    #mainGrid.mmchat {
-        grid-template-rows: auto auto 1fr;
-        grid-template-columns: auto minmax(28rem, 1fr) minmax(18rem, 24rem);
-        grid-template-areas:
-            "head stage nav"
-            "head stage chat"
-            "head view  chat";
-    }
-
-    #mainGrid.mmusrs {
-        grid-template-areas:
-            "head stage  nav"
-            "head stage  people"
-            "head view   people";
-    }
-
-    #mainGrid.login {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr;
-        grid-template-areas:
-            "head"
-            "stage"
-            "login";
-    }
-
-    #mainGrid.login #topbar {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        padding: var(--pad1) var(--pad3);
-    }
-
-    #importPromptBox .modalContent {
-        width: 30rem;
-    }
-
-    #topbar {
-        display: grid;
-        grid-template-rows: subgrid;
-        grid-template-columns: 1fr;
-        padding-top: 0;
-        padding-bottom: 0;
-        justify-items: center;
-    }
-
-    #viewnav {
-        display: flex;
-        flex-direction: column;
-        margin-left: 0;
-        margin-top: var(--pad4);
-        grid-row: 3;
-        grid-column: 1;
-        align-self: start;
-        gap: var(--pad1);
-    }
-
-    #topbarUtils {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        grid-row: 3;
-        grid-column: 1;
-        align-self: end;
-    }
-
-    #topbarUtils .flexpacer {
-        display: none;
-    }
-
-    .header_icon {
-        margin-bottom: 0.5rem;
-    }
-
-    #mainGrid.login #queuebox,
-    #mainGrid.login #thehistoryWrap {
-        display: none;
-    }
-
-    #loggedInUser,
-    #roomlogo {
-        margin-right: 0;
-        margin-left: 0;
-    }
-
-    #loggedInUser {
-        margin-bottom: 1.5rem;
-    }
-
-    #roomlogo {
-        grid-row: 1;
-        align-self: start;
-        margin-block: 0.5rem;
-    }
-
-    #queuebox {
-        padding-top: var(--pad4);
-    }
-
-    #actualChat {
-        max-width: 28rem;
-    }
-
-    #djlistpickerWrap {
-        margin-inline: var(--pad4);
-    }
-
-    .chatText {
-        grid-column: 1 / 2;
-    }
-
-    #cardsWrap {
-        padding-top: var(--pad4);
-    }
-}
-
 /* ── 1024px: 4-column layout, all panels always visible ── */
 @media only screen and (min-width: 1024px) {
+    #sidepanel-tabs { display: none; }
+
     #mainGrid,
     #mainGrid.mmqueue,
     #mainGrid.mmchat,
     #mainGrid.mmusrs {
-        grid-template-rows: auto 1fr;
-        grid-template-columns: min-content min-content 20vw auto;
+        grid-template-rows: auto auto 1fr;
+        grid-template-columns: 24vw 46vw auto;
         grid-template-areas:
-            "head stage  people chat"
-            "head view   people chat";
+            "people  stage   chat"
+            "people  nav     chat"
+            "people  view    chat";
+    }
+
+    #topbar {
+        grid-area: people;
+        align-self: start;
+        position: relative;
+        z-index: 2;
+        padding: var(--pad3) var(--pad4);
     }
 
     /* At 1024px: chat/people panels always visible regardless of nav class.
@@ -4929,21 +4754,9 @@ html#about body {
         justify-self: center;
     }
 
-    #mainGrid #minimodeoptions {
-        display: none;
-    }
-
-    /* Stage wrapper + view panels: right-column sizing */
-    #stage,
-    #queuebox,
-    #thehistoryWrap,
-    #cardsWrap {
-        width: 46vw;
-        max-width: 56rem;
-        justify-self: flex-end;
-    }
-
+    /* Stage sizing */
     #stage {
+        max-width: 56rem;
         margin-top: 1.5rem;
     }
 
@@ -4979,8 +4792,12 @@ html#about body {
         display: flex;
         flex-direction: column;
         gap: var(--pad2) 0;
-        padding: var(--pad4) var(--pad4) var(--pad3);
+        padding: 0 var(--pad4) var(--pad3);
         border-bottom: 1px solid var(--color-border);
+    }
+
+    #ondeck ~ #allUsersWrap #usersWaitlist {
+        padding-top: var(--pad3);
     }
 
     .waitlist-label {
@@ -4998,12 +4815,8 @@ html#about body {
 
     .newChat { margin-right: 0; }
 
-    #viewnav {
-        grid-row: 2;
-    }
-
-    #topbarUtils {
-        grid-row: 2;
+    #usersbox {
+        padding-top: 5rem;
     }
 }
 

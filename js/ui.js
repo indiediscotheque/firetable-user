@@ -635,12 +635,6 @@ firetable.nav = {
     $g.removeClass('view-playlists view-history view-cards view-discover')
       .addClass('view-' + n.view);
 
-    // ── Header buttons (visible at 640px+) ──
-    $('#playlists').toggleClass('on',    n.view === 'playlists');
-    $('#history').toggleClass('on',      n.view === 'history');
-    $('#cardcase').toggleClass('on',     n.view === 'cards');
-    $('#discover-nav').toggleClass('on', n.view === 'discover');
-
     // ── Layout classes ──
     $g.removeClass('mmqueue mmchat mmusrs');
 
@@ -648,13 +642,19 @@ firetable.nav = {
       // 1024px+: chat AND people always visible (CSS overrides).
       // Still set a layout class so resizing down transitions smoothly.
       $g.addClass(n.side === 'people' ? 'mmusrs' : 'mmchat');
+      // Mini-mode: mark active view tab; sidepanel-tabs: mark active side
+      $('#minimodeoptions .tab').removeClass('on');
+      $('#' + n._viewTabMap[n.view]).addClass('on');
+      $('#sidepanel-tabs .tab').removeClass('on');
+      $('#sp-' + n.side).addClass('on');
     } else if (isMd) {
       // 640px–1023px: side panel = chat or people
       $g.addClass(n.side === 'people' ? 'mmusrs' : 'mmchat');
-      // Mini-mode shows only Chat / People tabs at this size
+      // Mini-mode: mark active view tab; sidepanel-tabs: mark active side
       $('#minimodeoptions .tab').removeClass('on');
-      $('#mmusrs').toggleClass('on', n.side === 'people');
-      $('#mmchat').toggleClass('on',  n.side === 'chat');
+      $('#' + n._viewTabMap[n.view]).addClass('on');
+      $('#sidepanel-tabs .tab').removeClass('on');
+      $('#sp-' + n.side).addClass('on');
     } else {
       // Mobile: one panel at a time
       if (n.mobileSection === 'people') {
@@ -1085,6 +1085,13 @@ firetable.ui.setupMiscEvents = function () {
   // ── Mini-mode tabs ──
   $("#minimodeoptions .tab").bind("click", function () {
     firetable.nav.setMobileTab($(this).attr('id'));
+  });
+
+  // ── Side-panel tabs (Chat / People at 640px+) ──
+  $("#sidepanel-tabs .tab").bind("click", function () {
+    var id = $(this).attr('id');
+    if (id === 'sp-chat') firetable.nav.setSide('chat');
+    else if (id === 'sp-people') firetable.nav.setSide('people');
   });
 
   // ── Re-apply nav state when crossing breakpoints ──
