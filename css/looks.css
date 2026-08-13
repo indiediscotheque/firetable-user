@@ -1943,6 +1943,28 @@ html .ui-button.ui-state-disabled:active {
     background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.15));
 }
 
+body.screen #screenBox {
+    transform: translateY(0);
+}
+
+body.screen #stageBackdrop {
+    display: none;
+}
+
+body.screen #screenover {
+    display: none;
+}
+
+body.screen #screenBox::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 60%;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent);
+    pointer-events: none;
+    z-index: 2;
+}
+
 .lightrope {
     text-align: center;
     white-space: nowrap;
@@ -4638,6 +4660,18 @@ html#about body {
     /* Sidepanel tab bar: show at 640px+; hide chat/people from minimodeoptions */
     #sidepanel-tabs { display: flex; }
     #mmchat, #mmusrs { display: none; }
+
+    /* Screen mode: hide album art and collapse nowplaying gap */
+    body.screen #albumArt {
+        opacity: 0;
+        transform: translateX(-1rem);
+        margin-left: calc(-1 * var(--np-art-size) - var(--pad1));
+        pointer-events: none;
+    }
+
+    body.screen #nowplaying {
+        gap: 0;
+    }
 
     /* Grid templates */
     #mainGrid,
