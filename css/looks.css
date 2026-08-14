@@ -285,11 +285,8 @@ button:focus-visible {
 }
 
 code {
-    display: inline-block;
-    padding: 0.1em 0.2em;
-    font: 0.75rem Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace;
-    color: var(--color-text);
-    background-color: rgba(123, 123, 123, 0.5);
+    font-family: "Roboto Mono", monospace;
+    color: color-mix(var(--color-accent), var(--color-text));
 }
 
 /* ============================================
@@ -3058,6 +3055,7 @@ a.importLinkCheck {
     width: 100%;
     font-size: 0.875rem;
     font-weight: 300;
+    line-height: 1.4;
     color: rgba(255, 255, 255, 0.8);
 }
 
