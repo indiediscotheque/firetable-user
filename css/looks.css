@@ -4607,6 +4607,17 @@ html#about body {
     display: flex;
 }
 
+/* Bus: hidden unless self is on deck */
+.utt-bus-btn {
+    display: none;
+}
+#ft-user-tip.can-step-down .utt-bus-btn {
+    display: flex;
+}
+#ft-user-tip.departure-on .utt-bus-btn {
+    color: var(--color-accent);
+}
+
 /* Step down: hidden unless self is on deck */
 .utt-stepdown-btn {
     display: none;
