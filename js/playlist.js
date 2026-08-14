@@ -1135,6 +1135,7 @@ firetable.ui.setupPlaylistEvents = function () {
         val,
         $pvbar.attr('data-histid')
       );
+      $pvbar.attr('data-tag', val);
       document.getElementById('tagEditorPopover').hidePopover();
     }
   });
