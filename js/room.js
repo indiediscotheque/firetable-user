@@ -244,62 +244,73 @@ firetable.ui.setupRoomEvents = function () {
     var isSelfOnDeck = false;
 
     if (data) {
-      var countr = 0;
+      // Collect all DJs in Firebase's natural for-in order.
+      // The bot controls slot assignment and playdex; for-in in V8 preserves
+      // Firebase's child ordering, so activeIdx correctly indexes into allDjs.
+      // Do NOT sort by key — the bot may use non-push-key schemes (numeric slots,
+      // user IDs, etc.) where key order ≠ queue order.
+      var allDjs = [];
       for (var key in data) {
         if (!data.hasOwnProperty(key)) continue;
         var dj = data[key];
         if (dj.id === ftapi.uid) isSelfOnDeck = true;
+        allDjs.push({ tableKey: key, id: dj.id, name: dj.name, plays: dj.plays, removeAfter: dj.removeAfter });
+      }
 
-        var isGhost = !!(ftapi.users !== null && typeof ftapi.users === 'object' && !ftapi.users[dj.id]);
-        var isSelf = dj.id === ftapi.uid;
+      if (activeIdx < allDjs.length) {
+        var activeEntry = allDjs[activeIdx];
+        var key = activeEntry.tableKey;
+        var djId = activeEntry.id;
+        var djName = activeEntry.name;
+        var djPlays = activeEntry.plays;
+
+        var isGhost = !!(ftapi.users !== null && typeof ftapi.users === 'object' && !ftapi.users[djId]);
+        var isSelf = djId === ftapi.uid;
         var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
         var isMod = ownUser && (ownUser.mod || ownUser.supermod);
-        var isHostbot = !!(ftapi.users && ftapi.users[dj.id] && ftapi.users[dj.id].hostbot);
+        var isHostbot = !!(ftapi.users && ftapi.users[djId] && ftapi.users[djId].hostbot);
         var showBtn = isSelf || isMod;
         var showDeparture = isSelf && !isHostbot;
         var btnIcon = isSelf ? 'close' : 'person_remove';
         var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
         var actionBtn = showBtn
-          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + dj.id + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
+          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + djId + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
           : '';
         var departureIndicator;
         if (showDeparture) {
-          var djDisplayName = firetable.utilities.htmlEscape(dj.name);
-          var hasPending = _pendingDeparture.hasOwnProperty(dj.id);
-          var removeAfterValue = hasPending ? _pendingDeparture[dj.id] : dj.removeAfter;
-          if (hasPending && !!dj.removeAfter === !!_pendingDeparture[dj.id]) {
-            delete _pendingDeparture[dj.id];
+          var djDisplayName = firetable.utilities.htmlEscape(djName);
+          var hasPending = _pendingDeparture.hasOwnProperty(djId);
+          var removeAfterValue = hasPending ? _pendingDeparture[djId] : activeEntry.removeAfter;
+          if (hasPending && !!activeEntry.removeAfter === !!_pendingDeparture[djId]) {
+            delete _pendingDeparture[djId];
           }
           var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + djDisplayName + ' step down after their next play';
           var departureTitleOn  = isSelf ? "Don't step down after your next play" : "Don't have " + djDisplayName + ' step down after their next play';
           var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
-          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + dj.id + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
-        } else if (dj.removeAfter) {
+          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
+        } else if (activeEntry.removeAfter) {
           departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down after this song">departure_board</span>';
         } else {
           departureIndicator = '';
         }
 
-        if (countr === activeIdx) {
-          deckHtml = '<div id="spt0" class="spot' + (isGhost ? ' ghost' : '') + '">' +
-            '<div class="avtr animate" id="avtr0" style="background-image: url(' +
-            firetable.utilities.avatarURL(dj.id, dj.name) + ');"></div>' +
-            '<div id="djthing0" class="djplaque djActive">' +
-            '<div class="djname">' + firetable.utilities.htmlEscape(dj.name) + '</div>' +
-            departureIndicator + actionBtn +
-            '<div class="playcount">' + dj.plays + '/<span id="plimit0">' + firetable.playlimit + '</span></div>' +
-            '</div></div>';
-        } else {
-          onDeckDjs.push({ tableKey: key, id: dj.id, name: dj.name, plays: dj.plays });
-        }
-        countr++;
+        deckHtml = '<div id="spt0" class="spot' + (isGhost ? ' ghost' : '') + '">' +
+          '<div class="avtr animate" id="avtr0" style="background-image: url(' +
+          firetable.utilities.avatarURL(djId, djName) + ');"></div>' +
+          '<div id="djthing0" class="djplaque djActive">' +
+          '<div class="djname">' + firetable.utilities.htmlEscape(djName) + '</div>' +
+          departureIndicator + actionBtn +
+          '<div class="playcount">' + djPlays + '/<span id="plimit0">' + firetable.playlimit + '</span></div>' +
+          '</div></div>';
       }
 
-      // Sort by Firebase table key: push keys are lexicographically time-ordered,
-      // so a DJ who re-joined (newer key) appears after those already waiting.
-      onDeckDjs.sort(function (a, b) {
-        return a.tableKey < b.tableKey ? -1 : a.tableKey > b.tableKey ? 1 : 0;
-      });
+      // Build on-deck in rotation order: the DJ immediately after the active one
+      // goes first, wrapping around so the previously-active DJ is always last.
+      for (var j = 1; j < allDjs.length; j++) {
+        var rotIdx = (activeIdx + j) % allDjs.length;
+        var entry = allDjs[rotIdx];
+        onDeckDjs.push({ tableKey: entry.tableKey, id: entry.id, name: entry.name, plays: entry.plays });
+      }
 
       if (!deckHtml) {
         var stepUpBtn = isSelfOnDeck

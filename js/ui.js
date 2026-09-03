@@ -988,7 +988,8 @@ firetable.ui.tooltip = (function () {
         }
       })());
       var $deckBtn = $userTip.find('.utt-deck-btn');
-      $userTip.toggleClass('can-add-to-deck', !!(isMod && !isSelf));
+      $userTip.toggleClass('can-add-to-deck', !!(isMod && !isSelf && !isOnDeck));
+      $userTip.toggleClass('can-remove-from-deck', !!(isMod && !isSelf && isOnDeck));
       $userTip.toggleClass('can-step-down', !!(isSelf && isOnDeck));
       var departureScheduled = false;
       if (isSelf && isOnDeck && firetable.tableData) {
@@ -1037,6 +1038,14 @@ firetable.ui.tooltip = (function () {
         var userData = uid && ftapi.users && ftapi.users[uid];
         if (userData && userData.username) {
           ftapi.actions.sendBotCommand('!add ' + userData.username);
+          userTipEl.hidePopover();
+        }
+      })
+      .on('click', '[data-action="remove-from-deck"]', function () {
+        var uid = $userTip.attr('data-for');
+        var userData = uid && ftapi.users && ftapi.users[uid];
+        if (userData && userData.username) {
+          ftapi.actions.sendBotCommand('!remove ' + userData.username);
           userTipEl.hidePopover();
         }
       })

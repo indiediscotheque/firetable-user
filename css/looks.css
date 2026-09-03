@@ -4597,11 +4597,19 @@ html#about body {
     display: none;
 }
 
-/* Add to deck: hidden unless mod */
+/* Add to deck: hidden unless mod and user is not already on deck */
 .utt-deck-btn {
     display: none;
 }
 #ft-user-tip.can-add-to-deck .utt-deck-btn {
+    display: flex;
+}
+
+/* Remove from deck: hidden unless mod and user is already on deck */
+.utt-remove-deck-btn {
+    display: none;
+}
+#ft-user-tip.can-remove-from-deck .utt-remove-deck-btn {
     display: flex;
 }
 
