@@ -401,6 +401,7 @@ firetable.ui.setupRoomEvents = function () {
   function setNowPlayingAlbumArt(imageUrl, animate) {
     var artEl = document.getElementById('albumArt');
     if (!artEl) return;
+    artEl.classList.remove('skel');
 
     var currentUrl = artEl.dataset.albumArtCurrent || '';
     var nextUrl = imageUrl || '';
@@ -648,6 +649,8 @@ firetable.ui.setupRoomEvents = function () {
       // where firetable.song hasn't been set to the new song yet.
       var displayTitle  = (firetable.song && firetable.song.cid === data.cid) ? firetable.song.title  : nextTitle;
       var displayArtist = (firetable.song && firetable.song.cid === data.cid) ? firetable.song.artist : nextArtist;
+      document.getElementById('track').classList.remove('skel');
+      document.getElementById('artist').classList.remove('skel');
       $("#track").text(displayTitle);
       $("#artist").text(displayArtist);
       $("#songlink").attr("href", data.url);

@@ -1578,6 +1578,7 @@ firetable.ui.init = function () {
         });
       })) {
         outer.classList.remove('content-loading');
+        inner.querySelectorAll('.ft-skeleton').forEach(function (el) { el.remove(); });
         obs.disconnect();
       }
     });

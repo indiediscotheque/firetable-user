@@ -37,6 +37,11 @@
     to { opacity: 0.5; }
 }
 
+@keyframes skel-shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+}
+
 @keyframes fire {
     0% { background-position: center 0px, center 0px, 50% 100%, center center; }
     100% { background-position: center -500px, center -650px, 50% 100%, center center; }
@@ -288,6 +293,48 @@ code {
     font-family: "Roboto Mono", monospace;
     color: color-mix(var(--color-accent), var(--color-text));
 }
+
+/* ============================================
+   Skeleton Loading States
+   ============================================ */
+
+/* Shimmer effect applied directly to elements that are loading */
+.skel {
+    background: linear-gradient(
+        90deg,
+        var(--color-bg-t1) 0%,
+        var(--color-bg-t2) 35%,
+        var(--color-bg-t3) 50%,
+        var(--color-bg-t2) 65%,
+        var(--color-bg-t1) 100%
+    ) !important;
+    background-size: 400% 100% !important;
+    animation: skel-shimmer 1.6s ease-in-out infinite;
+    color: transparent !important;
+    pointer-events: none;
+    transition: none !important;
+}
+
+.skel * { visibility: hidden; }
+
+/* Wrapper for skeleton placeholder rows */
+.ft-skeleton {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Ensure skeleton bars inside .ft-skeleton rows have no shimmer of their own
+   (the row container drives the animation via background) */
+.ft-skeleton .skel-bar {
+    background: var(--color-bg-t2);
+    border-radius: var(--radius-sm);
+    height: 0.75rem;
+}
+
+/* Size helpers for skeleton rows */
+#albumArt.skel { border-radius: var(--radius-md); }
+#track.skel { min-height: 1.125em; max-width: 14rem; border-radius: var(--radius-sm); }
+#artist.skel { min-height: 0.875em; max-width: 9rem; border-radius: var(--radius-sm); }
 
 /* ============================================
    Shared Components
@@ -663,7 +710,7 @@ code {
     grid-area: head;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: var(--pad1);
     padding: var(--pad1) var(--pad3);
     color: #fff;
 }
@@ -720,6 +767,11 @@ a.sociallogo[href] {
     text-decoration: none;
 }
 
+#mainGrid.login #loggedInUser,
+#mainGrid.pre-auth #loggedInUser {
+    display: none;
+}
+
 #loggedInUser .ft-avatar {
     width: 2rem;
     height: 2rem;
@@ -772,14 +824,7 @@ a.sociallogo[href] {
     display: contents;
 }
 
-/* Whole-site fade-in after Firebase auth resolves */
-#mainGrid {
-    transition: opacity 600ms ease;
-}
-#mainGrid.pre-auth {
-    opacity: 0;
-    pointer-events: none;
-}
+/* Skeleton states handle loading UX — grid paints immediately from first paint */
 
 /* ── Content-area loading spinner (visible after 500 ms if data hasn't arrived) ── */
 .content-loading {
@@ -843,6 +888,7 @@ a.sociallogo[href] {
 }
 
 #mainGrid.login #login {
+    display: block;
     max-width: 36rem;
     margin: 0 auto;
 }
@@ -3757,6 +3803,7 @@ img.emoji,
 }
 
 #login {
+    display: none;
     grid-area: login;
     padding: var(--pad4);
     overflow: auto;
@@ -3784,13 +3831,14 @@ img.emoji,
 
 .inputline {
     display: flex;
-    flex-direction: column;
-    margin-top: 1rem;
-    max-width: 20rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--pad2);
+    max-width: 18rem;
 }
 
 .inputline > * {
-    margin: var(--pad1) 0;
+    margin: var(--pad2) 0;
 }
 
 .formlinks {
@@ -4776,6 +4824,11 @@ html#about body {
         padding: var(--pad3) var(--pad4);
     }
 
+    #usersbox {
+        /* clear the overlapping topbar */
+        padding-top: calc(3rem + var(--pad3) * 2);
+    }
+
     /* At 1024px: chat/people panels always visible regardless of nav class.
        The active view panel is still governed by view-class (inherited from 640px rules). */
     #mainGrid.mmusrs  #actualChat,
@@ -4786,29 +4839,26 @@ html#about body {
     }
 
     #mainGrid.login {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr;
+        grid-template-columns: 24vw 46vw auto;
+        grid-template-rows: auto 1fr;
         grid-template-areas:
-            "head"
-            "stage"
-            "login";
+            "people  stage ."
+            "people  login .";
     }
 
     #mainGrid.login #topbar {
         display: flex;
-        flex-direction: row;
     }
 
     #mainGrid.login #stage {
         width: 100%;
-        max-width: 36rem;
-        justify-self: center;
+        max-width: none;
+        justify-self: unset;
     }
 
     /* Stage sizing */
     #stage {
         max-width: 56rem;
-        margin-top: 1.5rem;
     }
 
     #djStage {
