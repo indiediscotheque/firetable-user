@@ -46,7 +46,8 @@ function renderHistoryItem(data, $template, containerSel) {
            .attr("data-key", pkey)
            .attr("data-histid", data.histID)
            .attr("data-cid", data.cid)
-           .attr("data-type", data.type);
+           .attr("data-type", data.type)
+           .attr("data-tag", data.artist + " - " + data.title);
 
   // Preview button
   $histItem.find('.previewicon').attr('id', "pv" + pkey).on('click', function () {
@@ -81,7 +82,7 @@ function renderHistoryItem(data, $template, containerSel) {
     } else {
       firetable.actions.editTagsPrompt(
         $pvbar.attr('data-key'),
-        data.artist + " - " + data.title,
+        $pvbar.attr('data-tag') || (data.artist + " - " + data.title),
         this
       );
     }

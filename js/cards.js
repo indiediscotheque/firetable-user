@@ -445,7 +445,7 @@ firetable.actions.displayCard = function (data, chatid) {
           finishCardRender();
         }
       };
-      legAvatar.src = firetable.utilities.avatarURL(data.djid, data.djname, "175x175");
+      legAvatar.src = firetable.utilities.avatarURL(data.djid, data.djname, "175x175", "robohash:" + set);
     };
 
     // Legacy special edition overlays
@@ -518,7 +518,7 @@ firetable.actions.displayCard = function (data, chatid) {
           };
           legId9.src = 'img/id9.png';
         };
-        legRobot.src = firetable.utilities.avatarURL(data.djid, data.djname, "110x110");
+          legRobot.src = firetable.utilities.avatarURL(data.djid, data.djname, "110x110", "robohash:" + set);
       };
       legArnold.src = 'img/arnold.png';
 
@@ -897,7 +897,7 @@ firetable.actions.displayCard = function (data, chatid) {
       avatarReady = true;
       tryDrawHero();
     };
-    avatarImg.src = firetable.utilities.avatarURL(data.djid, data.djname, "175x175");
+    avatarImg.src = firetable.utilities.avatarURL(data.djid, data.djname, "175x175", "robohash:" + set);
 
     drawAlbumImage(function (loadedAlbumImg) {
       if (loadedAlbumImg) albumImg = loadedAlbumImg;
