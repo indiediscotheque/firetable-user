@@ -17,8 +17,8 @@
 	<div id="mainGrid" class="pre-auth">
 		<header id="topbar">
 			<div id="roomlogo" title="Indie Discotheque" aria-label="Indie Discotheque"></div>
+			<div class="flexpacer"></div>
 			<div id="topbarUtils">
-				<div class="flexpacer"></div>
 				<button id="socialTrigger" type="button" role="button" class="header_icon" aria-label="Community" popovertarget="socialPopover" style="anchor-name: --tip-socialTrigger" aria-describedby="tip-socialTrigger">
 					<i class="material-symbols-outlined">share</i>
 				</button>
@@ -26,7 +26,7 @@
 				<a id="roomInfo" class="header_icon" aria-label="About" target="_blank" href="about" style="anchor-name: --tip-roomInfo" aria-describedby="tip-roomInfo"><i class="material-symbols-outlined">&#xE887;</i></a>
 				<span id="tip-roomInfo" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-roomInfo">About</span>
 				<div id="loggedInUser" class="openModal header_icon" data-modal="accountSettingsBox" data-tab="profile-tab" aria-label="Profile &amp; Settings" style="anchor-name: --tip-loggedInUser" aria-describedby="tip-loggedInUser">
-					<div class="ft-avatar"></div>
+						<div class="ft-avatar skel"></div>
 				</div>
 				<span id="tip-loggedInUser" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-loggedInUser">Profile &amp; Settings</span>
 				<div id="reconnecting">Reconnecting...</div>
@@ -128,10 +128,10 @@
 		</div>
 
 		<div id="nowplaying">
-			<div id="albumArt"></div>
+			<div id="albumArt" class="skel"></div>
 			<div id="npText">
-				<div id="track">Loading firetable...</div>
-				<div id="artist"></div>
+				<div id="track" class="skel">Loading firetable...</div>
+				<div id="artist" class="skel">&nbsp;</div>
 				<div id="plays">
 					<div id="playCount"></div>
 					<div id="firstPlay"></div>
@@ -190,6 +190,44 @@
 							<div id="chattxtKEY" class="chatText"></div>
 						</div>
 					</div>
+					<div class="newChat ft-skeleton" aria-hidden="true">
+						<div class="ft-avatar skel"></div>
+						<div class="chatContent">
+							<div class="chatHead"><div class="chatName skel" style="width:5rem;height:0.7rem;margin:0.2rem 0"></div></div>
+							<div class="chatText skel" style="height:0.75rem;max-width:18rem;margin:0.25rem 0"></div>
+							<div class="chatText skel" style="height:0.75rem;max-width:13rem;margin:0.25rem 0"></div>
+						</div>
+					</div>
+					<div class="newChat ft-skeleton" aria-hidden="true">
+						<div class="ft-avatar skel"></div>
+						<div class="chatContent">
+							<div class="chatHead"><div class="chatName skel" style="width:7rem;height:0.7rem;margin:0.2rem 0"></div></div>
+							<div class="chatText skel" style="height:0.75rem;max-width:22rem;margin:0.25rem 0"></div>
+						</div>
+					</div>
+					<div class="newChat ft-skeleton" aria-hidden="true">
+						<div class="ft-avatar skel"></div>
+						<div class="chatContent">
+							<div class="chatHead"><div class="chatName skel" style="width:4rem;height:0.7rem;margin:0.2rem 0"></div></div>
+							<div class="chatText skel" style="height:0.75rem;max-width:16rem;margin:0.25rem 0"></div>
+							<div class="chatText skel" style="height:0.75rem;max-width:11rem;margin:0.25rem 0"></div>
+						</div>
+					</div>
+					<div class="newChat ft-skeleton" aria-hidden="true">
+						<div class="ft-avatar skel"></div>
+						<div class="chatContent">
+							<div class="chatHead"><div class="chatName skel" style="width:6rem;height:0.7rem;margin:0.2rem 0"></div></div>
+							<div class="chatText skel" style="height:0.75rem;max-width:20rem;margin:0.25rem 0"></div>
+						</div>
+					</div>
+					<div class="newChat ft-skeleton" aria-hidden="true">
+						<div class="ft-avatar skel"></div>
+						<div class="chatContent">
+							<div class="chatHead"><div class="chatName skel" style="width:8rem;height:0.7rem;margin:0.2rem 0"></div></div>
+							<div class="chatText skel" style="height:0.75rem;max-width:14rem;margin:0.25rem 0"></div>
+							<div class="chatText skel" style="height:0.75rem;max-width:9rem;margin:0.25rem 0"></div>
+						</div>
+					</div>
 				</div>
 			</div>
 			<div id="chatbottom">
@@ -245,12 +283,25 @@
 					<div id="usersBot"></div>
 					<div id="usersSuper"></div>
 					<div id="usersMod"></div>
-					<div id="usersRegular"></div>
+					<div id="usersRegular">
+						<div class="prson ft-skeleton" aria-hidden="true">
+							<div class="ft-avatar skel"></div>
+							<div class="prsnNameRole"><span class="prsnName skel" style="display:inline-block;width:5rem;height:0.75rem"></span></div>
+						</div>
+						<div class="prson ft-skeleton" aria-hidden="true">
+							<div class="ft-avatar skel"></div>
+							<div class="prsnNameRole"><span class="prsnName skel" style="display:inline-block;width:7rem;height:0.75rem"></span></div>
+						</div>
+						<div class="prson ft-skeleton" aria-hidden="true">
+							<div class="ft-avatar skel"></div>
+							<div class="prsnNameRole"><span class="prsnName skel" style="display:inline-block;width:4rem;height:0.75rem"></span></div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
 
-		<div id="queuebox" class="content-loading">
+		<div id="queuebox">
 			<div class="queuetop">
 				<div id="queueControls">
 					<div id="listpickerWrap">
@@ -348,8 +399,9 @@
 								<a class="material-symbols-outlined tracklink-btn" target="_blank" href="" title="Open in new tab">open_in_new</a>
 								<i role="button" class="material-symbols-outlined deletesong" title="Delete track">delete</i>
 							</div>
-						</div>
-
+						</div>						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:14rem"></div></div>
+						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:10rem"></div></div>
+						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:17rem"></div></div>
 					</div>
 				</div>
 				<div id="addbox">
@@ -368,7 +420,7 @@
 			</div>
 		</div>
 
-		<div id="thehistoryWrap" class="content-loading">
+		<div id="thehistoryWrap">
 			<div id="histFilterBar">
 				<input type="search" id="histFilter" placeholder="Filter recents..." autocomplete="off" spellcheck="false">
 			</div>
@@ -383,6 +435,9 @@
 					<a class="material-symbols-outlined tracklink-btn" target="_blank" href="" title="Track link">open_in_new</a>
 					<button class="histeal material-symbols-outlined" id="apvX0" title="Add to playlist">&#xE03B;</button>
 				</div>
+				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:15rem"></div></div>
+				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:11rem"></div></div>
+				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:18rem"></div></div>
 			</div>
 		</div>
 
@@ -392,7 +447,7 @@
 
 		</div><!-- /#appShell -->
 
-		<div id="discover" class="scroll-view content-loading">
+		<div id="discover" class="scroll-view">
 			<div id="thediscovers">
 				<div class="pvbar" id="pvbar0">
 					<div class="pv-art discart">
@@ -400,7 +455,8 @@
 					</div>
 					<div class="qtxt">
 						<div class="listwords">
-							<a target="_blank" href="" class="histlink"></a>
+							<div class="fresh-title"></div>
+							<a class="tracklink-btn" target="_blank" href="" title="Open on source"></a>
 							<button class="histeal butt graybutt material-symbols-outlined" id="apvX0">&#xE03B;</button>
 						</div>
 						<div class="fresh-meta">
@@ -411,6 +467,9 @@
 						</div>
 					</div>
 				</div>
+				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2.5rem;height:2.5rem;flex-shrink:0;border-radius:3px"></div><div style="flex:1;min-width:0"><div class="skel" style="height:0.75rem;max-width:15rem;margin-bottom:0.35rem"></div><div class="skel" style="height:0.65rem;max-width:8rem"></div></div></div>
+				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2.5rem;height:2.5rem;flex-shrink:0;border-radius:3px"></div><div style="flex:1;min-width:0"><div class="skel" style="height:0.75rem;max-width:11rem;margin-bottom:0.35rem"></div><div class="skel" style="height:0.65rem;max-width:6rem"></div></div></div>
+				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2.5rem;height:2.5rem;flex-shrink:0;border-radius:3px"></div><div style="flex:1;min-width:0"><div class="skel" style="height:0.75rem;max-width:18rem;margin-bottom:0.35rem"></div><div class="skel" style="height:0.65rem;max-width:9rem"></div></div></div>
 			</div>
 		</div>
 
@@ -438,20 +497,20 @@
 			</div>
 			<div id="createscreen">
 				<form id="createAccountFormShell" novalidate>
-				<h4>Create an Account</h4>
-				<div class="inputline">Email: <input type="text" id="newemail" /></div>
-				<div class="inputline">Username: <input type="text" id="newusername" /></div>
-				<div class="inputline">Password: <input type="password" id="newpass" /></div>
-				<div class="inputline">Repeat Password: <input type="password" id="newpass2" /></div>
-				<div class="inputline">
-					<span id="termsAgreement"><input type="checkbox" id="agreetoterms" /> I have read, understand, and
-						agree to the
-						<a href="terms" target="_blank">Terms of Service</a> and
-						<a href="privacy" target="_blank">Privacy Policy</a>.</span>
-				</div>
-				<div class="inputline">
-					<button role="button" type="button" class="butt" id="createAccountBttn">Create Account</button>
-				</div>
+					<h4>Create an Account</h4>
+					<div class="inputline">Email: <input type="text" id="newemail" /></div>
+					<div class="inputline">Username: <input type="text" id="newusername" /></div>
+					<div class="inputline">Password: <input type="password" id="newpass" /></div>
+					<div class="inputline">Repeat Password: <input type="password" id="newpass2" /></div>
+					<div class="inputline">
+						<span id="termsAgreement"><input type="checkbox" id="agreetoterms" /> I have read, understand, and
+							agree to the
+							<a href="terms" target="_blank">Terms of Service</a> and
+							<a href="privacy" target="_blank">Privacy Policy</a>.</span>
+					</div>
+					<div class="inputline">
+						<button role="button" type="button" class="butt" id="createAccountBttn">Create Account</button>
+					</div>
 				</form>
 			</div>
 			<div id="resetscreen" style="display: none">
@@ -718,6 +777,8 @@
 		<div class="utt-actions">
 			<button class="utt-icon-btn utt-at-btn" data-action="chat-at" title="@ in chat"><i class="material-symbols-outlined">alternate_email</i></button>
 			<button class="utt-icon-btn utt-deck-btn" data-action="add-to-deck" title="Add to deck"><i class="material-symbols-outlined">add_2</i></button>
+			<button class="utt-icon-btn utt-remove-deck-btn" data-action="remove-from-deck" title="Remove from deck"><i class="material-symbols-outlined">person_remove</i></button>
+			<button class="utt-icon-btn utt-bus-btn" data-action="toggle-bus" title="Take the bus (step down after next play)"><i class="material-symbols-outlined">departure_board</i></button>
 			<button class="utt-icon-btn utt-stepdown-btn" data-action="step-down" title="Step down from deck"><i class="material-symbols-outlined">logout</i></button>
 			<button class="utt-icon-btn utt-block-btn" data-action="toggle-block" title="Block"><i class="material-symbols-outlined">block</i></button>
 		</div>

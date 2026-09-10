@@ -988,8 +988,19 @@ firetable.ui.tooltip = (function () {
         }
       })());
       var $deckBtn = $userTip.find('.utt-deck-btn');
-      $userTip.toggleClass('can-add-to-deck', !!(isMod && !isSelf));
+      $userTip.toggleClass('can-add-to-deck', !!(isMod && !isSelf && !isOnDeck));
+      $userTip.toggleClass('can-remove-from-deck', !!(isMod && !isSelf && isOnDeck));
       $userTip.toggleClass('can-step-down', !!(isSelf && isOnDeck));
+      var departureScheduled = false;
+      if (isSelf && isOnDeck && firetable.tableData) {
+        for (var dk in firetable.tableData) {
+          if (firetable.tableData.hasOwnProperty(dk) && firetable.tableData[dk].id === ftapi.uid) {
+            departureScheduled = !!firetable.tableData[dk].removeAfter;
+            break;
+          }
+        }
+      }
+      $userTip.toggleClass('departure-on', departureScheduled);
       $deckBtn
         .toggleClass('is-disabled', isOnDeck)
         .attr('aria-disabled', isOnDeck ? 'true' : 'false')
@@ -1029,6 +1040,20 @@ firetable.ui.tooltip = (function () {
           ftapi.actions.sendBotCommand('!add ' + userData.username);
           userTipEl.hidePopover();
         }
+      })
+      .on('click', '[data-action="remove-from-deck"]', function () {
+        var uid = $userTip.attr('data-for');
+        var userData = uid && ftapi.users && ftapi.users[uid];
+        if (userData && userData.username) {
+          ftapi.actions.sendBotCommand('!remove ' + userData.username);
+          userTipEl.hidePopover();
+        }
+      })
+      .on('click', '[data-action="toggle-bus"]', function () {
+        var isDepartureOn = $userTip.hasClass('departure-on');
+        ftapi.actions.sendBotCommand(isDepartureOn ? '!dontremoveme' : '!removeafter');
+        $userTip.toggleClass('departure-on', !isDepartureOn);
+        userTipEl.hidePopover();
       })
       .on('click', '[data-action="step-down"]', function () {
         ftapi.actions.sendBotCommand('!removeme');
@@ -1553,6 +1578,7 @@ firetable.ui.init = function () {
         });
       })) {
         outer.classList.remove('content-loading');
+        inner.querySelectorAll('.ft-skeleton').forEach(function (el) { el.remove(); });
         obs.disconnect();
       }
     });

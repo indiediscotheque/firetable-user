@@ -46,7 +46,8 @@ function renderHistoryItem(data, $template, containerSel) {
            .attr("data-key", pkey)
            .attr("data-histid", data.histID)
            .attr("data-cid", data.cid)
-           .attr("data-type", data.type);
+           .attr("data-type", data.type)
+           .attr("data-tag", data.artist + " - " + data.title);
 
   // Preview button
   $histItem.find('.previewicon').attr('id', "pv" + pkey).on('click', function () {
@@ -61,8 +62,9 @@ function renderHistoryItem(data, $template, containerSel) {
   // Track link
   var titleText = firetable.ui.strip(data.title || "");
   var artistText = firetable.ui.strip(data.artist || "");
-  var $histLink = $histItem.find('.histlink').attr('id', data.histID);
-  if (containerSel === "#thediscovers") {
+  var isFresh = containerSel === "#thediscovers";
+  var $histLink = $histItem.find(isFresh ? '.fresh-title' : '.histlink').attr('id', data.histID);
+  if (isFresh) {
     $histLink.html(
       '<span class="fresh-track-title">' + firetable.utilities.htmlEscape(titleText) + '</span>' +
       '<span class="fresh-track-artist">' + firetable.utilities.htmlEscape(artistText) + '</span>'
@@ -70,7 +72,7 @@ function renderHistoryItem(data, $template, containerSel) {
   } else {
     $histLink.text(artistText + " - " + titleText);
   }
-  $histItem.find('.tracklink-btn').attr('href', data.url || '');
+  $histItem.find('.tracklink-btn').attr('href', data.url || '').html(data.type == MEDIA_SOUNDCLOUD ? SC_LOGO_SVG : YT_LOGO_SVG);
 
   // Edit tags button (mod only)
   $histItem.find('.edittags').on('click', function () {
@@ -81,7 +83,7 @@ function renderHistoryItem(data, $template, containerSel) {
     } else {
       firetable.actions.editTagsPrompt(
         $pvbar.attr('data-key'),
-        data.artist + " - " + data.title,
+        $pvbar.attr('data-tag') || (data.artist + " - " + data.title),
         this
       );
     }
@@ -243,62 +245,73 @@ firetable.ui.setupRoomEvents = function () {
     var isSelfOnDeck = false;
 
     if (data) {
-      var countr = 0;
+      // Collect all DJs in Firebase's natural for-in order.
+      // The bot controls slot assignment and playdex; for-in in V8 preserves
+      // Firebase's child ordering, so activeIdx correctly indexes into allDjs.
+      // Do NOT sort by key — the bot may use non-push-key schemes (numeric slots,
+      // user IDs, etc.) where key order ≠ queue order.
+      var allDjs = [];
       for (var key in data) {
         if (!data.hasOwnProperty(key)) continue;
         var dj = data[key];
         if (dj.id === ftapi.uid) isSelfOnDeck = true;
+        allDjs.push({ tableKey: key, id: dj.id, name: dj.name, plays: dj.plays, removeAfter: dj.removeAfter });
+      }
 
-        var isGhost = !!(ftapi.users !== null && typeof ftapi.users === 'object' && !ftapi.users[dj.id]);
-        var isSelf = dj.id === ftapi.uid;
+      if (activeIdx < allDjs.length) {
+        var activeEntry = allDjs[activeIdx];
+        var key = activeEntry.tableKey;
+        var djId = activeEntry.id;
+        var djName = activeEntry.name;
+        var djPlays = activeEntry.plays;
+
+        var isGhost = !!(ftapi.users !== null && typeof ftapi.users === 'object' && !ftapi.users[djId]);
+        var isSelf = djId === ftapi.uid;
         var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
         var isMod = ownUser && (ownUser.mod || ownUser.supermod);
-        var isHostbot = !!(ftapi.users && ftapi.users[dj.id] && ftapi.users[dj.id].hostbot);
+        var isHostbot = !!(ftapi.users && ftapi.users[djId] && ftapi.users[djId].hostbot);
         var showBtn = isSelf || isMod;
         var showDeparture = isSelf && !isHostbot;
         var btnIcon = isSelf ? 'close' : 'person_remove';
         var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
         var actionBtn = showBtn
-          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + dj.id + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
+          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + djId + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
           : '';
         var departureIndicator;
         if (showDeparture) {
-          var djDisplayName = firetable.utilities.htmlEscape(dj.name);
-          var hasPending = _pendingDeparture.hasOwnProperty(dj.id);
-          var removeAfterValue = hasPending ? _pendingDeparture[dj.id] : dj.removeAfter;
-          if (hasPending && !!dj.removeAfter === !!_pendingDeparture[dj.id]) {
-            delete _pendingDeparture[dj.id];
+          var djDisplayName = firetable.utilities.htmlEscape(djName);
+          var hasPending = _pendingDeparture.hasOwnProperty(djId);
+          var removeAfterValue = hasPending ? _pendingDeparture[djId] : activeEntry.removeAfter;
+          if (hasPending && !!activeEntry.removeAfter === !!_pendingDeparture[djId]) {
+            delete _pendingDeparture[djId];
           }
           var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + djDisplayName + ' step down after their next play';
           var departureTitleOn  = isSelf ? "Don't step down after your next play" : "Don't have " + djDisplayName + ' step down after their next play';
           var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
-          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + dj.id + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
-        } else if (dj.removeAfter) {
+          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
+        } else if (activeEntry.removeAfter) {
           departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down after this song">departure_board</span>';
         } else {
           departureIndicator = '';
         }
 
-        if (countr === activeIdx) {
-          deckHtml = '<div id="spt0" class="spot' + (isGhost ? ' ghost' : '') + '">' +
-            '<div class="avtr animate" id="avtr0" style="background-image: url(' +
-            firetable.utilities.avatarURL(dj.id, dj.name) + ');"></div>' +
-            '<div id="djthing0" class="djplaque djActive">' +
-            '<div class="djname">' + firetable.utilities.htmlEscape(dj.name) + '</div>' +
-            departureIndicator + actionBtn +
-            '<div class="playcount">' + dj.plays + '/<span id="plimit0">' + firetable.playlimit + '</span></div>' +
-            '</div></div>';
-        } else {
-          onDeckDjs.push({ tableKey: key, id: dj.id, name: dj.name, plays: dj.plays });
-        }
-        countr++;
+        deckHtml = '<div id="spt0" class="spot' + (isGhost ? ' ghost' : '') + '">' +
+          '<div class="avtr animate" id="avtr0" style="background-image: url(' +
+          firetable.utilities.avatarURL(djId, djName) + ');"></div>' +
+          '<div id="djthing0" class="djplaque djActive">' +
+          '<div class="djname">' + firetable.utilities.htmlEscape(djName) + '</div>' +
+          departureIndicator + actionBtn +
+          '<div class="playcount">' + djPlays + '/<span id="plimit0">' + firetable.playlimit + '</span></div>' +
+          '</div></div>';
       }
 
-      // Sort by Firebase table key: push keys are lexicographically time-ordered,
-      // so a DJ who re-joined (newer key) appears after those already waiting.
-      onDeckDjs.sort(function (a, b) {
-        return a.tableKey < b.tableKey ? -1 : a.tableKey > b.tableKey ? 1 : 0;
-      });
+      // Build on-deck in rotation order: the DJ immediately after the active one
+      // goes first, wrapping around so the previously-active DJ is always last.
+      for (var j = 1; j < allDjs.length; j++) {
+        var rotIdx = (activeIdx + j) % allDjs.length;
+        var entry = allDjs[rotIdx];
+        onDeckDjs.push({ tableKey: entry.tableKey, id: entry.id, name: entry.name, plays: entry.plays });
+      }
 
       if (!deckHtml) {
         var stepUpBtn = isSelfOnDeck
@@ -389,6 +402,7 @@ firetable.ui.setupRoomEvents = function () {
   function setNowPlayingAlbumArt(imageUrl, animate) {
     var artEl = document.getElementById('albumArt');
     if (!artEl) return;
+    artEl.classList.remove('skel');
 
     var currentUrl = artEl.dataset.albumArtCurrent || '';
     var nextUrl = imageUrl || '';
@@ -636,6 +650,8 @@ firetable.ui.setupRoomEvents = function () {
       // where firetable.song hasn't been set to the new song yet.
       var displayTitle  = (firetable.song && firetable.song.cid === data.cid) ? firetable.song.title  : nextTitle;
       var displayArtist = (firetable.song && firetable.song.cid === data.cid) ? firetable.song.artist : nextArtist;
+      document.getElementById('track').classList.remove('skel');
+      document.getElementById('artist').classList.remove('skel');
       $("#track").text(displayTitle);
       $("#artist").text(displayArtist);
       $("#songlink").attr("href", data.url);
@@ -669,7 +685,7 @@ firetable.ui.setupRoomEvents = function () {
     // ── Platform-specific UI + playback ──
     if (data.type === MEDIA_YOUTUBE) {
       $("#scScreen").hide();
-      $("#songlink").html('<svg aria-hidden="true" focusable="false" data-prefix="fab" data-icon="youtube" class="svg-inline--fa fa-youtube fa-w-18" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path fill="currentColor" d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.321 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"></path></svg>');
+      $("#songlink").html(YT_LOGO_SVG);
 
       if (firetable.ytLoaded && !firetable.preview) {
         if (firetable.scLoaded) firetable.scwidget.pause();
@@ -681,7 +697,7 @@ firetable.ui.setupRoomEvents = function () {
 
     } else if (data.type === MEDIA_SOUNDCLOUD) {
       $("#scScreen").show();
-      $("#songlink").html('<svg aria-hidden="true" focusable="false" data-prefix="fab" data-icon="soundcloud" class="svg-inline--fa fa-soundcloud fa-w-20" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path fill="currentColor" d="M111.4 256.3l5.8 65-5.8 68.3c-.3 2.5-2.2 4.4-4.4 4.4s-4.2-1.9-4.2-4.4l-5.6-68.3 5.6-65c0-2.2 1.9-4.2 4.2-4.2 2.2 0 4.1 2 4.4 4.2zm21.4-45.6c-2.8 0-4.7 2.2-5 5l-5 105.6 5 68.3c.3 2.8 2.2 5 5 5 2.5 0 4.7-2.2 4.7-5l5.8-68.3-5.8-105.6c0-2.8-2.2-5-4.7-5zm25.5-24.1c-3.1 0-5.3 2.2-5.6 5.3l-4.4 130 4.4 67.8c.3 3.1 2.5 5.3 5.6 5.3 2.8 0 5.3-2.2 5.3-5.3l5.3-67.8-5.3-130c0-3.1-2.5-5.3-5.3-5.3zM7.2 283.2c-1.4 0-2.2 1.1-2.5 2.5L0 321.3l4.7 35c.3 1.4 1.1 2.5 2.5 2.5s2.2-1.1 2.5-2.5l5.6-35-5.6-35.6c-.3-1.4-1.1-2.5-2.5-2.5zm23.6-21.9c-1.4 0-2.5 1.1-2.5 2.5l-6.4 57.5 6.4 56.1c0 1.7 1.1 2.8 2.5 2.8s2.5-1.1 2.8-2.5l7.2-56.4-7.2-57.5c-.3-1.4-1.4-2.5-2.8-2.5zm25.3-11.4c-1.7 0-3.1 1.4-3.3 3.3L47 321.3l5.8 65.8c.3 1.7 1.7 3.1 3.3 3.1 1.7 0 3.1-1.4 3.1-3.1l6.9-65.8-6.9-68.1c0-1.9-1.4-3.3-3.1-3.3zm25.3-2.2c-1.9 0-3.6 1.4-3.6 3.6l-5.8 70 5.8 67.8c0 2.2 1.7 3.6 3.6 3.6s3.6-1.4 3.9-3.6l6.4-67.8-6.4-70c-.3-2.2-2-3.6-3.9-3.6zm241.4-110.9c-1.1-.8-2.8-1.4-4.2-1.4-2.2 0-4.2.8-5.6 1.9-1.9 1.7-3.1 4.2-3.3 6.7v.8l-3.3 176.7 1.7 32.5 1.7 31.7c.3 4.7 4.2 8.6 8.9 8.6s8.6-3.9 8.6-8.6l3.9-64.2-3.9-177.5c-.4-3-2-5.8-4.5-7.2zm-26.7 15.3c-1.4-.8-2.8-1.4-4.4-1.4s-3.1.6-4.4 1.4c-2.2 1.4-3.6 3.9-3.6 6.7l-.3 1.7-2.8 160.8s0 .3 3.1 65.6v.3c0 1.7.6 3.3 1.7 4.7 1.7 1.9 3.9 3.1 6.4 3.1 2.2 0 4.2-1.1 5.6-2.5 1.7-1.4 2.5-3.3 2.5-5.6l.3-6.7 3.1-58.6-3.3-162.8c-.3-2.8-1.7-5.3-3.9-6.7zm-111.4 22.5c-3.1 0-5.8 2.8-5.8 6.1l-4.4 140.6 4.4 67.2c.3 3.3 2.8 5.8 5.8 5.8 3.3 0 5.8-2.5 6.1-5.8l5-67.2-5-140.6c-.2-3.3-2.7-6.1-6.1-6.1zm376.7 62.8c-10.8 0-21.1 2.2-30.6 6.1-6.4-70.8-65.8-126.4-138.3-126.4-17.8 0-35 3.3-50.3 9.4-6.1 2.2-7.8 4.4-7.8 9.2v249.7c0 5 3.9 8.6 8.6 9.2h218.3c43.3 0 78.6-35 78.6-78.3.1-43.6-35.2-78.9-78.5-78.9zm-296.7-60.3c-4.2 0-7.5 3.3-7.8 7.8l-3.3 136.7 3.3 65.6c.3 4.2 3.6 7.5 7.8 7.5 4.2 0 7.5-3.3 7.5-7.5l3.9-65.6-3.9-136.7c-.3-4.5-3.3-7.8-7.5-7.8zm-53.6-7.8c-3.3 0-6.4 3.1-6.4 6.7l-3.9 145.3 3.9 66.9c.3 3.6 3.1 6.4 6.4 6.4 3.6 0 6.4-2.8 6.7-6.4l4.4-66.9-4.4-145.3c-.3-3.6-3.1-6.7-6.7-6.7zm26.7 3.4c-3.9 0-6.9 3.1-6.9 6.9L227 321.3l3.9 66.4c.3 3.9 3.1 6.9 6.9 6.9s6.9-3.1 6.9-6.9l4.2-66.4-4.2-141.7c0-3.9-3-6.9-6.9-6.9z"></path></svg>');
+      $("#songlink").html(SC_LOGO_SVG);
 
       var biggerImg = data.image.replace('-large', '-t500x500');
       firetable.scImg = biggerImg;
