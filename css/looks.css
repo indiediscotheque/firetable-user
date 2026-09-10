@@ -2469,6 +2469,9 @@ ul.lightrope li {
     color: var(--color-text);
     text-decoration: none;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    margin: 0 var(--pad1);
 }
 
 #queuelist .tracklink-btn:hover {
@@ -3702,7 +3705,9 @@ img.emoji,
 #thediscovers .listwords .histlink {
     flex: 1;
 }
-#thediscovers .listwords .butt {
+
+#thediscovers .listwords .butt,
+#thediscovers .listwords .tracklink-btn svg {
     align-self: flex-start;
     flex-shrink: 0;
     min-width: 0;
@@ -3717,7 +3722,8 @@ img.emoji,
     line-height: 1.1;
     box-shadow: none;
 }
-#thediscovers .listwords .butt:hover {
+#thediscovers .listwords .butt:hover,
+#thediscovers .listwords .tracklink-btn:hover {
     color: var(--color-text-light);
 }
 #thediscovers .discart .previewicon {
@@ -4258,6 +4264,13 @@ input.tagMachine,
     width: 100%;
     height: 100%;
     padding: 0.25rem;
+}
+
+.tracklink-btn svg {
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+    flex-shrink: 0;
 }
 
 #importSources {
