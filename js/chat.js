@@ -124,6 +124,11 @@ firetable.actions.replayPendingFireReactions = function () {
  */
 firetable.actions.localChatResponse = function (txt) {
   if (txt.length) {
+    if (!firetable._chatBooted) {
+      firetable._chatBooted = true;
+      var skels = document.querySelectorAll('#chats .ft-skeleton');
+      for (var i = 0; i < skels.length; i++) skels[i].remove();
+    }
     $("#chats").append('<div class="newChat"><div class="lcrsp">' + txt + '</div></div>');
     firetable.utilities.scrollToBottom();
   }
@@ -342,6 +347,10 @@ firetable.ui.setupChatEvents = function () {
       firetable.utilities.chatAt($chatthing.find('.chatName'));
       twemoji.parse($chatthing.find(".chatText")[0]);
       $chatthing.appendTo("#chats");
+      if (!firetable._chatBooted) {
+        firetable._chatBooted = true;
+        document.querySelectorAll('#chats .ft-skeleton').forEach(function(el) { el.remove(); });
+      }
       maybeCollapseChat($chatthing.find('.chatText')[0]);
 
       if (canDelete()) {

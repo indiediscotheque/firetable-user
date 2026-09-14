@@ -146,6 +146,7 @@ firetable.ui.setupSearchEvents = function () {
             firetable.actions.pview($(this).closest('.pvbar').attr('data-key'), true, MEDIA_YOUTUBE);
           });
           $srli.find('.listwords').html(vidTitle);
+          $srli.find('.pvbarWrap').append('<a class="tracklink-btn" target="_blank" href="https://www.youtube.com/watch?v=' + thecid + '" title="Open on YouTube">' + YT_LOGO_SVG + '</a>');
           bindSearchResultButtons($srli, thecid, MEDIA_YOUTUBE);
           $("#searchResults").append($srli);
         });
@@ -190,6 +191,7 @@ firetable.ui.setupSearchEvents = function () {
             firetable.actions.pview($(this).closest('.pvbar').attr('data-key'), true, MEDIA_SOUNDCLOUD);
           });
           $srli.find('.listwords').html(vidTitle);
+          $srli.find('.pvbarWrap').append('<a class="tracklink-btn" target="_blank" href="' + (item.permalink_url || '') + '" title="Open on SoundCloud">' + SC_LOGO_SVG + '</a>');
           bindSearchResultButtons($srli, item.id, MEDIA_SOUNDCLOUD);
           $("#searchResults").append($srli);
         });

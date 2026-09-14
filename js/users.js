@@ -108,7 +108,7 @@ firetable.actions.loggedIn = function (user) {
     displayName = ftapi.users[ftapi.uid].username;
   }
   $("#loggedInName").text(displayName);
-  $("#loggedInUser .ft-avatar").css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, displayName) + ")");
+  $("#loggedInUser .ft-avatar").removeClass('skel').css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, displayName) + ")");
   $("#avatarStylePicker").val(firetable.avatarStyle);
 
   // Load all playlists into the picker

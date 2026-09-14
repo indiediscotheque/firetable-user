@@ -667,6 +667,64 @@ firetable.actions.editTagsPrompt = function (songid, tag, anchorEl) {
   firetable.debug && console.log('edit tags song id:', songid);
 };
 
+// ─── Queue item HTML builder ─────────────────────────────────────────────────
+
+function buildQueueItemHTML(key, track, isPreview) {
+  var trackName = String(track.name || "Unknown");
+  var safeTrackName = firetable.utilities.htmlEscape(trackName);
+
+  var trackSeconds = firetable.actions.parseTrackDurationSeconds(
+    track.duration || track.length || track.dur || track.time ||
+    track.seconds || track.msecs || track.ms || 0
+  );
+  var durationHtml = trackSeconds > 0
+    ? '<span class="trackDuration">' + firetable.actions.formatTrackDuration(trackSeconds) + '</span>'
+    : '';
+
+  var isYT = String(track.type) === String(MEDIA_YOUTUBE);
+  var artUrl = isYT
+    ? 'https://i.ytimg.com/vi/' + track.cid + '/mqdefault.jpg'
+    : (track.img || (firetable.imgCache && firetable.imgCache[track.cid]) || '');
+  var artStyle = artUrl ? ' style="background-image:url(' + artUrl + ')"' : '';
+
+  var trackUrl = isYT
+    ? 'https://www.youtube.com/watch?v=' + track.cid
+    : SC_API_TRACK_URL + track.cid;
+
+  var flagHtml = '';
+  if (track.flagged) {
+    var flagLabel = 'broken', flagIcon = 'warning';
+    if      (track.flagged.code === 7)  { flagLabel = 'age restricted'; }
+    else if (track.flagged.code === 8)  { flagLabel = 'broken (manual)'; }
+    else if (track.flagged.code === 9)  { flagLabel = 'low audio quality'; flagIcon = 'disc_full'; }
+    else if (track.flagged.code === 10) { flagLabel = 'offtheme'; flagIcon = 'flag'; }
+    var flagTitle = firetable.utilities.htmlEscape(
+      'Flagged as ' + flagLabel + ' on ' + firetable.utilities.format_date(track.flagged.date) + '. Click to remove flag.'
+    );
+    flagHtml = ' title="' + flagTitle + '"><span class="material-symbols-filled"> ' + flagIcon + ' </span>';
+  }
+
+  return (
+    '<div class="pvbar" id="pvbar' + key + '"' +
+    ' data-key="' + key + '" data-type="' + track.type + '"' +
+    ' data-cid="' + firetable.utilities.htmlEscape(String(track.cid)) + '"' +
+    ' data-tags="' + safeTrackName + '" data-broken="' + (track.flagged ? '1' : '0') + '"' +
+    ' data-track-seconds="' + (trackSeconds || '') + '">' +
+    '<div class="pvbarWrap">' +
+    '<div class="q-art"' + artStyle + '></div>' +
+    '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
+    '<span class="track-warning"' + (track.flagged ? flagHtml : '>') + '</span>' +
+    '<div class="listwords">' + safeTrackName + durationHtml + '</div>' +
+    '<i role="button" class="material-symbols-outlined bumpsongs" title="Send to top">vertical_align_top</i>' +
+    '<i role="button" class="material-symbols-outlined bottomsongs" title="Send to bottom">vertical_align_bottom</i>' +
+    '<i role="button" class="material-symbols-outlined closeeditor" title="Close tags editor">close</i>' +
+    '<i role="button" class="material-symbols-outlined histeal" title="Add to playlist">playlist_add</i>' +
+    '<a class="tracklink-btn" target="_blank" href="' + trackUrl + '" title="Open on ' + (isYT ? 'YouTube' : 'SoundCloud') + '">' + (isYT ? YT_LOGO_SVG : SC_LOGO_SVG) + '</a>' +
+    '<i role="button" class="material-symbols-outlined deletesong" title="Delete track">delete</i>' +
+    '</div></div>'
+  );
+}
+
 // ─── Playlist Event Binding ──────────────────────────────────────────────────
 
 /**
@@ -686,179 +744,133 @@ firetable.ui.setupPlaylistEvents = function () {
     }
   });
 
-  // ── Playlist changed: re-render the queue ──
-  ftapi.events.on("playlistChanged", function (okdata, listID) {
-    firetable.queue = okdata;
-    $('#mainqueue').html("");
-
-    for (var key in okdata) {
-      if (!okdata.hasOwnProperty(key)) continue;
-      var thisone = okdata[key];
-      var $newli = $playlistItemTemplate.clone();
-      var psign = (key === firetable.preview) ? "&#xE034;" : "&#xE037;";
-      var trackName = String(thisone.name || "Unknown");
-      var safeTrackName = firetable.utilities.htmlEscape(trackName);
-      var trackSeconds = firetable.actions.parseTrackDurationSeconds(
-        thisone.duration || thisone.length || thisone.dur || thisone.time || thisone.seconds || thisone.msecs || thisone.ms || 0
-      );
-      var durationHtml = trackSeconds > 0
-        ? '<span class="trackDuration">' + firetable.actions.formatTrackDuration(trackSeconds) + '</span>'
-        : '';
-
-      $newli.attr('id', "pvbar" + key)
-            .attr("data-key", key)
-            .attr("data-type", thisone.type)
-        .attr("data-cid", thisone.cid)
-        .attr("data-tags", trackName)
-        .attr("data-broken", thisone.flagged ? "1" : "0")
-        .attr("data-track-seconds", trackSeconds || "");
-
-      // Album art thumbnail
-      var artUrl = (thisone.type == MEDIA_YOUTUBE)
-        ? 'https://i.ytimg.com/vi/' + thisone.cid + '/mqdefault.jpg'
-        : (thisone.img || (firetable.imgCache && firetable.imgCache[thisone.cid]) || '');
-      if (artUrl) $newli.find('.q-art').css('background-image', 'url(' + artUrl + ')');
-
-      // Preview button
-      $newli.find('.previewicon').attr('id', "pv" + key).on('click', function () {
-        firetable.actions.pview(
-          $(this).closest('.pvbar').attr('data-key'),
-          false,
-          $(this).closest('.pvbar').attr('data-type')
-        );
-      }).html(psign);
-
-      // Track title
-      $newli.find('.listwords').html(safeTrackName + durationHtml);
-
-      // Bump to top
-      $newli.find('.bumpsongs').on('click', function () {
-        firetable.actions.bumpSongInQueue($(this).closest('.pvbar').attr('data-key'));
-      });
-
-      // Move to bottom
-      $newli.find('.bottomsongs').on('click', function () {
-        var oldID = $(this).closest('.pvbar').attr('data-key');
-        ftapi.actions.moveTrackToBottom(oldID, function (newID) {
-          if (firetable.preview && firetable.preview === oldID) {
-            firetable.preview = newID;
-            $("#pv" + newID).html("&#xE034;");
-          }
-        });
-      });
-
-      // Flagged track warning icon
-      if (thisone.flagged) {
-        var flagLabel = "broken";
-        var flagIcon = "warning";
-        if (thisone.flagged.code === 7) {
-          flagLabel = "age restricted";
-        } else if (thisone.flagged.code === 8) {
-          flagLabel = "broken (manual)";
-        } else if (thisone.flagged.code === 9) {
-          flagLabel = "low audio quality";
-          flagIcon = "disc_full";
-        } else if (thisone.flagged.code === 10) {
-          flagLabel = "offtheme";
-          flagIcon = "flag";
+  // ── Delegated event handlers — set up once, work for all current and future items ──
+  $('#mainqueue')
+    .on('click', '.previewicon', function () {
+      var $p = $(this).closest('.pvbar');
+      firetable.actions.pview($p.attr('data-key'), false, $p.attr('data-type'));
+    })
+    .on('click', '.bumpsongs', function () {
+      firetable.actions.bumpSongInQueue($(this).closest('.pvbar').attr('data-key'));
+    })
+    .on('click', '.bottomsongs', function () {
+      var oldID = $(this).closest('.pvbar').attr('data-key');
+      ftapi.actions.moveTrackToBottom(oldID, function (newID) {
+        if (firetable.preview && firetable.preview === oldID) {
+          firetable.preview = newID;
+          $('#pv' + newID).html('&#xE034;');
         }
-        $newli.find('.track-warning')
-          .html('<span class="material-symbols-filled"> ' + flagIcon + ' </span>')
-          .prop('title', 'Flagged as ' + flagLabel + ' on ' + firetable.utilities.format_date(thisone.flagged.date) + '. Click to remove flag.')
-          .on('click', function () {
-            ftapi.actions.unflagTrack($(this).closest('.pvbar').attr('data-key'));
-            $(this).html("");
-          });
+      });
+    })
+    .on('click', '.track-warning', function () {
+      var $p = $(this).closest('.pvbar');
+      ftapi.actions.unflagTrack($p.attr('data-key'));
+      $(this).html('').removeAttr('title');
+    })
+    .on('click', '.deletesong', function () {
+      var popoverEl = document.getElementById('deleteSongPopover');
+      var $p = $(this).closest('.pvbar');
+      if (popoverEl && popoverEl.matches(':popover-open') && firetable.deletingPvbar && firetable.deletingPvbar.is($p)) {
+        popoverEl.hidePopover();
+        return;
+      }
+      firetable.actions.deleteSongPrompt($p.attr('data-key'), $p.attr('data-tags') || $p.find('.listwords').text(), $p.attr('data-type'), this);
+    })
+    .on('click', '.edittags', function () {
+      var popoverEl = document.getElementById('tagEditorPopover');
+      var $p = $(this).closest('.pvbar');
+      if (popoverEl.matches(':popover-open') && firetable.editingPvbar && firetable.editingPvbar.is($p)) {
+        popoverEl.hidePopover();
+      } else {
+        firetable.actions.editTagsPrompt($p.attr('data-key'), $p.attr('data-tags') || $p.find('.listwords').text(), this);
+      }
+    })
+    .on('click', '.closeeditor', function () {
+      document.getElementById('tagEditorPopover').hidePopover();
+    })
+    .on('click', '.histeal', function () {
+      var $btn = $(this);
+      var $p = $btn.closest('.pvbar');
+      var btnCid = $p.attr('data-cid');
+      var btnType = $p.attr('data-type');
+      var btnTitle = firetable.utilities.htmlEscape($p.attr('data-tags') || $p.find('.listwords').text());
+
+      if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$('#stealContain').is(':hidden')) {
+        $btn.removeClass('on');
+        firetable.stealSourceBtn = null;
+        firetable.stealTarget = null;
+        $('#stealContain').hide();
+        return;
       }
 
-      // Delete button
-      $newli.find('.deletesong').on('click', function () {
-        var popoverEl = document.getElementById('deleteSongPopover');
-        var $pvbar = $(this).closest('.pvbar');
-        if (popoverEl && popoverEl.matches(':popover-open') && firetable.deletingPvbar && firetable.deletingPvbar.is($pvbar)) {
-          popoverEl.hidePopover();
-          return;
-        }
-        firetable.actions.deleteSongPrompt(
-          $pvbar.attr('data-key'),
-          $pvbar.attr('data-tags') || $pvbar.find('.listwords').text(),
-          $pvbar.attr('data-type'),
-          this
-        );
-      });
-
-      // Edit tags button
-      $newli.find('.edittags').on('click', function () {
-        var popoverEl = document.getElementById('tagEditorPopover');
-        var $pvbar = $(this).closest('.pvbar');
-        if (popoverEl.matches(':popover-open') && firetable.editingPvbar && firetable.editingPvbar.is($pvbar)) {
-          popoverEl.hidePopover();
-        } else {
-          firetable.actions.editTagsPrompt(
-            $pvbar.attr('data-key'),
-            $pvbar.attr('data-tags') || $pvbar.find('.listwords').text(),
-            this
-          );
-        }
-      });
-
-      // Close editor button
-      $newli.find('.closeeditor').on('click', function () {
-        document.getElementById('tagEditorPopover').hidePopover();
-      });
-
-      if (!ftapi.isMod) $newli.find('.edittags, .closeeditor').hide();
-
-      // External track link
-      var trackUrl = String(thisone.type) === String(MEDIA_YOUTUBE)
-        ? 'https://www.youtube.com/watch?v=' + thisone.cid
-        : SC_API_TRACK_URL + thisone.cid;
-      $newli.find('.tracklink-btn').attr('href', trackUrl);
-
-      // Add-to-playlist button
-      $newli.find('.histeal').on('click', function () {
-        var $btn = $(this);
-        var $pvbar = $btn.closest('.pvbar');
-        var btnCid = $pvbar.attr('data-cid');
-        var btnType = $pvbar.attr('data-type');
-        var btnTitle = firetable.utilities.htmlEscape($pvbar.attr('data-tags') || $pvbar.find('.listwords').text());
-
-        if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$("#stealContain").is(':hidden')) {
-          $btn.removeClass('on');
-          firetable.stealSourceBtn = null;
-          firetable.stealTarget = null;
-          $("#stealContain").hide();
-          return;
-        }
-
-        ftapi.lookup.allLists(function (allPlaylists) {
-          $("#stealpicker").html(
-            '<option value="-1">Where to?</option>' +
-            '<option value="0">Default Queue</option>'
-          );
-          for (var key in allPlaylists) {
-            if (allPlaylists.hasOwnProperty(key)) {
-              $("#stealpicker").append(
-                '<option value="' + key + '">' + allPlaylists[key].name + '</option>'
-              );
-            }
+      ftapi.lookup.allLists(function (allPlaylists) {
+        $('#stealpicker').html('<option value="-1">Where to?</option><option value="0">Default Queue</option>');
+        for (var k in allPlaylists) {
+          if (allPlaylists.hasOwnProperty(k)) {
+            $('#stealpicker').append('<option value="' + k + '">' + allPlaylists[k].name + '</option>');
           }
-          if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
-          $("#grab").removeClass('on');
-          firetable.stealSourceBtn = $btn;
-          firetable.stealTarget = { cid: btnCid, type: btnType, title: btnTitle };
-          $btn.addClass('on');
-          var stealContainEl = document.getElementById('stealContain');
-          stealContainEl.style.visibility = 'hidden';
-          $("#stealContain").show();
-          firetable.ui.positionPopover($btn[0], stealContainEl, document.getElementById('stealArrow'), 'left');
-        });
+        }
+        if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
+        $('#grab').removeClass('on');
+        firetable.stealSourceBtn = $btn;
+        firetable.stealTarget = { cid: btnCid, type: btnType, title: btnTitle };
+        $btn.addClass('on');
+        var stealContainEl = document.getElementById('stealContain');
+        stealContainEl.style.visibility = 'hidden';
+        $('#stealContain').show();
+        firetable.ui.positionPopover($btn[0], stealContainEl, document.getElementById('stealArrow'), 'left');
       });
+    });
 
-      $('#mainqueue').append($newli);
+  // ── Playlist changed: re-render the queue ──
+  ftapi.events.on("playlistChanged", function (okdata) {
+    firetable.queue = okdata;
+
+    var container = document.getElementById('mainqueue');
+    var keys = okdata ? Object.keys(okdata) : [];
+
+    if (!keys.length) {
+      container.innerHTML = '';
+      firetable.actions.filterQueue('');
+      return;
     }
 
-    firetable.actions.filterQueue($("#queueFilter").val() || "");
+    var FIRST = Math.min(30, keys.length);
+    var html = '';
+    for (var i = 0; i < FIRST; i++) {
+      var k = keys[i];
+      html += buildQueueItemHTML(k, okdata[k], k === firetable.preview);
+    }
+    container.innerHTML = html;
+
+    firetable.actions.filterQueue($('#queueFilter').val() || '');
+
+    if (keys.length <= FIRST) return;
+
+    // Render remaining items in idle-time batches to keep the first paint fast
+    var CHUNK = 50;
+    var idx = FIRST;
+    var schedule = window.requestIdleCallback
+      ? function (fn) { requestIdleCallback(fn, { timeout: 300 }); }
+      : function (fn) { setTimeout(fn, 0); };
+
+    function renderNextChunk() {
+      var end = Math.min(idx + CHUNK, keys.length);
+      var frag = document.createDocumentFragment();
+      var tmp = document.createElement('div');
+      var chunkHtml = '';
+      for (var j = idx; j < end; j++) {
+        var ck = keys[j];
+        chunkHtml += buildQueueItemHTML(ck, okdata[ck], ck === firetable.preview);
+      }
+      tmp.innerHTML = chunkHtml;
+      while (tmp.firstChild) frag.appendChild(tmp.firstChild);
+      container.appendChild(frag);
+      idx = end;
+      if (idx < keys.length) schedule(renderNextChunk);
+    }
+
+    schedule(renderNextChunk);
   });
 
   // ── Queue filter input ──
