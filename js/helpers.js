@@ -81,9 +81,15 @@ firetable.utilities = {
    * @returns {{artist: string, title: string}}
    */
   parseArtistTitle: function (raw, fallbackArtist) {
-    var parts = raw.split(" - ");
-    var artist = parts[0];
-    var title = parts[1];
+    // Split on the FIRST " - " only, so "Band - Song - Live" keeps the full title.
+    var sep = raw.indexOf(" - ");
+    var artist = sep === -1 ? raw : raw.slice(0, sep);
+    var title = sep === -1 ? undefined : raw.slice(sep + 3);
+    // ...but drop a trailing " - Official Video" style suffix (only when it
+    // follows another " - ", so a song actually called "Video" is untouched).
+    if (title) {
+      title = title.replace(/\s+-\s+(?:official\s+)?(?:hd\s+|4k\s+)?(?:music\s+video|lyric\s+video|video|audio|visuali[sz]er|lyrics)\s*$/i, "");
+    }
     if (!title) {
       title = artist;
       artist = fallbackArtist || "";
