@@ -1524,7 +1524,8 @@ firetable.ui.checkLastfmToken = function () {
     var request_url = LASTFM_API_URL + '?' + serialize(params) + "&format=json";
     var xhr = new XMLHttpRequest();
     xhr.open('POST', request_url, true);
-    xhr.onload = function () { firetable.lastfm.newSession(xhr); };
+    // newSession() returns the onload handler — assign it, don't just call it
+    xhr.onload = firetable.lastfm.newSession(xhr);
     xhr.onerror = firetable.lastfm._onAjaxError;
     xhr.send();
   }
