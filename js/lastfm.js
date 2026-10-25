@@ -52,7 +52,13 @@ firetable.lastfm = {
    */
   newSession: function (xhr) {
     return function () {
-      var jsonResponse = JSON.parse(xhr.responseText);
+      var jsonResponse = null;
+      try { jsonResponse = JSON.parse(xhr.responseText); } catch (e) { /* handled below */ }
+      if (!jsonResponse || !jsonResponse.session || !jsonResponse.session.key) {
+        // e.g. expired/used token — leave the "Set up" link in place
+        console.error("Last.fm auth.getSession failed:", jsonResponse || xhr.responseText);
+        return;
+      }
       firetable.lastfm.sk = jsonResponse.session.key;
       localStorage[STORAGE.lastfmSession] = firetable.lastfm.sk;
       $("#scrobtoggle").html(
