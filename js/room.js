@@ -626,7 +626,10 @@ firetable.ui.setupRoomEvents = function () {
       firetable.moveBar = null;
     }
     setTimeout(function () {
-      $prg.css("background", "color-mix(in srgb, " + ftconfigs.accentColor + " 50%, black)");
+      // ftconfigs.accentColor isn't in config.js.example; fall back to the
+      // room's current colour (same one the progress gradient uses).
+      var emptyColor = ftconfigs.accentColor || firetable.color;
+      $prg.css("background", "color-mix(in srgb, " + emptyColor + " 50%, black)");
       $prg.css("opacity", "1");
     }, 450);
 
