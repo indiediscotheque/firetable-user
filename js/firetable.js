@@ -559,6 +559,7 @@ ftapi.actions = {
         });
         sourceref.once("value")
           .then(function(snapshot3) {
+            var writes = [];
             snapshot3.forEach(function(childSnapshot3) {
               var key = childSnapshot3.key;
               var childData = childSnapshot3.val();
@@ -570,13 +571,19 @@ ftapi.actions = {
                   }
                   if (!dupe) {
                     // NOT A DUPLICATE! GO GO GO
-                    destref.push(childData);
+                    writes.push(destref.push(childData));
                   }
                 }
               }
 
             });
-            return callback();
+            // Report completion only once every copy has been saved
+            Promise.all(writes).then(function() {
+              callback();
+            }, function(err) {
+              console.error("[firetable] merge failed:", err);
+              callback(err || true);
+            });
           });
       });
   },
@@ -605,7 +612,7 @@ ftapi.actions = {
     if (changePv) pvChangeCallback(changePv);
     ftapi.queueRef.set(newobj);
   },
-  removeDuplicatesFromList: function() {
+  removeDuplicatesFromList: function(callback) {
     var okdata = ftapi.queue;
     var arr = [];
     for (var key in okdata) {
@@ -618,8 +625,14 @@ ftapi.actions = {
     var dupes = arr.filter((obj, pos, arr2) => {
       return arr2.map(mapObj => mapObj.cid).indexOf(obj.cid) !== pos;
     });
+    // Report completion only once every duplicate has been deleted
+    var pending = dupes.length;
+    if (!pending) { if (callback) callback(); return; }
     for (var i = 0; i < dupes.length; i++) {
-      ftapi.actions.deleteTrack(dupes[i].key);
+      ftapi.actions.deleteTrack(dupes[i].key, function() {
+        pending--;
+        if (pending === 0 && callback) callback();
+      });
     }
   },
   reorderList: function(arr, preview, pvChangeCallback) {

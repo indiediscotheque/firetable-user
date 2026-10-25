@@ -111,9 +111,18 @@ firetable.actions.shuffleQueue = function () {
 
 /** Remove duplicate tracks from the current playlist. */
 firetable.actions.removeDupesFromQueue = function () {
-  ftapi.actions.removeDuplicatesFromList();
-  $("#mergeCompleted").show();
+  ftapi.actions.removeDuplicatesFromList(firetable.actions.mergeFinished);
+};
+
+/** Show the merge result once the database has confirmed the writes. */
+firetable.actions.mergeFinished = function (err) {
   $("#mergeHappening").hide();
+  if (err) {
+    alert("Sorry, the merge could not be saved. Please try again.");
+    $("#mergeSetup").show();
+    return;
+  }
+  $("#mergeCompleted").show();
 };
 
 /**
@@ -331,10 +340,7 @@ firetable.actions.mergeLists = function (source, dest, sourceName) {
     $("#listpicker").append(firetable.utilities.playlistOption(dest, newname, 'pdopt' + dest));
     $("#djlistpicker").append(firetable.utilities.playlistOption(dest, newname));
   }
-  ftapi.actions.mergeLists(source, dest, function () {
-    $("#mergeCompleted").show();
-    $("#mergeHappening").hide();
-  });
+  ftapi.actions.mergeLists(source, dest, firetable.actions.mergeFinished);
 };
 
 // ─── Queue From Link (Drag & Drop URLs) ─────────────────────────────────────
