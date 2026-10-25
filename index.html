@@ -5,7 +5,15 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>firetable</title>
 	<meta name="description" content="Collaborative radio." />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<script>
+		// iPhone/iPad: keep maximum-scale=1 so tapping a small text field doesn't
+		// auto-zoom the page (iOS still allows pinch-zoom). Other devices get
+		// normal pinch-zoom.
+		if (/iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+			document.querySelector('meta[name="viewport"]').setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0");
+		}
+	</script>
 	<meta name="theme-color" content="#181818" />
 	<link rel="shortcut icon" href="favicon.png" />
 	<link rel="stylesheet" href="css/reset.css" type="text/css" />

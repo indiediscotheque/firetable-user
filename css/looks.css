@@ -289,6 +289,12 @@ button:focus-visible {
     outline: none;
 }
 
+/* Pinch-zoom is allowed; stop double-tap from zooming the page (pinch and
+   scrolling still work). */
+html {
+    touch-action: manipulation;
+}
+
 code {
     font-family: "Roboto Mono", monospace;
     color: color-mix(var(--color-accent), var(--color-text));
