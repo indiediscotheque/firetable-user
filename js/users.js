@@ -362,12 +362,12 @@ function buildUserHTML(data) {
   if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; }
   if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; }
 
-  return '<div class="ft-avatar" style="background-image:url(' + firetable.utilities.avatarURL(data.userid, data.username, null, data.avatarStyle) + ');">' +
+  return '<div class="ft-avatar" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username, null, data.avatarStyle)) + ');">' +
          '<span class="material-symbols-outlined blockon">' + blockcon + '</span>' +
          '</div>' +
          '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
          '<div class="prsnNameRole">' +
-         '<span class="prsnName">' + data.username + '</span>' +
+         '<span class="prsnName">' + firetable.utilities.htmlEscape(data.username) + '</span>' +
          '</div>';
 }
 
@@ -569,7 +569,7 @@ firetable.ui.setupUserEvents = function () {
         if (person) {
           if (!person.supermod) {
             ftapi.actions.banUser(person.userid);
-            $("#supercopResponse").html(person.username + " suspended.");
+            $("#supercopResponse").text(person.username + " suspended.");
           } else {
             $("#supercopResponse").text("Can not suspend that (or any) supermod.");
           }

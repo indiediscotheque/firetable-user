@@ -129,7 +129,7 @@ firetable.actions.localChatResponse = function (txt) {
       var skels = document.querySelectorAll('#chats .ft-skeleton');
       for (var i = 0; i < skels.length; i++) skels[i].remove();
     }
-    $("#chats").append('<div class="newChat"><div class="lcrsp">' + txt + '</div></div>');
+    $("#chats").append($('<div class="newChat"><div class="lcrsp"></div></div>').find('.lcrsp').text(txt).end());
     firetable.utilities.scrollToBottom();
   }
 };
@@ -511,7 +511,7 @@ firetable.ui.setupChatEvents = function () {
         $('#atPicker').addClass('show');
         for (var i = 0; i < firetable.atUsersFiltered.length; i++) {
           var $item = $('<div class="atPickerThing"><button class="butt graybutt" role="option" aria-selected="false">@' +
-            firetable.atUsersFiltered[i] + '</button></div>');
+            firetable.utilities.htmlEscape(firetable.atUsersFiltered[i]) + '</button></div>');
           if (i === 0) $item.find('.butt').attr('aria-selected', 'true');
           $item.appendTo('#atPicker');
         }
