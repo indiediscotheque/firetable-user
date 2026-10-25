@@ -78,7 +78,9 @@ ftapi.init = function(firebaseConfig) {
         okdata[key].blocked = true;
       }
     }
-    ftapi.users = okdata;
+    // No one online => Firebase returns null; keep users an object (as it
+    // starts out) so lookups like ftapi.users[id] don't throw.
+    ftapi.users = okdata || {};
     if (ftapi.users[ftapi.uid]) {
       if (ftapi.users[ftapi.uid].username) {
         ftapi.uname = ftapi.users[ftapi.uid].username;
