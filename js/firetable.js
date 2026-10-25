@@ -509,7 +509,7 @@ ftapi.actions = {
     // Copy every stored field (album art, broken/off-theme flag, ...), not
     // just type/name/cid, so nothing is lost when the track is re-added.
     var theTrack = JSON.parse(JSON.stringify(ftapi.queue[trackID]));
-    delete theTrack.key; // added locally by removeDuplicatesFromList
+    delete theTrack.key; // older code tagged queue entries with .key locally
     var ref = ftapi.queueRef;
     ftapi.actions.deleteTrack(trackID, function() {
       var newTrack = ref.push(theTrack, function() {
@@ -612,28 +612,30 @@ ftapi.actions = {
     if (changePv) pvChangeCallback(changePv);
     ftapi.queueRef.set(newobj);
   },
-  removeDuplicatesFromList: function(callback) {
-    var okdata = ftapi.queue;
-    var arr = [];
-    for (var key in okdata) {
-      if (okdata.hasOwnProperty(key)) {
-        var entry = ftapi.queue[key];
-        entry.key = key;
-        arr.push(entry);
-      }
-    }
-    var dupes = arr.filter((obj, pos, arr2) => {
-      return arr2.map(mapObj => mapObj.cid).indexOf(obj.cid) !== pos;
-    });
-    // Report completion only once every duplicate has been deleted
-    var pending = dupes.length;
-    if (!pending) { if (callback) callback(); return; }
-    for (var i = 0; i < dupes.length; i++) {
-      ftapi.actions.deleteTrack(dupes[i].key, function() {
-        pending--;
-        if (pending === 0 && callback) callback();
+  removeDuplicatesFromList: function(listID, callback) {
+    // Read the chosen list itself (not whichever list is on screen), then
+    // delete every later copy of a track id, keeping the first one.
+    var ref = (listID == 0)
+      ? firebase.app("firetable").database().ref("queues/" + ftapi.uid)
+      : firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + listID + "/list");
+    ref.once("value").then(function(snap) {
+      var seen = {};
+      var dupes = [];
+      snap.forEach(function(child) {
+        var track = child.val();
+        if (!track) return;
+        if (seen.hasOwnProperty(track.cid)) dupes.push(child.key);
+        else seen[track.cid] = true;
       });
-    }
+      return Promise.all(dupes.map(function(key) {
+        return ref.child(key).remove();
+      }));
+    }).then(function() {
+      if (callback) callback();
+    }, function(err) {
+      console.error("[firetable] duplicate cleanup failed:", err);
+      if (callback) callback(err || true);
+    });
   },
   reorderList: function(arr, preview, pvChangeCallback) {
     if (!arr.length) return;
