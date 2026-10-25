@@ -50,6 +50,27 @@ firetable.utilities = {
     return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + set;
   },
 
+  // ─── Playlist <option> Builder ───────────────────────────────────────────
+
+  /**
+   * Build an <option> element for a playlist picker.
+   * The name is set as text so it is never parsed as live HTML. It is first
+   * decoded through an inert <template> (no scripts run, no images load) so
+   * entities like "&amp;" saved by YouTube imports, and whitespace, look
+   * exactly as they did when names were inserted as HTML.
+   * @param {string} value - Option value (playlist key)
+   * @param {*} name - Playlist name
+   * @param {string} [id] - Optional element id
+   * @returns {jQuery}
+   */
+  playlistOption: function (value, name, id) {
+    var tpl = document.createElement('template');
+    tpl.innerHTML = String(name);
+    var $opt = $('<option></option>').val(value).text(tpl.content.textContent);
+    if (id) $opt.attr('id', id);
+    return $opt;
+  },
+
   // ─── Song Title Parsing ──────────────────────────────────────────────────
 
   /**

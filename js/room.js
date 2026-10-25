@@ -133,7 +133,7 @@ function renderHistoryItem(data, $template, containerSel) {
       for (var key in allPlaylists) {
         if (allPlaylists.hasOwnProperty(key)) {
           $("#stealpicker").append(
-            '<option value="' + key + '">' + allPlaylists[key].name + '</option>'
+            firetable.utilities.playlistOption(key, allPlaylists[key].name)
           );
         }
       }

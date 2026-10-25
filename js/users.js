@@ -120,8 +120,8 @@ firetable.actions.loggedIn = function (user) {
     $("#djlistpicker").html('<option value="0">Default Playlist</option>');
     for (var key in allPlaylists) {
       if (allPlaylists.hasOwnProperty(key)) {
-        $("#listpicker").append('<option id="pdopt' + key + '" value="' + key + '">' + allPlaylists[key].name + '</option>');
-        $("#djlistpicker").append('<option value="' + key + '">' + allPlaylists[key].name + '</option>');
+        $("#listpicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name, 'pdopt' + key));
+        $("#djlistpicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
       }
     }
 
