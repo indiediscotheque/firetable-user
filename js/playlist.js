@@ -840,7 +840,7 @@ firetable.ui.setupPlaylistEvents = function () {
     });
 
   // ── Playlist changed: re-render the queue ──
-  ftapi.events.on("playlistChanged", function (okdata) {
+  ftapi.events.on("playlistChanged", function (okdata, listID) {
     firetable.queue = okdata;
     // Each render gets a number; chunks from an older render stop when a
     // newer one starts, so stale rows never get appended to the new list.
@@ -849,13 +849,24 @@ firetable.ui.setupPlaylistEvents = function () {
     var container = document.getElementById('mainqueue');
     var keys = okdata ? Object.keys(okdata) : [];
 
+    // Is this an update to the playlist already on screen (send to top/bottom,
+    // delete, reorder, add) rather than a playlist being opened?
+    var listKey = String(listID);
+    var isUpdate = firetable._queueShownList === listKey &&
+      container.querySelector('.pvbar') !== null;
+    firetable._queueShownList = listKey;
+
     if (!keys.length) {
       container.innerHTML = '';
       firetable.actions.filterQueue('');
       return;
     }
 
-    var FIRST = Math.min(30, keys.length);
+    // Updates: redraw every row in one pass and keep the scroll position, so
+    // the list doesn't collapse to 30 rows and visibly re-grow.
+    var FIRST = isUpdate ? keys.length : Math.min(30, keys.length);
+    var scroller = document.getElementById('queuelist');
+    var keepScroll = isUpdate && scroller ? scroller.scrollTop : null;
     var html = '';
     for (var i = 0; i < FIRST; i++) {
       var k = keys[i];
@@ -864,6 +875,8 @@ firetable.ui.setupPlaylistEvents = function () {
     container.innerHTML = html;
 
     firetable.actions.filterQueue($('#queueFilter').val() || '');
+
+    if (keepScroll !== null) scroller.scrollTop = keepScroll;
 
     if (keys.length <= FIRST) return;
 
