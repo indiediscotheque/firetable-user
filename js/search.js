@@ -98,7 +98,7 @@ firetable.ui.setupSearchEvents = function () {
         );
         for (var key in allPlaylists) {
           if (allPlaylists.hasOwnProperty(key)) {
-            $("#stealpicker").append('<option value="' + key + '">' + allPlaylists[key].name + '</option>');
+            $("#stealpicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
           }
         }
         if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
