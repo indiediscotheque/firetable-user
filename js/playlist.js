@@ -87,6 +87,16 @@ firetable.actions.updateQueue = function () {
   var arr = $('#mainqueue > div').map(function () {
     return this.id.slice(5);
   }).get();
+  // Large playlists render in chunks; if the drag happened before every row
+  // was on screen, keep the not-yet-rendered tracks after the dragged ones
+  // in their existing order (otherwise reorderList ignores the change).
+  if (firetable.queue) {
+    var inDom = {};
+    for (var i = 0; i < arr.length; i++) inDom[arr[i]] = true;
+    Object.keys(firetable.queue).forEach(function (key) {
+      if (!inDom[key]) arr.push(key);
+    });
+  }
   ftapi.actions.reorderList(arr, firetable.preview, function (changePV) {
     if (changePV) firetable.preview = changePV;
   });
@@ -270,6 +280,13 @@ firetable.actions.formatTrackDuration = function (seconds) {
  * Filter visible queue items by a search string.
  * @param {string} val - Filter text (empty string shows all)
  */
+/** True when the text filter or either filter checkbox is in use. */
+firetable.actions.queueFilterActive = function () {
+  return !!(String($("#queueFilter").val() || "").trim() ||
+    $("#queueFilterRemixOnly").is(":checked") ||
+    $("#queueFilterBrokenOnly").is(":checked"));
+};
+
 firetable.actions.filterQueue = function (val) {
   var textFilter = String(typeof val === "string" ? val : $("#queueFilter").val() || "").toLowerCase().trim();
   var remixOnly = $("#queueFilterRemixOnly").is(":checked");
@@ -825,6 +842,9 @@ firetable.ui.setupPlaylistEvents = function () {
   // ── Playlist changed: re-render the queue ──
   ftapi.events.on("playlistChanged", function (okdata) {
     firetable.queue = okdata;
+    // Each render gets a number; chunks from an older render stop when a
+    // newer one starts, so stale rows never get appended to the new list.
+    var renderGen = firetable._queueRenderGen = (firetable._queueRenderGen || 0) + 1;
 
     var container = document.getElementById('mainqueue');
     var keys = okdata ? Object.keys(okdata) : [];
@@ -855,6 +875,7 @@ firetable.ui.setupPlaylistEvents = function () {
       : function (fn) { setTimeout(fn, 0); };
 
     function renderNextChunk() {
+      if (renderGen !== firetable._queueRenderGen) return; // superseded
       var end = Math.min(idx + CHUNK, keys.length);
       var frag = document.createDocumentFragment();
       var tmp = document.createElement('div');
@@ -867,6 +888,10 @@ firetable.ui.setupPlaylistEvents = function () {
       while (tmp.firstChild) frag.appendChild(tmp.firstChild);
       container.appendChild(frag);
       idx = end;
+      // Apply the active filter to the newly added rows
+      if (firetable.actions.queueFilterActive()) {
+        firetable.actions.filterQueue($('#queueFilter').val() || '');
+      }
       if (idx < keys.length) schedule(renderNextChunk);
     }
 
