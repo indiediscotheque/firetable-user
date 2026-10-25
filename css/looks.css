@@ -2425,6 +2425,15 @@ ul.lightrope li {
     cursor: grab;
 }
 
+/* Large playlists: let the browser skip layout/paint for rows that are
+   off-screen, so redrawing a 2,000+ track list stays fast. "auto" remembers
+   each row's real height once it has been shown. The drag placeholder and the
+   row being dragged are excluded so drag-to-reorder positions are unchanged. */
+#mainqueue > .pvbar:not(.ui-sortable-placeholder):not(.ui-sortable-helper) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 34px;
+}
+
 #queuelist .q-art,
 #searchResults .q-art {
     flex-shrink: 0;
