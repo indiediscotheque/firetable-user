@@ -248,18 +248,11 @@ firetable.ui.loginEventsInit = function () {
     }
   });
 
-  // Signup via Enter
+  // Signup via Enter — runs the same checks as the Create Account button
+  // (including the Terms of Service checkbox)
   $("#newpass2").bind("keyup", function (e) {
     if (e.which === 13) {
-      var email = $("#newemail").val();
-      var pass = $("#newpass").val();
-      var pass2 = $("#newpass2").val();
-      var username = $("#newusername").val();
-      if (pass === pass2) {
-        firetable.actions.signUp(email, pass, username);
-      } else {
-        alert("Those passwords do not match!");
-      }
+      $("#createAccountBttn").trigger("click");
     }
   });
 
