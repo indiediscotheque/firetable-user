@@ -201,6 +201,18 @@ function renderHistoryItem(data, $template, containerSel) {
   }
 }
 
+/**
+ * Make a song title / artist / DJ name safe to place inside HTML.
+ * strip() matches how #track and #artist display these values (entities
+ * decoded, tags dropped); htmlEscape() stops the result being parsed as HTML.
+ * @param {*} value
+ * @returns {string}
+ */
+function nowPlayingText(value) {
+  if (value === undefined || value === null) return '';
+  return firetable.utilities.htmlEscape(firetable.ui.strip(String(value)));
+}
+
 // ─── Room Event Binding ──────────────────────────────────────────────────────
 
 /**
@@ -582,12 +594,12 @@ firetable.ui.setupRoomEvents = function () {
       var count = data.adamData.playcount;
       $("#playCount").text(firetable.utilities.pluralize(count, "play"));
       $(".npmsg" + data.cid).last().find(".npmsg").html(
-        'DJ <strong>' + nicename + '</strong> started playing <strong>' + data.adamData.track_name + '</strong> by <strong>' + data.adamData.artist + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(count, "time") + '.'
+        'DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.adamData.track_name) + '</strong> by <strong>' + nowPlayingText(data.adamData.artist) + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(count, "time") + '.'
       );
     } else {
       $("#playCount").text("");
       $(".npmsg" + data.cid).last().find(".npmsg").html(
-        'DJ <strong>' + nicename + '</strong> started playing <strong>' + data.adamData.track_name + '</strong> by <strong>' + data.adamData.artist + '</strong>'
+        'DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.adamData.track_name) + '</strong> by <strong>' + nowPlayingText(data.adamData.artist) + '</strong>'
       );
     }
     if (doTheScrollThing) firetable.utilities.scrollToBottom();
@@ -739,9 +751,9 @@ firetable.ui.setupRoomEvents = function () {
         var npmsgTime = firetable.utilities.format_time(Date.now());
         var npmsgHTML;
         if (showPlaycount) {
-          npmsgHTML = '<div class="newChat nowplayn npmsg' + data.cid + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nicename + '</strong> started playing <strong>' + data.title + '</strong> by <strong>' + data.artist + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(firetable.tagUpdate.adamData.playcount, "time") + '.</div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
+          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(firetable.tagUpdate.adamData.playcount, "time") + '.</div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
         } else {
-          npmsgHTML = '<div class="newChat nowplayn npmsg' + data.cid + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nicename + '</strong> started playing <strong>' + data.title + '</strong> by <strong>' + data.artist + '</strong></div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
+          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong></div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
         }
         $("#chats").append(npmsgHTML);
         if (doTheScrollThing) firetable.utilities.scrollToBottom();
