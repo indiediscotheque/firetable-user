@@ -163,7 +163,10 @@ firetable.utilities = {
    * @param {string} namebo - Display name of the sender
    */
   desktopNotify: function (chatData, namebo) {
-    if (Notification) {
+    // iPhone/iPad Safari has no Notification API, and Android Chrome throws on
+    // `new Notification()`. Never let either break rendering the chat message.
+    if (typeof Notification === "undefined") return;
+    try {
       if (Notification.permission !== "granted") {
         Notification.requestPermission();
       } else {
@@ -172,6 +175,8 @@ firetable.utilities = {
           body: chatData.txt
         });
       }
+    } catch (e) {
+      firetable.debug && console.log("desktop notification failed:", e);
     }
   },
 

@@ -1426,7 +1426,7 @@ firetable.ui.setupMiscEvents = function () {
     firetable.debug && console.log("dtnm " + (this.checked ? "on" : "off"));
     localStorage[STORAGE.notifyMentions] = this.checked;
     firetable.desktopNotifyMentions = this.checked;
-    if (this.checked && Notification && Notification.permission !== "granted") {
+    if (this.checked && typeof Notification !== "undefined" && Notification.permission !== "granted") {
       Notification.requestPermission();
     }
   });
