@@ -498,7 +498,7 @@
 				<div class="miniLoginNavOnly"><br/><br/><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
 			</div>
 			<div id="logscreen" style="display: none">
-				<form id="loginFormShell" novalidate>
+				<form id="loginFormShell" novalidate onsubmit="return false;">
 				<h4>Log In</h4>
 				<div class="inputline">
 					<label>Email:</label>
@@ -511,7 +511,7 @@
 				</form>
 			</div>
 			<div id="createscreen">
-				<form id="createAccountFormShell" novalidate>
+				<form id="createAccountFormShell" novalidate onsubmit="return false;">
 					<h4>Create an Account</h4>
 					<div class="inputline">Email: <input type="email" id="newemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
 					<div class="inputline">Username: <input type="text" id="newusername" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
@@ -529,7 +529,7 @@
 				</form>
 			</div>
 			<div id="resetscreen" style="display: none">
-				<form id="resetPasswordFormShell" novalidate>
+				<form id="resetPasswordFormShell" novalidate onsubmit="return false;">
 				<h4>Reset your password!</h4>
 
 				<div class="inputline">Email: <input type="email" id="theAddress" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" /></div>
