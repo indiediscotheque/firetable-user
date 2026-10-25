@@ -110,8 +110,8 @@ firetable.actions.shuffleQueue = function () {
 };
 
 /** Remove duplicate tracks from the current playlist. */
-firetable.actions.removeDupesFromQueue = function () {
-  ftapi.actions.removeDuplicatesFromList(firetable.actions.mergeFinished);
+firetable.actions.removeDupesFromQueue = function (listID) {
+  ftapi.actions.removeDuplicatesFromList(listID, firetable.actions.mergeFinished);
 };
 
 /** Show the merge result once the database has confirmed the writes. */
@@ -331,7 +331,7 @@ firetable.actions.filterQueue = function (val) {
  */
 firetable.actions.mergeLists = function (source, dest, sourceName) {
   if (source === dest) {
-    firetable.actions.removeDupesFromQueue();
+    firetable.actions.removeDupesFromQueue(source);
     return;
   }
   if (dest == -1) {
