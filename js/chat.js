@@ -193,12 +193,15 @@ firetable.ui.strip = function (html) {
  * @returns {string} Formatted HTML string safe for insertion
  */
 firetable.ui.formatChatText = function (rawTxt) {
-  var txt = firetable.ui.strip(rawTxt);
+  // \x01 is reserved as the code-span placeholder marker below
+  var txt = firetable.ui.strip(rawTxt).replace(/\x01/g, '');
 
-  // Extract inline code spans first so their content is immune to markdown
+  // Extract inline code spans first so their content is immune to markdown.
+  // strip() decodes entities (e.g. "&lt;" -> "<"), so the content must be
+  // escaped here or it would be inserted into the page as live HTML.
   var codeSpans = [];
   txt = txt.replace(/`([^`\n]+)`/g, function (_, inner) {
-    codeSpans.push('<code>' + inner + '</code>');
+    codeSpans.push('<code>' + firetable.utilities.htmlEscape(inner) + '</code>');
     return '\x01' + (codeSpans.length - 1) + '\x01';
   });
 
