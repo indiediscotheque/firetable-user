@@ -109,7 +109,8 @@ function renderHistoryItem(data, $template, containerSel) {
     var btnCid = $(this).closest('.pvbar').attr('data-cid');
     var btnType = parseInt($(this).closest('.pvbar').attr('data-type'), 10);
     var btnImg = $(this).closest('.pvbar').attr('data-img') || '';
-    var $histlink = $(this).closest('.pvbar').find('.histlink');
+    // Recent rows use .histlink; Fresh rows use .fresh-title (with artist/title spans)
+    var $histlink = $(this).closest('.pvbar').find('.histlink, .fresh-title').first();
     var $trackTitle = $histlink.find('.fresh-track-title');
     var $trackArtist = $histlink.find('.fresh-track-artist');
     var btnTitle = ($trackTitle.length && $trackArtist.length)
