@@ -505,10 +505,15 @@ ftapi.actions = {
     });
   },
   moveTrackToBottom: function(trackID, callback) {
-    var theTrack = ftapi.queue[trackID];
+    if (!ftapi.queue || !ftapi.queue[trackID]) return;
+    // Copy every stored field (album art, broken/off-theme flag, ...), not
+    // just type/name/cid, so nothing is lost when the track is re-added.
+    var theTrack = JSON.parse(JSON.stringify(ftapi.queue[trackID]));
+    delete theTrack.key; // added locally by removeDuplicatesFromList
+    var ref = ftapi.queueRef;
     ftapi.actions.deleteTrack(trackID, function() {
-      var newID = ftapi.actions.addToList(theTrack.type, theTrack.name, theTrack.cid, false, function() {
-        if (callback) return callback(newID);
+      var newTrack = ref.push(theTrack, function() {
+        if (callback) return callback(newTrack.key);
       });
     });
   },
