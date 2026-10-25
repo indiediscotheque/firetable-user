@@ -769,9 +769,11 @@ ftapi.actions = {
   },
   editTag: function(type, cid, tag, histID){
     console.log(type+" "+cid+" "+tag+ " "+histID);
-    var yargo = tag.split(" - ");
-    var theartist = yargo[0];
-    var thetitle = yargo[1];
+    // Split on the FIRST " - " only, so titles that contain " - "
+    // (e.g. "Song - Live Version") keep everything after it.
+    var sep = tag.indexOf(" - ");
+    var theartist = sep === -1 ? tag : tag.slice(0, sep);
+    var thetitle = sep === -1 ? "" : tag.slice(sep + 3);
     //UPDATE HISTORY
     var histRef = firebase.app("firetable").database().ref("songHistory/" + histID);
     histRef.child("artist").set(theartist);
