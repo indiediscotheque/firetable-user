@@ -309,7 +309,7 @@ firetable.ui.setupRoomEvents = function () {
 
         deckHtml = '<div id="spt0" class="spot' + (isGhost ? ' ghost' : '') + '">' +
           '<div class="avtr animate" id="avtr0" style="background-image: url(' +
-          firetable.utilities.avatarURL(djId, djName) + ');"></div>' +
+          firetable.utilities.htmlEscape(firetable.utilities.avatarURL(djId, djName)) + ');"></div>' +
           '<div id="djthing0" class="djplaque djActive">' +
           '<div class="djname">' + firetable.utilities.htmlEscape(djName) + '</div>' +
           departureIndicator + actionBtn +
@@ -343,7 +343,7 @@ firetable.ui.setupRoomEvents = function () {
         ondeckHtml += '<button class="ondeck-slot" data-djid="' + odj.id + '" data-plays="' + (odj.plays || 0) + '" aria-label="' +
           firetable.utilities.htmlEscape(odj.name) + '">' +
           '<div class="ft-avatar" style="background-image: url(' +
-          firetable.utilities.avatarURL(odj.id, odj.name, '40x40') + ')"></div>' +
+          firetable.utilities.htmlEscape(firetable.utilities.avatarURL(odj.id, odj.name, '40x40')) + ')"></div>' +
           '</button>';
       } else {
         ondeckHtml += '<button class="ondeck-slot empty" aria-label="Add to DJ list"' + (isSelfOnDeck ? ' disabled' : '') + '></button>';
@@ -868,7 +868,7 @@ firetable.ui.setupRoomEvents = function () {
             departureBtn +
             '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
             '<div class="ft-avatar" style="background-image:url(' +
-            firetable.utilities.avatarURL(userId, data[key].name) +
+            firetable.utilities.htmlEscape(firetable.utilities.avatarURL(userId, data[key].name)) +
             ');"></div>' +
             '</div>';
 
@@ -1006,7 +1006,7 @@ firetable.ui.setupRoomEvents = function () {
       if (data[key]) {
         ftapi.lookup.userByName(key, function (person) {
           $("#activeSuspentions").append(
-            '<div class="importResult"><div class="imtxt">' + person.username + '</div>' +
+            '<div class="importResult"><div class="imtxt">' + firetable.utilities.htmlEscape(person.username) + '</div>' +
             '<i role="button" onclick="firetable.actions.unban(\'' + person.userid + '\')" class="material-symbols-filled" title="Unsuspend">&#xE5C9;</i></div>'
           );
         });

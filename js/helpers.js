@@ -342,7 +342,7 @@ firetable.utilities = {
     $('#atPicker').html('');
     if (firetable.atUsersFiltered.length) {
       for (var i = 0; i < firetable.atUsersFiltered.length; i++) {
-        var $btn = $('<div class="atPickerThing"><button class="butt graybutt" role="option" aria-selected="false">@' + firetable.atUsersFiltered[i] + '</button></div>');
+        var $btn = $('<div class="atPickerThing"><button class="butt graybutt" role="option" aria-selected="false">@' + firetable.utilities.htmlEscape(firetable.atUsersFiltered[i]) + '</button></div>');
         if (i === 0) $btn.find('.butt').attr('aria-selected', 'true');
         $btn.appendTo('#atPicker');
       }
