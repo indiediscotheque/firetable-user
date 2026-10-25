@@ -94,6 +94,14 @@ firetable.utilities = {
       title = artist;
       artist = fallbackArtist || "";
     }
+    // Drop bracketed upload junk like "(Official Music Video)", "[Official
+    // Audio]" or "[HD]". Only brackets that contain nothing but junk words are
+    // removed, so "(Video Mix)", "(Live Audio Session)", "(Remix)" etc. stay.
+    var cleaned = title
+      .replace(/\s*[\(\[]\s*(?:(?:official\s+)?(?:hd\s+|4k\s+)?(?:music\s+video|lyric\s+video|video|audio|visuali[sz]er|lyrics)|hd|hq|4k)\s*[\)\]]/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    if (cleaned) title = cleaned;
     return { artist: artist, title: title };
   },
 
