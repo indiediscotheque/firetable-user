@@ -26,7 +26,8 @@ function onYouTubeIframeAPIReady() {
     height: frameH,
     playerVars: {
       autoplay: 1,
-      controls: 0
+      controls: 0,
+      playsinline: 1 // iPhone: play inside the stage instead of going full screen
     },
     videoId: '5mGuCdlCcNM', // placeholder video
     events: {
