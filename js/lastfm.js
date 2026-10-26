@@ -38,10 +38,23 @@ firetable.lastfm = {
   killSession: function () {
     firetable.lastfm.sk = false;
     localStorage[STORAGE.lastfmSession] = firetable.lastfm.sk;
-    $("#scrobtoggle").html(
-      '<a href="http://www.last.fm/api/auth/?api_key=' + firetable.lastfm.key +
-      '&cb=' + window.location.href + '">Set up last.fm scrobbling</a>'
-    );
+    firetable.lastfm.renderToggle();
+  },
+
+  /**
+   * Render the Settings link: "Set up" when disconnected, "Disconnect" when connected.
+   */
+  renderToggle: function () {
+    if (firetable.lastfm.sk) {
+      $("#scrobtoggle").html(
+        '<a onclick="firetable.lastfm.killSession(); return false;" href="#">Disconnect Last.fm scrobbling</a>'
+      );
+    } else {
+      $("#scrobtoggle").html(
+        '<a href="https://www.last.fm/api/auth/?api_key=' + firetable.lastfm.key +
+        '&cb=' + encodeURIComponent(window.location.href) + '">Set up Last.fm scrobbling</a>'
+      );
+    }
   },
 
   /**
@@ -61,9 +74,7 @@ firetable.lastfm = {
       }
       firetable.lastfm.sk = jsonResponse.session.key;
       localStorage[STORAGE.lastfmSession] = firetable.lastfm.sk;
-      $("#scrobtoggle").html(
-        '<a onclick="firetable.lastfm.killSession()" href="#">Disconnect Lastfm Scrobbling</a>'
-      );
+      firetable.lastfm.renderToggle();
     };
   },
 

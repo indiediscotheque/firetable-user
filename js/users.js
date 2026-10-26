@@ -25,14 +25,12 @@ firetable.ui = firetable.ui || {};
  */
 firetable.actions.logIn = function (email, password) {
   firetable.debug && console.log("login");
+    firetable.ui.formMessage('#loginFormShell', '');
   ftapi.actions.logIn(email, password, function (error) {
     var errorCode = error.code;
     var errorMessage = error.message;
-    if (errorCode === 'auth/wrong-password') {
-      alert('Wrong password.');
-    } else {
-      alert(errorMessage);
-    }
+    firetable.ui.formMessage('#loginFormShell',
+      errorCode === 'auth/wrong-password' ? 'Wrong password.' : errorMessage);
     firetable.debug && console.log("log in error:", error);
   });
 };
@@ -52,8 +50,10 @@ firetable.actions.logOut = function () {
  */
 firetable.actions.signUp = function (email, password, username) {
   firetable.debug && console.log("signup");
+    firetable.ui.formMessage('#createAccountFormShell', '');
   ftapi.actions.signUp(email, password, username, function (error) {
-    alert(error);
+    firetable.ui.formMessage('#createAccountFormShell',
+      (error && error.message) ? error.message : String(error));
   });
 };
 
@@ -70,7 +70,6 @@ firetable.actions.showLoginScreen = function () {
   firetable.ui._hasRunBootReveal = false;
   firetable.ui._isShellBooting = false;
 
-  $("#cardCaseButton").hide();
   $("#loggedInName").hide();
   $("#logOutButton").hide().off();
   $('#mainGrid').removeClass().addClass('login');
@@ -166,7 +165,6 @@ firetable.actions.loggedIn = function (user) {
     });
   });
 
-  $("#cardCaseButton").show();
   $("#loggedInName").show();
   $("#logOutButton").show().on('click', firetable.actions.logOut);
   firetable.debug && console.log('remove login class from mainGrid');
@@ -259,17 +257,8 @@ firetable.ui.loginEventsInit = function () {
   // Password reset via Enter
   $("#theAddress").bind("keyup", function (e) {
     if (e.which === 13) {
-      var email = $(this).val();
       firetable.debug && console.log("reset email return");
-      ftapi.actions.resetPassword(email, function (error) {
-        if (error.code === 'auth/wrong-password') {
-          alert('Wrong password.');
-        } else {
-          alert(error.message);
-        }
-        firetable.debug && console.log('send pass reset error:', error);
-      });
-      alert("Reset email sent. Click the reset link when it arrives thanks.");
+      $("#resetPassBttn").trigger("click");
     }
   });
 
@@ -281,9 +270,9 @@ firetable.ui.loginEventsInit = function () {
     var termsAgreedTo = $("#agreetoterms").is(":checked");
     var username = $("#newusername").val();
     if (!termsAgreedTo) {
-      alert("You must read and agree to the Terms of Service and Privacy Policy before you can create an account.");
+      firetable.ui.formMessage('#createAccountFormShell', "You must read and agree to the Terms of Service and Privacy Policy before you can create an account.");
     } else if (pass !== pass2) {
-      alert("Those passwords do not match!");
+      firetable.ui.formMessage('#createAccountFormShell', "Those passwords do not match!");
     } else {
       firetable.actions.signUp(email, pass, username);
     }
@@ -293,15 +282,13 @@ firetable.ui.loginEventsInit = function () {
   $("#resetPassBttn").bind("click", function () {
     var email = $("#theAddress").val();
     firetable.debug && console.log("reset email click button");
+        // Success shows right away; an error from Firebase replaces it.
+    firetable.ui.formMessage('#resetPasswordFormShell', "Reset email sent. Click the reset link when it arrives, thanks.", 'success');
     ftapi.actions.resetPassword(email, function (error) {
-      if (error.code === 'auth/wrong-password') {
-        alert('Wrong password.');
-      } else {
-        alert(error.message);
-      }
+      firetable.ui.formMessage('#resetPasswordFormShell',
+        error.code === 'auth/wrong-password' ? 'Wrong password.' : error.message);
       firetable.debug && console.log('send pass reset error:', error);
     });
-    alert("Reset email sent. Click the reset link when it arrives thanks.");
   });
 
   // Login button
@@ -329,6 +316,7 @@ firetable.ui.loginEventsDestroy = function () {
 firetable.ui.loginLinkToggle = function (id) {
   $("#formlinks").find(".selected").removeClass("selected");
   $("#" + id).addClass("selected");
+  $("#login .formMessage").text('').removeClass('is-success');
 };
 
 // ─── User Event Binding ──────────────────────────────────────────────────────
@@ -530,9 +518,7 @@ firetable.ui.setupUserEvents = function () {
     firetable.ui.syncGhostUsers();
   });
 
-  // ── User tab switching ──
-  $("#label1").bind("click.lb1tab", firetable.ui.usertab1);
-  $("#label2").bind("click.lb2tab", firetable.ui.usertab2);
+  
 
   // ── Username change ──
   $("#changeUsername").bind("keyup", function (e) {
@@ -542,7 +528,6 @@ firetable.ui.setupUserEvents = function () {
     if (newDjName) {
       ftapi.actions.changeName(newDjName, function (error) {
         if (error) {
-          alert(error);
           $("#usernameResponse").text(error);
         } else {
           $("#usernameResponse").text("Great job! Your name is now " + newDjName);
@@ -574,20 +559,4 @@ firetable.ui.setupUserEvents = function () {
   });
 };
 
-// ─── User Tab Helpers ────────────────────────────────────────────────────────
 
-/** Show the "All Users" tab, hide the "Waitlist" tab. */
-firetable.ui.usertab1 = function () {
-  $("#allusersWrap").css("display", "block");
-  $("#justwaitWrap").css("display", "none");
-  $("#usertabs").find(".on").removeClass("on");
-  $("#label1").addClass("on");
-};
-
-/** Show the "Waitlist" tab, hide the "All Users" tab. */
-firetable.ui.usertab2 = function () {
-  $("#usertabs").find(".on").removeClass("on");
-  $("#label2").addClass("on");
-  $("#allusersWrap").css("display", "none");
-  $("#justwaitWrap").css("display", "block");
-};
