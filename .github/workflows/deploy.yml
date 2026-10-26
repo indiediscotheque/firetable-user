@@ -2,8 +2,8 @@
 #
 # Uploads over SFTP (works with an SFTP-only DreamHost user). Every file type
 # and folder is included, files are sent exactly as they are in git, nothing
-# on the server is deleted, and config.js (which lives only on the server) is
-# never touched. Before uploading, it checks the target folder already holds
+# on the server is deleted, and config.js and api/soundcloud-config.php (which
+# live only on the server) are never touched. Before uploading, it checks the target folder already holds
 # config.js, so a wrong path or login stops the publish instead of copying the
 # site somewhere else.
 #
@@ -115,5 +115,6 @@ jobs:
               --exclude-glob .gitignore \
               --exclude-glob .DS_Store \
               --exclude-glob config.js \
+              --exclude-glob soundcloud-config.php \
               --exclude-glob README.md \
               ./ \"$DEST/\""

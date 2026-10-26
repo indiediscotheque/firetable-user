@@ -8,7 +8,7 @@
  * - Queue filtering (#queueFilter)
  * - Merge lists between playlists
  * - Queue from link (YouTube/SoundCloud URL drag-and-drop)
- * - SoundCloud URL resolution (resolveSCLink, scGet)
+ * - SoundCloud API access via the site proxy (scSearch, resolveSCLink, scPlaylist)
  * - Import playlist from YouTube/SoundCloud (importList)
  * - List CRUD (create, delete, switch)
  * - playlistChanged event handler
@@ -483,51 +483,132 @@ firetable.actions.queueFromLink = function (link) {
     firetable.actions.queueYoutubeWithFallback(youtubeId);
   } else if (incomingLink.match(/soundcloud.com/i)) {
     firetable.debug && console.log("sc");
-    firetable.actions.resolveSCLink(incomingLink, function (tracks) {
-      if (tracks) {
-        var parsed = firetable.utilities.parseArtistTitle(tracks.title, tracks.user.username);
-        firetable.actions.queueTrack(tracks.id, parsed.artist + " - " + parsed.title, MEDIA_SOUNDCLOUD);
+    firetable.actions.resolveSCLink(incomingLink, function (item) {
+      if (item && item.kind === "track") {
+        var parsed = firetable.utilities.parseArtistTitle(item.title, item.user.username);
+        firetable.actions.queueTrack(item.id, parsed.artist + " - " + parsed.title, MEDIA_SOUNDCLOUD);
+      } else {
+        firetable.actions.localChatResponse("That SoundCloud link isn't a track. Use Import to add a whole playlist.");
       }
+    }, function (err) {
+      firetable.actions.localChatResponse("Couldn't add that SoundCloud link: " + err.message);
     });
   }
 };
 
-// ─── SoundCloud Resolution ───────────────────────────────────────────────────
+// ─── SoundCloud API ──────────────────────────────────────────────────────────
+//
+// SoundCloud only answers OAuth-signed requests, so the browser can't call its
+// API directly (the old SC.get() SDK calls now fail with 401). Everything goes
+// through this site's own proxy (api/soundcloud.php) when it's set up. Link
+// lookups and playlist imports fall back to the legacy thompsn.com proxy,
+// which can't do keyword search.
 
-/**
- * Resolve a SoundCloud URL to track/playlist metadata via proxy.
- * @param {string} link     - Full SoundCloud URL
- * @param {Function} callback - Called with the resolved response object
- */
-firetable.actions.resolveSCLink = function (link, callback) {
-  var importantStuff = link.replace("https://soundcloud.com/", "").replace("http://soundcloud.com/", "");
-  $.ajax({
-    url: SC_RESOLVE_URL + importantStuff,
-    type: 'GET',
-    dataType: 'json',
-    success: function (res) {
-      console.log(res);
-      callback(res.response);
+/** True once the site proxy turns out to be missing or unconfigured. */
+firetable.scProxyDown = false;
+
+/** Build a rejected jQuery promise carrying {status, message, unavailable}. */
+firetable.utilities.scReject = function (status, message, unavailable) {
+  return $.Deferred().reject({ status: status, message: message, unavailable: !!unavailable }).promise();
+};
+
+/** Call api/soundcloud.php. Resolves with its JSON, rejects with an error object. */
+firetable.actions.scProxy = function (params) {
+  if (firetable.scProxyDown) return firetable.utilities.scReject(501, "SoundCloud proxy unavailable", true);
+  return $.ajax({ url: SC_API_PROXY_URL, data: params, type: "GET", dataType: "json", timeout: 20000 })
+    .then(null, function (xhr) {
+      var apiMsg = xhr.responseJSON && xhr.responseJSON.error;
+      // 404 / 405 / 501 / non-JSON (no PHP on this host) mean the proxy isn't
+      // usable: stop trying it this session and fall back where possible.
+      var down = xhr.status === 404 || xhr.status === 405 || xhr.status === 501 ||
+        (!apiMsg && xhr.status !== 0 && xhr.status !== 429);
+      if (down) {
+        firetable.scProxyDown = true;
+        console.warn("SoundCloud proxy (" + SC_API_PROXY_URL + ") unavailable:", apiMsg || (xhr.status + " " + xhr.statusText),
+          "- see api/soundcloud-config.php.example to enable keyword search.");
+      }
+      return firetable.utilities.scReject(xhr.status, apiMsg || "Couldn't reach SoundCloud.", down || xhr.status === 0);
+    });
+};
+
+/** GET the legacy proxy; it wraps results as {response: item} and returns {} when nothing matches. */
+firetable.actions.scLegacy = function (url) {
+  return $.ajax({ url: url, type: "GET", dataType: "json", timeout: 20000 }).then(
+    function (res) {
+      var item = res && res.response;
+      return (item && item.id) ? item : firetable.utilities.scReject(404, "Not found on SoundCloud (it may be private or deleted).");
+    },
+    function (xhr) {
+      return firetable.utilities.scReject(xhr.status, "Couldn't reach SoundCloud.");
     }
-  });
+  );
+};
+
+/** Does this text look like a SoundCloud link? (soundcloud.com, www., m., on.) */
+firetable.utilities.isSCLink = function (txt) {
+  return /^\s*(?:https?:\/\/)?(?:(?:www|m|on)\.)?soundcloud\.com\/\S+/i.test(String(txt || ""));
 };
 
 /**
- * Generic SoundCloud API GET request via proxy.
- * @param {string} type     - Resource type (e.g. 'playlists')
- * @param {string} q        - Query/ID
- * @param {Function} callback - Called with the response
+ * Keyword search.
+ * @param {string} type - 'tracks' or 'playlists'
+ * @param {string} q    - Search text
+ * @returns {Promise<Array>} Matching tracks/playlists
  */
-firetable.actions.scGet = function (type, q, callback) {
-  $.ajax({
-    url: SC_PROXY_URL + "?type=" + type + "&q=" + q,
-    type: 'GET',
-    dataType: 'json',
-    success: function (res) {
-      console.log(res);
-      callback(res.response);
+firetable.actions.scSearch = function (type, q) {
+  return firetable.actions.scProxy({ action: "search", type: type, q: q, limit: SEARCH_MAX_RESULTS })
+    .then(function (res) { return (res && res.collection) || []; }, function (err) {
+      if (err.unavailable) {
+        err.message = "SoundCloud keyword search isn't available right now. Paste a soundcloud.com link instead.";
+      }
+      return $.Deferred().reject(err);
+    });
+};
+
+/**
+ * Resolve a SoundCloud URL to track/playlist/user metadata.
+ * @param {string}   link       - SoundCloud URL
+ * @param {Function} [callback] - Called with the resolved item
+ * @param {Function} [onError]  - Called with {status, message} on failure
+ * @returns {Promise<Object>}
+ */
+firetable.actions.resolveSCLink = function (link, callback, onError) {
+  var url = String(link || "").trim();
+  var legacy = function () {
+    var m = url.match(/^(?:https?:\/\/)?(?:(?:www|m)\.)?soundcloud\.com\/([^?#\s]+)/i);
+    if (!m) {
+      return firetable.utilities.scReject(400, "Short on.soundcloud.com links can't be looked up right now. Open the link and paste the full soundcloud.com address.");
     }
+    // The legacy resolver takes the path as ?q=…, slashes intact.
+    var path = m[1].replace(/\/+$/, "").split("/").map(function (seg) {
+      try { seg = decodeURIComponent(seg); } catch (e) { /* keep as typed */ }
+      return encodeURIComponent(seg);
+    }).join("/");
+    return firetable.actions.scLegacy(SC_RESOLVE_URL + "?q=" + path);
+  };
+  var p = firetable.actions.scProxy({ action: "resolve", url: url })
+    .then(function (res) { return res.item; }, function (err) {
+      return err.unavailable ? legacy() : $.Deferred().reject(err);
+    });
+  p.then(function (item) { if (callback) callback(item); }, function (err) {
+    console.warn("SoundCloud resolve failed:", err.message);
+    if (onError) onError(err);
   });
+  return p;
+};
+
+/**
+ * Fetch a playlist with its tracks (for import).
+ * @param {string|number} id
+ * @returns {Promise<Object>} Playlist with a .tracks array
+ */
+firetable.actions.scPlaylist = function (id) {
+  return firetable.actions.scProxy({ action: "playlist", id: id })
+    .then(function (res) { return res.item; }, function (err) {
+      return err.unavailable
+        ? firetable.actions.scLegacy(SC_PROXY_URL + "?type=playlists&q=" + encodeURIComponent(id))
+        : $.Deferred().reject(err);
+    });
 };
 
 // ─── Playlist Import ─────────────────────────────────────────────────────────
@@ -581,21 +662,25 @@ firetable.actions.importList = function (id, name, type) {
     fetchPage(); // start with first page
 
   } else if (type === MEDIA_SOUNDCLOUD) {
-    firetable.actions.scGet('playlists', id, function (listinfo) {
-      firetable.debug && console.log('sc tracks:', listinfo.tracks);
+    firetable.actions.scPlaylist(id).then(function (listinfo) {
+      var tracks = (listinfo && listinfo.tracks) || [];
+      firetable.debug && console.log('sc tracks:', tracks);
       var listid = ftapi.actions.createList(name);
       $("#listpicker").append(firetable.utilities.playlistOption(listid, name, 'pdopt' + listid));
       $("#djlistpicker").append(firetable.utilities.playlistOption(listid, name));
-      for (var i = 0; i < listinfo.tracks.length; i++) {
+      for (var i = 0; i < tracks.length; i++) {
         var goodTitle;
-        if (listinfo.tracks[i].title) {
-          var parsed = firetable.utilities.parseArtistTitle(listinfo.tracks[i].title, listinfo.tracks[i].user.username);
+        if (tracks[i].title) {
+          var parsed = firetable.utilities.parseArtistTitle(tracks[i].title, (tracks[i].user && tracks[i].user.username) || "");
           goodTitle = parsed.artist + " - " + parsed.title;
         } else {
           goodTitle = "Unknown";
         }
-        ftapi.actions.addToList(MEDIA_SOUNDCLOUD, goodTitle, listinfo.tracks[i].id, listid);
+        ftapi.actions.addToList(MEDIA_SOUNDCLOUD, goodTitle, tracks[i].id, listid);
       }
+      firetable.actions.localChatResponse("Imported " + firetable.utilities.pluralize(tracks.length, "song") + " from SoundCloud into \"" + name + "\".");
+    }, function (err) {
+      firetable.actions.localChatResponse("SoundCloud import failed: " + err.message);
     });
   }
 };

@@ -1,0 +1,16 @@
+<?php
+/*
+ * SoundCloud API credentials for api/soundcloud.php.
+ *
+ * 1.) copy this file to soundcloud-config.php (same folder)
+ * 2.) fill in your SoundCloud app's client ID and client secret
+ *     (https://soundcloud.com/you/apps)
+ *
+ * soundcloud-config.php is git-ignored and skipped by the deploy, so it only
+ * ever lives on the server. Env vars SOUNDCLOUD_CLIENT_ID and
+ * SOUNDCLOUD_CLIENT_SECRET work too and take priority.
+ */
+return [
+    'client_id'     => 'xxxxxxxxxxxxxxxxxxxx',
+    'client_secret' => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+];

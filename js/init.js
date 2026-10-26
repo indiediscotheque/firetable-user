@@ -9,9 +9,8 @@
  *  5. Initializes the SoundCloud widget and binds its READY/PLAY events
  *  6. Removes playlist/tag editor DOM templates for later cloning
  *  7. Boots Firebase via ftapi.init()
- *  8. Initializes the SoundCloud SDK
- *  9. Binds auth lifecycle events (login, logout, reconnect, ban)
- *  10. Calls firetable.ui.init() to wire up the rest of the UI
+ *  8. Binds auth lifecycle events (login, logout, reconnect, ban)
+ *  9. Calls firetable.ui.init() to wire up the rest of the UI
  *
  * The final line auto-starts the app: `if (!firetable.started) firetable.init();`
  *
@@ -131,9 +130,6 @@ firetable.init = function () {
 
   // ── Firebase Init ──
   ftapi.init(ftconfigs.firebase);
-
-  // ── SoundCloud SDK Init ──
-  SC.initialize({ client_id: ftconfigs.soundcloudKey });
 
   // ── Auth Lifecycle Events ──
 
