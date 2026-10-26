@@ -4,7 +4,8 @@
  * This module contains:
  * - firetable.ui.hidePlayerControls / showPlayerControls
  * - firetable.ui.LinkGrabber (drag-and-drop link detection)
- * - firetable.ui.usertab1 / usertab2
+ * - firetable.ui.toast / formMessage (in-app feedback instead of alert())
+ * - firetable.actions.openStealPicker (shared "add to playlist" picker)
  * - firetable.ui.loginEventsInit / loginEventsDestroy / loginLinkToggle
  * - firetable.ui.initSettings(): restore settings from localStorage
  * - firetable.ui.setupMiscEvents(): modals, sortable, volume, grab, settings toggles, etc.
@@ -70,7 +71,6 @@ firetable.ui.hidePlayerControls = function () {
   $("head").append(
     "<style class='playerControlsHider'>" +
     ".previewicon { display: none !important; } " +
-    "div#playerControls { display: none !important; } " +
     "</style>"
   );
 };
@@ -82,22 +82,96 @@ firetable.ui.showPlayerControls = function () {
   $(".playerControlsHider").remove();
 };
 
-// ─── User Tabs (All Users / Waitlist) ────────────────────────────────────────
+// ─── Feedback: toast + inline form messages ──────────────────────────────────
 
-/** Show the "All Users" panel, hide the "Waitlist" panel */
-firetable.ui.usertab1 = function () {
-  $("#allusersWrap").css("display", "block");
-  $("#justwaitWrap").css("display", "none");
-  $("#usertabs").find(".on").removeClass("on");
-  $("#label1").addClass("on");
+/**
+ * Show a short app-styled notice at the bottom of the screen.
+ * Replaces browser alert() pop-ups. Uses a manual popover so it also shows
+ * above open dialogs.
+ * @param {string} msg
+ * @param {"error"|"success"} [type]
+ */
+firetable.ui.toast = function (msg, type) {
+  var el = document.getElementById('ft-toast');
+  if (!el || !msg) return;
+  clearTimeout(firetable.ui._toastTimer);
+  clearTimeout(firetable.ui._toastHideTimer);
+  el.textContent = msg;
+  el.classList.remove('is-error', 'is-success', 'show');
+  if (type) el.classList.add('is-' + type);
+  try {
+    if (el.showPopover && !el.matches(':popover-open')) el.showPopover();
+  } catch (e) { /* popover unsupported: plain fixed element */ }
+  requestAnimationFrame(function () { el.classList.add('show'); });
+  firetable.ui._toastTimer = setTimeout(function () {
+    el.classList.remove('show');
+    firetable.ui._toastHideTimer = setTimeout(function () {
+      try {
+        if (el.hidePopover && el.matches(':popover-open')) el.hidePopover();
+      } catch (e) { /* ignore */ }
+    }, 220);
+  }, type === 'error' ? 5000 : 3500);
 };
 
-/** Show the "Waitlist" panel, hide the "All Users" panel */
-firetable.ui.usertab2 = function () {
-  $("#usertabs").find(".on").removeClass("on");
-  $("#label2").addClass("on");
-  $("#allusersWrap").css("display", "none");
-  $("#justwaitWrap").css("display", "block");
+/**
+ * Show (or clear) the inline message inside a form.
+ * Falls back to a toast when the form has no message slot.
+ * @param {string} formSel - Form selector
+ * @param {string} msg - Message text; empty clears it
+ * @param {"error"|"success"} [type="error"]
+ */
+firetable.ui.formMessage = function (formSel, msg, type) {
+  var $m = $(formSel).find('.formMessage');
+  if (!$m.length) {
+    if (msg) firetable.ui.toast(msg, type || 'error');
+    return;
+  }
+  $m.text(msg || '').toggleClass('is-success', type === 'success');
+};
+
+// ─── Add-to-playlist picker (shared by stage, playlist, recent, fresh, search) ─
+
+/** Fill the "Where to?" picker with the user's playlists. */
+firetable.ui.fillStealPicker = function (allPlaylists) {
+  var $picker = $("#stealpicker");
+  $picker.html(
+    '<option value="-1">Where to?</option>' +
+    '<option value="0">Default Playlist</option>'
+  );
+  for (var key in allPlaylists) {
+    if (allPlaylists.hasOwnProperty(key)) {
+      $picker.append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
+    }
+  }
+};
+
+/**
+ * Open the playlist picker next to a row button. Clicking the same button
+ * again closes it.
+ * @param {jQuery} $btn - Button the picker points at
+ * @param {{cid:string, type:number|string, title:string, img:string}} target - Track to add
+ * @param {string} [placement="left"]
+ */
+firetable.actions.openStealPicker = function ($btn, target, placement) {
+  if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$("#stealContain").is(':hidden')) {
+    $btn.removeClass('on');
+    firetable.stealSourceBtn = null;
+    firetable.stealTarget = null;
+    $("#stealContain").hide();
+    return;
+  }
+  ftapi.lookup.allLists(function (allPlaylists) {
+    firetable.ui.fillStealPicker(allPlaylists);
+    if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
+    $("#grab").removeClass('on');
+    firetable.stealSourceBtn = $btn;
+    firetable.stealTarget = target;
+    $btn.addClass('on');
+    var stealContainEl = document.getElementById('stealContain');
+    stealContainEl.style.visibility = 'hidden';
+    $("#stealContain").show();
+    firetable.ui.positionPopover($btn[0], stealContainEl, document.getElementById('stealArrow'), placement || 'left');
+  });
 };
 
 // ─── LinkGrabber (Drag-and-Drop Track Detection) ─────────────────────────────
@@ -675,6 +749,11 @@ firetable.nav = {
       }
     }
 
+        // Keep screen readers in sync with the visual tab state
+    $('#minimodeoptions .tab, #sidepanel-tabs .tab').each(function () {
+      this.setAttribute('aria-selected', this.classList.contains('on') ? 'true' : 'false');
+    });
+
     if (n.view === 'cards') firetable.actions.cardCase();
   }
 };
@@ -690,11 +769,21 @@ firetable.ui.getViewFromPath = function () {
   return firetable.nav.view;
 };
 
+/** Raise or lower the video screen to match the user's screen setting. */
+firetable.ui.applyScreenSetting = function () {
+  var val = firetable.screenControl;
+  if (val === 'on' || (val === 'sync' && firetable.screenSyncPos)) {
+    firetable.utilities.screenDown();
+  } else {
+    firetable.utilities.screenUp();
+  }
+};
+
 firetable.ui.updateScreenBtn = function (val) {
-  var icons  = { on: 'capture', off: 'cancel_presentation', sync: 'microwave' };
+  var icons  = { on: 'tv', off: 'tv_off', sync: 'live_tv' };
   var titles = { on: 'Screen: always on', off: 'Screen: disabled', sync: 'Screen: synced' };
   var title = titles[val] || 'Screen: synced';
-  $('#screenControl').find('[class*="material-symbols-"]').text(icons[val] || 'microwave');
+  $('#screenControl').find('[class*="material-symbols-"]').text(icons[val] || 'live_tv');
   $('#screenControl').attr('aria-label', title);
   $('#screenControlTip').text(title);
   var isOn = (val === 'on') || (val === 'sync' && firetable.screenSyncPos);
@@ -705,7 +794,11 @@ firetable.ui.updateScreenBtn = function (val) {
 firetable.ui.tooltip = (function () {
   var tipEl;
 
+  // Touch screens fire a fake hover on tap, which would leave tips stuck open
+  var noHover = window.matchMedia('(hover: none)');
+
   function show(anchor, text) {
+    if (noHover.matches) return;
     tipEl.textContent = text;
     tipEl.style.visibility = 'hidden';
     tipEl.classList.add('is-visible');
@@ -1132,17 +1225,10 @@ firetable.ui.setupMiscEvents = function () {
     var isHidden = $("#stealContain").is(":hidden");
     if (isHidden) {
       ftapi.lookup.allLists(function (allPlaylists) {
-        $("#stealpicker").html(
-          '<option value="-1">Where to?</option>' +
-          '<option value="0">Default Queue</option>'
-        );
-        for (var key in allPlaylists) {
-          if (allPlaylists.hasOwnProperty(key)) {
-            $("#stealpicker").append(
-              firetable.utilities.playlistOption(key, allPlaylists[key].name)
-            );
-          }
-        }
+        firetable.ui.fillStealPicker(allPlaylists);
+        if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
+        firetable.stealSourceBtn = null;
+        firetable.stealTarget = null;
         $('#grab').addClass('on');
         var stealContainEl = document.getElementById('stealContain');
         stealContainEl.style.visibility = 'hidden';
@@ -1250,11 +1336,6 @@ firetable.ui.setupMiscEvents = function () {
     firetable.nav.apply();
   });
 
-  $("#history").bind("click", function () { firetable.nav.setView('history'); });
-
-  // ── Playlists button toggle ──
-  $("#playlists").bind("click", function () { firetable.nav.setView('playlists'); });
-
   // ── Reload Track ──
   $("#reloadtrack").bind("click", firetable.actions.reloadtrack);
 
@@ -1296,11 +1377,18 @@ firetable.ui.setupMiscEvents = function () {
     }
   });
 
-  // ── Card Case panel ──
-  $("#cardcase").bind("click", function () { firetable.nav.setView('cards'); });
+  // ── Keyboard: Enter / Space activate non-native role="button" elements ──
+  $(document).on('keydown.ftRoleButton', '[role="button"][tabindex]:not(button):not(a[href])', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      $(this).trigger('click');
+    }
+  });
 
-  // ── Discover / Fresh Produce panel ──
-  $("#discover-nav").bind("click", function () { firetable.nav.setView('discover'); });
+  // ── Tap to start audio (autoplay was blocked) ──
+  $('#tapToPlay').on('click', function () {
+    firetable.media.tapToPlay();
+  });
 
   // ── Emoji Picker ──
   $("#pickerNav").on("click", "span", function () {
@@ -1401,6 +1489,7 @@ firetable.ui.setupMiscEvents = function () {
       firetable.ui.showPlayerControls();
       firetable.actions.reloadtrack();
     }
+    firetable.media.refresh();
   });
   $('#showAvatarsToggle').change(function () {
     firetable.debug && console.log("show avatars " + (this.checked ? "on" : "off"));
@@ -1436,15 +1525,9 @@ firetable.ui.setupMiscEvents = function () {
     var val = next[firetable.screenControl] || 'sync';
     localStorage[STORAGE.screenControl] = val;
     firetable.screenControl = val;
+    firetable.media.forcedScreen = false;
     firetable.ui.updateScreenBtn(val);
-    if (val == 'off') {
-      firetable.utilities.screenUp();
-    } else if (val == 'on') {
-      firetable.utilities.screenDown();
-    } else if (val == 'sync') {
-      if (firetable.screenSyncPos) firetable.utilities.screenDown();
-      else firetable.utilities.screenUp();
-    }
+    firetable.ui.applyScreenSetting();
   });
 
   // ── Avatar style picker ──
@@ -1458,27 +1541,7 @@ firetable.ui.setupMiscEvents = function () {
       "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname, null, val) + ")");
   });
 
-  // ── Cancel Search / Return to Queue ──
-  $("#cancelqsearch").bind("click", function () {
-    $("#mainqueuestuff").css("display", "block");
-    $("#filterMachine").css("display", "block");
-    $("#searchMachine").css("display", "none");
-    $("#cancelqsearch").hide();
-    $("#qControlButtons").show();
-    $("#addbox").css("display", "none");
-    firetable.utilities.cancelSearchPreview();
-  });
-
-  // ── Add to Queue button (opens search panel) ──
-  $("#addToQueueBttn").bind("click", function () {
-    $("#mainqueuestuff").css("display", "none");
-    $("#filterMachine").css("display", "none");
-    $("#searchMachine").css("display", "block");
-    $("#addbox").css("display", "flex");
-    $("#cancelqsearch").show();
-    $("#qControlButtons").hide();
-    $("#plmanager").css("display", "none");
-  });
+  // (Search / Done buttons are bound in playlist.js)
 };
 
 // ─── Last.fm Token Check ─────────────────────────────────────────────────────
@@ -1491,17 +1554,8 @@ firetable.ui.setupMiscEvents = function () {
 firetable.ui.checkLastfmToken = function () {
   var thingo = localStorage[STORAGE.lastfmSession];
   if (thingo == "false") thingo = false;
-  if (thingo) {
-    firetable.lastfm.sk = thingo;
-    $("#scrobtoggle").html(
-      '<a onclick="firetable.lastfm.killSession()" href="#">Disconnect Lastfm Scrobbling</a>'
-    );
-  } else {
-    $("#scrobtoggle").html(
-      '<a href="http://www.last.fm/api/auth/?api_key=' + firetable.lastfm.key +
-      '&cb=' + window.location.href + '">Set up last.fm scrobbling</a>'
-    );
-  }
+  if (thingo) firetable.lastfm.sk = thingo;
+  firetable.lastfm.renderToggle();
 
   // Check if URL contains a token param (redirect from Last.fm auth)
   var pattern = /[?&]token=/;

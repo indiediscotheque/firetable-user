@@ -27,7 +27,11 @@ function onYouTubeIframeAPIReady() {
     playerVars: {
       autoplay: 1,
       controls: 0,
-      playsinline: 1 // iPhone: play inside the stage instead of going full screen
+      disablekb: 1,
+      fs: 0,
+      iv_load_policy: 3, // no annotations / cards over the video
+      rel: 0,            // related videos only from the same channel
+      playsinline: 1     // iPhone: play inside the stage instead of going full screen
     },
     videoId: '5mGuCdlCcNM', // placeholder video
     events: {
@@ -39,6 +43,10 @@ function onYouTubeIframeAPIReady() {
         if (event.data === YT.PlayerState.PLAYING) {
           $('#reloadtrack').removeClass('on working');
         }
+        firetable.media.onYouTubeState(event.data);
+      },
+      onError: function () {
+        firetable.media.onYouTubeError();
       }
     }
   });
@@ -200,6 +208,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     clearInterval(firetable.movePvBar);
     firetable.movePvBar = null;
     firetable.preview = false;
+    firetable.previewType = null;
 
     firetable.utilities.resumeCurrentSong();
 
@@ -211,6 +220,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     }
 
     firetable.preview = id;
+    firetable.previewType = Number(type);
     var cid = fromSearch ? id.slice(5) : firetable.queue[id].cid;
 
     // Clear any existing preview timer
@@ -233,6 +243,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
       firetable.movePvBar = null;
       firetable.pvCount = 0;
       firetable.preview = false;
+      firetable.previewType = null;
 
       // Resume the room's current song
       firetable.utilities.resumeCurrentSong();
@@ -244,10 +255,10 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     firetable.movePvBar = setInterval(function () {
       var pcnt = (firetable.pvCount / 29) * 100; // 29 = PREVIEW_DURATION/1000 - 1
       firetable.pvCount += 0.2;
-      var bgColor = fromHist ? "#222" : "#222";
+      // Same accent as the rest of the app (not a separate hardcoded orange)
       $("#pvbar" + firetable.preview).css(
         "background-image",
-        "linear-gradient(90deg, rgba(244, 129, 11, 0.267) " + pcnt + "%, " + bgColor + " " + pcnt + "%)"
+        "linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 27%, transparent) " + pcnt + "%, var(--color-bg-t1) " + pcnt + "%)"
       );
     }, PREVIEW_BAR_INTERVAL);
 
@@ -275,3 +286,101 @@ firetable.actions.reloadtrack = function () {
   $('#reloadtrack').addClass('on working');
   firetable.utilities.resumeCurrentSong();
 };
+
+// ─── Media State (video screen + autoplay feedback) ──────────────────────────
+
+/**
+ * Keeps the stage honest about what the YouTube player is doing:
+ * - `yt-stalled` on <body>: YouTube is the active media but not playing, so the
+ *   video screen stays up and YouTube's own title / play button / "Watch on
+ *   YouTube" bar never show through the stage.
+ * - `media-blocked` on <body>: the browser blocked autoplay (or paused it), so
+ *   the "Tap to start audio" pill is shown.
+ * Short gaps (loading the next video) are ignored via STALL_MS.
+ */
+firetable.media = {
+  /** @type {number|null}  Last YT.PlayerState, or null when unknown (new song) */
+  ytState: null,
+  /** @type {boolean}  The current video failed to load */
+  ytError: false,
+  /** @type {boolean}  User asked to reveal YouTube's own player (autoplay still blocked) */
+  directTap: false,
+  /** @type {boolean}  Screen was lowered only so the user could tap YouTube's play button */
+  forcedScreen: false,
+  STALL_MS: 1500,
+  _stallTimer: null,
+  _tapTimer: null,
+
+  _isPlaying: function (state) {
+    return state === 1 || state === 3; // PLAYING or BUFFERING
+  },
+
+  /** YouTube player state changed. */
+  onYouTubeState: function (state) {
+    var m = firetable.media;
+    m.ytState = state;
+    clearTimeout(m._stallTimer);
+    if (m._isPlaying(state)) {
+      m.ytError = false;
+      m.directTap = false;
+      clearTimeout(m._tapTimer);
+      if (m.forcedScreen) {
+        m.forcedScreen = false;
+        firetable.ui.applyScreenSetting && firetable.ui.applyScreenSetting();
+      }
+      m.refresh();
+      return;
+    }
+    m._stallTimer = setTimeout(m.refresh, m.STALL_MS);
+  },
+
+  /** YouTube could not play the video (removed, private, embed blocked…). */
+  onYouTubeError: function () {
+    firetable.media.ytError = true;
+    firetable.media.refresh();
+  },
+
+  /** A new room song started: forget the old player state. */
+  songChanged: function () {
+    var m = firetable.media;
+    clearTimeout(m._stallTimer);
+    m.ytState = null;
+    m.ytError = false;
+    m.refresh();
+  },
+
+  /** Re-evaluate the body classes. */
+  refresh: function () {
+    var m = firetable.media;
+    var ytActive = firetable.preview
+      ? firetable.previewType === MEDIA_YOUTUBE
+      : !!(firetable.song && firetable.song.type === MEDIA_YOUTUBE && firetable.song.cid != 0);
+    var s = m.ytState;
+    var known = s !== null && s !== undefined;
+    var stalled = ytActive && known && !m._isPlaying(s) && !m.directTap;
+    var blocked = stalled && !firetable.preview && !firetable.disableMediaPlayback &&
+      !m.ytError && (s === -1 || s === 2 || s === 5); // UNSTARTED, PAUSED, CUED
+    document.body.classList.toggle('yt-stalled', stalled);
+    document.body.classList.toggle('media-blocked', blocked);
+  },
+
+  /** "Tap to start audio": the tap is a user gesture, so playback is allowed now. */
+  tapToPlay: function () {
+    var m = firetable.media;
+    document.body.classList.remove('media-blocked');
+    firetable.utilities.resumeCurrentSong();
+    clearTimeout(m._tapTimer);
+    m._tapTimer = setTimeout(function () {
+      if (m._isPlaying(m.ytState)) return;
+      // Still blocked (some phones only accept a tap inside the video itself):
+      // lower the screen so YouTube's own play button can be tapped.
+      m.directTap = true;
+      if (!document.body.classList.contains('screen')) {
+        m.forcedScreen = true;
+        firetable.utilities.screenDown();
+      }
+      m.refresh();
+    }, 2500);
+  }
+};
+

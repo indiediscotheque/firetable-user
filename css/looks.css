@@ -51,7 +51,7 @@
     0%   { transform: scale(1);    box-shadow: var(--shadow-drop); }
     30%  { transform: scale(1.18); box-shadow: 0 0 1.2rem var(--color-accent), var(--shadow-drop); }
     60%  { transform: scale(1.06); box-shadow: 0 0 0.5rem var(--color-accent), var(--shadow-drop); }
-    100% { transform: scale(1);    box-shadow: var(--shadow-drop); }
+    100% { transform: scale(1);    box-shadow: 0 0 0.75rem color-mix(in srgb, var(--color-accent) 55%, transparent), var(--shadow-drop); }
 }
 
 /* ============================================
@@ -66,6 +66,8 @@
 }
 
 :root {
+    color-scheme: dark;
+
     /* Colors */
     --color-bg: #181818;
     --color-bg-s1: #151515;
@@ -82,6 +84,11 @@
     --color-text-light: #fff;
     --color-text-muted: #888;
     --color-text-dim: #666;
+    --color-text-subtle: #b3b3b3;
+    --color-icon: #b8b8b8;
+    --color-on-accent: #fff;
+    --color-danger: #c43;
+    --color-success: #43b581;
 
     /* Spacing */
     --pad1: 0.25rem;
@@ -93,6 +100,8 @@
 
     /* Layout */
     --height-footer: 3.5rem;
+    --panel-gap: var(--pad2);
+    --tap-min: 2.5rem;
 
     /* Radii */
     --radius-sm: 0.25rem;
@@ -101,6 +110,9 @@
 
     /* Typography */
     --font-family: "Inter", "Open Sans", helvetica, arial, sans-serif;
+    --fs-title: 0.875rem;
+    --fs-meta: 0.75rem;
+    --fs-micro: 0.6875rem;
 
     /* Shadows */
     --shadow-drop: 0 0.25rem 0.5rem -0.25rem black;
@@ -173,8 +185,8 @@ a {
 }
 
 :focus-visible {
-    outline: none;
-    box-shadow: 0 0 0.5rem var(--color-accent);
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
 }
 
 input:not([type="checkbox"]):not([type="radio"]),
@@ -196,6 +208,15 @@ input::placeholder {
     color: var(--color-text-muted);
 }
 
+input[type="search"] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+    cursor: pointer;
+}
+
 select,
 button {
     cursor: pointer;
@@ -211,6 +232,9 @@ select {
     background-position: right 0.65rem center;
     background-size: 1rem 1rem;
     padding-right: 2rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 select::-ms-expand {
@@ -221,9 +245,14 @@ select::-ms-expand {
 @supports (appearance: base-select) {
     select {
         appearance: base-select;
-        /* Keep the SVG bg caret — just let base-select handle the picker */
+        /* Keep the SVG bg caret — just let base-select handle the picker.
+           Right padding stays clear of the caret so long names don't run under it. */
         background-color: var(--color-bg-t3);
-        padding-right: var(--pad3);
+        padding-right: 2rem;
+        /* base-select lays the label out as a flex item, so text-overflow
+           can't apply; clip at the content edge so it never runs under the caret */
+        overflow: clip;
+        overflow-clip-margin: content-box;
     }
 
     /* The open dropdown surface */
@@ -283,10 +312,8 @@ option {
 }
 
 input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-button:focus-visible {
-    outline: none;
+textarea:focus-visible {
+    outline-offset: 0;
 }
 
 /* Pinch-zoom is allowed; stop double-tap from zooming the page (pinch and
@@ -299,7 +326,7 @@ html {
 
 code {
     font-family: "Roboto Mono", monospace;
-    color: color-mix(var(--color-accent), var(--color-text));
+    color: color-mix(in srgb, var(--color-accent) 50%, var(--color-text));
 }
 
 /* ============================================
@@ -370,7 +397,19 @@ code {
 }
 
 .track-warning {
+    position: absolute;
+    z-index: 2;
+    left: 1.3rem;
+    bottom: 0.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
     color: var(--color-accent);
+    background-color: var(--color-bg-s2);
+    border-radius: var(--radius-pill);
+    box-shadow: 0 0 0 1px var(--color-bg-t1);
     cursor: pointer;
 }
 
@@ -394,6 +433,10 @@ code {
 
 .notice#notice {
     display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    overflow: auto;
 }
 
 .notice p {
@@ -441,13 +484,18 @@ code {
     &::after {
         content: "";
         position: absolute;
-        left: 0;
-        right: 0;
+        left: 0.25rem;
+        right: 0.25rem;
         bottom: 0;
         height: 3px;
         background-color: var(--color-accent);
         border-radius: 99px;
-        opacity: 0.5;
+    }
+}
+
+@media (hover: hover) {
+    .tab:not(.on):hover {
+        color: var(--color-text-light);
     }
 }
 
@@ -549,8 +597,14 @@ code {
     }
 }
 
-.butt:not(:disabled):hover {
-    background-color: var(--color-accentlite);
+@media (hover: hover) {
+    .butt:not(:disabled):hover {
+        background-color: color-mix(in oklab, var(--color-accent) 82%, white);
+    }
+}
+
+.butt:not(:disabled):active {
+    filter: brightness(1.15);
 }
 
 .butt:disabled,
@@ -564,8 +618,10 @@ code {
     background: rgba(255, 255, 255, 0.05);
 }
 
-.graybutt:not(:disabled):hover {
-    background: rgba(255, 255, 255, 0.1);
+@media (hover: hover) {
+    .graybutt:not(:disabled):hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
 }
 
 .graybutt:focus-visible {
@@ -573,11 +629,13 @@ code {
 }
 
 .redbutt {
-    background: #c43;
+    background: var(--color-danger);
 }
 
-.redbutt:not(:disabled):hover {
-    background: #b54;
+@media (hover: hover) {
+    .redbutt:not(:disabled):hover {
+        background: #d5513f;
+    }
 }
 
 .iconbutt {
@@ -595,9 +653,31 @@ code {
     text-shadow: 0 0 1rem black;
 }
 
-#fire.on {
-    color: white;
-    animation: fire-btn-on 0.5s ease-out forwards;
+/* Fire: idle = gray button with an accent icon, on = filled accent with a glow */
+#stageActions #fire {
+    color: color-mix(in oklab, var(--color-accent) 70%, white);
+}
+
+#stageActions #fire.on {
+    color: var(--color-on-accent);
+    background-color: var(--color-accent);
+    background-image: radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.25));
+    border-top-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0.75rem color-mix(in srgb, var(--color-accent) 55%, transparent), var(--shadow-drop);
+    animation: fire-btn-on 0.5s ease-out;
+}
+
+/* Bigger invisible tap area for small icon buttons on touch screens */
+@media (pointer: coarse) {
+    .iconbutt {
+        position: relative;
+    }
+
+    .iconbutt::before {
+        content: "";
+        position: absolute;
+        inset: -0.25rem;
+    }
 }
 
 .iconbutt [class*="material-symbols-"] {
@@ -636,6 +716,57 @@ code {
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
+/* Icon-only actions inside track rows. Same size, colour and order everywhere. */
+.row-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin: 0 0.125rem;
+    padding: 0;
+    font-size: 1.2rem;
+    line-height: 1;
+    color: var(--color-icon);
+    text-decoration: none;
+    background: none;
+    border: 0;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+    mix-blend-mode: normal;
+    cursor: pointer;
+}
+
+.row-icon svg {
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
+.row-icon.on {
+    color: var(--color-accent);
+}
+
+@media (hover: hover) {
+    .row-icon:hover {
+        color: var(--color-text-light);
+        background-color: rgba(255, 255, 255, 0.08);
+    }
+}
+
+/* Overflow menu trigger, only shown on narrow playlist rows */
+.row-more {
+    display: none;
+}
+
+@media (pointer: coarse) {
+    .row-icon {
+        width: var(--tap-min);
+        height: 2.25rem;
+        margin: 0;
+    }
+}
+
 .accent {
     color: white;
     background-color: var(--color-accent);
@@ -645,8 +776,10 @@ code {
     border-radius: var(--radius-md);
 }
 
-.accent:hover {
-    background-color: var(--color-accentlite);
+@media (hover: hover) {
+    .accent:hover {
+        background-color: color-mix(in oklab, var(--color-accent) 82%, white);
+    }
 }
 
 .scrollWrap {
@@ -701,8 +834,10 @@ code {
     display: flex;
     align-items: center;
     position: relative;
+}
 
-    &:hover {
+@media (hover: hover) {
+    .pvbarWrap:hover {
         background-color: var(--color-bg-t1);
     }
 }
@@ -770,7 +905,7 @@ a.sociallogo[href] {
 
 #topbarUtils {
     display: flex;
-    gap: 0.33rem;
+    gap: 0;
     align-items: center;
 }
 
@@ -790,12 +925,13 @@ a.sociallogo[href] {
     height: 2rem;
 }
 
-#loggedInUser:hover {
-    text-decoration: underline;
-}
-
 .header_icon {
-    margin: 0 0.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    margin: 0 -0.15rem;
     padding: 0;
     height: auto;
     font-size: 0;
@@ -831,6 +967,11 @@ a.sociallogo[href] {
         "content";
     width: 100%;
     overflow: hidden;
+    padding:
+        env(safe-area-inset-top, 0px)
+        env(safe-area-inset-right, 0px)
+        env(safe-area-inset-bottom, 0px)
+        env(safe-area-inset-left, 0px);
 }
 
 #appShell {
@@ -926,6 +1067,26 @@ a.sociallogo[href] {
    ============================================ */
 #minimodeoptions {
     grid-area: nav;
+}
+
+/* Phones: six tabs share one fixed row. They size to their labels and the
+   type scales down with the bar's width, so nothing clips or scrolls. */
+@media only screen and (max-width: 639px) {
+    #minimodeoptions {
+        container-type: inline-size;
+        justify-content: space-between;
+        gap: 0;
+        padding-inline: var(--pad1);
+    }
+
+    #minimodeoptions .tab {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding-inline: 0.2rem;
+        font-size: clamp(0.5625rem, 3.05cqi, 0.75rem);
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
 }
 
 #sidepanel-tabs {
@@ -1394,6 +1555,11 @@ button.waitlist-pos {
     flex-direction: column;
     flex: 1;
     min-width: 0;
+}
+
+#track,
+#artist {
+    text-shadow: 0 1px 0.3rem rgba(0, 0, 0, 0.6);
 }
 
 #track {
@@ -1911,7 +2077,24 @@ html .ui-button.ui-state-disabled:active {
     transition: background 1s ease;
 }
 .djActive {
+    color: var(--color-on-accent);
     background: linear-gradient(to bottom, var(--color-accent), color-mix(in srgb, var(--color-bg-t2), var(--color-accent) 66%));
+}
+
+.djActive .deckRemoveBtn,
+.djActive .deckDepartureBtn,
+.djActive .removemeIcon {
+    color: color-mix(in srgb, var(--color-on-accent) 65%, transparent);
+}
+
+.djActive .deckDepartureBtn.on {
+    color: var(--color-on-accent);
+}
+
+.djActive .deckRemoveBtn:hover,
+.djActive .deckDepartureBtn:hover {
+    color: var(--color-on-accent);
+    background: color-mix(in srgb, var(--color-on-accent) 15%, transparent);
 }
 
 .djname {
@@ -1999,19 +2182,54 @@ html .ui-button.ui-state-disabled:active {
     background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.15));
 }
 
-body.screen #screenBox {
+body.screen:not(.yt-stalled) #screenBox {
     transform: translateY(0);
 }
 
-body.screen #stageBackdrop {
+body.screen:not(.yt-stalled) #stageBackdrop {
     display: none;
 }
 
-body.screen #screenover {
+body.screen:not(.yt-stalled) #screenover {
     display: none;
 }
 
-body.screen #screenBox::after {
+/* Stage buttons over video: frosted dark backing so they stay legible */
+body.screen:not(.yt-stalled) #stageActions .graybutt,
+body.screen:not(.yt-stalled) #stageTopRight .graybutt {
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(0, 0, 0, 0.42);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+    backdrop-filter: blur(8px) saturate(1.2);
+    border-top-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Shown when the browser blocked autoplay and audio is not running */
+#tapToPlay {
+    display: none;
+    position: absolute;
+    z-index: 4;
+    top: 55%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    gap: var(--pad1);
+    height: var(--tap-min);
+    padding: 0 var(--pad3) 0 var(--pad2);
+    font-size: var(--fs-meta);
+    white-space: nowrap;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 0.5rem 1.5rem -0.5rem black;
+}
+
+#tapToPlay [class*="material-symbols-"] {
+    font-size: 1.4rem;
+}
+
+body.media-blocked #tapToPlay {
+    display: inline-flex;
+}
+
+body.screen:not(.yt-stalled) #screenBox::after {
     content: '';
     position: absolute;
     inset: 0 0 auto 0;
@@ -2243,6 +2461,12 @@ ul.lightrope li {
     min-width: 0;
 }
 
+#queuebox,
+#thehistoryWrap,
+#discover {
+    padding-top: var(--panel-gap);
+}
+
 #queuebox.drop-ready #queuelist {
     position: relative;
 
@@ -2257,6 +2481,7 @@ ul.lightrope li {
 }
 
 .queuetop {
+    container: queuetop / inline-size;
     background-color: var(--color-bg-t1);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -2270,11 +2495,14 @@ ul.lightrope li {
     padding: 0 var(--pad3) var(--pad2) var(--pad3);
 }
 
-#queueFilter {
+input.ft-filter {
     flex: 1;
-    margin: 2px 0 0 0;
-    width: auto;
+    width: 100%;
     min-width: 0;
+    margin: 0;
+    padding: 0 var(--pad3);
+    font-size: var(--fs-title);
+    color: var(--color-text-light);
 }
 
 .queueFilterExtras {
@@ -2395,6 +2623,13 @@ ul.lightrope li {
 #mainqueue.emptyList:before {
     content: "this playlist is empty";
 }
+
+.searchStatus {
+    padding: var(--pad2);
+    font-style: italic;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+}
 #mainqueue.loading:before {
     content: "loading...";
 }
@@ -2402,10 +2637,33 @@ ul.lightrope li {
     content: "no tracks meet your search criteria";
 }
 
-#mainqueue [class*="material-symbols-"],
-#thehistory [class*="material-symbols-"] {
+#mainqueue [class*="material-symbols-"]:not(.row-icon),
+#thehistory [class*="material-symbols-"]:not(.row-icon) {
     margin: 0 var(--pad1);
     font-size: 1.2rem;
+}
+
+#mainqueue .track-warning [class*="material-symbols-"] {
+    margin: 0;
+    font-size: 0.7rem;
+}
+
+/* Narrow playlist rows: keep "Send to top" and move the rest into the ⋮ menu */
+#queuelist {
+    container: queuelist / inline-size;
+}
+
+@container queuelist (width < 28rem) {
+    #mainqueue .bottomsongs,
+    #mainqueue .tracklink-btn,
+    #mainqueue .histeal,
+    #mainqueue .deletesong {
+        display: none;
+    }
+
+    #mainqueue .row-more {
+        display: inline-flex;
+    }
 }
 
 #thehistory button[class*="material-symbols-"]:not(.previewicon) {
@@ -2473,8 +2731,9 @@ ul.lightrope li {
 #queuelist .listwords,
 #searchResults .listwords {
     flex: 1;
+    min-width: 0;
     margin-left: var(--pad3);
-    font-size: 0.875rem;
+    font-size: var(--fs-title);
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
@@ -2486,19 +2745,7 @@ ul.lightrope li {
     font-size: 0.82em;
 }
 
-#queuelist .tracklink-btn {
-    font-size: 1.2rem;
-    color: var(--color-text);
-    text-decoration: none;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    margin: 0 var(--pad1);
-}
 
-#queuelist .tracklink-btn:hover {
-    color: var(--color-text-light);
-}
 
 #listpickerWrap {
     flex: 1;
@@ -2518,6 +2765,28 @@ ul.lightrope li {
 #cancelqsearch {
     display: none;
     margin-left: var(--pad2);
+}
+
+/* Narrow panel: the playlist name gets its own row, tools sit underneath */
+@container queuetop (width < 24rem) {
+    #queueControls {
+        flex-wrap: wrap;
+        row-gap: var(--pad2);
+    }
+
+    #listpickerWrap {
+        flex: 1 1 100%;
+    }
+
+    #qControlButtons {
+        flex: 1 1 100%;
+        justify-content: flex-end;
+        padding-left: 0;
+    }
+
+    #cancelqsearch {
+        margin-left: auto;
+    }
 }
 
 #addbox,
@@ -2559,8 +2828,8 @@ ul.lightrope li {
     position: absolute;
     z-index: 200;
     flex-direction: column;
-    gap: var(--pad1);
-    padding: var(--pad2);
+    gap: 0;
+    padding: var(--pad1);
     background: var(--color-bg-t1);
     box-shadow: 0 0.25rem 1rem black;
     border-radius: var(--radius-md);
@@ -2568,16 +2837,60 @@ ul.lightrope li {
     &.show {
         display: flex;
     }
+}
 
-    .butt {
-        justify-content: flex-start;
-        gap: var(--pad2);
-        text-transform: none;
-        letter-spacing: 0;
-        font-size: 0.8rem;
-        white-space: nowrap;
-        padding: 0.4em 0.75em;
-        height: auto;
+#plAddPopover .butt,
+.ft-menu .butt {
+    justify-content: flex-start;
+    gap: var(--pad2);
+    height: auto;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    font-size: var(--fs-title);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+    color: var(--color-text);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+@media (hover: hover) {
+    #plAddPopover .butt:hover,
+    .ft-menu .butt:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+}
+
+#plAddPopover .butt:focus-visible,
+.ft-menu .butt:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    outline-offset: -2px;
+}
+
+#plAddPopover .butt [class*="material-symbols-"],
+.ft-menu .butt [class*="material-symbols-"] {
+    font-size: 1.2rem;
+}
+
+.ft-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 11rem;
+    padding: var(--pad1);
+}
+
+.ft-menu .ft-menu-danger {
+    color: #ff8a7a;
+}
+
+@media (pointer: coarse) {
+    #plAddPopover .butt,
+    .ft-menu .butt {
+        min-height: var(--tap-min);
     }
 }
 
@@ -2622,22 +2935,14 @@ ul.lightrope li {
     left: 0.2rem;
 }
 
-#searchResults [class*="material-symbols-"] {
+#searchResults [class*="material-symbols-"]:not(.row-icon) {
     margin: 0 var(--pad1);
     font-size: 1.2rem;
 }
 
-#searchResults i[class*="material-symbols-"] {
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    color: inherit;
-}
-
 .search-feedback {
-    font-size: 0.75rem;
-    color: #4caf50;
+    font-size: var(--fs-meta);
+    color: var(--color-success);
     opacity: 0;
     transition: opacity 0.2s;
     pointer-events: none;
@@ -2649,7 +2954,7 @@ ul.lightrope li {
     opacity: 1;
 }
 #mergeContain {
-    overflow: auto;
+    overflow: visible;
     display: none;
     position: absolute;
     z-index: 15;
@@ -2799,8 +3104,9 @@ a.importLinkCheck {
     gap: var(--pad3);
 }
 
-#queuelist .pvbar.deleting .deletesong {
-    color: var(--firetable-orange);
+#queuelist .pvbar.deleting .deletesong,
+#queuelist .pvbar.deleting .row-more {
+    color: var(--color-accent);
 }
 
 /* ============================================
@@ -2811,7 +3117,7 @@ a.importLinkCheck {
     z-index: 15;
     position: relative;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     max-width: 100vw;
     padding: var(--pad2) var(--pad1);
     font-size: 1rem;
@@ -2835,11 +3141,12 @@ a.importLinkCheck {
 
 .themeTimr {
     flex-shrink: 0;
-    font-family: "Open Sans", helvetica, arial, sans-serif;
-    font-size: 0.75rem;
-    font-weight: 400;
+    font-family: var(--font-family);
+    font-size: var(--fs-meta);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
     line-height: 1.25;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.04em;
     text-align: center;
     color: rgba(255, 255, 255, 0.5);
     min-width: 3.5rem;
@@ -3097,7 +3404,7 @@ a.importLinkCheck {
 .chatName {
     order: 1;
     flex: 0 0 auto;
-    font-size: 0.75rem;
+    font-size: var(--fs-meta);
     font-weight: 500;
     color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
@@ -3241,7 +3548,7 @@ a.importLinkCheck {
     order: 4;
     position: relative;
     z-index: 2;
-    font-size: 0.66rem;
+    font-size: var(--fs-micro);
     font-weight: 400;
     line-height: 1;
     color: rgba(255, 255, 255, 0.47);
@@ -3251,8 +3558,18 @@ a.importLinkCheck {
 
 .chatCard {
     display: block;
-    margin: var(--pad2) 0;
+    width: 225px;
     max-width: 100%;
+    height: auto;
+    margin: var(--pad2) 0;
+    border-radius: var(--radius-md);
+    cursor: zoom-in;
+}
+
+@media only screen and (max-width: 639px) {
+    .chatCard {
+        width: 10rem;
+    }
 }
 
 #chatbottom {
@@ -3423,22 +3740,9 @@ img.emoji,
     overflow: hidden;
 
     #histFilterBar {
+        display: flex;
         flex-shrink: 0;
-        padding: 0 var(--pad3) var(--pad3) var(--pad3);
-    }
-
-    #histFilter {
-        width: 100%;
-        padding: var(--pad2) var(--pad3);
-        color: var(--color-text);
-        font-size: 0.875rem;
-        background: color-mix(var(--color-bg-s2) 85%, black);
-        border-radius: var(--radius-md);
-        outline: none;
-
-        &:focus-visible {
-            border-color: var(--color-accent);
-        }
+        padding: 0 var(--pad3) var(--pad2) var(--pad3);
     }
 }
 
@@ -3462,10 +3766,9 @@ img.emoji,
 
     .listwords {
         flex: 1;
-    }
-
-    .tracklink-btn {
-        color: var(--color-primary);
+    min-width: 0;
+        font-size: var(--fs-title);
+        line-height: 1.35;
     }
 }
 
@@ -3486,7 +3789,7 @@ img.emoji,
     top: 0;
     z-index: 2;
     padding: var(--pad1) var(--pad2);
-    font-size: 0.68rem;
+    font-size: var(--fs-micro);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.07em;
@@ -3574,7 +3877,7 @@ img.emoji,
         text-align: right;
         padding-right: 0.4rem;
         pointer-events: none;
-        font-size: 0.65rem;
+        font-size: var(--fs-micro);
         color: var(--color-text-muted);
         white-space: nowrap;
         font-variant-numeric: tabular-nums;
@@ -3617,6 +3920,17 @@ img.emoji,
 .histlink {
     color: var(--color-text);
     text-wrap: balance;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+}
+
+/* Recent: icons sit flush together so the title keeps the room */
+#thehistory .pvbar {
+    padding-right: var(--pad1);
+}
+
+#thehistory .pvbar .row-icon + .row-icon {
+    margin-left: calc(-1 * var(--pad2));
 }
 
 
@@ -3629,7 +3943,7 @@ img.emoji,
     grid-area: content;
     display: none;
     overflow: auto;
-    padding: 0 1rem 1rem 1rem;
+    padding: var(--panel-gap) 1rem 1rem 1rem;
 }
 @media only screen and (hover: hover) {
     #cardsWrap {
@@ -3668,7 +3982,7 @@ img.emoji,
 }
 
 #minidiscover, #minijoin {
-    color: var(--orange);
+    color: var(--color-accent);
     cursor: pointer;
 }
 
@@ -3717,36 +4031,39 @@ img.emoji,
 }
 
 #thediscovers .listwords {
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-size: var(--fs-title);
     line-height: 1.3;
     display: flex;
     align-items: flex-start;
-    gap: 0.25rem;
+    gap: 0;
+}
+
+#thediscovers .listwords .fresh-title {
+    flex: 1;
+    min-width: 0;
 }
 #thediscovers .listwords .histlink {
     flex: 1;
 }
 
-#thediscovers .listwords .butt,
-#thediscovers .listwords .tracklink-btn svg {
+#thediscovers .listwords .row-icon {
     align-self: flex-start;
-    flex-shrink: 0;
-    min-width: 0;
-    min-height: 0;
-    height: auto;
-    font-size: 1.25rem;
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    padding: 0;
-    line-height: 1.1;
-    box-shadow: none;
+    margin-top: -0.2rem;
 }
-#thediscovers .listwords .butt:hover,
-#thediscovers .listwords .tracklink-btn:hover {
-    color: var(--color-text-light);
+
+/* Fresh cards are narrow: slightly smaller buttons, hit area extended invisibly */
+@media (pointer: coarse) {
+    #thediscovers .listwords .row-icon {
+        position: relative;
+        width: 2rem;
+        height: 2rem;
+    }
+
+    #thediscovers .listwords .row-icon::before {
+        content: "";
+        position: absolute;
+        inset: -0.25rem -0.125rem;
+    }
 }
 #thediscovers .discart .previewicon {
     width: 3rem;
@@ -3762,18 +4079,20 @@ img.emoji,
 #thediscovers .fresh-track-artist {
     display: block;
     text-wrap: balance;
+    overflow-wrap: anywhere;
+    hyphens: auto;
 }
 
 #thediscovers .fresh-track-title {
-    font-size: 1rem;
-    font-weight: 300;
+    font-size: var(--fs-title);
+    font-weight: 500;
     color: var(--color-text-light);
 }
 
 #thediscovers .fresh-track-artist {
-    font-size: 0.75rem;
-    font-weight: 300;
-    color: var(--color-text);
+    margin-top: 0.1rem;
+    font-size: var(--fs-meta);
+    color: var(--color-text-subtle);
 }
 
 #thediscovers .fresh-meta {
@@ -3806,7 +4125,7 @@ img.emoji,
 #thediscovers .histdj,
 #thediscovers .histdate,
 #thediscovers .histtime {
-    font-size: 0.7rem;
+    font-size: var(--fs-micro);
     color: var(--color-text-muted);
     margin-top: 0;
 }
@@ -3857,16 +4176,65 @@ img.emoji,
     width: auto;
 }
 
+/* Label column + field column so every input lines up */
 .inputline {
-    display: flex;
+    display: grid;
+    grid-template-columns: 8.5rem minmax(0, 1fr);
     align-items: center;
-    justify-content: space-between;
-    gap: var(--pad2);
-    max-width: 18rem;
+    column-gap: var(--pad2);
+    max-width: 22rem;
+}
+
+.inputline > :only-child {
+    grid-column: 1 / -1;
+    justify-self: start;
+}
+
+.inputline > input {
+    width: 100%;
 }
 
 .inputline > * {
     margin: var(--pad2) 0;
+}
+
+.inputline > label {
+    flex-shrink: 0;
+    font-size: var(--fs-title);
+    color: var(--color-text);
+}
+
+#termsAgreement {
+    font-size: var(--fs-title);
+    line-height: 1.5;
+}
+
+#termsAgreement label {
+    display: inline;
+    margin: 0;
+}
+
+/* Inline form feedback (replaces browser alert pop-ups) */
+.formMessage {
+    max-width: 22rem;
+    margin: var(--pad1) 0;
+    padding: var(--pad2) 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: #f2b8ae;
+    background-color: color-mix(in srgb, var(--color-danger) 15%, transparent);
+    border-left: 3px solid var(--color-danger);
+    border-radius: var(--radius-sm);
+}
+
+.formMessage:empty {
+    display: none;
+}
+
+.formMessage.is-success {
+    color: #b5e8cf;
+    background-color: color-mix(in srgb, var(--color-success) 15%, transparent);
+    border-left-color: var(--color-success);
 }
 
 .formlinks {
@@ -4123,6 +4491,7 @@ dialog::backdrop {
 .cardFilterInput,
 .cardFilterSelect {
     width: 100%;
+    height: 2rem;
     border-radius: var(--radius-md);
     background-color: var(--color-bg-s2);
     color: var(--color-text-subtle);
@@ -4234,7 +4603,15 @@ dialog::backdrop {
     transition: opacity 150ms ease;
 }
 
-.caseCardSpot:hover .cardActions {
+@media (hover: hover) {
+    .caseCardSpot:hover .cardActions {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+.caseCardSpot.actions-open .cardActions,
+.caseCardSpot:focus-within .cardActions {
     opacity: 1;
     pointer-events: auto;
 }
@@ -4338,6 +4715,46 @@ input.tagMachine,
 
 .responseBox:empty {
     display: none;
+}
+
+/* Toast: short app-styled notices (replaces browser alert pop-ups).
+   It is a manual popover so it shows above open dialogs too. */
+#ft-toast {
+    position: fixed;
+    inset: auto 1rem calc(1rem + env(safe-area-inset-bottom, 0px)) 1rem;
+    width: fit-content;
+    margin: 0 auto;
+    max-width: 28rem;
+    padding: 0.625rem 1rem;
+    font-size: var(--fs-title);
+    line-height: 1.4;
+    color: var(--color-text-light);
+    background-color: var(--color-bg-t3);
+    border: 0;
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    box-shadow: 0 0.5rem 1.5rem -0.5rem black;
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition: opacity 180ms ease, transform 180ms ease;
+    pointer-events: none;
+}
+
+#ft-toast:empty {
+    display: none;
+}
+
+#ft-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+#ft-toast.is-error {
+    border-left-color: var(--color-danger);
+}
+
+#ft-toast.is-success {
+    border-left-color: var(--color-success);
 }
 
 /* ============================================
@@ -4465,8 +4882,14 @@ html#about body {
     }
 }
 
-/* Show on hover or keyboard focus of the preceding sibling */
-:hover + .ft-tip,
+/* Show on hover (mouse only, so taps don't leave tips stuck open)
+   or keyboard focus of the preceding sibling */
+@media (hover: hover) {
+    :hover + .ft-tip {
+        opacity: 1;
+    }
+}
+
 :focus-visible + .ft-tip {
     opacity: 1;
 }
@@ -4649,8 +5072,14 @@ html#about body {
     color: rgba(255,255,255,0.4);
     cursor: pointer;
     border-radius: var(--radius-sm);
+    box-shadow: none;
 
     i { font-size: 1.05rem; pointer-events: none; }
+
+    @media (pointer: coarse) {
+        width: var(--tap-min);
+        height: var(--tap-min);
+    }
 
     &:hover {
         color: #fff;
@@ -4762,14 +5191,14 @@ html#about body {
     #mmchat, #mmusrs { display: none; }
 
     /* Screen mode: hide album art and collapse nowplaying gap */
-    body.screen #albumArt {
+    body.screen:not(.yt-stalled) #albumArt {
         opacity: 0;
         transform: translateX(-1rem);
         margin-left: calc(-1 * var(--np-art-size) - var(--pad1));
         pointer-events: none;
     }
 
-    body.screen #nowplaying {
+    body.screen:not(.yt-stalled) #nowplaying {
         gap: 0;
     }
 
@@ -4822,13 +5251,8 @@ html#about body {
     }
 }
 
-/* ── max 799px: touch-only users list ── */
+/* ── max 799px ── */
 @media only screen and (max-width: 799px) {
-    #allUsersWrap .prson .ft-avatar {
-        cursor: none;
-        pointer-events: none;
-    }
-
     .miniLoginInvisible { display: none !important; }
     .miniLoginNavOnly { display: block !important; }
 
@@ -4963,5 +5387,19 @@ html#about body {
 
     #mainGrid.login #thehistoryWrap {
         width: 100%;
+    }
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

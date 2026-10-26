@@ -81,36 +81,8 @@ firetable.ui.setupSearchEvents = function () {
     });
 
     $srli.find('.queuetrack').on('click', function () {
-      var $btn = $(this);
       var title = firetable.utilities.htmlEscape($srli.find('.listwords').text());
-      // toggle off if already open for this button
-      if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$("#stealContain").is(':hidden')) {
-        $btn.removeClass('on');
-        firetable.stealSourceBtn = null;
-        firetable.stealTarget = null;
-        $("#stealContain").hide();
-        return;
-      }
-      ftapi.lookup.allLists(function (allPlaylists) {
-        $("#stealpicker").html(
-          '<option value="-1">Where to?</option>' +
-          '<option value="0">Default Queue</option>'
-        );
-        for (var key in allPlaylists) {
-          if (allPlaylists.hasOwnProperty(key)) {
-            $("#stealpicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
-          }
-        }
-        if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
-        $("#grab").removeClass('on');
-        firetable.stealSourceBtn = $btn;
-        firetable.stealTarget = { cid: mediaCid, type: mediaType, title: title };
-        $btn.addClass('on');
-        var stealContainEl = document.getElementById('stealContain');
-        stealContainEl.style.visibility = 'hidden';
-        $("#stealContain").show();
-        firetable.ui.positionPopover($btn[0], stealContainEl, document.getElementById('stealArrow'), 'left');
-      });
+      firetable.actions.openStealPicker($(this), { cid: mediaCid, type: mediaType, title: title });
     });
   };
 
@@ -166,7 +138,7 @@ firetable.ui.setupSearchEvents = function () {
         firetable.debug && console.log("direct yt link found");
         ytAPI('videos', { id: thecid, part: 'snippet', maxResults: 1 }, showYTResults);
       } else {
-        $('#searchResults').html("Searching...");
+        $('#searchResults').html('<p class="searchStatus">Searching…</p>');
         ytAPI('search', { q: txt, type: 'video', part: 'snippet', maxResults: SEARCH_MAX_RESULTS }, showYTResults);
       }
 
@@ -204,7 +176,7 @@ firetable.ui.setupSearchEvents = function () {
       var directLink = false;
       if (q.match(/:\/\/soundcloud\.com\//)) directLink = true;
 
-      $('#searchResults').html("Searching...");
+      $('#searchResults').html('<p class="searchStatus">Searching…</p>');
       if (directLink) {
         firetable.debug && console.log("sc direct link found");
         firetable.actions.resolveSCLink(q, function (item) {

@@ -56,7 +56,7 @@ firetable.init = function () {
   if (socialPopoverEl) {
     socialPopoverEl.addEventListener('toggle', function (e) {
       var btn = document.getElementById('socialTrigger');
-      var icon = btn && btn.querySelector('.material-symbols-filled');
+      var icon = btn && btn.querySelector('[class*="material-symbols-"]');
       if (e.newState === 'open') {
         if (icon) icon.textContent = 'close';
         socialPopoverEl.style.visibility = 'hidden';
@@ -163,12 +163,7 @@ firetable.init = function () {
   ftapi.events.on("userBanned", function () {
     firetable.debug && console.log("ban detected.");
     if (document.getElementById("notice") == null) {
-      var usrname2use = ftapi.uid;
-      if (ftapi.users[ftapi.uid] && ftapi.users[ftapi.uid].username) {
-        usrname2use = ftapi.users[ftapi.uid].username;
-      }
       $('.notice').attr('id', 'notice');
-      $("#troublemaker").text(usrname2use);
     }
   });
 
@@ -183,7 +178,7 @@ firetable.init = function () {
   document.addEventListener('visibilitychange', function () {
     if (document.hidden || firetable.disableMediaPlayback) return;
     var vol = firetable.utilities.getEffectiveVolume();
-    if (firetable.song && firetable.song.type == MEDIA_YOUTUBE && firetable.ytLoaded) {
+    if (firetable.song && firetable.song.type == MEDIA_YOUTUBE && firetable.ytLoaded && !firetable.preview) {
       if (player.getPlayerState() !== 1) {
         player.setVolume(vol);
         player.playVideo();

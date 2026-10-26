@@ -26,6 +26,16 @@ $(document)
     $group.toggleClass('collapsed');
     $(this).attr('aria-expanded', String(!$group.hasClass('collapsed')));
   })
+    // Touch screens have no hover: tapping a card shows / hides its actions
+  .off('click.cardSpotActions')
+  .on('click.cardSpotActions', '#cardsMain .caseCardSpot', function (e) {
+    if (!window.matchMedia('(hover: none)').matches) return;
+    if ($(e.target).closest('button').length) return;
+    var $spot = $(this);
+    var open = !$spot.hasClass('actions-open');
+    $('#cardsMain .caseCardSpot.actions-open').removeClass('actions-open');
+    $spot.toggleClass('actions-open', open);
+  })
   .off('input.cardFilters change.cardFilters')
   .on('input.cardFilters change.cardFilters', '#cardFilterRow input, #cardFilterRow select', function () {
     firetable.actions.applyCardFilters();
@@ -115,11 +125,11 @@ firetable.actions.renderCardStats = function (data) {
     '<div class="cardStatTile"><span class="cardStatLabel">Highest Temp</span><span class="cardStatValue">' + (maxTemp === null ? '--' : (maxTemp + '°')) + '</span></div>' +
     '</div>' +
     '<div class="cardStatDjBreakdown hist-day-group collapsed">' +
-    '<div class="hist-day-header" role="button" aria-expanded="false">Cards Per DJ</div>' +
+    '<div class="hist-day-header" role="button" tabindex="0" aria-expanded="false">Cards Per DJ</div>' +
     '<div class="hist-day-items cardStatDjList">' + djRows + '</div>' +
     '</div>' +
     '<div id="cardFilterRow" class="cardFilterRow">' +
-    '<div class="cardFilterControl"><input id="cardFilterText" class="cardFilterInput" type="text" placeholder="Search cards" aria-label="Filter cards by text" /></div>' +
+    '<div class="cardFilterControl"><input id="cardFilterText" class="cardFilterInput" type="search" placeholder="Search cards…" aria-label="Filter cards by text" /></div>' +
     '<div class="cardFilterControl"><select id="cardFilterDj" class="cardFilterSelect" aria-label="Filter cards by DJ"><option value="">All DJs</option>' + djOptions + '</select></div>' +
     '<div class="cardFilterControl"><select id="cardSortBy" class="cardFilterSelect" aria-label="Sort cards by"><option value="cardnum">Card Number</option><option value="djname">DJ Name</option><option value="temp">Temp</option><option value="num">Num</option></select></div>' +
     '</div>' +

@@ -42,6 +42,8 @@ var firetable = {
   movePvBar: null,
   /** @type {number|null}  setTimeout ID for auto-stopping preview after 30s */
   ptimeout: null,
+  /** @type {number|null}  Media type of the active preview (MEDIA_YOUTUBE / MEDIA_SOUNDCLOUD) */
+  previewType: null,
 
   // ── Playback ──
   /** @type {number}  Index of the currently-active DJ seat (0-3) */
@@ -169,7 +171,7 @@ var firetable = {
 };
 
 // ─── Version ─────────────────────────────────────────────────────────────────
-firetable.version = "01.10.29";
+firetable.version = "01.11.00";
 
 // ─── Chat Scroll Container ──────────────────────────────────────────────────
 /** Native scroll container wrapper preserving the legacy chatScroll API shape. */

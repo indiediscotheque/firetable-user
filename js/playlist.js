@@ -118,7 +118,7 @@ firetable.actions.removeDupesFromQueue = function (listID) {
 firetable.actions.mergeFinished = function (err) {
   $("#mergeHappening").hide();
   if (err) {
-    alert("Sorry, the merge could not be saved. Please try again.");
+    firetable.ui.toast("Sorry, the merge could not be saved. Please try again.", "error");
     $("#mergeSetup").show();
     return;
   }
@@ -713,6 +713,7 @@ function buildQueueItemHTML(key, track, isPreview) {
   var trackUrl = isYT
     ? 'https://www.youtube.com/watch?v=' + track.cid
     : SC_API_TRACK_URL + track.cid;
+  var platform = isYT ? 'YouTube' : 'SoundCloud';
 
   var flagHtml = '';
   if (track.flagged) {
@@ -738,12 +739,14 @@ function buildQueueItemHTML(key, track, isPreview) {
     '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
     '<span class="track-warning"' + (track.flagged ? flagHtml : '>') + '</span>' +
     '<div class="listwords">' + safeTrackName + durationHtml + '</div>' +
-    '<i role="button" class="material-symbols-outlined bumpsongs" title="Send to top">vertical_align_top</i>' +
-    '<i role="button" class="material-symbols-outlined bottomsongs" title="Send to bottom">vertical_align_bottom</i>' +
-    '<i role="button" class="material-symbols-outlined closeeditor" title="Close tags editor">close</i>' +
-    '<i role="button" class="material-symbols-outlined histeal" title="Add to playlist">playlist_add</i>' +
-    '<a class="tracklink-btn" target="_blank" href="' + trackUrl + '" title="Open on ' + (isYT ? 'YouTube' : 'SoundCloud') + '">' + (isYT ? YT_LOGO_SVG : SC_LOGO_SVG) + '</a>' +
-    '<i role="button" class="material-symbols-outlined deletesong" title="Delete track">delete</i>' +
+    // Order matches Recent / Fresh: move actions, link, add, destructive last
+    '<button type="button" class="material-symbols-outlined row-icon bumpsongs" title="Send to top" aria-label="Send to top">vertical_align_top</button>' +
+    '<button type="button" class="material-symbols-outlined row-icon bottomsongs" title="Send to bottom" aria-label="Send to bottom">vertical_align_bottom</button>' +
+    '<button type="button" class="material-symbols-outlined row-icon closeeditor" title="Close tags editor" aria-label="Close tags editor">close</button>' +
+    '<a class="row-icon tracklink-btn" target="_blank" rel="noopener" href="' + trackUrl + '" title="Open on ' + platform + '" aria-label="Open on ' + platform + '">' + (isYT ? YT_LOGO_SVG : SC_LOGO_SVG) + '</a>' +
+    '<button type="button" class="material-symbols-outlined row-icon histeal" title="Add to playlist" aria-label="Add to playlist">playlist_add</button>' +
+    '<button type="button" class="material-symbols-outlined row-icon deletesong" title="Delete track" aria-label="Delete track">delete</button>' +
+    '<button type="button" class="material-symbols-outlined row-icon row-more" title="More" aria-label="More track options" aria-haspopup="menu" aria-expanded="false">more_vert</button>' +
     '</div></div>'
   );
 }
@@ -812,37 +815,79 @@ firetable.ui.setupPlaylistEvents = function () {
       document.getElementById('tagEditorPopover').hidePopover();
     })
     .on('click', '.histeal', function () {
-      var $btn = $(this);
-      var $p = $btn.closest('.pvbar');
-      var btnCid = $p.attr('data-cid');
-      var btnType = $p.attr('data-type');
-      var btnTitle = firetable.utilities.htmlEscape($p.attr('data-tags') || $p.find('.listwords').text());
+      firetable.actions.openStealPicker($(this), queueRowTarget($(this).closest('.pvbar')));
+    })
+    .on('click', '.row-more', function () {
+      openTrackMenu(this);
+    });
 
-      if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$('#stealContain').is(':hidden')) {
-        $btn.removeClass('on');
-        firetable.stealSourceBtn = null;
-        firetable.stealTarget = null;
-        $('#stealContain').hide();
-        return;
+  /** Track info used by the "add to playlist" picker for a playlist row. */
+  function queueRowTarget($p) {
+    return {
+      cid: $p.attr('data-cid'),
+      type: $p.attr('data-type'),
+      title: firetable.utilities.htmlEscape($p.attr('data-tags') || $p.find('.listwords').text())
+    };
+  }
+
+  // ── Narrow rows: ⋮ menu (Send to bottom / Add to playlist / Open / Delete) ──
+  var trackMenuEl = document.getElementById('trackMenuPopover');
+
+  function openTrackMenu(btn) {
+    var $p = $(btn).closest('.pvbar');
+    if (trackMenuEl.matches(':popover-open')) {
+      var sameRow = firetable.trackMenuRow && firetable.trackMenuRow.is($p);
+      trackMenuEl.hidePopover();
+      if (sameRow) return;
+    }
+    firetable.trackMenuRow = $p;
+    firetable.trackMenuBtn = btn;
+    var $link = $p.find('.tracklink-btn');
+    var $menu = $(trackMenuEl);
+    $menu.find('[data-act="open"]').attr('href', $link.attr('href') || '#');
+    $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
+    $(btn).addClass('on').attr('aria-expanded', 'true');
+    trackMenuEl.style.visibility = 'hidden';
+    trackMenuEl.showPopover();
+    firetable.ui.positionPopover(btn, trackMenuEl, document.getElementById('trackMenuArrow'), 'bottom-end').then(function () {
+      var first = trackMenuEl.querySelector('[role="menuitem"]');
+      if (first) first.focus();
+    });
+  }
+
+  trackMenuEl.addEventListener('toggle', function (e) {
+    if (e.newState === 'closed' && firetable.trackMenuBtn) {
+      $(firetable.trackMenuBtn).removeClass('on').attr('aria-expanded', 'false');
+    }
+  });
+
+  $(trackMenuEl)
+    .on('click', '[data-act]', function (e) {
+      var act = $(this).attr('data-act');
+      var $p = firetable.trackMenuRow;
+      var btn = firetable.trackMenuBtn;
+      trackMenuEl.hidePopover();
+      if (!$p || !$p.length) return;
+      if (act === 'open') return; // the link opens the track itself
+      e.preventDefault();
+      if (act === 'bottom') {
+        $p.find('.bottomsongs').trigger('click');
+      } else if (act === 'add') {
+        firetable.actions.openStealPicker($(btn), queueRowTarget($p));
+      } else if (act === 'delete') {
+        firetable.actions.deleteSongPrompt($p.attr('data-key'), $p.attr('data-tags') || $p.find('.listwords').text(), $p.attr('data-type'), btn);
       }
-
-      ftapi.lookup.allLists(function (allPlaylists) {
-        $('#stealpicker').html('<option value="-1">Where to?</option><option value="0">Default Queue</option>');
-        for (var k in allPlaylists) {
-          if (allPlaylists.hasOwnProperty(k)) {
-            $('#stealpicker').append(firetable.utilities.playlistOption(k, allPlaylists[k].name));
-          }
-        }
-        if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
-        $('#grab').removeClass('on');
-        firetable.stealSourceBtn = $btn;
-        firetable.stealTarget = { cid: btnCid, type: btnType, title: btnTitle };
-        $btn.addClass('on');
-        var stealContainEl = document.getElementById('stealContain');
-        stealContainEl.style.visibility = 'hidden';
-        $('#stealContain').show();
-        firetable.ui.positionPopover($btn[0], stealContainEl, document.getElementById('stealArrow'), 'left');
-      });
+    })
+    .on('keydown', function (e) {
+      var $items = $(trackMenuEl).find('[role="menuitem"]');
+      var idx = $items.index($items.filter(':focus'));
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        $items.eq((idx + 1) % $items.length).focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        $items.eq((idx - 1 + $items.length) % $items.length).focus();
+      }
     });
 
   // ── Playlist changed: re-render the queue ──
@@ -1127,8 +1172,8 @@ firetable.ui.setupPlaylistEvents = function () {
     var isHidden = $("#mergeContain").is(":hidden");
     if (isHidden) {
       ftapi.lookup.allLists(function (allPlaylists) {
-        $("#mergepicker").html('<option value="0">Default Queue</option>');
-        $("#mergepicker2").html('<option value="-1">Create New Copy</option><option value="0">Default Queue</option>');
+        $("#mergepicker").html('<option value="0">Default Playlist</option>');
+        $("#mergepicker2").html('<option value="-1">Create New Copy</option><option value="0">Default Playlist</option>');
         for (var key in allPlaylists) {
           if (allPlaylists.hasOwnProperty(key)) {
             $("#mergepicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
@@ -1141,6 +1186,12 @@ firetable.ui.setupPlaylistEvents = function () {
         }
         $("#mergeContain").show();
         $this.addClass('on');
+        // Point the arrow at the merge button wherever it sits in the toolbar
+        var box = document.getElementById('mergeContain').getBoundingClientRect();
+        var btn = $this[0].getBoundingClientRect();
+        var arrow = document.getElementById('mergeArrow');
+        var half = parseFloat(getComputedStyle(arrow).borderLeftWidth) || 16;
+        arrow.style.right = Math.max(0, box.right - (btn.left + btn.width / 2) - half) + 'px';
       });
     } else {
       closeMergeContain();
@@ -1183,7 +1234,7 @@ firetable.ui.setupPlaylistEvents = function () {
     if (!val) return;
     var yargo = val.split(" - ");
     if (!yargo[0] || !yargo[1]) {
-      alert("check yr tags");
+      firetable.ui.toast("Check yr tags: use Artist - Song Title.", "error");
     } else {
       ftapi.actions.editTag(
         $pvbar.attr('data-type'),
