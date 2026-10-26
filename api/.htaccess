@@ -1,0 +1,5 @@
+# Only the proxy itself is reachable over the web.
+<FilesMatch "^soundcloud-config">
+  Require all denied
+</FilesMatch>
+Options -Indexes

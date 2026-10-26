@@ -2,8 +2,8 @@
  * search.js — YouTube and SoundCloud track & playlist search.
  *
  * Handles:
- * - Track search via YouTube Data API v3 + SoundCloud API
- * - Direct link detection (youtube.com/watch, soundcloud.com/…)
+ * - Track search via YouTube Data API v3 + SoundCloud (through api/soundcloud.php)
+ * - Direct link detection (youtube.com/watch, soundcloud.com/…, on.soundcloud.com/…)
  * - Playlist/import search via YouTube + SoundCloud
  * - Dubtrack import file parsing + import
  * - Search source toggle buttons (#ytsearchSelect, #scsearchSelect)
@@ -61,6 +61,11 @@ function getQueryStringValue(str, key) {
 firetable.ui.setupSearchEvents = function () {
   var $searchItemTemplate = $('#searchResults .pvbar').remove();
 
+  // Status line in a results box (text only, so messages can't inject HTML).
+  var showStatus = function (sel, msg) {
+    $(sel).empty().append($('<p class="searchStatus"></p>').text(msg));
+  };
+
   // ── Shared helper: bind addtolist + queuetrack buttons on a search result row ──
   var bindSearchResultButtons = function ($srli, mediaCid, mediaType) {
     $srli.find('.addtolist').on('click', function () {
@@ -89,10 +94,11 @@ firetable.ui.setupSearchEvents = function () {
   // ── Track Search (Enter in #qsearch) ──
   $("#qsearch").bind("keyup", function (e) {
     if (e.which !== 13) return;
-    var txt = $("#qsearch").val();
+    var txt = $.trim($("#qsearch").val());
     if (!txt) return;
+    var source = firetable.utilities.isSCLink(txt) ? MEDIA_SOUNDCLOUD : firetable.searchSelectsChoice;
 
-    if (firetable.searchSelectsChoice === MEDIA_YOUTUBE) {
+    if (source === MEDIA_YOUTUBE) {
       // ── YouTube Track Search ──
       var showYTResults = function (response) {
         firetable.debug && console.log('queue search:', response);
@@ -142,7 +148,7 @@ firetable.ui.setupSearchEvents = function () {
         ytAPI('search', { q: txt, type: 'video', part: 'snippet', maxResults: SEARCH_MAX_RESULTS }, showYTResults);
       }
 
-    } else if (firetable.searchSelectsChoice === MEDIA_SOUNDCLOUD) {
+    } else if (source === MEDIA_SOUNDCLOUD) {
       // ── SoundCloud Track Search ──
       var q = txt;
 
@@ -150,9 +156,13 @@ firetable.ui.setupSearchEvents = function () {
         firetable.debug && console.log('sc tracks:', tracks);
         $('#searchResults').html("");
         firetable.utilities.cancelSearchPreview();
+        if (!tracks.length) {
+          showStatus('#searchResults', 'No playable SoundCloud tracks found.');
+          return;
+        }
 
         $.each(tracks, function (index, item) {
-          var parsed = firetable.utilities.parseArtistTitle(item.title, item.user.username);
+          var parsed = firetable.utilities.parseArtistTitle(item.title, (item.user && item.user.username) || "");
           var vidTitle = parsed.artist + " - " + parsed.title;
           var pkey = "sccid" + item.id;
 
@@ -164,30 +174,31 @@ firetable.ui.setupSearchEvents = function () {
           $srli.find('.previewicon').attr('id', "pv" + pkey).on('click', function () {
             firetable.actions.pview($(this).closest('.pvbar').attr('data-key'), true, MEDIA_SOUNDCLOUD);
           });
-          // strip() decodes entities and drops tags (YouTube returns titles
-          // HTML-escaped); .text() keeps the result from being parsed as HTML.
           $srli.find('.listwords').text(firetable.ui.strip(vidTitle));
-          $srli.find('.pvbarWrap').append('<a class="tracklink-btn" target="_blank" href="' + (item.permalink_url || '') + '" title="Open on SoundCloud">' + SC_LOGO_SVG + '</a>');
+          var $scLink = $('<a class="tracklink-btn" target="_blank" rel="noopener" title="Open on SoundCloud"></a>').html(SC_LOGO_SVG);
+          if (/^https:\/\/(?:[a-z0-9-]+\.)?soundcloud\.com\//i.test(item.permalink_url || '')) $scLink.attr('href', item.permalink_url);
+          $srli.find('.pvbarWrap').append($scLink);
           bindSearchResultButtons($srli, item.id, MEDIA_SOUNDCLOUD);
           $("#searchResults").append($srli);
         });
       };
 
-      var directLink = false;
-      if (q.match(/:\/\/soundcloud\.com\//)) directLink = true;
+      var showSCError = function (err) {
+        firetable.utilities.cancelSearchPreview();
+        showStatus('#searchResults', err.message || "SoundCloud search failed.");
+      };
 
-      $('#searchResults').html('<p class="searchStatus">Searching…</p>');
-      if (directLink) {
+      showStatus('#searchResults', 'Searching…');
+      if (firetable.utilities.isSCLink(q)) {
         firetable.debug && console.log("sc direct link found");
-        firetable.actions.resolveSCLink(q, function (item) {
-          var items = [];
-          if (item.kind === "track") items.push(item);
-          showSCResults(items);
-        });
+        firetable.actions.resolveSCLink(q).then(function (item) {
+          if (item && item.kind === "track") return showSCResults([item]);
+          showStatus('#searchResults', item && item.kind === "playlist"
+            ? "That's a SoundCloud playlist. Use Import to add it as a list."
+            : "That SoundCloud link isn't a track.");
+        }, showSCError);
       } else {
-        SC.get('/tracks', { q: q }).then(function (tracks) {
-          showSCResults(tracks);
-        });
+        firetable.actions.scSearch('tracks', q).then(showSCResults, showSCError);
       }
     }
   });
@@ -282,29 +293,32 @@ firetable.ui.setupSearchEvents = function () {
 
     } else if (searchFrom === MEDIA_SOUNDCLOUD) {
       // ── SoundCloud Playlist Search ──
-      if (val.match(/.*\/\/soundcloud\.com\/.*\/sets\/.*/)) {
-        // Direct set URL
-        firetable.actions.resolveSCLink(val, function (item) {
-          if (item && item.sharing === "public" && item.kind === "playlist") {
-            appendImportResult(
-              item.title + ' by ' + item.user.username + ' (' + firetable.utilities.pluralize(item.track_count, "song") + ')',
-              item.permalink_url, item.id, item.title, MEDIA_SOUNDCLOUD
-            );
-          }
-        });
+      var appendSCList = function (item) {
+        appendImportResult(
+          item.title + ' by ' + ((item.user && item.user.username) || 'unknown') + ' (' + firetable.utilities.pluralize(item.track_count, "song") + ')',
+          item.permalink_url, item.id, item.title, MEDIA_SOUNDCLOUD
+        );
+      };
+      var showImportError = function (err) {
+        showStatus('#importResults', err.message || "SoundCloud search failed.");
+      };
+
+      showStatus('#importResults', 'Searching…');
+      if (firetable.utilities.isSCLink(val)) {
+        // Direct set URL (also accepts short on.soundcloud.com links)
+        firetable.actions.resolveSCLink(val).then(function (item) {
+          $("#importResults").html("");
+          if (item && item.kind === "playlist" && item.sharing !== "private") return appendSCList(item);
+          showStatus('#importResults', "That link isn't a public SoundCloud playlist.");
+        }, showImportError);
       } else {
         // Keyword search for playlists
-        SC.get('/playlists', { q: val }).then(function (lists) {
-          for (var i = 0; i < lists.length; i++) {
-            var item = lists[i];
-            if (item.sharing === "public") {
-              appendImportResult(
-                item.title + ' by ' + item.user.username + ' (' + firetable.utilities.pluralize(item.track_count, "song") + ')',
-                item.permalink_url, item.id, item.title, MEDIA_SOUNDCLOUD
-              );
-            }
-          }
-        });
+        firetable.actions.scSearch('playlists', val).then(function (lists) {
+          $("#importResults").html("");
+          lists = $.grep(lists, function (item) { return item.sharing !== "private"; });
+          if (!lists.length) return showStatus('#importResults', 'No public SoundCloud playlists found.');
+          $.each(lists, function (i, item) { appendSCList(item); });
+        }, showImportError);
       }
     }
   });

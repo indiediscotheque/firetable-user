@@ -48,9 +48,20 @@ var STORAGE = {
 // ─── External Service URLs ──────────────────────────────────────────────────
 /** Avatar / Robohash image base URL */
 var AVATAR_BASE_URL = "https://indiediscotheque.com/robots/";
-/** SoundCloud link resolver proxy */
+/**
+ * This site's SoundCloud API proxy (api/soundcloud.php). Handles keyword
+ * search, link resolving and playlist import with an OAuth token.
+ * Override with ftconfigs.soundcloudProxyURL if it lives elsewhere.
+ */
+// Resolved against the page URL now, like the page's own js/ files, so the
+// later history.replaceState() route changes can't break it.
+var SC_API_PROXY_URL = new URL(
+  (typeof ftconfigs !== "undefined" && ftconfigs.soundcloudProxyURL) || "api/soundcloud.php",
+  document.baseURI
+).href;
+/** Legacy SoundCloud link resolver (fallback; takes the URL path as ?q=) */
 var SC_RESOLVE_URL = "https://thompsn.com/resolvesc/";
-/** SoundCloud general proxy */
+/** Legacy SoundCloud lookup-by-id proxy (fallback; ?type=…&q=ID) */
 var SC_PROXY_URL = "https://thompsn.com/soundcloud/";
 /** SoundCloud API track base URL */
 var SC_API_TRACK_URL = "https://api.soundcloud.com/tracks/";
