@@ -1,0 +1,119 @@
+# Publish the site to DreamHost whenever master changes.
+#
+# Uploads over SFTP (works with an SFTP-only DreamHost user). Every file type
+# and folder is included, files are sent exactly as they are in git, nothing
+# on the server is deleted, and config.js (which lives only on the server) is
+# never touched. Before uploading, it checks the target folder already holds
+# config.js, so a wrong path or login stops the publish instead of copying the
+# site somewhere else.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   DREAMHOST_HOST      server hostname, e.g. iad1-shared-b8-12.dreamhost.com
+#   DREAMHOST_USER      the site's SFTP user
+#   DREAMHOST_PASSWORD  that user's password
+#   DREAMHOST_PATH      site folder, e.g. indiediscotheque.com (relative to
+#                       the user's home; "/indiediscotheque.com" also works)
+#
+# Manual run: Actions → "Deploy to DreamHost" → Run workflow. "Dry run" lists
+# what would change without uploading anything.
+
+name: Deploy to DreamHost
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (only list what would change)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-dreamhost
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HOST: ${{ secrets.DREAMHOST_HOST }}
+      SFTP_USER: ${{ secrets.DREAMHOST_USER }}
+      LFTP_PASSWORD: ${{ secrets.DREAMHOST_PASSWORD }}
+      DEST_RAW: ${{ secrets.DREAMHOST_PATH }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+    steps:
+      - name: Check out master
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, to give files their last-commit times
+
+      - name: Check secrets
+        run: |
+          missing=""
+          for v in HOST SFTP_USER LFTP_PASSWORD DEST_RAW; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing DreamHost secret(s):$missing"
+            exit 1
+          fi
+
+      - name: Prepare
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          ssh-keyscan -T 15 "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::Could not reach $HOST over SFTP (port 22). Check DREAMHOST_HOST."
+            exit 1
+          fi
+          # Give each file its last-commit time, so only files changed in git
+          # differ from the server copy on later runs.
+          git ls-files -z | while IFS= read -r -d '' f; do
+            t=$(git log -1 --format=%ct -- "$f")
+            [ -n "$t" ] && touch -m -d "@$t" "$f"
+          done
+          # "/indiediscotheque.com" (FTP style) means the folder in the home directory
+          DEST="$DEST_RAW"
+          case "$DEST" in
+            /home/*) ;;
+            /*) DEST="${DEST#/}" ;;
+          esac
+          DEST="${DEST%/}"
+          echo "DEST=$DEST" >> "$GITHUB_ENV"
+          cat > ~/.lftprc <<EOF
+          set sftp:connect-program "ssh -a -x -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o BatchMode=no"
+          set net:max-retries 3
+          set net:timeout 30
+          set cmd:fail-exit yes
+          EOF
+
+      - name: Safety check (target folder must already hold config.js)
+        run: |
+          if ! lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; cls -1 \"$DEST/config.js\"" >/dev/null; then
+            echo "::error::Couldn't find $DEST/config.js on the server. Either the login failed or DREAMHOST_PATH is wrong. Nothing was uploaded."
+            exit 1
+          fi
+          echo "Found $DEST/config.js - target folder looks right."
+
+      - name: Upload changed files
+        run: |
+          flags=""
+          if [ "$DRY_RUN" = "true" ]; then
+            flags="--dry-run"
+            echo "Dry run: nothing will be uploaded."
+          fi
+          lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
+            mirror --reverse --verbose --no-perms --parallel=4 $flags \
+              --exclude-glob .git/ \
+              --exclude-glob .github/ \
+              --exclude-glob .gitignore \
+              --exclude-glob .DS_Store \
+              --exclude-glob config.js \
+              --exclude-glob README.md \
+              ./ \"$DEST/\""
