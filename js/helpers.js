@@ -412,10 +412,11 @@ firetable.utilities = {
     $("#pv" + firetable.preview).html("&#xE037;");
     clearTimeout(firetable.ptimeout);
     firetable.ptimeout = null;
-    $("#pvbar" + firetable.preview).css("background-image", "none");
+    $("#pvbar" + firetable.preview).css("background-image", "none").removeClass("previewing");
     clearInterval(firetable.movePvBar);
     firetable.movePvBar = null;
     firetable.preview = false;
+    firetable.previewType = null;
     firetable.utilities.resumeCurrentSong();
     return true;
   },

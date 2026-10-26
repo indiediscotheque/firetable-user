@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>firetable</title>
 	<meta name="description" content="Collaborative radio." />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 	<script>
 		// iPhone/iPad: keep maximum-scale=1 so tapping a small text field doesn't
 		// auto-zoom the page (iOS still allows pinch-zoom). Other devices get
 		// normal pinch-zoom.
 		if (/iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
-			document.querySelector('meta[name="viewport"]').setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0");
+			document.querySelector('meta[name="viewport"]').setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover");
 		}
 	</script>
 	<meta name="theme-color" content="#181818" />
@@ -23,9 +23,9 @@
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-title" content="Indie Disco" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
-	<link rel="stylesheet" href="css/reset.css?v=01.10.29" type="text/css" />
-	<link rel="stylesheet" href="css/fonts-local.css?v=01.10.29" type="text/css" />
-	<link rel="stylesheet" href="css/looks.css?v=01.10.29" type="text/css" />
+	<link rel="stylesheet" href="css/reset.css?v=01.11.00" type="text/css" />
+	<link rel="stylesheet" href="css/fonts-local.css?v=01.11.00" type="text/css" />
+	<link rel="stylesheet" href="css/looks.css?v=01.11.00" type="text/css" />
 </head>
 
 <body>
@@ -44,7 +44,7 @@
 						<div class="ft-avatar skel"></div>
 				</div>
 				<span id="tip-loggedInUser" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-loggedInUser">Profile &amp; Settings</span>
-				<div id="reconnecting">Reconnecting...</div>
+				<div id="reconnecting" role="status">Reconnecting…</div>
 			</div>
 		</header>
 
@@ -123,7 +123,7 @@
 				<span id="tip-reloadtrack" role="tooltip" class="ft-tip" style="position-anchor: --tip-reloadtrack">Reload audio</span>
 			</div>
 			<div id="stageActions">
-				<button role="button" class="butt accent iconbutt" id="fire" aria-label="Fire!" tabindex="0" style="anchor-name: --tip-fire" aria-describedby="tip-fire">
+				<button role="button" class="butt graybutt iconbutt" id="fire" aria-label="Fire!" tabindex="0" style="anchor-name: --tip-fire" aria-describedby="tip-fire">
 					<i class="material-symbols-outlined"> mode_heat </i>
 				</button>
 				<span id="tip-fire" role="tooltip" class="ft-tip" style="position-anchor: --tip-fire">Fire!</span>
@@ -140,12 +140,15 @@
 				</button>
 				<span id="tip-skipTrigger" role="tooltip" class="ft-tip" style="position-anchor: --tip-skipTrigger">Skip options</span>
 			</div>
+			<button type="button" id="tapToPlay" class="butt">
+				<i class="material-symbols-filled">play_arrow</i> Tap to start audio
+			</button>
 		</div>
 
 		<div id="nowplaying">
 			<div id="albumArt" class="skel"></div>
 			<div id="npText">
-				<div id="track" class="skel">Loading firetable...</div>
+				<div id="track" class="skel">Loading firetable…</div>
 				<div id="artist" class="skel">&nbsp;</div>
 				<div id="plays">
 					<div id="playCount"></div>
@@ -176,19 +179,19 @@
 
 		<div id="appShell">
 
-		<div id="minimodeoptions" class="tabs">
-			<button role="button" class="tab on" id="mm-playlists">Playlists</button>
-			<button role="button" class="tab" id="mm-history">Recent</button>
-			<button role="button" class="tab" id="mm-discover">Fresh</button>
-			<button role="button" class="tab" id="mmchat">Chat</button>
-			<button role="button" class="tab" id="mmusrs">People</button>
-			<button role="button" class="tab" id="mm-cards">Cards</button>
-		</div>
+		<nav id="minimodeoptions" class="tabs" role="tablist" aria-label="Sections">
+			<button type="button" role="tab" class="tab on" id="mm-playlists" aria-selected="true">Playlists</button>
+			<button type="button" role="tab" class="tab" id="mm-history" aria-selected="false">Recent</button>
+			<button type="button" role="tab" class="tab" id="mm-discover" aria-selected="false">Fresh</button>
+			<button type="button" role="tab" class="tab" id="mm-cards" aria-selected="false">Cards</button>
+			<button type="button" role="tab" class="tab" id="mmchat" aria-selected="false">Chat</button>
+			<button type="button" role="tab" class="tab" id="mmusrs" aria-selected="false">People</button>
+		</nav>
 
-		<div id="sidepanel-tabs" class="tabs">
-			<button role="button" class="tab on" id="sp-chat">Chat</button>
-			<button role="button" class="tab" id="sp-people">People</button>
-		</div>
+		<nav id="sidepanel-tabs" class="tabs" role="tablist" aria-label="Side panel">
+			<button type="button" role="tab" class="tab on" id="sp-chat" aria-selected="true">Chat</button>
+			<button type="button" role="tab" class="tab" id="sp-people" aria-selected="false">People</button>
+		</nav>
 
 		<div id="actualChat">
 			<div id="chatsWrap" class="scroll-view">
@@ -256,7 +259,7 @@
 				</form>
 				<div id="emojiPicker">
 					<div id="pickerNav"></div>
-					<input type="text" placeholder="Filter emoji things..." id="pickerSearch" tabindex="-1" />
+					<input type="text" placeholder="Filter emoji…" id="pickerSearch" tabindex="-1" />
 					<div id="pickerResults" class="scroll-view">
 						<div id="pickerContents"></div>
 					</div>
@@ -332,22 +335,22 @@
 							<i class="material-symbols-outlined"> search </i>
 						</button>
 						<span id="tip-addToQueueBttn" role="tooltip" class="ft-tip" style="position-anchor: --tip-addToQueueBttn">Find tracks</span>
-						<button role="button" class="butt graybutt iconbutt" id="plDeleteLauncher" aria-label="Delete playlist" style="anchor-name: --tip-plDeleteLauncher" aria-describedby="tip-plDeleteLauncher">
-							<i class="material-symbols-outlined">delete</i>
-						</button>
-						<span id="tip-plDeleteLauncher" role="tooltip" class="ft-tip" style="position-anchor: --tip-plDeleteLauncher">Delete playlist</span>
-						<button role="button" class="butt graybutt iconbutt" id="mergeLists" aria-label="Merge playlists" style="anchor-name: --tip-mergeLists" aria-describedby="tip-mergeLists">
-							<i class="material-symbols-outlined"> merge_type </i>
-						</button>
-						<span id="tip-mergeLists" role="tooltip" class="ft-tip" style="position-anchor: --tip-mergeLists">Merge playlists</span>
 						<button role="button" class="butt graybutt iconbutt" id="shuffleQueue" aria-label="Shuffle list" style="anchor-name: --tip-shuffleQueue" aria-describedby="tip-shuffleQueue">
 							<i class="material-symbols-outlined"> shuffle </i>
 						</button>
 						<span id="tip-shuffleQueue" role="tooltip" class="ft-tip" style="position-anchor: --tip-shuffleQueue">Shuffle list</span>
+						<button role="button" class="butt graybutt iconbutt" id="mergeLists" aria-label="Merge playlists" style="anchor-name: --tip-mergeLists" aria-describedby="tip-mergeLists">
+							<i class="material-symbols-outlined"> merge_type </i>
+						</button>
+						<span id="tip-mergeLists" role="tooltip" class="ft-tip" style="position-anchor: --tip-mergeLists">Merge playlists</span>
 						<button role="button" class="butt graybutt iconbutt" id="plAddLauncher" aria-label="New or Import playlist" aria-haspopup="menu" aria-expanded="false" style="anchor-name: --tip-plAddLauncher" aria-describedby="tip-plAddLauncher">
 							<i class="material-symbols-outlined">add</i>
 						</button>
 						<span id="tip-plAddLauncher" role="tooltip" class="ft-tip" style="position-anchor: --tip-plAddLauncher">New / Import playlist</span>
+						<button role="button" class="butt graybutt iconbutt" id="plDeleteLauncher" aria-label="Delete playlist" style="anchor-name: --tip-plDeleteLauncher" aria-describedby="tip-plDeleteLauncher">
+							<i class="material-symbols-outlined">delete</i>
+						</button>
+						<span id="tip-plDeleteLauncher" role="tooltip" class="ft-tip" style="position-anchor: --tip-plDeleteLauncher">Delete playlist</span>
 					</div>
 					<button role="button" class="butt graybutt" id="cancelqsearch">Done</button>
 				</div>
@@ -364,7 +367,7 @@
 							</select>
 							<button role="button" class="butt" id="startMerge">Merge</button>
 						</div>
-						<div id="mergeHappening">Merge in progress... Please stand by...</div>
+						<div id="mergeHappening">Merge in progress… please stand by.</div>
 						<div id="mergeCompleted">
 							Congratulations! Merge completed.
 							<button role="button" class="butt" id="mergeOK">Ok Fine</button>
@@ -373,8 +376,7 @@
 				</div>
 				<div id="filterMachine">
 					<form id="queueFilterForm" autocomplete="off" onsubmit="return false;">
-						<input type="text" autocomplete="off" placeholder="Filter your list..." name="queueFilter"
-							id="queueFilter" />
+						<input type="search" autocomplete="off" spellcheck="false" placeholder="Filter playlist…" name="queueFilter" id="queueFilter" class="ft-filter" aria-label="Filter playlist" />
 						<div id="queueFilterExtras" class="queueFilterExtras">
 							<label class="queueFilterRemixOnly" for="queueFilterRemixOnly">
 								<input type="checkbox" id="queueFilterRemixOnly" />
@@ -397,37 +399,22 @@
 			<div id="queuelist" class="scroll-view">
 				<div id="mainqueuestuff">
 					<div id="mainqueue" class="innr">
-						<div class="pvbar" id="pvbarKEY">
-							<!-- template for playlist items -->
-							<div class="pvbarWrap">
-								<div class="q-art"></div>
-								<button id="pvKEY" class="material-symbols-filled previewicon"></button>
-								<span class="track-warning"></span>
-								<div class="listwords"></div>
-								<i role="button" class="material-symbols-outlined bumpsongs"
-									title="Send to top">vertical_align_top</i>
-								<i role="button" class="material-symbols-outlined bottomsongs"
-									title="Send to bottom">vertical_align_bottom</i>
-
-								<i role="button" class="material-symbols-outlined closeeditor" title="Close tags editor">close</i>
-								<i role="button" class="material-symbols-outlined histeal" title="Add to playlist">playlist_add</i>
-								<a class="material-symbols-outlined tracklink-btn" target="_blank" href="" title="Open in new tab">open_in_new</a>
-								<i role="button" class="material-symbols-outlined deletesong" title="Delete track">delete</i>
-							</div>
-						</div>						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:14rem"></div></div>
+						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:14rem"></div></div>
 						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:10rem"></div></div>
 						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:17rem"></div></div>
 					</div>
 				</div>
 				<div id="addbox">
 					<div id="searchResults" class="scroll-view">
-						<div class="pvbar" id="pvbarKEY">
+						<div class="pvbar">
 							<!-- template for search result items -->
 							<div class="pvbarWrap">
 								<div class="q-art"></div>
-								<button id="pvKEY" class="material-symbols-filled previewicon">&#xE037;</button>
-								<div class="listwords"></div>									<span class="search-feedback"></span>								<i role="button" class="material-symbols-outlined addtolist" title="Add to current list">add</i>
-								<i role="button" class="material-symbols-outlined queuetrack" title="Add to playlist">playlist_add</i>
+								<button type="button" class="material-symbols-filled previewicon" aria-label="Preview">&#xE037;</button>
+								<div class="listwords"></div>
+								<span class="search-feedback" role="status"></span>
+								<button type="button" class="material-symbols-outlined row-icon addtolist" title="Add to current list" aria-label="Add to current list">add</button>
+								<button type="button" class="material-symbols-outlined row-icon queuetrack" title="Add to playlist" aria-label="Add to playlist">playlist_add</button>
 							</div>
 						</div>
 					</div>
@@ -437,18 +424,18 @@
 
 		<div id="thehistoryWrap">
 			<div id="histFilterBar">
-				<input type="search" id="histFilter" placeholder="Filter recents..." autocomplete="off" spellcheck="false">
+				<input type="search" id="histFilter" class="ft-filter" placeholder="Filter recent plays…" aria-label="Filter recent plays" autocomplete="off" spellcheck="false">
 			</div>
 			<div id="thehistory" class="scroll-view">
-				<div class="pvbar" id="pvbar0">
+				<div class="pvbar">
 					<div class="pv-art histart">
-						<button class="material-symbols-filled previewicon" id="pv0" title="Preview">&#xE037;</button>
+						<button type="button" class="material-symbols-filled previewicon" title="Preview" aria-label="Preview">&#xE037;</button>
 					</div>
 					<span class="ft-avatar pv-dj-avatar dj-avatar-tip"></span>
 					<div class="listwords"><div class="histlink"></div></div>
-					<button class="material-symbols-outlined edittags" title="Edit tags">edit</button>
-					<a class="material-symbols-outlined tracklink-btn" target="_blank" href="" title="Track link">open_in_new</a>
-					<button class="histeal material-symbols-outlined" id="apvX0" title="Add to playlist">&#xE03B;</button>
+					<a class="row-icon tracklink-btn" target="_blank" rel="noopener" href="" title="Open track" aria-label="Open track"></a>
+					<button type="button" class="histeal material-symbols-outlined row-icon" title="Add to playlist" aria-label="Add to playlist">&#xE03B;</button>
+					<button type="button" class="material-symbols-outlined row-icon edittags" title="Edit tags" aria-label="Edit tags">edit</button>
 				</div>
 				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:15rem"></div></div>
 				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:11rem"></div></div>
@@ -457,22 +444,22 @@
 		</div>
 
 		<div id="cardsWrap" class="scroll-view">
-			<div id="cardsMain">loading your cards...</div>
+			<div id="cardsMain">Loading your cards…</div>
 		</div>
 
 		</div><!-- /#appShell -->
 
 		<div id="discover" class="scroll-view">
 			<div id="thediscovers">
-				<div class="pvbar" id="pvbar0">
+				<div class="pvbar">
 					<div class="pv-art discart">
-						<button id="pv0" class="material-symbols-filled previewicon">&#xE037;</button>
+						<button type="button" class="material-symbols-filled previewicon" aria-label="Preview">&#xE037;</button>
 					</div>
 					<div class="qtxt">
 						<div class="listwords">
 							<div class="fresh-title"></div>
-							<a class="tracklink-btn" target="_blank" href="" title="Open on source"></a>
-							<button class="histeal butt graybutt material-symbols-outlined" id="apvX0">&#xE03B;</button>
+							<a class="row-icon tracklink-btn" target="_blank" rel="noopener" href="" title="Open track" aria-label="Open track"></a>
+							<button type="button" class="histeal material-symbols-outlined row-icon" title="Add to playlist" aria-label="Add to playlist">&#xE03B;</button>
 						</div>
 						<div class="fresh-meta">
 							<span class="pv-dj-avatar ft-avatar dj-avatar-tip"></span>
@@ -500,31 +487,29 @@
 			<div id="logscreen" style="display: none">
 				<form id="loginFormShell" novalidate onsubmit="return false;">
 				<h4>Log In</h4>
+				<div class="inputline"><label for="loginemail">Email</label><input type="email" id="loginemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
+				<div class="inputline"><label for="loginpass">Password</label><input type="password" id="loginpass" autocomplete="current-password" enterkeyhint="go" /></div>
+				<div class="formMessage" role="alert"></div>
 				<div class="inputline">
-					<label>Email:</label>
-					<input type="email" id="loginemail" autocomplete="username" autocapitalize="off" spellcheck="false" />
-				</div>
-				<div class="inputline">Password: <input type="password" id="loginpass" autocomplete="current-password" enterkeyhint="go" /></div>
-				<div class="inputline">
-					<button role="button" type="button" class="butt" id="loginBttn">Log In</button>
+					<button type="button" class="butt" id="loginBttn">Log In</button>
 				</div>
 				</form>
 			</div>
 			<div id="createscreen">
 				<form id="createAccountFormShell" novalidate onsubmit="return false;">
 					<h4>Create an Account</h4>
-					<div class="inputline">Email: <input type="email" id="newemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
-					<div class="inputline">Username: <input type="text" id="newusername" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
-					<div class="inputline">Password: <input type="password" id="newpass" autocomplete="new-password" /></div>
-					<div class="inputline">Repeat Password: <input type="password" id="newpass2" autocomplete="new-password" enterkeyhint="go" /></div>
+					<div class="inputline"><label for="newemail">Email</label><input type="email" id="newemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
+					<div class="inputline"><label for="newusername">Username</label><input type="text" id="newusername" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
+					<div class="inputline"><label for="newpass">Password</label><input type="password" id="newpass" autocomplete="new-password" /></div>
+					<div class="inputline"><label for="newpass2">Repeat password</label><input type="password" id="newpass2" autocomplete="new-password" enterkeyhint="go" /></div>
 					<div class="inputline">
-						<span id="termsAgreement"><input type="checkbox" id="agreetoterms" /> I have read, understand, and
-							agree to the
+						<span id="termsAgreement"><input type="checkbox" id="agreetoterms" /> <label for="agreetoterms">I have read, understand, and agree to the</label>
 							<a href="terms" target="_blank">Terms of Service</a> and
 							<a href="privacy" target="_blank">Privacy Policy</a>.</span>
 					</div>
+					<div class="formMessage" role="alert"></div>
 					<div class="inputline">
-						<button role="button" type="button" class="butt" id="createAccountBttn">Create Account</button>
+						<button type="button" class="butt" id="createAccountBttn">Create Account</button>
 					</div>
 				</form>
 			</div>
@@ -532,15 +517,15 @@
 				<form id="resetPasswordFormShell" novalidate onsubmit="return false;">
 				<h4>Reset your password!</h4>
 
-				<div class="inputline">Email: <input type="email" id="theAddress" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" /></div>
+				<div class="inputline"><label for="theAddress">Email</label><input type="email" id="theAddress" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" /></div>
+				<div class="formMessage" role="alert"></div>
 				<div class="inputline">
-					<button role="button" type="button" class="butt" id="resetPassBttn">Reset password</button>
+					<button type="button" class="butt" id="resetPassBttn">Reset password</button>
 				</div>
 				</form>
 			</div>
 			<div id="formlinks" class="formlinks">
-				<a id="loginlink" class="loginlink">Log In</a> <a id="signuplink" class="selected">Create Account</a><a
-					id="resetpass">Reset Password</a>
+				<a id="loginlink" class="loginlink" role="button" tabindex="0">Log In</a> <a id="signuplink" class="selected" role="button" tabindex="0">Create Account</a><a id="resetpass" role="button" tabindex="0">Reset Password</a>
 			</div>
 		</div>
 	</div>
@@ -568,18 +553,6 @@
 					<button role="button" class="butt graybutt closeModal" id="deleteCancelButton">Cancel</button>
 					<button role="button" class="butt redbutt" id="pldeleteButton" disabled>Delete</button>
 				</div>
-			</div>
-		</div>
-	</dialog>
-
-	<dialog id="cardsBox">
-		<div class="modalBox">
-			<div class="modalHeader">
-				<h2>Your Card Case</h2>
-				<button role="button" class="butt graybutt iconbutt closeModal"><i class="material-symbols-outlined" title="Close"> close </i></button>
-			</div>
-			<div class="modalContent">
-				<div id="cardsMain">loading your cards...</div>
 			</div>
 		</div>
 	</dialog>
@@ -669,11 +642,11 @@
 					<div id="version" class="settingline"></div>
 				</div>
 				<div id="mod-tab" class="tabPanel">
-					Suspend a user's account, or manage active suspentions.<br /><br />
+					Suspend a user's account, or manage active suspensions.<br /><br />
 					<input type="text" placeholder="Enter Username to Suspend User's Account" id="supercopSearch" />
 					<div class="responseBox" id="supercopResponse"></div>
-					<h3>Active Suspentions</h3>
-					<div id="activeSuspentions"></div>
+					<h3>Active Suspensions</h3>
+					<div id="activeSuspensions"></div>
 				</div>
 			</div>
 		</div>
@@ -687,11 +660,10 @@
 			</div>
 			<div class="modalContent">
 				<div id="importSources" class="tabs">
-					<button role="button" class="tab on" id="ytimportchoice">Youtube</button><button role="button"
-						class="tab" id="scimportchoice">Soundcloud</button>
+					<button type="button" class="tab on" id="ytimportchoice">YouTube</button><button type="button" class="tab" id="scimportchoice">SoundCloud</button>
 				</div>
 				<div id="importContent">
-					<input type="text" placeholder="Search Playlists" id="plMachine" enterkeyhint="search"></input>
+					<input type="text" placeholder="Search playlists" id="plMachine" enterkeyhint="search" />
 					<div id="importResults"></div>
 				</div>
 			</div>
@@ -713,7 +685,7 @@
 			<a title="Last.fm" target="_blank" class="header_icon sociallogo lastfm">
 				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M10.584 17.209l-.88-2.392s-1.43 1.595-3.573 1.595c-1.897 0-3.244-1.65-3.244-4.289 0-3.381 1.704-4.591 3.382-4.591 2.419 0 3.188 1.567 3.849 3.574l.88 2.75c.879 2.667 2.528 4.811 7.284 4.811 3.409 0 5.719-1.044 5.719-3.793 0-2.227-1.265-3.381-3.629-3.932l-1.76-.385c-1.209-.275-1.566-.77-1.566-1.594 0-.935.742-1.485 1.952-1.485 1.319 0 2.034.495 2.144 1.677l2.749-.33c-.22-2.474-1.924-3.491-4.729-3.491-2.474 0-4.893.935-4.893 3.931 0 1.87.907 3.052 3.188 3.602l1.869.439c1.402.33 1.869.907 1.869 1.705 0 1.017-.989 1.43-2.858 1.43-2.776 0-3.932-1.457-4.591-3.464l-.907-2.749c-1.155-3.574-2.997-4.894-6.653-4.894-4.041-.001-6.186 2.556-6.186 6.899 0 4.179 2.145 6.433 5.993 6.433 3.107.001 4.591-1.457 4.591-1.457z"/></svg>
 			</a>
-			<a title="Soundcloud" target="_blank" class="header_icon sociallogo soundcloud">
+			<a title="SoundCloud" target="_blank" class="header_icon sociallogo soundcloud">
 				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M7 17.939h-1v-8.068c.308-.231.639-.429 1-.566v8.634zm3 0h1v-9.224c-.229.265-.443.548-.621.857l-.379-.184v8.551zm-2 0h1v-8.848c-.508-.079-.623-.05-1-.01v8.858zm-4 0h1v-7.02c-.312.458-.555.971-.692 1.535l-.308-.182v5.667zm-3-5.25c-.606.547-1 1.354-1 2.268 0 .914.394 1.721 1 2.268v-4.536zm18.879-.671c-.204-2.837-2.404-5.079-5.117-5.079-1.022 0-1.964.328-2.762.877v10.123h9.089c1.607 0 2.911-1.393 2.911-3.106 0-2.233-2.168-3.772-4.121-2.815zm-16.879-.027c-.302-.024-.526-.03-1 .122v5.689c.446.143.636.138 1 .138v-5.949z"/></svg>
 			</a>
 		</div>
@@ -774,6 +746,18 @@
 		</div>
 	</div>
 
+	<div id="trackMenuPopover" popover="auto" class="ft-popover">
+		<div id="trackMenuArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu" role="menu" aria-label="Track options">
+			<button type="button" role="menuitem" class="butt graybutt" data-act="bottom"><i class="material-symbols-outlined">vertical_align_bottom</i> Send to bottom</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="add"><i class="material-symbols-outlined">playlist_add</i> Add to playlist</button>
+			<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><i class="material-symbols-outlined">open_in_new</i> <span class="ft-menu-open-label">Open track</span></a>
+			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete</button>
+		</div>
+	</div>
+
+	<div id="ft-toast" popover="manual" role="status" aria-live="polite"></div>
+
 	<div id="stealContain">
 		<div id="stealArrow" class="ft-arrow"></div>
 		<div id="stealBox">
@@ -821,44 +805,35 @@
 	<script src="https://www.youtube.com/iframe_api"></script>
 	<script src="https://cdn.jsdelivr.net/npm/pixi.js@4.8.9/dist/pixi.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js"></script>
-	<script type="text/javascript" src="config.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/firetable.js?v=01.10.29"></script>
+	<script type="text/javascript" src="config.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/firetable.js?v=01.11.00"></script>
 	<script src="js/linkify.min.js"></script>
 	<script src="js/linkify-string.min.js"></script>
 
 	<!-- Application modules (order matters — each builds on the previous) -->
-	<script type="text/javascript" src="js/constants.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/state.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/fire.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/md5.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/helpers.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/emoji.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/lastfm.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/player.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/cards.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/chat.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/search.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/playlist.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/users.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/room.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/ui.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/glitch.js?v=01.10.29"></script>
-	<script type="text/javascript" src="js/init.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/constants.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/state.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/fire.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/md5.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/helpers.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/emoji.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/lastfm.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/player.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/cards.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/chat.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/search.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/playlist.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/users.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/room.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/ui.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/glitch.js?v=01.11.00"></script>
+	<script type="text/javascript" src="js/init.js?v=01.11.00"></script>
+
+	<div class="notice" role="alert">
+		<p>Your account has been suspended due to a perceived violation of our <a href="terms">Terms of Service</a>.</p>
+		<p>We reserve the right to modify, suspend, or terminate the Service for any reason, without notice, at any time.</p>
+	</div>
 
 </body>
-
-<div class="notice">
-	<p>Your account has been suspended due to a perceived violation of our <a href="terms">Terms of Service</a>.</p>
-	<p>We reserve the right to modify, suspend, or terminate the Service for any reason, without notice, at any time.
-	</p>
-</div>
-
-<div class="notice">
-	<p>Your account has been suspended due to a perceived violation of our <a href="terms">Terms of Service</a>.</p>
-	<p>
-		We reserve the right to modify, suspend, or terminate the Service for any reason, without notice, at any
-		time.
-	</p>
-</div>
 
 </html>

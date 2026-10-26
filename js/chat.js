@@ -409,7 +409,8 @@ firetable.ui.setupChatEvents = function () {
     // ── Inline card rendering ──
     if (chatData.card) {
       $("#chattxt" + chatData.chatID).append(
-        '<canvas width="225" height="300" class="chatCard" id="cardMaker' + chatData.chatID + '"></canvas>'
+        '<canvas width="225" height="300" class="chatCard" id="cardMaker' + chatData.chatID + '"' +
+        ' role="button" tabindex="0" aria-label="View card larger" title="View larger"></canvas>'
       );
       firetable.actions.showCard(chatData.card, chatData.chatID);
     }
@@ -662,6 +663,11 @@ firetable.ui.setupChatEvents = function () {
     } else if (e.key === "Escape") {
       firetable.utilities.exitAtLand();
     }
+  });
+
+    // ── Shared cards: tap to view larger ──
+  $("#chats").on("click", ".chatCard", function () {
+    firetable.actions.viewLargerCard(this.id.replace("cardMaker", ""));
   });
 
   // ── "More chats" scroll-to-bottom button ──

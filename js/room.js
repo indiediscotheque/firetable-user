@@ -72,7 +72,10 @@ function renderHistoryItem(data, $template, containerSel) {
   } else {
     $histLink.text(artistText + " - " + titleText);
   }
-  $histItem.find('.tracklink-btn').attr('href', data.url || '').html(data.type == MEDIA_SOUNDCLOUD ? SC_LOGO_SVG : YT_LOGO_SVG);
+  var platform = data.type == MEDIA_SOUNDCLOUD ? 'SoundCloud' : 'YouTube';
+  $histItem.find('.tracklink-btn')
+    .attr({ href: data.url || '', title: 'Open on ' + platform, 'aria-label': 'Open on ' + platform })
+    .html(data.type == MEDIA_SOUNDCLOUD ? SC_LOGO_SVG : YT_LOGO_SVG);
 
   // Edit tags button (mod only)
   $histItem.find('.edittags').on('click', function () {
@@ -117,40 +120,7 @@ function renderHistoryItem(data, $template, containerSel) {
       ? firetable.utilities.htmlEscape($trackArtist.text().trim() + ' - ' + $trackTitle.text().trim())
       : firetable.utilities.htmlEscape($histlink.text());
 
-    // If this button's picker is already open, close it
-    if (firetable.stealSourceBtn && firetable.stealSourceBtn.is($btn) && !$("#stealContain").is(':hidden')) {
-      $btn.removeClass('on');
-      firetable.stealSourceBtn = null;
-      firetable.stealTarget = null;
-      $("#stealContain").hide();
-      return;
-    }
-
-    ftapi.lookup.allLists(function (allPlaylists) {
-      $("#stealpicker").html(
-        '<option value="-1">Where to?</option>' +
-        '<option value="0">Default Queue</option>'
-      );
-      for (var key in allPlaylists) {
-        if (allPlaylists.hasOwnProperty(key)) {
-          $("#stealpicker").append(
-            firetable.utilities.playlistOption(key, allPlaylists[key].name)
-          );
-        }
-      }
-      // Mark any previously open source button as off
-      if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
-      $("#grab").removeClass('on');
-
-      firetable.stealSourceBtn = $btn;
-      firetable.stealTarget = { cid: btnCid, type: btnType, title: btnTitle, img: btnImg };
-      $btn.addClass('on');
-
-      var stealContainEl = document.getElementById('stealContain');
-      stealContainEl.style.visibility = 'hidden';
-      $("#stealContain").show();
-      firetable.ui.positionPopover($btn[0], stealContainEl, document.getElementById('stealArrow'), 'left');
-    });
+    firetable.actions.openStealPicker($btn, { cid: btnCid, type: btnType, title: btnTitle, img: btnImg });
   });
 
   // Album art
@@ -170,7 +140,7 @@ function renderHistoryItem(data, $template, containerSel) {
     if ($dayGroup.length === 0) {
       $dayGroup = $(
         '<div class="hist-day-group" data-date="' + dateKey + '">' +
-        '<div class="hist-day-header" role="button">' + dateLabel + '</div>' +
+        '<div class="hist-day-header" role="button" tabindex="0" aria-expanded="true">' + dateLabel + '</div>' +
         '<div class="hist-day-items"></div>' +
         '</div>'
       );
@@ -409,6 +379,9 @@ firetable.ui.setupRoomEvents = function () {
 
   function toCssBackgroundImage(url) {
     if (!url) return 'none';
+    // Resolve against the page: a relative path inside a CSS variable would
+    // otherwise resolve against css/ (e.g. the default "img/idlogo.png").
+    try { url = new URL(String(url), document.baseURI).href; } catch (e) { /* keep as-is */ }
     return 'url("' + String(url).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
   }
 
@@ -496,7 +469,8 @@ firetable.ui.setupRoomEvents = function () {
   $(document).on('input.histfilter', '#histFilter', applyHistoryFilter);
 
   $(document).on('click', '#thehistory .hist-day-header', function () {
-    $(this).closest('.hist-day-group').toggleClass('collapsed');
+    var $group = $(this).closest('.hist-day-group').toggleClass('collapsed');
+    $(this).attr('aria-expanded', String(!$group.hasClass('collapsed')));
   });
 
   ftapi.events.on('newHistory', function (data) {
@@ -681,6 +655,7 @@ firetable.ui.setupRoomEvents = function () {
     var secSince = Math.floor(timeSince / 1000);
     var timeLeft = data.duration - secSince;
     firetable.song = data;
+    firetable.media.songChanged();
     firetable.debug && console.log("NEW TRACK", data);
 
     // ── Last.fm scrobble timer ──
@@ -797,9 +772,8 @@ firetable.ui.setupRoomEvents = function () {
   ftapi.events.on("screenStateChanged", function (data) {
     firetable.debug && console.log('thescreen:', data);
     firetable.screenSyncPos = data;
-    if (firetable.screenControl === "sync") {
-      if (data) firetable.utilities.screenDown();
-      else firetable.utilities.screenUp();
+    if (firetable.screenControl === "sync" && !firetable.media.forcedScreen) {
+      firetable.ui.applyScreenSetting();
     }
     firetable.ui.updateScreenBtn(firetable.screenControl);
   });
@@ -1028,13 +1002,13 @@ firetable.ui.setupRoomEvents = function () {
 
   // ── Ban List ──
   ftapi.events.on("banListChanged", function (data) {
-    $("#activeSuspentions").html("");
+    $("#activeSuspensions").html("");
     for (var key in data) {
       if (data[key]) {
         ftapi.lookup.userByName(key, function (person) {
-          $("#activeSuspentions").append(
+          $("#activeSuspensions").append(
             '<div class="importResult"><div class="imtxt">' + firetable.utilities.htmlEscape(person.username) + '</div>' +
-            '<i role="button" onclick="firetable.actions.unban(\'' + person.userid + '\')" class="material-symbols-filled" title="Unsuspend">&#xE5C9;</i></div>'
+            '<button type="button" onclick="firetable.actions.unban(\'' + person.userid + '\')" class="material-symbols-filled row-icon" title="Unsuspend" aria-label="Unsuspend ' + firetable.utilities.htmlEscape(person.username) + '">&#xE5C9;</button></div>'
           );
         });
       }
@@ -1061,9 +1035,9 @@ firetable.ui.setupRoomEvents = function () {
     // Update custom color styles
     $('.customColorStyles').remove();
     $("head").append(
-      "<style class='customColorStyles'>#stage { --color-accent: " + firetable.color + "; } " +
+      "<style class='customColorStyles'>#stage { --color-accent: " + firetable.color + "; --color-on-accent: " + firetable.countcolor + "; } " +
       "#stage .accent:not(#fire), #stage .butt:not(.graybutt):not(#fire) { color: " + firetable.countcolor + "; } " +
-      "#stage .iconbutt.on:not(.deckDepartureBtn) { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
+      "#stage .iconbutt.on:not(.deckDepartureBtn):not(#fire) { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
       "#themebox { background-color: " + firetable.color + "33; }</style>"
     );
 
