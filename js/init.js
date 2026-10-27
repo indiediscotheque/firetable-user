@@ -109,7 +109,12 @@ firetable.init = function () {
     firetable.scwidget.bind(SC.Widget.Events.PLAY, function () {
       var vol = firetable.utilities.getEffectiveVolume();
       firetable.scwidget.setVolume(vol);
-      if (firetable.scSeek) firetable.scwidget.seekTo(firetable.scSeek);
+      // Previews start where asked; the room's song joins the room where it is now
+      if (firetable.preview) {
+        if (firetable.scSeek) firetable.scwidget.seekTo(firetable.scSeek);
+      } else {
+        firetable.media.syncSoundCloud();
+      }
       // Clear reload spinner once SC audio actually starts playing
       $('#reloadtrack').removeClass('on working');
       firetable.media.onSoundCloudPlay();
