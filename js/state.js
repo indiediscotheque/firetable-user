@@ -30,8 +30,10 @@ var firetable = {
   // ── Avatars ──
   /** @type {string}  Robohash set name (e.g. "set1", "set2") */
   avatarset: "set1",
-  /** @type {string}  Active avatar style key e.g. "robohash:set1" or "dicebear:pixel-art" */
-  avatarStyle: "robohash:set1",
+  /** @type {string|null}  Room-wide avatar style forced by ftconfigs.avatarset (null = off) */
+  roomAvatarStyle: null,
+  /** @type {string|null}  Current user's own avatar style key e.g. "dicebear:pixel-art" (null = room default) */
+  avatarStyle: null,
 
   // ── Preview State ──
   /** @type {number}  Elapsed preview bar counter (seconds, in 0.2 increments) */
@@ -171,7 +173,7 @@ var firetable = {
 };
 
 // ─── Version ─────────────────────────────────────────────────────────────────
-firetable.version = "01.11.01";
+firetable.version = "01.11.02";
 
 // ─── Chat Scroll Container ──────────────────────────────────────────────────
 /** Native scroll container wrapper preserving the legacy chatScroll API shape. */

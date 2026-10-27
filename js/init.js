@@ -36,7 +36,12 @@ firetable.init = function () {
   // ── Room Branding ──
   $("#welcomeName").text(ftconfigs.roomName);
 
-  if (ftconfigs.avatarset) firetable.avatarset = ftconfigs.avatarset;
+  // Room avatar theme: when config.js sets avatarset (e.g. "set2" for the
+  // spooky monsters), it overrides every user's saved avatar style.
+  firetable.roomAvatarStyle = firetable.utilities.normalizeAvatarStyle(ftconfigs.avatarset);
+  if (firetable.roomAvatarStyle && firetable.roomAvatarStyle.indexOf("robohash:") === 0) {
+    firetable.avatarset = firetable.roomAvatarStyle.slice(9);
+  }
 
   // Social links — show each icon only if the URL is configured
   var socialLinks = [

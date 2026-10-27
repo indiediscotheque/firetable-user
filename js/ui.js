@@ -1533,7 +1533,7 @@ firetable.ui.setupMiscEvents = function () {
     firebase.app("firetable").database().ref("users/" + ftapi.uid + "/avatarStyle").set(val)
       .catch(function (err) { console.error("[firetable] Avatar style save failed:", err); });
     $("#loggedInUser .ft-avatar").css("background-image",
-      "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname, null, val) + ")");
+      "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname, null, firetable.roomAvatarStyle || val) + ")");
   });
 
   // (Search / Done buttons are bound in playlist.js)
