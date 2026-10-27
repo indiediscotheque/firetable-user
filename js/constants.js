@@ -64,6 +64,11 @@ var AVATAR_SEASONS = [
  */
 var LIGHTS_MONTHS = [12]; // December
 /**
+ * Months (1-12) with subtle snowfall on the stage (visitor's local date).
+ * Override with ftconfigs.snowMonths, or set it to false to turn off.
+ */
+var SNOW_MONTHS = [1, 2]; // January and February
+/**
  * This site's SoundCloud API proxy (api/soundcloud.php). Handles keyword
  * search, link resolving and playlist import with an OAuth token.
  * Override with ftconfigs.soundcloudProxyURL if it lives elsewhere.
