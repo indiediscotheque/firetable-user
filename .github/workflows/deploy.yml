@@ -23,8 +23,9 @@
 #
 # Optional repository variable (same page, "Variables" tab):
 #   SITE_URL            the site's address, for the check after the .htaccess
-#                       update. Default: https://<last part of DREAMHOST_PATH>/
-#                       when that looks like a domain.
+#                       update (redirects are followed). Default:
+#                       https://<last part of DREAMHOST_PATH>/ when that looks
+#                       like a domain, e.g. https://indiediscotheque.com/.
 #
 # Manual run: Actions → "Deploy to DreamHost" → Run workflow. "Dry run" lists
 # what would change without uploading anything.
@@ -176,7 +177,8 @@ jobs:
             d=$(basename "$DEST")
             case "$d" in *.*) url="https://$d/" ;; esac
           fi
-          status() { curl -s -o /dev/null -m 20 -w '%{http_code}' "$url" || true; }
+          # Follows redirects (indiediscotheque.com → www.) and reports the final page
+          status() { curl -s -L --max-redirs 5 -o /dev/null -m 20 -w '%{http_code}' "$url" || true; }
           before=""
           [ -n "$url" ] && before=$(status)
 
@@ -203,7 +205,8 @@ jobs:
               exit 1
               ;;
           esac
-          if ! curl -s -I -m 20 "$url" | grep -qi '^content-security-policy:'; then
+          csp=$(curl -s -L --max-redirs 5 -o /dev/null -m 20 -w '%header{content-security-policy}' "$url" || true)
+          if [ -z "$csp" ]; then
             echo "::warning::The site loads but sends no Content-Security-Policy header (is mod_headers enabled?)."
           fi
 
