@@ -190,6 +190,14 @@ function nowPlayingText(value) {
  * Set up all room-state ftapi event handlers.
  * Called once from firetable.ui.init().
  */
+/**
+ * Show or hide the stage string lights: manual switch OR seasonal (December).
+ */
+firetable.ui.applyLights = function () {
+  firetable.lights = firetable.lightsManual || firetable.utilities.seasonalLights(new Date());
+  $("body").toggleClass("lights-on", firetable.lights);
+};
+
 firetable.ui.setupRoomEvents = function () {
   var NOW_PLAYING_TEXT_FADE_MS = 180;
   var NOW_PLAYING_ALBUM_FLIP_MS = 560;
@@ -786,15 +794,15 @@ firetable.ui.setupRoomEvents = function () {
   });
 
   // ── Festive Lights ──
+  // On when the manual Firebase switch is on, or automatically in December.
   ftapi.events.on("lightsChanged", function (data) {
     firetable.debug && console.log('lights check:', data);
-    if (data) {
-      firetable.lights = true;
-    } else {
-      firetable.lights = false;
-    }
-    $("body").toggleClass("lights-on", !!firetable.lights);
+    firetable.lightsManual = !!data;
+    firetable.ui.applyLights();
   });
+  firetable.ui.applyLights();
+  // Re-check hourly so an open tab switches on Dec 1 and off Jan 1.
+  setInterval(firetable.ui.applyLights, 60 * 60 * 1000);
 
   // ── Waitlist ──
   ftapi.events.on("waitlistChanged", function (data) {

@@ -57,6 +57,13 @@ var AVATAR_SEASONS = [
   { months: [10], style: "set2" } // October: spooky monsters
 ];
 /**
+ * Months (1-12) when the stage string lights turn on by themselves, checked
+ * against the visitor's local date. The manual "lights" switch in Firebase
+ * turns them on any time of year.
+ * Override with ftconfigs.lightsMonths, or set it to false to turn off.
+ */
+var LIGHTS_MONTHS = [12]; // December
+/**
  * This site's SoundCloud API proxy (api/soundcloud.php). Handles keyword
  * search, link resolving and playlist import with an OAuth token.
  * Override with ftconfigs.soundcloudProxyURL if it lives elsewhere.
