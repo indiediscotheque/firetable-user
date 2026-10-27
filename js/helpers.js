@@ -65,14 +65,36 @@ firetable.utilities = {
       ? ftconfigs.avatarSeasons
       : AVATAR_SEASONS;
     if (!Array.isArray(seasons)) return null;
-    var month = (date || new Date()).getMonth() + 1;
     for (var i = 0; i < seasons.length; i++) {
       var season = seasons[i];
-      if (season && Array.isArray(season.months) && season.months.indexOf(month) !== -1) {
+      if (season && firetable.utilities.inMonths(season.months, date)) {
         return firetable.utilities.normalizeAvatarStyle(season.style);
       }
     }
     return null;
+  },
+
+  /**
+   * Is the date's local month (1-12) in the list?
+   * @param {number[]} months
+   * @param {Date} [date=new Date()]
+   * @returns {boolean}
+   */
+  inMonths: function (months, date) {
+    return Array.isArray(months) && months.indexOf((date || new Date()).getMonth() + 1) !== -1;
+  },
+
+  /**
+   * Should the stage string lights be on by season (December by default)?
+   * Uses ftconfigs.lightsMonths when set, else LIGHTS_MONTHS.
+   * @param {Date} [date=new Date()]
+   * @returns {boolean}
+   */
+  seasonalLights: function (date) {
+    var months = (typeof ftconfigs !== "undefined" && ftconfigs.lightsMonths !== undefined)
+      ? ftconfigs.lightsMonths
+      : LIGHTS_MONTHS;
+    return firetable.utilities.inMonths(months, date);
   },
 
   /**
