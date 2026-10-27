@@ -114,14 +114,6 @@ function onPlayerReady(event) {
   }
 }
 
-/**
- * Stub — YouTube fires this when playback state changes.
- * Currently unused but required by the API.
- */
-function onPlayerStateChange(event) {
-  // no-op
-}
-
 // ─── Mute / Volume Toggle ────────────────────────────────────────────────────
 
 firetable.actions = firetable.actions || {};
@@ -265,7 +257,10 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     // ── Start playing the preview from the beginning ──
     if (type == MEDIA_YOUTUBE) {
       if (firetable.scLoaded) firetable.scwidget.pause();
-      if (!firetable.disableMediaPlayback) player.loadVideoById(cid, 0, "large");
+      if (!firetable.disableMediaPlayback) {
+        firetable.media.videoLoading();
+        player.loadVideoById(cid, 0, "large");
+      }
     } else if (type == MEDIA_SOUNDCLOUD) {
       if (firetable.ytLoaded) player.stopVideo();
       firetable.scSeek = 0;
@@ -307,6 +302,12 @@ firetable.media = {
   directTap: false,
   /** @type {boolean}  Screen was lowered only so the user could tap YouTube's play button */
   forcedScreen: false,
+  /** @type {boolean}  The loaded video has started playing, so it may be shown (see yt-revealed in CSS) */
+  revealed: false,
+  /** @type {boolean}  A SoundCloud song should be playing but the browser blocked it */
+  scBlocked: false,
+  _scTimer: null,
+  _scErrorShown: false,
   STALL_MS: 1500,
   _stallTimer: null,
   _tapTimer: null,
@@ -320,6 +321,7 @@ firetable.media = {
     var m = firetable.media;
     m.ytState = state;
     clearTimeout(m._stallTimer);
+    if (state === 1) m.revealed = true; // first real playback → fade the video in
     if (m._isPlaying(state)) {
       m.ytError = false;
       m.directTap = false;
@@ -340,12 +342,59 @@ firetable.media = {
     firetable.media.refresh();
   },
 
+  /**
+   * A SoundCloud room song was just loaded: a few seconds later, check it is
+   * actually playing. If the browser blocked autoplay, show "Tap to start
+   * audio" (the same pill YouTube uses).
+   */
+  watchSoundCloud: function () {
+    var m = firetable.media;
+    clearTimeout(m._scTimer);
+    m.scBlocked = false;
+    m._scTimer = setTimeout(function () {
+      if (!firetable.scLoaded || firetable.preview || firetable.disableMediaPlayback) return;
+      if (!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD)) return;
+      firetable.scwidget.isPaused(function (paused) {
+        m.scBlocked = !!paused;
+        m.refresh();
+      });
+    }, 4000);
+  },
+
+  /** The SoundCloud widget started playing. */
+  onSoundCloudPlay: function () {
+    var m = firetable.media;
+    clearTimeout(m._scTimer);
+    if (m.scBlocked) {
+      m.scBlocked = false;
+      m.refresh();
+    }
+  },
+
+  /** The SoundCloud widget couldn't play the track (removed, private, region-blocked…). */
+  onSoundCloudError: function () {
+    var m = firetable.media;
+    if (m._scErrorShown || firetable.preview) return;
+    m._scErrorShown = true; // once per song
+    firetable.ui.toast && firetable.ui.toast("SoundCloud couldn't play this track.", "error");
+  },
+
+  /** A new YouTube video is being loaded: hide it until it plays. */
+  videoLoading: function () {
+    firetable.media.revealed = false;
+    firetable.media.refresh();
+  },
+
   /** A new room song started: forget the old player state. */
   songChanged: function () {
     var m = firetable.media;
     clearTimeout(m._stallTimer);
     m.ytState = null;
     m.ytError = false;
+    m.revealed = false; // hide the video again until the new one is playing
+    clearTimeout(m._scTimer);
+    m.scBlocked = false;
+    m._scErrorShown = false;
     m.refresh();
   },
 
@@ -360,7 +409,11 @@ firetable.media = {
     var stalled = ytActive && known && !m._isPlaying(s) && !m.directTap;
     var blocked = stalled && !firetable.preview && !firetable.disableMediaPlayback &&
       !m.ytError && (s === -1 || s === 2 || s === 5); // UNSTARTED, PAUSED, CUED
+    var scActive = !firetable.preview && !!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD);
+    if (scActive && m.scBlocked && !firetable.disableMediaPlayback) blocked = true;
     document.body.classList.toggle('yt-stalled', stalled);
+    // Video fades in once it plays (or when the user must tap YouTube's own button)
+    document.body.classList.toggle('yt-revealed', !!(m.revealed || m.directTap));
     document.body.classList.toggle('media-blocked', blocked);
   },
 
@@ -371,6 +424,7 @@ firetable.media = {
     firetable.utilities.resumeCurrentSong();
     clearTimeout(m._tapTimer);
     m._tapTimer = setTimeout(function () {
+      if (!(firetable.song && firetable.song.type == MEDIA_YOUTUBE)) return; // YouTube-only fallback
       if (m._isPlaying(m.ytState)) return;
       // Still blocked (some phones only accept a tap inside the video itself):
       // lower the screen so YouTube's own play button can be tapped.

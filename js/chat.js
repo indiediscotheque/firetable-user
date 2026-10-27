@@ -139,14 +139,15 @@ firetable.actions.localChatResponse = function (txt) {
 firetable.ui = firetable.ui || {};
 
 /**
- * Convert URLs in text to clickable <a> links.
- * Image URLs are included here — showImages() will upgrade them to embeds afterward.
+ * Convert URLs in plain text to clickable <a> links. All other text is
+ * HTML-escaped, so the result is safe to insert as HTML.
  * @param {string} text - Raw plain text
  * @param {boolean} [themeBox=false] - unused, kept for API compat
- * @returns {string} Text with URLs wrapped in anchor tags
+ * @returns {string} Escaped HTML with URLs wrapped in anchor tags
  */
 firetable.ui.textToLinks = function (text, themeBox) {
-  if (typeof linkifyStr !== 'function') return text;
+  // Without linkify, still escape: callers insert the result as HTML.
+  if (typeof linkifyStr !== 'function') return firetable.utilities.htmlEscape(text);
   return linkifyStr(text, {
     target: '_blank',
     rel: 'noopener noreferrer',
@@ -155,26 +156,44 @@ firetable.ui.textToLinks = function (text, themeBox) {
 };
 
 /**
- * Find image links in already-linkified chat HTML and replace them with inline <img> embeds.
- * Must run after textToLinks() so image URLs have already been wrapped in <a> tags.
- * Auto-scrolls chat if user was already at the bottom when the image loads.
- * @param {string} chatTxt - Chat text after linkification
- * @returns {string} Text with image anchors replaced by inline images
+ * Upgrade image links in linkified HTML to inline <img> embeds (when the
+ * "Show images" setting is on). Only anchors made by textToLinks() are
+ * matched; the href is re-validated with imageLinkUrl() and escaped again.
+ * Auto-scrolls chat if the user was already at the bottom when the image loads.
+ * @param {string} chatTxt - HTML from textToLinks()
+ * @returns {string}
  */
 firetable.ui.showImages = function (chatTxt) {
   if (!firetable.showImages) return chatTxt;
 
-  var imageAnchorRegex = /<a\b([^>]*)\bhref="((?:https?:\/\/)[^"]+\.(?:jpe?g|gif|png)(?:[?#][^"]*)?)"([^>]*)>[^<]*<\/a>/gi;
-  return chatTxt.replace(imageAnchorRegex, function (_, _before, imageUrl) {
-    var onload = "if(firetable.utilities.isChatPrettyMuchAtBottom())firetable.utilities.scrollToBottom();";
-    var onerror = "var w=this.closest('.inlineImgLink');if(w)w.style.display='none';";
-    return '<a class="inlineImgLink" href="' + imageUrl + '" target="_blank" tabindex="-1">' +
-           '<img src="' + imageUrl + '" class="inlineImage"' +
-           ' onload="' + onload + '"' +
-           ' onerror="' + onerror + '" />' +
+  return chatTxt.replace(/<a\b[^>]*\bhref="([^"]*)"[^>]*>[^<]*<\/a>/gi, function (anchor, href) {
+    var decoded = firetable.parser
+      ? firetable.parser.parseFromString(href, 'text/html').body.textContent
+      : href;
+    var imageUrl = firetable.utilities.imageLinkUrl(decoded);
+    if (!imageUrl) return anchor;
+    var safeUrl = firetable.utilities.htmlEscape(imageUrl);
+    // load/error are handled by the listeners below (no inline handlers)
+    return '<a class="inlineImgLink" href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" tabindex="-1">' +
+           '<img src="' + safeUrl + '" class="inlineImage" alt="" />' +
            '<span role="button" class="hideImage">&times;</span></a>';
   });
 };
+
+// Inline chat images: keep the chat pinned to the bottom when one loads while
+// the user is already there, and hide ones that fail. load/error don't
+// bubble, so these listen in the capture phase.
+document.addEventListener('load', function (e) {
+  if (e.target && e.target.classList && e.target.classList.contains('inlineImage') &&
+      firetable.utilities.isChatPrettyMuchAtBottom()) {
+    firetable.utilities.scrollToBottom();
+  }
+}, true);
+document.addEventListener('error', function (e) {
+  var link = e.target && e.target.classList && e.target.classList.contains('inlineImage') &&
+    e.target.closest('.inlineImgLink');
+  if (link) link.style.display = 'none';
+}, true);
 
 /**
  * Strip HTML from a string using DOMParser.
@@ -187,39 +206,54 @@ firetable.ui.strip = function (html) {
 };
 
 /**
- * Process raw chat text through the full formatting pipeline:
- * strip HTML → protect code spans → inline markdown → images → links → emoji → restore code
+ * Process raw chat text into safe HTML:
+ * strip HTML → set aside code spans → escape + linkify → set aside links →
+ * inline markdown → emoji → put links (or inline images) back → newlines → code.
+ * Markdown runs after escaping so its tags aren't escaped away, and links are
+ * set aside so markdown or emoji never touch a URL.
  * @param {string} rawTxt - Unprocessed chat text
  * @returns {string} Formatted HTML string safe for insertion
  */
 firetable.ui.formatChatText = function (rawTxt) {
-  // \x01 is reserved as the code-span placeholder marker below
-  var txt = firetable.ui.strip(rawTxt).replace(/\x01/g, '');
+  // \x01 and \x02 are reserved as placeholder markers below
+  var txt = firetable.ui.strip(rawTxt).replace(/[\x01\x02]/g, '');
 
-  // Extract inline code spans first so their content is immune to markdown.
-  // strip() decodes entities (e.g. "&lt;" -> "<"), so the content must be
-  // escaped here or it would be inserted into the page as live HTML.
+  // Inline code spans: content is escaped and immune to markdown, links, emoji.
+  // strip() decodes entities (e.g. "&lt;" -> "<"), so escaping here matters.
   var codeSpans = [];
   txt = txt.replace(/`([^`\n]+)`/g, function (_, inner) {
     codeSpans.push('<code>' + firetable.utilities.htmlEscape(inner) + '</code>');
-    return '\x01' + (codeSpans.length - 1) + '\x01';
+    // Spaces keep linkify from treating the marker as part of a URL
+    return ' \x01' + (codeSpans.length - 1) + '\x01 ';
   });
 
-  // Inline markdown — bold before italic so ** is consumed before *
+  // Escape everything and wrap URLs in <a> tags
+  txt = firetable.ui.textToLinks(txt);
+
+  // Set links aside so markdown and emoji can't change them
+  var links = [];
+  txt = txt.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, function (anchor) {
+    links.push(anchor);
+    return '\x02' + (links.length - 1) + '\x02';
+  });
+
+  // Inline markdown on escaped text — bold before italic so ** is consumed first
   txt = txt.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
   txt = txt.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
   txt = txt.replace(/~~([^~\n]+)~~/g, '<s>$1</s>');
 
-  // Existing pipeline
-  txt = firetable.ui.textToLinks(txt);  // linkify all URLs (plain text input)
-  txt = firetable.ui.showImages(txt);   // upgrade image links to embeds
   txt = firetable.utilities.emojiShortnamestoUnicode(txt);
+
+  // Restore links, upgrading image links when "Show images" is on
+  txt = txt.replace(/\x02(\d+)\x02/g, function (_, i) {
+    return firetable.ui.showImages(links[parseInt(i, 10)]);
+  });
 
   // Newlines → <br> (for bot/system messages)
   txt = txt.replace(/\n/g, '<br>');
 
-  // Restore code spans
-  txt = txt.replace(/\x01(\d+)\x01/g, function (_, i) {
+  // Restore code spans (dropping the spaces added around the markers)
+  txt = txt.replace(/ ?\x01(\d+)\x01 ?/g, function (_, i) {
     return codeSpans[parseInt(i, 10)];
   });
 
@@ -282,9 +316,15 @@ firetable.ui.setupChatEvents = function () {
     // ── @-mention detection ──
     // Mention styling should apply even for older messages loaded from history,
     // but sound/desktop alerts should only fire for recent messages.
-    var hasMention = !!(chatData.txt.match("@" + you, 'i') || chatData.txt.match(/\@everyone/));
+    // "@name" must be the whole name (@bob isn't @bobby); any case.
+    // Only mods, supermods and the bot can ping the whole room with @everyone.
+    var nameRe = new RegExp("@" + String(you).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![A-Za-z0-9_])", "i");
+    var sender = ftapi.users[chatData.id] || {};
+    var canPingAll = !!(sender.mod || sender.supermod || sender.hostbot);
+    var hasMention = nameRe.test(chatData.txt || "") ||
+      (canPingAll && /@everyone(?![A-Za-z0-9_])/i.test(chatData.txt || ""));
     if (hasMention) {
-      var timeSinceMessage = Date.now() - chatData.time;
+      var timeSinceMessage = ftapi.now() - chatData.time;
       if (timeSinceMessage < 10 * 1000) {
         firetable.utilities.playSound("sound");
         if (firetable.desktopNotifyMentions) {
@@ -320,7 +360,7 @@ firetable.ui.setupChatEvents = function () {
 
       if (canDelete()) {
         $("#chattxt" + chatData.chatID).addClass("deleteMe");
-        $("#chattxt" + chatData.chatID).append('<div class="modDelete">x</div>');
+        $("#chattxt" + chatData.chatID).append('<button type="button" class="modDelete" aria-label="Delete message">&times;</button>');
         $("#chattxt" + chatData.chatID).find(".modDelete").on('click', function () {
           ftapi.actions.deleteChat(chatData.feedID);
         });
@@ -358,7 +398,7 @@ firetable.ui.setupChatEvents = function () {
 
       if (canDelete()) {
         $chatthing.find(".chatText").addClass("deleteMe");
-        $chatthing.find(".chatText").append('<div class="modDelete">x</div>');
+        $chatthing.find(".chatText").append('<button type="button" class="modDelete" aria-label="Delete message">&times;</button>');
         $chatthing.find(".modDelete").on('click', function () {
           ftapi.actions.deleteChat(chatData.feedID);
         });
@@ -425,7 +465,7 @@ firetable.ui.setupChatEvents = function () {
   $("#newchat").on('input', growChatInput);
 
   // ── Chat Input: Send Message + Slash Commands ──
-  $("#newchat").bind("keydown", function (e) {
+  $("#newchat").on("keydown", function (e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       var txt = $("#newchat").val();
@@ -547,7 +587,7 @@ firetable.ui.setupChatEvents = function () {
   });
 
   // ── @-mention: backspace/arrow navigation ──
-  $("#newchat").bind("keyup", function (e) {
+  $("#newchat").on("keyup", function (e) {
     if (!firetable.atLand) return;
     if (e.key === "Backspace") {
       if (!firetable.atString) {
@@ -564,7 +604,7 @@ firetable.ui.setupChatEvents = function () {
   });
 
   // ── @-mention: Tab to auto-complete (selects the highlighted item) ──
-  $("#newchat").bind("keydown", function (e) {
+  $("#newchat").on("keydown", function (e) {
     if (!firetable.atLand) return;
     if (e.key === "Tab") {
       e.preventDefault();
@@ -633,12 +673,12 @@ firetable.ui.setupChatEvents = function () {
   });
 
   // ── "More chats" scroll-to-bottom button ──
-  $("#morechats .butt").bind("click", function () {
+  $("#morechats .butt").on("click", function () {
     firetable.utilities.scrollToBottom();
   });
 
   // ── Fire / Rain reaction buttons ──
-  $("#fire").bind("click", function () {
+  $("#fire").on("click", function () {
     if (ftapi.uid && firetable.fireReactors[ftapi.uid]) {
       ftapi.actions.sendChat(":cloud_with_rain:");
       $("#cloud_with_rain").addClass("on");
@@ -647,7 +687,7 @@ firetable.ui.setupChatEvents = function () {
       ftapi.actions.sendChat(":fire:");
     }
   });
-  $("#cloud_with_rain").bind("click", function () {
+  $("#cloud_with_rain").on("click", function () {
     ftapi.actions.sendChat(":cloud_with_rain:");
     $("#cloud_with_rain").addClass("on");
     $("#fire").removeClass("on");

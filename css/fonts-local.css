@@ -6,8 +6,7 @@
   font-weight: 300 800;
   font-stretch: 75% 100%;
   font-display: swap;
-  src: url('../fonts/OpenSans-VariableFont_wdth,wght.woff2') format('woff2'),
-       url('../fonts/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');
+  src: url('../fonts/OpenSans-VariableFont_wdth,wght.woff2') format('woff2');
 }
 
 @font-face {
@@ -16,8 +15,7 @@
   font-weight: 300 800;
   font-stretch: 75% 100%;
   font-display: swap;
-  src: url('../fonts/OpenSans-Italic-VariableFont_wdth,wght.woff2') format('woff2'),
-       url('../fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf') format('truetype');
+  src: url('../fonts/OpenSans-Italic-VariableFont_wdth,wght.woff2') format('woff2');
 }
 
 @font-face {
@@ -25,8 +23,7 @@
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url('../fonts/Inter-VariableFont_opsz,wght.woff2') format('woff2'),
-       url('../fonts/Inter-VariableFont_opsz,wght.ttf') format('truetype');
+  src: url('../fonts/Inter-VariableFont_opsz,wght.woff2') format('woff2');
 }
 
 @font-face {
@@ -34,8 +31,7 @@
   font-style: italic;
   font-weight: 100 900;
   font-display: swap;
-  src: url('../fonts/Inter-Italic-VariableFont_opsz,wght.woff2') format('woff2'),
-       url('../fonts/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype');
+  src: url('../fonts/Inter-Italic-VariableFont_opsz,wght.woff2') format('woff2');
 }
 
 @font-face {
@@ -43,8 +39,7 @@
   font-style: normal;
   font-weight: 100 700;
   font-display: swap;
-  src: url('../fonts/RobotoMono-VariableFont_wght.woff2') format('woff2'),
-       url('../fonts/RobotoMono-VariableFont_wght.ttf') format('truetype');
+  src: url('../fonts/RobotoMono-VariableFont_wght.woff2') format('woff2');
 }
 
 @font-face {
@@ -52,6 +47,5 @@
   font-style: italic;
   font-weight: 100 700;
   font-display: swap;
-  src: url('../fonts/RobotoMono-Italic-VariableFont_wght.woff2') format('woff2'),
-       url('../fonts/RobotoMono-Italic-VariableFont_wght.ttf') format('truetype');
+  src: url('../fonts/RobotoMono-Italic-VariableFont_wght.woff2') format('woff2');
 }

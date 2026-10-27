@@ -91,7 +91,8 @@ firetable.init = function () {
     var $screenFrame = $('#screenFrame');
     var frameW = $screenFrame.outerWidth() || $('#djStage').outerWidth();
     var frameH = $screenFrame.outerHeight() || $('#djStage').outerHeight();
-    $('#playerArea, #scScreen')
+    // (the YouTube player is sized in CSS, taller than the frame, to crop its chrome)
+    $('#scScreen')
       .width(frameW)
       .height(frameH);
     setup(); // Re-create the p5.js canvas at the new size
@@ -111,12 +112,16 @@ firetable.init = function () {
       if (firetable.scSeek) firetable.scwidget.seekTo(firetable.scSeek);
       // Clear reload spinner once SC audio actually starts playing
       $('#reloadtrack').removeClass('on working');
+      firetable.media.onSoundCloudPlay();
+    });
+    firetable.scwidget.bind(SC.Widget.Events.ERROR, function () {
+      firetable.media.onSoundCloudError();
     });
 
     // If a SC song was already loaded before the widget was ready, start it now
     if (firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD) {
       var data = firetable.song;
-      var timeSince = Date.now() - data.started;
+      var timeSince = ftapi.now() - data.started;
       if (timeSince <= 0) timeSince = 0;
       if (!firetable.preview) {
         firetable.scSeek = timeSince;
@@ -125,6 +130,7 @@ firetable.init = function () {
             auto_play: true,
             callback: function () { firetable.scwidget.play(); }
           });
+          firetable.media.watchSoundCloud();
         }
       }
     }

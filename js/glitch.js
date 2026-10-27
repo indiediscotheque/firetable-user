@@ -314,3 +314,30 @@ class Glitch {
     });
   }
 }
+
+// ─── Only animate while it can be seen ──────────────────────────────────────
+// p5 redraws 60 times a second. The glitch is only visible with a SoundCloud
+// song playing, the video screen down and the tab in front, so pause the draw
+// loop otherwise (the last frame is never on show while paused).
+
+var glitchPauseTimer = null;
+
+function syncGlitchLoop() {
+  if (typeof loop !== 'function' || typeof noLoop !== 'function') return; // p5 not ready yet
+  var isSoundCloud = !!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD);
+  var screenDown = document.body.classList.contains('screen');
+  clearTimeout(glitchPauseTimer);
+  if (isSoundCloud && screenDown && !document.hidden) {
+    loop();
+  } else if (document.hidden || !isSoundCloud) {
+    noLoop();
+  } else {
+    // Screen is sliding up (2 s): keep animating until it's out of sight
+    glitchPauseTimer = setTimeout(noLoop, 2100);
+  }
+}
+
+ftapi.events.on('newSong', function () { setTimeout(syncGlitchLoop, 0); });
+document.addEventListener('visibilitychange', syncGlitchLoop);
+window.addEventListener('load', syncGlitchLoop); // after p5 has started
+new MutationObserver(syncGlitchLoop).observe(document.body, { attributes: true, attributeFilter: ['class'] });

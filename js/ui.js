@@ -427,85 +427,54 @@ firetable.ui.LinkGrabber = {
  */
 firetable.ui.initSettings = function () {
 
-  // ── Disable Media Playback ──
-  var disableMediaPlayback = localStorage[STORAGE.disableMedia];
-  if (typeof disableMediaPlayback == "undefined") {
-    localStorage[STORAGE.disableMedia] = false;
-    firetable.disableMediaPlayback = false;
-    $("#mediaDisableToggle").prop("checked", false);
-  } else {
-    disableMediaPlayback = JSON.parse(disableMediaPlayback);
-    firetable.disableMediaPlayback = disableMediaPlayback;
-    $("#mediaDisableToggle").prop("checked", disableMediaPlayback);
-    if (disableMediaPlayback) firetable.ui.hidePlayerControls();
+  /**
+   * Read an on/off setting. Anything other than "true"/"false" (missing, or
+   * mangled by an extension) falls back to the default and is rewritten.
+   */
+  function readSetting(key, fallback) {
+    var raw = localStorage[key];
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+    localStorage[key] = fallback;
+    return fallback;
   }
+
+  // ── Disable Media Playback ──
+  firetable.disableMediaPlayback = readSetting(STORAGE.disableMedia, false);
+  $("#mediaDisableToggle").prop("checked", firetable.disableMediaPlayback);
+  if (firetable.disableMediaPlayback) firetable.ui.hidePlayerControls();
 
   // ── Show Inline Images ──
-  var showImages = localStorage[STORAGE.showImages];
-  if (typeof showImages == "undefined") {
-    localStorage[STORAGE.showImages] = false;
-    firetable.showImages = false;
-    $("#showImagesToggle").prop("checked", false);
-  } else {
-    showImages = JSON.parse(showImages);
-    firetable.showImages = showImages;
-    $("#showImagesToggle").prop("checked", showImages);
-  }
+  firetable.showImages = readSetting(STORAGE.showImages, false);
+  $("#showImagesToggle").prop("checked", firetable.showImages);
 
   // ── Show Avatars ──
-  var showAvatars = localStorage[STORAGE.showAvatars];
-  if (typeof showAvatars == "undefined") {
-    localStorage[STORAGE.showAvatars] = true;
-    firetable.showAvatars = true;
-    $("#showAvatarsToggle").prop("checked", true);
-  } else {
-    showAvatars = JSON.parse(showAvatars);
-    firetable.showAvatars = showAvatars;
-    $("#showAvatarsToggle").prop("checked", showAvatars);
-    if (showAvatars == false) {
-      document.getElementById("actualChat").classList.add("avatarsOff");
-    }
-  }
+  firetable.showAvatars = readSetting(STORAGE.showAvatars, true);
+  $("#showAvatarsToggle").prop("checked", firetable.showAvatars);
+  if (!firetable.showAvatars) document.getElementById("actualChat").classList.add("avatarsOff");
 
   // ── Show Song Announcements ──
-  var showSongAnnouncements = localStorage[STORAGE.showSongAnnouncements];
-  if (typeof showSongAnnouncements == "undefined") {
-    localStorage[STORAGE.showSongAnnouncements] = true;
-    firetable.showSongAnnouncements = true;
-    $("#showSongAnnouncementsToggle").prop("checked", true);
-  } else {
-    showSongAnnouncements = JSON.parse(showSongAnnouncements);
-    firetable.showSongAnnouncements = showSongAnnouncements;
-    $("#showSongAnnouncementsToggle").prop("checked", showSongAnnouncements);
-  }
+  firetable.showSongAnnouncements = readSetting(STORAGE.showSongAnnouncements, true);
+  $("#showSongAnnouncementsToggle").prop("checked", firetable.showSongAnnouncements);
 
   // ── Chat Sound (Badoop) ──
-  var playBadoop = localStorage[STORAGE.badoop];
-  if (typeof playBadoop == "undefined") {
-    localStorage[STORAGE.badoop] = true;
-    firetable.playBadoop = true;
-    $("#badoopToggle").prop("checked", true);
-  } else {
-    playBadoop = JSON.parse(playBadoop);
-    firetable.playBadoop = playBadoop;
-    $("#badoopToggle").prop("checked", playBadoop);
-  }
+  firetable.playBadoop = readSetting(STORAGE.badoop, true);
+  $("#badoopToggle").prop("checked", firetable.playBadoop);
 
   // ── Desktop Notifications for Mentions ──
-  var dtnmt = localStorage[STORAGE.notifyMentions];
-  if (typeof dtnmt == "undefined") {
-    localStorage[STORAGE.notifyMentions] = false;
-    firetable.desktopNotifyMentions = false;
-    $("#desktopNotifyMentionsToggle").prop("checked", false);
-  } else {
-    dtnmt = JSON.parse(dtnmt);
-    firetable.desktopNotifyMentions = dtnmt;
-    $("#desktopNotifyMentionsToggle").prop("checked", dtnmt);
+  // Older versions saved this setting under the key "undefined"; move it.
+  var legacyDtnm = localStorage["undefined"];
+  if ((legacyDtnm === "true" || legacyDtnm === "false") &&
+      typeof localStorage[STORAGE.notifyMentions] == "undefined") {
+    localStorage[STORAGE.notifyMentions] = legacyDtnm;
   }
+  if (legacyDtnm === "true" || legacyDtnm === "false") localStorage.removeItem("undefined");
+  firetable.desktopNotifyMentions = readSetting(STORAGE.notifyMentions, false);
+  $("#desktopNotifyMentionsToggle").prop("checked", firetable.desktopNotifyMentions);
 
   // ── Screen Control (on/off/sync) ──
   var screenControl = localStorage[STORAGE.screenControl];
-  if (typeof screenControl == "undefined") {
+  if (["sync", "on", "off"].indexOf(screenControl) === -1) {
     localStorage[STORAGE.screenControl] = "sync";
     firetable.screenControl = "sync";
   } else {
@@ -754,7 +723,10 @@ firetable.nav = {
       this.setAttribute('aria-selected', this.classList.contains('on') ? 'true' : 'false');
     });
 
-    if (n.view === 'cards') firetable.actions.cardCase();
+    // Load the card collection when the Cards view is opened, not on every
+    // layout pass (breakpoint changes, tab clicks, logins all call apply)
+    if (n.view === 'cards' && n._cardsShown !== true) firetable.actions.cardCase();
+    n._cardsShown = n.view === 'cards';
   }
 };
 
@@ -908,7 +880,6 @@ firetable.ui.tooltip = (function () {
 
     // ── User list: rich user info tooltip on .prson hover ──
     var userTipEl = document.getElementById('ft-user-tip');
-    var userTipArrowEl = document.getElementById('ft-user-tip-arrow');
     var userTipTooltipEl = document.getElementById('ft-user-tip-tooltip');
     var $userTip  = $(userTipEl);
     var _cardCountCache = {};
@@ -1103,7 +1074,7 @@ firetable.ui.tooltip = (function () {
       if (_cardCountCache.hasOwnProperty(userid)) {
         $userTip.find('.utt-cards-val').text(_cardCountCache[userid]);
       } else {
-        firebase.app("firetable").database().ref("cards")
+        ftapi.db().ref("cards")
           .orderByChild('owner').equalTo(userid)
           .once("value")
           .then(function (snap) {
@@ -1193,20 +1164,20 @@ firetable.ui.setupMiscEvents = function () {
   firetable.ui.tooltip.bind();
 
   // ── Mini mode discover/login tabs (pre-login only) ──
-  $("#minidiscover").bind("click", function () {
+  $("#minidiscover").on("click", function () {
     firetable.nav.setView('discover');
   });
-  $("#minijoin").bind("click", function () {
+  $("#minijoin").on("click", function () {
     firetable.nav.setView('playlists');
   });
 
   // ── Mini-mode tabs ──
-  $("#minimodeoptions .tab").bind("click", function () {
+  $("#minimodeoptions .tab").on("click", function () {
     firetable.nav.setMobileTab($(this).attr('id'));
   });
 
   // ── Side-panel tabs (Chat / People at 640px+) ──
-  $("#sidepanel-tabs .tab").bind("click", function () {
+  $("#sidepanel-tabs .tab").on("click", function () {
     var id = $(this).attr('id');
     if (id === 'sp-chat') firetable.nav.setSide('chat');
     else if (id === 'sp-people') firetable.nav.setSide('people');
@@ -1221,7 +1192,7 @@ firetable.ui.setupMiscEvents = function () {
   });
 
   // ── Grab (steal to another playlist) ──
-  $("#grab").bind("click", function () {
+  $("#grab").on("click", function () {
     var isHidden = $("#stealContain").is(":hidden");
     if (isHidden) {
       ftapi.lookup.allLists(function (allPlaylists) {
@@ -1276,7 +1247,7 @@ firetable.ui.setupMiscEvents = function () {
     var src = firetable.stealTarget || (firetable.song && firetable.song.cid != 0 && {
       cid: firetable.song.cid,
       type: firetable.song.type,
-      title: firetable.song.artist + " - " + firetable.song.title,
+      title: firetable.utilities.decodeEntities(firetable.song.artist + " - " + firetable.song.title),
       img: (firetable.imgCache && firetable.imgCache[firetable.song.cid]) || ''
     });
     if (src) {
@@ -1291,18 +1262,14 @@ firetable.ui.setupMiscEvents = function () {
         String(src.cid) === String(firetable.song.cid) &&
         String(src.type) === String(firetable.song.type));
       firetable.stealTarget = null;
-      var cuteid = ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
-      // Now-playing track goes to the bottom (Firebase push already appends there).
-      // Any other source (history, discover, search) goes to the top.
-      if (!isNowPlaying) {
-        if (!dest || dest === "0") {
-          ftapi.actions.moveTrackToTop(cuteid, ftapi.queueRef, firetable.preview, function(changePV) {
-            if (changePV) firetable.preview = changePV;
-          });
-        } else {
-          var plRef = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + String(dest) + "/list");
-          ftapi.actions.moveTrackToTop(cuteid, plRef);
-        }
+      // Now-playing track goes to the bottom; any other source (history,
+      // discover, search) goes to the top, added and moved in one step.
+      if (isNowPlaying) {
+        ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
+      } else {
+        ftapi.actions.addTrackToTop(ftapi.lookup.listRef(dest),
+          { type: src.type, name: src.title, cid: src.cid, img: src.img },
+          firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
       }
       $("#stealContain").hide();
       // Show "added" feedback if the source button was inside a search result row
@@ -1337,15 +1304,15 @@ firetable.ui.setupMiscEvents = function () {
   });
 
   // ── Reload Track ──
-  $("#reloadtrack").bind("click", firetable.actions.reloadtrack);
+  $("#reloadtrack").on("click", firetable.actions.reloadtrack);
 
   // ── Volume ──
-  $("#volstatus").bind("click", function () {
+  $("#volstatus").on("click", function () {
     firetable.actions.muteToggle();
   });
 
   // ── Modals ──
-  $(".openModal").bind("click", function () {
+  $(".openModal").on("click", function () {
     var modalContentID = $(this).attr('data-modal');
     var targetTab = $(this).attr('data-tab');
     document.getElementById(modalContentID).showModal();
@@ -1365,7 +1332,7 @@ firetable.ui.setupMiscEvents = function () {
     $('#accountSettingsBox .tabPanel').removeClass('active');
     $('#' + targetTab).addClass('active');
   });
-  $(".closeModal").bind("click", function () {
+  $(".closeModal").on("click", function () {
     var dlg = $(this).closest("dialog")[0];
     if (dlg) dlg.close();
     $("#plMachine").val("");
@@ -1396,7 +1363,7 @@ firetable.ui.setupMiscEvents = function () {
       firetable.emojis.sec($(this)[0].id);
     } catch (s) { /* ignore */ }
   });
-  $("#pickEmoji").bind("click", function () {
+  $("#pickEmoji").on("click", function () {
     if ($("#emojiPicker").is(":hidden")) {
       $(this).addClass('on');
       $("#emojiPicker").slideDown(function () {
@@ -1454,18 +1421,17 @@ firetable.ui.setupMiscEvents = function () {
     firetable.debug && console.log("show images " + (this.checked ? "on" : "off"));
     localStorage[STORAGE.showImages] = this.checked;
     firetable.showImages = this.checked;
-    var imageUrlRegex = /((http(s?):)([/|.|\w|\s|-])*\.(?:jpe?g|gif|png))/g;
     if (this.checked) {
-      // Convert plain image links → inline images
+      // Convert plain image links → inline images. Built with attr(), never
+      // string concatenation: hrefs come from chat and can contain quotes.
       $('#actualChat a[href]').not('.inlineImgLink').each(function () {
-        var url = $(this).attr('href');
-        if (url && imageUrlRegex.test(url)) {
-          var $img = $('<a class="inlineImgLink" target="_blank" tabindex="-1">' +
-            '<img src="' + url + '" class="inlineImage" />' +
-            '<span role="button" class="hideImage">&times;</span></a>').attr('href', url);
-          $(this).replaceWith($img);
-        }
-        imageUrlRegex.lastIndex = 0;
+        var url = firetable.utilities.imageLinkUrl($(this).attr('href'));
+        if (!url) return;
+        var $img = $('<a class="inlineImgLink" target="_blank" rel="noopener noreferrer" tabindex="-1"></a>')
+          .attr('href', url)
+          .append($('<img class="inlineImage" alt="" />').attr('src', url))
+          .append('<span role="button" class="hideImage">&times;</span>');
+        $(this).replaceWith($img);
       });
     } else {
       // Convert inline images → plain links
@@ -1535,7 +1501,7 @@ firetable.ui.setupMiscEvents = function () {
     var val = $(this).val();
     firetable.avatarStyle = val;
     localStorage[STORAGE.avatarStyle] = val;
-    firebase.app("firetable").database().ref("users/" + ftapi.uid + "/avatarStyle").set(val)
+    ftapi.db().ref("users/" + ftapi.uid + "/avatarStyle").set(val)
       .catch(function (err) { console.error("[firetable] Avatar style save failed:", err); });
     $("#loggedInUser .ft-avatar").css("background-image",
       "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname, null, firetable.roomAvatarStyle || val) + ")");
@@ -1593,6 +1559,10 @@ firetable.ui.checkLastfmToken = function () {
  * Orchestrates all sub-setup functions and restores persisted settings.
  */
 firetable.ui.init = function () {
+  // Every form is handled in JS: stop Enter from submitting/reloading the page
+  // (replaces inline onsubmit="return false;", which a strict CSP blocks)
+  $(document).on('submit', 'form', function (e) { e.preventDefault(); });
+
   // Restore settings from localStorage
   firetable.ui.initSettings();
 

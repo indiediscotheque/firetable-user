@@ -23,14 +23,47 @@ firetable.ui = firetable.ui || {};
  * @param {string} email
  * @param {string} password
  */
+/**
+ * Turn a Firebase Auth error (or a plain message string) into friendly text.
+ * Sign-in failures share one message so the form never reveals whether an
+ * email address has an account.
+ * @param {Object|string} error
+ * @returns {string}
+ */
+firetable.ui.authErrorMessage = function (error) {
+  if (!error) return "Something went wrong. Please try again.";
+  if (typeof error === "string") return error;
+  switch (error.code) {
+    case 'auth/invalid-credential':
+    case 'auth/invalid-login-credentials':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return "That email and password don't match. Check them, or reset your password.";
+    case 'auth/invalid-email':
+    case 'auth/missing-email':
+      return "That doesn't look like a valid email address.";
+    case 'auth/missing-password':
+      return "Enter your password.";
+    case 'auth/email-already-in-use':
+      return "That email already has an account. Try logging in, or reset your password.";
+    case 'auth/weak-password':
+    case 'auth/password-does-not-meet-requirements':
+      return "Choose a stronger password (at least 6 characters).";
+    case 'auth/user-disabled':
+      return "This account has been disabled.";
+    case 'auth/too-many-requests':
+      return "Too many attempts. Wait a few minutes and try again.";
+    case 'auth/network-request-failed':
+      return "Couldn't reach the server. Check your connection and try again.";
+  }
+  return "Something went wrong (" + (error.code || error.message || "unknown error") + "). Please try again.";
+};
+
 firetable.actions.logIn = function (email, password) {
   firetable.debug && console.log("login");
-    firetable.ui.formMessage('#loginFormShell', '');
+  firetable.ui.formMessage('#loginFormShell', '');
   ftapi.actions.logIn(email, password, function (error) {
-    var errorCode = error.code;
-    var errorMessage = error.message;
-    firetable.ui.formMessage('#loginFormShell',
-      errorCode === 'auth/wrong-password' ? 'Wrong password.' : errorMessage);
+    firetable.ui.formMessage('#loginFormShell', firetable.ui.authErrorMessage(error));
     firetable.debug && console.log("log in error:", error);
   });
 };
@@ -50,10 +83,9 @@ firetable.actions.logOut = function () {
  */
 firetable.actions.signUp = function (email, password, username) {
   firetable.debug && console.log("signup");
-    firetable.ui.formMessage('#createAccountFormShell', '');
+  firetable.ui.formMessage('#createAccountFormShell', '');
   ftapi.actions.signUp(email, password, username, function (error) {
-    firetable.ui.formMessage('#createAccountFormShell',
-      (error && error.message) ? error.message : String(error));
+    firetable.ui.formMessage('#createAccountFormShell', firetable.ui.authErrorMessage(error));
   });
 };
 
@@ -119,8 +151,7 @@ firetable.actions.loggedIn = function (user) {
     $("#djlistpicker").html('<option value="0">Default Playlist</option>');
     for (var key in allPlaylists) {
       if (allPlaylists.hasOwnProperty(key)) {
-        $("#listpicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name, 'pdopt' + key));
-        $("#djlistpicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
+        firetable.utilities.addPlaylistToPickers(key, allPlaylists[key].name);
       }
     }
 
@@ -142,11 +173,7 @@ firetable.actions.loggedIn = function (user) {
         var val = $("#listpicker").val();
         $("#plDeleteLauncher").prop("disabled", !val || val === "0");
         // Switch the view/edit list (does not affect DJ queue)
-        $("#mainqueuestuff, #filterMachine").css("display", "block");
-        $("#searchMachine").css("display", "none");
-        $("#addbox").css("display", "none");
-        $("#cancelqsearch").hide();
-        $("#qControlButtons").show();
+        firetable.ui.showQueuePanel();
         $("#plmanager").css("display", "none");
         $("#listpickerWrap").show();
         $("#plAddLauncher i").text("add");
@@ -169,6 +196,7 @@ firetable.actions.loggedIn = function (user) {
   $("#logOutButton").show().on('click', firetable.actions.logOut);
   firetable.debug && console.log('remove login class from mainGrid');
   $('#mainGrid').removeClass('login').removeClass('pre-auth');
+  firetable.nav._cardsShown = false; // fresh login → reload the card collection
   firetable.nav.restore();
   firetable.nav.apply();
   $("#grab").css("display", "inline-block");
@@ -200,7 +228,7 @@ firetable.actions.uidLookup = function (name) {
  */
 firetable.actions.grab = function () {
   if (firetable.song.cid !== 0) {
-    var title = firetable.song.artist + " - " + firetable.song.title;
+    var title = firetable.utilities.decodeEntities(firetable.song.artist + " - " + firetable.song.title);
     firetable.actions.queueTrack(firetable.song.cid, title, firetable.song.type, true);
   }
 };
@@ -220,24 +248,24 @@ firetable.actions.unban = function (userid) {
  */
 firetable.ui.loginEventsInit = function () {
   // Tab switching
-  $("#resetpass").bind("click", function () {
+  $("#resetpass").on("click", function () {
     $("#logscreen, #createscreen").css("display", "none");
     $("#resetscreen").css("display", "block");
     firetable.ui.loginLinkToggle(this.id);
   });
-  $("#loginlink").bind("click", function () {
+  $("#loginlink").on("click", function () {
     $("#logscreen").css("display", "block");
     $("#createscreen, #resetscreen").css("display", "none");
     firetable.ui.loginLinkToggle(this.id);
   });
-  $("#signuplink").bind("click", function () {
+  $("#signuplink").on("click", function () {
     $("#createscreen").css("display", "block");
     $("#logscreen, #resetscreen").css("display", "none");
     firetable.ui.loginLinkToggle(this.id);
   });
 
   // Login via Enter
-  $("#loginpass").bind("keyup", function (e) {
+  $("#loginpass").on("keyup", function (e) {
     if (e.which === 13) {
       var email = $("#loginemail").val();
       var pass = $("#loginpass").val();
@@ -248,14 +276,14 @@ firetable.ui.loginEventsInit = function () {
 
   // Signup via Enter — runs the same checks as the Create Account button
   // (including the Terms of Service checkbox)
-  $("#newpass2").bind("keyup", function (e) {
+  $("#newpass2").on("keyup", function (e) {
     if (e.which === 13) {
       $("#createAccountBttn").trigger("click");
     }
   });
 
   // Password reset via Enter
-  $("#theAddress").bind("keyup", function (e) {
+  $("#theAddress").on("keyup", function (e) {
     if (e.which === 13) {
       firetable.debug && console.log("reset email return");
       $("#resetPassBttn").trigger("click");
@@ -263,7 +291,7 @@ firetable.ui.loginEventsInit = function () {
   });
 
   // Create Account button
-  $("#createAccountBttn").bind("click", function () {
+  $("#createAccountBttn").on("click", function () {
     var email = $("#newemail").val();
     var pass = $("#newpass").val();
     var pass2 = $("#newpass2").val();
@@ -279,20 +307,22 @@ firetable.ui.loginEventsInit = function () {
   });
 
   // Reset Password button
-  $("#resetPassBttn").bind("click", function () {
+  $("#resetPassBttn").on("click", function () {
     var email = $("#theAddress").val();
     firetable.debug && console.log("reset email click button");
-        // Success shows right away; an error from Firebase replaces it.
-    firetable.ui.formMessage('#resetPasswordFormShell', "Reset email sent. Click the reset link when it arrives, thanks.", 'success');
+    // Success shows right away; a real error (bad address, rate limit,
+    // network) replaces it. "No such user" keeps the success message so the
+    // form doesn't reveal which emails have accounts.
+    firetable.ui.formMessage('#resetPasswordFormShell', "If that email has an account, a reset link is on its way.", 'success');
     ftapi.actions.resetPassword(email, function (error) {
-      firetable.ui.formMessage('#resetPasswordFormShell',
-        error.code === 'auth/wrong-password' ? 'Wrong password.' : error.message);
+      if (error && error.code === 'auth/user-not-found') return;
+      firetable.ui.formMessage('#resetPasswordFormShell', firetable.ui.authErrorMessage(error));
       firetable.debug && console.log('send pass reset error:', error);
     });
   });
 
   // Login button
-  $("#loginBttn").bind("click", function () {
+  $("#loginBttn").on("click", function () {
     var email = $("#loginemail").val();
     var pass = $("#loginpass").val();
     $("#loginemail, #loginpass").val("");
@@ -328,13 +358,6 @@ firetable.ui.loginLinkToggle = function (id) {
  */
 function buildUserHTML(data) {
   var blockcon = data.blocked ? "block" : "";
-  var herecon = "lens";
-  var isIdle = "";
-
-  if (data.idle) {
-    if (data.idle.isIdle && !data.hostbot) isIdle = "idle";
-    if (data.idle.audio === 2) herecon = "label_important";
-  }
 
   if (!data.username) data.username = data.userid;
   var roleicon = "person";
@@ -343,7 +366,7 @@ function buildUserHTML(data) {
   if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; }
   if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; }
 
-  return '<div class="ft-avatar" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username, null, firetable.roomAvatarStyle || data.avatarStyle)) + ');">' +
+  return '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + firetable.utilities.htmlEscape(data.username) + ' — profile" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username, null, firetable.roomAvatarStyle || data.avatarStyle)) + ');">' +
          '<span class="material-symbols-outlined blockon">' + blockcon + '</span>' +
          '</div>' +
          '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
@@ -431,43 +454,17 @@ firetable.ui.setupUserEvents = function () {
 
   // ── Auth state events (already bound in init.js, but user-list events here) ──
 
-  ftapi.events.on("userJoined", function (data) {
-    console.log(data);
-    rememberGhostRole(data);
-    // Remove any existing entry (ghost or duplicate) before inserting
-    $("#user" + data.userid).remove();
-    var isIdle = "";
-    if (data.idle && data.idle.isIdle && !data.hostbot) isIdle = "idle";
-    var $el = $("<div></div>")
-      .addClass("prson" + (data.blocked ? " blockd" : "") + (isIdle ? " " + isIdle : ""))
-      .attr("id", "user" + data.userid)
-      .attr("data-userid", data.userid)
-      .html(buildUserHTML(data));
-    $(getUserDestination(data)).append($el);
-  });
+  // Single joins/leaves/changes need no work of their own: Firebase follows
+  // each one with "usersChanged", which rebuilds the list (once per frame).
+  // Only remember roles, so a DJ who drops off still shows the right icon.
+  ftapi.events.on("userJoined", rememberGhostRole);
+  ftapi.events.on("userChanged", rememberGhostRole);
 
-  ftapi.events.on("userLeft", function (data) {
-    // If this user still occupies a deck slot, keep them in the list
-    // instead of removing them — the ghost user will clear once the bot removes them from the deck.
-    var onDeck = firetable.tableData && (function () {
-      for (var k in firetable.tableData) {
-        if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === data.userid) return true;
-      }
-    })();
-    if (!onDeck) {
-      $("#user" + data.userid).remove();
-    }
-  });
-
-  ftapi.events.on("userChanged", function (data) {
-    console.log("CHANGE", data);
-    rememberGhostRole(data);
-    $("#user" + data.userid).html(buildUserHTML(data));
-  });
-
-  ftapi.events.on("usersChanged", function (okdata) {
+  // Several updates can land at once (presence, idle, blocks); rebuild the
+  // list at most once per frame, with the latest data.
+  ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function (okdata) {
     // Rebuild the user list sections from scratch — handles the timing case
-    // where userJoined fires while #appShell is detached (login screen).
+    // where a user joins while #appShell is detached (login screen).
     $("#usersBot, #usersSuper, #usersMod, #usersRegular").empty();
     if (okdata) {
       // Track which IDs are on the waitlist so we skip them
@@ -516,12 +513,12 @@ firetable.ui.setupUserEvents = function () {
     firetable.debug && console.log('users:', okdata);
     // Re-insert any ghost deck users that were cleared by the full rebuild
     firetable.ui.syncGhostUsers();
-  });
+  }));
 
   
 
   // ── Username change ──
-  $("#changeUsername").bind("keyup", function (e) {
+  $("#changeUsername").on("keyup", function (e) {
     if (e.which !== 13) return;
     var newDjName = $(this).val();
     $("#usernameResponse").html("");
@@ -538,24 +535,35 @@ firetable.ui.setupUserEvents = function () {
   });
 
   // ── Supermod ban search ──
-  $("#supercopSearch").bind("keyup", function (e) {
+  // Two steps: Enter looks the person up and asks; Enter again confirms.
+  var pendingSuspend = null;
+  $("#supercopSearch").on("input", function () {
+    pendingSuspend = null;
+    $("#supercopResponse").text("");
+  });
+  $("#supercopSearch").on("keyup", function (e) {
     if (e.which !== 13) return;
-    var val = $(this).val();
-    $("#supercopResponse").html("");
-    if (val) {
-      ftapi.lookup.userByName(val, function (person) {
-        if (person) {
-          if (!person.supermod) {
-            ftapi.actions.banUser(person.userid);
-            $("#supercopResponse").text(person.username + " suspended.");
-          } else {
-            $("#supercopResponse").text("Can not suspend that (or any) supermod.");
-          }
-        } else {
-          $("#supercopResponse").text(val + " not found...");
-        }
-      });
+    var val = $(this).val().trim();
+    if (!val) return;
+    if (pendingSuspend && pendingSuspend.name === val) {
+      var who = pendingSuspend;
+      pendingSuspend = null;
+      ftapi.actions.banUser(who.userid);
+      $("#supercopResponse").text(who.username + " suspended.");
+      $(this).val("");
+      return;
     }
+    $("#supercopResponse").text("");
+    ftapi.lookup.userByName(val, function (person) {
+      if (!person) {
+        $("#supercopResponse").text(val + " not found...");
+      } else if (person.supermod) {
+        $("#supercopResponse").text("Can not suspend that (or any) supermod.");
+      } else {
+        pendingSuspend = { name: val, userid: person.userid, username: person.username };
+        $("#supercopResponse").text("Suspend " + person.username + "? Press Enter again to confirm.");
+      }
+    });
   });
 };
 

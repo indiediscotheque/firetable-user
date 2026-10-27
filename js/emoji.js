@@ -94,7 +94,9 @@ firetable.utilities.getEmojiMap = function () {
   firetable.emojiMap = {};
   (async function () {
     try {
-      var requests = EMOJI_URLS.map(function (url) { return fetch(url); });
+      var requests = EMOJI_URLS.map(function (src) {
+        return fetch(src.url, { integrity: src.integrity, mode: "cors", credentials: "omit" });
+      });
       var responses = await Promise.all(requests);
       var promises = responses.map(function (response) { return response.json(); });
       var data = await Promise.all(promises);
@@ -160,10 +162,13 @@ firetable.utilities.getEmojiMap = function () {
  * @returns {string} Text with shortnames replaced by unicode or custom HTML
  */
 firetable.utilities.emojiShortnamestoUnicode = function (str) {
-  return str.replace(/\:(.*?)\:/g, function (match) {
-    var shortname = match.replace(/\:/g, "");
-    if (firetable.emojiMap[shortname]) {
-      return '<span title="' + match + '">' + firetable.emojiMap[shortname] + '</span>';
+  // HTML tags are matched first and passed through untouched, so a
+  // shortname-like run inside an attribute (e.g. a URL) is never replaced.
+  return str.replace(/(<[^>]*>)|:([a-z0-9_+-]+):/gi, function (match, tag, shortname) {
+    if (tag) return tag;
+    var map = firetable.emojiMap;
+    if (map && Object.prototype.hasOwnProperty.call(map, shortname)) {
+      return '<span title="' + match + '">' + map[shortname] + '</span>';
     } else if (shortname === "rohn") {
       return '<span class="rohnmoji" title=":rohn:"></span>';
     }

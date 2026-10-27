@@ -6,14 +6,7 @@
 	<title>firetable</title>
 	<meta name="description" content="Collaborative radio." />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-	<script>
-		// iPhone/iPad: keep maximum-scale=1 so tapping a small text field doesn't
-		// auto-zoom the page (iOS still allows pinch-zoom). Other devices get
-		// normal pinch-zoom.
-		if (/iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
-			document.querySelector('meta[name="viewport"]').setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover");
-		}
-	</script>
+	<script src="js/viewport.js?v=01.11.11"></script>
 	<meta name="theme-color" content="#181818" />
 	<link rel="shortcut icon" href="favicon.png" />
 	<!-- Installable web app (Add to Home Screen / Install app) -->
@@ -23,9 +16,9 @@
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-title" content="Indie Disco" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
-	<link rel="stylesheet" href="css/reset.css?v=01.11.06" type="text/css" />
-	<link rel="stylesheet" href="css/fonts-local.css?v=01.11.06" type="text/css" />
-	<link rel="stylesheet" href="css/looks.css?v=01.11.06" type="text/css" />
+	<link rel="stylesheet" href="css/reset.css?v=01.11.11" type="text/css" />
+	<link rel="stylesheet" href="css/fonts-local.css?v=01.11.11" type="text/css" />
+	<link rel="stylesheet" href="css/looks.css?v=01.11.11" type="text/css" />
 </head>
 
 <body>
@@ -195,7 +188,7 @@
 
 		<div id="actualChat">
 			<div id="chatsWrap" class="scroll-view">
-				<div id="chats">
+				<div id="chats" role="log" aria-label="Chat messages">
 					<div id="chatKEY" class="newChat">
 						<!-- template for chat items -->
 						<div class="ft-avatar"></div>
@@ -253,7 +246,7 @@
 					<i class="material-symbols-outlined"> insert_emoticon </i>
 				</button>
 				<span id="tip-pickEmoji" role="tooltip" class="ft-tip" style="position-anchor: --tip-pickEmoji">Emoji</span>
-				<form id="newchatForm" autocomplete="off" onsubmit="return false;">
+				<form id="newchatForm" autocomplete="off">
 					<textarea maxlength="240" autocomplete="off" name="newchat" placeholder="Chat a thing"
 						id="newchat" tabindex="0" rows="1" enterkeyhint="send"></textarea>
 				</form>
@@ -270,7 +263,7 @@
 						<i class="material-symbols-outlined">arrow_downward</i>
 					</button>
 				</div>
-				<div id="atPicker"></div>
+				<div id="atPicker" role="listbox" aria-label="Mention someone"></div>
 			</div>
 		</div>
 
@@ -375,7 +368,7 @@
 					</div>
 				</div>
 				<div id="filterMachine">
-					<form id="queueFilterForm" autocomplete="off" onsubmit="return false;">
+					<form id="queueFilterForm" autocomplete="off">
 						<input type="search" autocomplete="off" spellcheck="false" placeholder="Filter playlist…" name="queueFilter" id="queueFilter" class="ft-filter" aria-label="Filter playlist" />
 						<div id="queueFilterExtras" class="queueFilterExtras">
 							<label class="queueFilterRemixOnly" for="queueFilterRemixOnly">
@@ -485,7 +478,7 @@
 				<div class="miniLoginNavOnly"><br/><br/><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
 			</div>
 			<div id="logscreen" style="display: none">
-				<form id="loginFormShell" novalidate onsubmit="return false;">
+				<form id="loginFormShell" novalidate>
 				<h4>Log In</h4>
 				<div class="inputline"><label for="loginemail">Email</label><input type="email" id="loginemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
 				<div class="inputline"><label for="loginpass">Password</label><input type="password" id="loginpass" autocomplete="current-password" enterkeyhint="go" /></div>
@@ -496,7 +489,7 @@
 				</form>
 			</div>
 			<div id="createscreen">
-				<form id="createAccountFormShell" novalidate onsubmit="return false;">
+				<form id="createAccountFormShell" novalidate>
 					<h4>Create an Account</h4>
 					<div class="inputline"><label for="newemail">Email</label><input type="email" id="newemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
 					<div class="inputline"><label for="newusername">Username</label><input type="text" id="newusername" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
@@ -514,7 +507,7 @@
 				</form>
 			</div>
 			<div id="resetscreen" style="display: none">
-				<form id="resetPasswordFormShell" novalidate onsubmit="return false;">
+				<form id="resetPasswordFormShell" novalidate>
 				<h4>Reset your password!</h4>
 
 				<div class="inputline"><label for="theAddress">Email</label><input type="email" id="theAddress" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" /></div>
@@ -788,47 +781,46 @@
 
 	<audio autoplay="autoplay" id="audilert"></audio>
 
-	<script src="https://cdn.jsdelivr.net/npm/@floating-ui/core@1.7.4"></script>
-	<script src="https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.7.5"></script>
-	<script src="js/twemoji.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/8.2.6/firebase-app.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/8.2.6/firebase-auth.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/8.2.6/firebase-database.js"></script>
-	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-	<script src="https://code.jquery.com/ui/1.12.0/jquery-ui.min.js"></script>
-	<script src="js/jquery.countdown.min.js"></script>
-
+	<!-- Third-party libraries: exact versions, verified with Subresource Integrity -->
+	<script src="https://cdn.jsdelivr.net/npm/@floating-ui/core@1.8.0/dist/floating-ui.core.umd.min.js" integrity="sha384-HNCdK6HYLs4EKIDg2Ml3NdfNMVD/LcFbGXnagRABpWmpJjiEuhrtSIckScRnqDOD" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.8.0/dist/floating-ui.dom.umd.min.js" integrity="sha384-h02fHnOrZRtL8NvKyMkr2vfTxUr0lTnQdZexzrbPfME4nd74qGfOZ97tbiroJo1Y" crossorigin="anonymous"></script>
+	<script src="js/twemoji.js?v=01.11.11"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js" integrity="sha384-Nc6Wpwz02/84Nk70wNI+ylNG2C8ynXTyEv7mPrL017fNCyPIP/hiEI1FVXGPuxvQ" crossorigin="anonymous"></script>
+	<script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js" integrity="sha384-TlPrn6ucRHEvycwgV0QgSFXJhJyUwaN4N9iqLak1MWy0/G1VhVwgttErzSlUDfa2" crossorigin="anonymous"></script>
+	<script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-auth-compat.js" integrity="sha384-VRJm5/qS935RWeVBR4A4ZoWzrWZpqPmTgnvM/z2R4A1+mlGxWYVjjlE5ZWXZE2un" crossorigin="anonymous"></script>
+	<script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-database-compat.js" integrity="sha384-LXlcKfZa4dKRGTde8HcsjmxloF7wRHDvUWCV/UFqEsccZaCsOue3gUiDYzknmbW+" crossorigin="anonymous"></script>
+	<script src="https://code.jquery.com/jquery-4.0.0.min.js" integrity="sha384-fgGyf7Mo7DURSOMnOy7ed+dkq5Job205Gnzu6QIg0BOHKaqt4D76Dt8VlDCzcMHV" crossorigin="anonymous"></script>
+	<script src="https://code.jquery.com/ui/1.14.2/jquery-ui.min.js" integrity="sha384-tBcEcHGtNy7/Mx08+YxuvQ6v6s0N2jgehtFiT+bLtGwTj/txXtB/L5GqXfggm5sS" crossorigin="anonymous"></script>
 	<script src="js/idle.min.js"></script>
-	<script src="https://apis.google.com/js/client.js?onload=googleApiClientReady"></script>
-	<script src="https://w.soundcloud.com/player/api.js" type="text/javascript"></script>
+	<script src="https://w.soundcloud.com/player/api.js"></script>
 	<script src="https://www.youtube.com/iframe_api"></script>
-	<script src="https://cdn.jsdelivr.net/npm/pixi.js@4.8.9/dist/pixi.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js"></script>
-	<script type="text/javascript" src="config.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/firetable.js?v=01.11.06"></script>
+	<script src="https://cdn.jsdelivr.net/npm/pixi.js@4.8.9/dist/pixi.min.js" integrity="sha384-fxjo+jPUZU4vjfxyz9RXr7LgHy6G3mgwntjZP6+T4YWAxd8PVz/necyJjkUDjOKi" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js" integrity="sha384-yXOFkJyq6/vzPbuifPxEbwfurfDPO9+2O3UHh8QfQH8yZCdI/KoyHxxuOk2hwIVL" crossorigin="anonymous"></script>
+	<script src="js/storage.js?v=01.11.11"></script>
+	<script type="text/javascript" src="config.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/firetable.js?v=01.11.11"></script>
 	<script src="js/linkify.min.js"></script>
 	<script src="js/linkify-string.min.js"></script>
 
 	<!-- Application modules (order matters — each builds on the previous) -->
-	<script type="text/javascript" src="js/constants.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/state.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/fire.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/md5.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/helpers.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/emoji.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/lastfm.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/player.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/cards.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/chat.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/search.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/playlist.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/users.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/room.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/ui.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/glitch.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/snow.js?v=01.11.06"></script>
-	<script type="text/javascript" src="js/init.js?v=01.11.06"></script>
+	<script type="text/javascript" src="js/constants.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/state.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/fire.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/md5.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/helpers.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/emoji.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/lastfm.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/player.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/cards.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/chat.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/search.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/playlist.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/users.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/room.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/ui.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/glitch.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/snow.js?v=01.11.11"></script>
+	<script type="text/javascript" src="js/init.js?v=01.11.11"></script>
 
 	<div class="notice" role="alert">
 		<p>Your account has been suspended due to a perceived violation of our <a href="terms">Terms of Service</a>.</p>

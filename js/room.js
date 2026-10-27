@@ -29,8 +29,10 @@
  * @param {Object} data          - Track data from ftapi
  * @param {jQuery} $template     - Cloneable template element
  * @param {string} containerSel  - jQuery selector for the target container
+ * @param {boolean} [older]      - Recent plays only: add below everything shown
+ *                                 (for "Show older plays") instead of on top
  */
-function renderHistoryItem(data, $template, containerSel) {
+function renderHistoryItem(data, $template, containerSel, older) {
   if (data.img === "img/idlogo.png" && ftconfigs.defaultAlbumArtUrl.length) {
     data.img = ftconfigs.defaultAlbumArtUrl;
   }
@@ -45,6 +47,7 @@ function renderHistoryItem(data, $template, containerSel) {
   $histItem.attr('id', "pvbar" + pkey)
            .attr("data-key", pkey)
            .attr("data-histid", data.histID)
+           .attr("data-list", containerSel === "#thediscovers" ? "newMusic" : "songHistory")
            .attr("data-cid", data.cid)
            .attr("data-type", data.type)
            .attr("data-tag", data.artist + " - " + data.title);
@@ -91,11 +94,7 @@ function renderHistoryItem(data, $template, containerSel) {
       );
     }
   });
-  try {
-    if (!ftapi.isMod) $histItem.find('.edittags').hide();
-  } catch (e) {
-    console.log(e);
-  }
+  if (!ftapi.isMod) $histItem.find('.edittags').hide();
 
   // Metadata
   $histItem.find('.histdj').text(data.dj);
@@ -117,8 +116,8 @@ function renderHistoryItem(data, $template, containerSel) {
     var $trackTitle = $histlink.find('.fresh-track-title');
     var $trackArtist = $histlink.find('.fresh-track-artist');
     var btnTitle = ($trackTitle.length && $trackArtist.length)
-      ? firetable.utilities.htmlEscape($trackArtist.text().trim() + ' - ' + $trackTitle.text().trim())
-      : firetable.utilities.htmlEscape($histlink.text());
+      ? $trackArtist.text().trim() + ' - ' + $trackTitle.text().trim()
+      : $histlink.text();
 
     firetable.actions.openStealPicker($btn, { cid: btnCid, type: btnType, title: btnTitle, img: btnImg });
   });
@@ -144,16 +143,35 @@ function renderHistoryItem(data, $template, containerSel) {
         '<div class="hist-day-items"></div>' +
         '</div>'
       );
-      $dayGroup.prependTo('#thehistory');
+      if (!older) $dayGroup.prependTo('#thehistory');
+      else if ($('#histMore').length) $dayGroup.insertBefore('#histMore');
+      else $dayGroup.appendTo('#thehistory');
     }
     var timeStr = firetable.utilities.format_time(data.when);
     var $avatar = $histItem.find('.dj-avatar-tip').detach();
     var entryHour = new Date(data.when).getHours();
-    var $entry = $('<div class="hist-entry" data-hour="' + entryHour + '"></div>');
+    var $entry = $('<div class="hist-entry" data-hour="' + entryHour + '" data-when="' + Number(data.when) + '"></div>');
     $('<span class="hist-timestamp">' + timeStr + '</span>').appendTo($entry);
     $avatar.appendTo($entry);
     $histItem.appendTo($entry);
     var $dayItems = $dayGroup.find('.hist-day-items');
+
+    if (older) {
+      // Below the newer plays; an hour marker (labelled with the newer play's
+      // hour, like the ones added on top) goes between them when the hour changes
+      var $prevEntry = $dayItems.children('.hist-entry').last();
+      $entry.appendTo($dayItems);
+      if ($prevEntry.length) {
+        var prevHour = parseInt($prevEntry.attr('data-hour'), 10);
+        if (prevHour !== entryHour) {
+          var prevDate = new Date(parseInt($prevEntry.attr('data-when'), 10));
+          prevDate.setMinutes(0, 0, 0);
+          $('<div class="hist-hour-marker"><span class="hist-hour-label">' +
+            prevDate.toLocaleTimeString(undefined, { hour: 'numeric' }) + '</span></div>').insertAfter($prevEntry);
+        }
+      }
+      return;
+    }
     $entry.prependTo($dayItems);
 
     // Insert an hour marker when crossing an hour boundary
@@ -170,6 +188,17 @@ function renderHistoryItem(data, $template, containerSel) {
   } else {
     $histItem.prependTo(containerSel);
   }
+}
+
+/**
+ * Format whole seconds as MM:SS (minutes keep counting past 59, e.g. 62:08).
+ * @param {number} secs
+ * @returns {string}
+ */
+function formatClock(secs) {
+  secs = Math.max(0, secs || 0);
+  var m = Math.floor(secs / 60), sec = secs % 60;
+  return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
 }
 
 /**
@@ -251,7 +280,7 @@ firetable.ui.setupRoomEvents = function () {
 
       if (activeIdx < allDjs.length) {
         var activeEntry = allDjs[activeIdx];
-        var key = activeEntry.tableKey;
+        var tableKey = activeEntry.tableKey;
         var djId = activeEntry.id;
         var djName = activeEntry.name;
         var djPlays = activeEntry.plays;
@@ -266,7 +295,7 @@ firetable.ui.setupRoomEvents = function () {
         var btnIcon = isSelf ? 'close' : 'person_remove';
         var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
         var actionBtn = showBtn
-          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + djId + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
+          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + djId + '" data-tablekey="' + tableKey + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
           : '';
         var departureIndicator;
         if (showDeparture) {
@@ -279,7 +308,7 @@ firetable.ui.setupRoomEvents = function () {
           var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + djDisplayName + ' step down after their next play';
           var departureTitleOn  = isSelf ? "Don't step down after your next play" : "Don't have " + djDisplayName + ' step down after their next play';
           var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
-          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
+          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + tableKey + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
         } else if (activeEntry.removeAfter) {
           departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down after this song">departure_board</span>';
         } else {
@@ -342,29 +371,23 @@ firetable.ui.setupRoomEvents = function () {
     $("#ondeck").off('click.addme').on('click.addme', '.ondeck-slot.empty', function () {
       ftapi.actions.sendBotCommand("!addme");
     });
+    // Only your own departure button is drawn. The bot keeps its own copy of
+    // the deck (and the rules only let the bot write table/), so this always
+    // goes through a bot command.
     $("#deck").off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
       var $btn = $(this);
-      var tableKey = $btn.data('tablekey');
-      var userId = $btn.data('userid');
-      var djName = $btn.data('djname');
-      var isSelf = userId === ftapi.uid;
-      var isOn = $btn.hasClass('on');
-      var newIsOn = !isOn;
+      var userId = $btn.attr('data-userid');
+      if (userId !== ftapi.uid) return;
+      var newIsOn = !$btn.hasClass('on');
       $btn.toggleClass('on', newIsOn);
-      var newTitle = newIsOn
-        ? (isSelf ? 'You are taking the bus after your next play'           : djName + ' is taking the bus after their next play')
-        : (isSelf ? 'You will not be taking the bus after your next play' : djName + ' will not be taking the bus after their next play');
-      $btn.attr('title', newTitle);
-      if (isSelf) {
-        _pendingDeparture[userId] = newIsOn ? true : null;
-        ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
-      } else {
-        _pendingDeparture[userId] = newIsOn ? true : null;
-        firebase.app("firetable").database().ref("table/" + tableKey + "/removeAfter").set(newIsOn ? true : null);
-      }
+      $btn.attr('title', newIsOn
+        ? 'You are taking the bus after your next play'
+        : 'You will not be taking the bus after your next play');
+      _pendingDeparture[userId] = newIsOn ? true : null;
+      ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
     });
     $("#deck").off('click.remove').on('click.remove', '.deckRemoveBtn', function () {
-      var userId = $(this).data('userid');
+      var userId = $(this).attr('data-userid');
       if (userId === ftapi.uid) {
         ftapi.actions.sendBotCommand("!removeme");
       } else {
@@ -481,10 +504,56 @@ firetable.ui.setupRoomEvents = function () {
     $(this).attr('aria-expanded', String(!$group.hasClass('collapsed')));
   });
 
+  // Only the latest plays load at first. Scrolling near the bottom of the
+  // list loads the next page automatically (the button is a fallback), all
+  // the way back through the stored history.
+  firetable._historyHasOlder = true;
+  var historyLoading = false;
+  var historyObserver = ('IntersectionObserver' in window)
+    ? new IntersectionObserver(function (entries) {
+        if (entries.some(function (e) { return e.isIntersecting; })) loadOlderHistory();
+      }, { root: document.getElementById('thehistory'), rootMargin: '0px 0px 600px 0px' })
+    : null;
+
+  function syncHistoryMoreButton() {
+    var show = firetable._historyHasOlder && ftapi.historyLoaded >= HISTORY_PAGE_SIZE;
+    var $btn = $('#histMore');
+    if (!show) {
+      if ($btn.length && historyObserver) historyObserver.unobserve($btn[0]);
+      $btn.remove();
+      return;
+    }
+    if (!$btn.length) {
+      $btn = $('<button type="button" id="histMore" class="butt graybutt small">Show older plays</button>');
+    }
+    $btn.prop('disabled', false).text('Show older plays').appendTo('#thehistory'); // always last
+    if (historyObserver) { historyObserver.unobserve($btn[0]); historyObserver.observe($btn[0]); }
+  }
+
+  function loadOlderHistory() {
+    if (historyLoading || !firetable._historyHasOlder) return;
+    historyLoading = true;
+    $('#histMore').prop('disabled', true).text('Loading older plays…');
+    ftapi.lookup.olderHistory(function (plays, hasMore) {
+      historyLoading = false;
+      firetable._historyHasOlder = hasMore;
+      // plays come oldest-first; add newest-first below what's shown
+      for (var i = plays.length - 1; i >= 0; i--) {
+        renderHistoryItem(plays[i], $historyItem, "#thehistory", true);
+      }
+      firetable._historyCache = plays.concat(firetable._historyCache);
+      applyHistoryFilter();
+      syncHistoryMoreButton(); // re-observing loads the next page if still in view
+    });
+  }
+  $(document).on('click', '#histMore', loadOlderHistory);
+
+  var historyButtonSoon = firetable.utilities.oncePerFrame(syncHistoryMoreButton);
   ftapi.events.on('newHistory', function (data) {
     firetable._historyCache.push(data);
     renderHistoryItem(data, $historyItem, "#thehistory");
     applyHistoryFilter();
+    historyButtonSoon();
   });
 
   // ── Re-render history/discover after re-login ──
@@ -503,13 +572,33 @@ firetable.ui.setupRoomEvents = function () {
         renderHistoryItem(data, $historyItem, "#thehistory");
       });
       applyHistoryFilter();
+      syncHistoryMoreButton();
     }
   });
 
   // ── Edited History (tag correction) ──
+  // A tag correction: from a mod here, or from the live window of recent plays
   ftapi.events.on('editedHistory', function (data) {
-    console.log("HIST EDIT", data);
-    $("#" + data.histID).text(data.artist + " - " + data.title);
+    var tag = data.artist + " - " + data.title;
+    var el = document.getElementById(data.histID);
+    if (el) {
+      var $el = $(el);
+      var $title = $el.find('.fresh-track-title'), $artist = $el.find('.fresh-track-artist');
+      if ($title.length && $artist.length) {
+        $title.text(firetable.ui.strip(data.title || ''));
+        $artist.text(firetable.ui.strip(data.artist || ''));
+      } else {
+        $el.text(firetable.ui.strip(data.artist || '') + " - " + firetable.ui.strip(data.title || ''));
+      }
+      $el.closest('.pvbar').attr('data-tag', tag);
+    }
+    // keep the cached copies (used to redraw after logging back in) in step
+    [firetable._historyCache, firetable._produceCache].forEach(function (cache) {
+      (cache || []).forEach(function (item) {
+        if (item.histID === data.histID) { item.artist = data.artist; item.title = data.title; }
+      });
+    });
+    applyHistoryFilter();
   });
 
   // ── Mod Check (show edit buttons for mods) ──
@@ -598,7 +687,6 @@ firetable.ui.setupRoomEvents = function () {
     $("#playCount, #lastPlay, #firstPlay").text("");
     window.dispatchEvent(new Event('resize'));
     $("#cloud_with_rain, #fire").removeClass("on");
-    $("#timr, #timrUp").countdown("destroy");
 
     // Fade the progress bar out, then reset it
     var $prg = $("#prgbar");
@@ -614,6 +702,9 @@ firetable.ui.setupRoomEvents = function () {
       $prg.css("background", "color-mix(in srgb, " + emptyColor + " 50%, black)");
       $prg.css("opacity", "1");
     }, 450);
+
+    // Empty room (no song): stop here instead of crashing on missing fields
+    if (!data) return;
 
     // Check if tagUpdate has pre-corrected metadata for this track
     var showPlaycount = false;
@@ -657,8 +748,7 @@ firetable.ui.setupRoomEvents = function () {
     });
 
     // Calculate elapsed time
-    var nownow = Date.now();
-    var timeSince = nownow - data.started;
+    var timeSince = ftapi.now() - data.started;
     if (timeSince <= 0) timeSince = 0;
     var secSince = Math.floor(timeSince / 1000);
     var timeLeft = data.duration - secSince;
@@ -671,13 +761,18 @@ firetable.ui.setupRoomEvents = function () {
       clearTimeout(firetable.lastfm.timer);
       firetable.lastfm.timer = null;
     }
-    if (firetable.lastfm.sk) {
+    if (firetable.lastfm.sk && data.cid !== 0) {
       firetable.lastfm.duration = Math.floor(timeLeft);
-      firetable.lastfm.songStart = Math.floor(Date.now() / 1000);
-      firetable.lastfm.timer = setTimeout(function () {
-        firetable.lastfm.timer = null;
-        firetable.lastfm.scrobble();
-      }, (timeLeft * 1000) - 3000);
+      firetable.lastfm.songStart = Math.floor(ftapi.now() / 1000);
+      // Last.fm's rule: scrobble tracks over 30 s once at least half of
+      // them (or 4 minutes) has been heard — not when joining near the end.
+      var willHear = timeLeft - 3;
+      if (data.duration > 30 && willHear >= Math.min(data.duration / 2, 240)) {
+        firetable.lastfm.timer = setTimeout(function () {
+          firetable.lastfm.timer = null;
+          firetable.lastfm.scrobble();
+        }, willHear * 1000);
+      }
       firetable.lastfm.nowPlaying();
     }
 
@@ -714,12 +809,14 @@ firetable.ui.setupRoomEvents = function () {
             single_active: false,
             callback: function () {
               var vol = firetable.utilities.getEffectiveVolume();
-              player.setVolume(vol);
+              // (YouTube may not have loaded, e.g. blocked by an extension)
+              if (firetable.ytLoaded) player.setVolume(vol);
               firetable.scwidget.setVolume(vol);
               // Explicitly play — auto_play can be suppressed in background tabs
               firetable.scwidget.play();
             }
           });
+          firetable.media.watchSoundCloud();
         }
       }
     }
@@ -751,29 +848,19 @@ firetable.ui.setupRoomEvents = function () {
 
     firetable.actions.replayPendingFireReactions();
 
-    // ── Countdown timer ──
-    $("#timr").countdown({
-      until: timeLeft,
-      compact: true,
-      description: "",
-      format: "MS"
-    });
-
-    // ── Count-up timer (elapsed) ──
-    $("#timrUp").countdown({
-      since: new Date(data.started),
-      compact: true,
-      description: "",
-      format: "MS"
-    });
-
-    // ── Progress bar ──
-    firetable.moveBar = setInterval(function () {
-      var now = Date.now();
-      var sofar = now - firetable.song.started;
-      var pcnt = (sofar / (firetable.song.duration * 1000)) * 100;
+    // ── Time left, time elapsed and progress bar (one timer, server clock) ──
+    var tick = function (withBar) {
+      var song = firetable.song;
+      if (!song) return;
+      var elapsed = Math.max(0, (ftapi.now() - song.started) / 1000);
+      $("#timrUp").text(formatClock(Math.floor(elapsed)));
+      $("#timr").text(formatClock(Math.ceil((song.duration || 0) - elapsed)));
+      if (!withBar) return;
+      var pcnt = (elapsed / song.duration) * 100;
       $("#prgbar").css("background", "linear-gradient(90deg, " + firetable.color + " " + pcnt + "%, color-mix(in srgb, " + firetable.color + " 50%, black) " + pcnt + "%)");
-    }, PROGRESS_BAR_INTERVAL);
+    };
+    tick(false); // the bar fades in on its own (above), so just the clocks now
+    firetable.moveBar = setInterval(function () { tick(true); }, PROGRESS_BAR_INTERVAL);
   });
 
   // ── Screen State ──
@@ -853,7 +940,7 @@ firetable.ui.setupRoomEvents = function () {
             '</span>' +
             departureBtn +
             '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
-            '<div class="ft-avatar" style="background-image:url(' +
+            '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + wlName + ' — profile" style="background-image:url(' +
             firetable.utilities.htmlEscape(firetable.utilities.avatarURL(userId, data[key].name)) +
             ');"></div>' +
             '</div>';
@@ -913,35 +1000,29 @@ firetable.ui.setupRoomEvents = function () {
     $('#usersWaitlist').off('click.wladdme').on('click.wladdme', '.waitlist-addme-row .ft-avatar, .wlAddMeBtn', function () {
       ftapi.actions.sendBotCommand('!addme');
     });
+    // Waitlist changes go through the bot: it owns waitlist/ and would
+    // overwrite direct writes (which the database rules refuse anyway).
     $('#usersWaitlist').off('click.wlremove').on('click.wlremove', 'button.waitlist-pos', function () {
-      var $btn = $(this);
-      var wlKey = $btn.data('wlkey');
-      var userId = $btn.data('userid');
-      var isSelf = userId === ftapi.uid;
-      if (isSelf) {
+      var userId = $(this).attr('data-userid');
+      if (userId === ftapi.uid) {
         ftapi.actions.sendBotCommand('!removeme');
-      } else {
-        firebase.app('firetable').database().ref('waitlist/' + wlKey).remove();
+        return;
       }
+      var entry = null;
+      for (var k in firetable.waitlistData || {}) {
+        if (firetable.waitlistData.hasOwnProperty(k) && firetable.waitlistData[k].id === userId) entry = firetable.waitlistData[k];
+      }
+      var person = ftapi.users && ftapi.users[userId];
+      var name = (person && person.username) || (entry && entry.name);
+      if (name) ftapi.actions.sendBotCommand('!remove ' + name); // mod-only on the bot side
     });
     $('#usersWaitlist').off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
       var $btn = $(this);
-      var wlKey = $btn.data('wlkey');
-      var userId = $btn.data('userid');
-      var djName = $btn.data('djname');
-      var isSelf = userId === ftapi.uid;
-      var isOn = $btn.hasClass('on');
-      var newIsOn = !isOn;
+      if ($btn.attr('data-userid') !== ftapi.uid) return; // only drawn for yourself
+      var newIsOn = !$btn.hasClass('on');
       $btn.toggleClass('on', newIsOn);
-      var newTitle = newIsOn
-        ? (isSelf ? "Don't step down after your next play" : "Don't have " + djName + ' step down after their next play')
-        : (isSelf ? 'Step down after your next play'       : 'Have ' + djName + ' step down after their next play');
-      $btn.attr('title', newTitle);
-      if (isSelf) {
-        ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
-      } else {
-        firebase.app('firetable').database().ref('waitlist/' + wlKey + '/removeAfter').set(newIsOn ? true : null);
-      }
+      $btn.attr('title', newIsOn ? "Don't step down after your next play" : 'Step down after your next play');
+      ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
     });
 
     if (firetable.ui && firetable.ui.syncGhostUsers) firetable.ui.syncGhostUsers();
@@ -951,12 +1032,13 @@ firetable.ui.setupRoomEvents = function () {
     }
   });
 
-  // Re-render deck when user data arrives (mod status affects button visibility)
-  ftapi.events.on("usersChanged", function () {
+  // Re-render deck when user data arrives (mod status affects button visibility),
+  // at most once per frame however many updates arrive together
+  ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () {
     if (firetable.tableData !== undefined) {
       ftapi.events.emit("tableChanged", firetable.tableData);
     }
-  });
+  }));
 
   // ── Spotlight (Active DJ Index) ──
   ftapi.events.on("spotlightStateChanged", function (data) {
@@ -993,20 +1075,25 @@ firetable.ui.setupRoomEvents = function () {
         ftapi.lookup.userByName(key, function (person) {
           $("#activeSuspensions").append(
             '<div class="importResult"><div class="imtxt">' + firetable.utilities.htmlEscape(person.username) + '</div>' +
-            '<button type="button" onclick="firetable.actions.unban(\'' + person.userid + '\')" class="material-symbols-filled row-icon" title="Unsuspend" aria-label="Unsuspend ' + firetable.utilities.htmlEscape(person.username) + '">&#xE5C9;</button></div>'
+            '<button type="button" data-userid="' + firetable.utilities.htmlEscape(person.userid) + '" class="material-symbols-filled row-icon unbanButton" title="Unsuspend" aria-label="Unsuspend ' + firetable.utilities.htmlEscape(person.username) + '">&#xE5C9;</button></div>'
           );
         });
       }
     }
   });
 
+  $("#activeSuspensions").off('click.unban').on('click.unban', '.unbanButton', function () {
+    firetable.actions.unban($(this).attr('data-userid'));
+  });
+
   // ── Colors Changed (Accent Color) ──
   ftapi.events.on("colorsChanged", function (data) {
     firetable.debug && console.log("COLOR CHANGE!", data);
 
+    data = data || {}; // no colors saved yet → fall back to the default orange
     firetable.color = data.color;
     firetable.countcolor = data.txt;
-    if (data.color === "#fff" || data.color === "#7f7f7f") {
+    if (!data.color || data.color === "#fff" || data.color === "#7f7f7f") {
       firetable.color = firetable.orange;
       firetable.countcolor = "#fff";
     }

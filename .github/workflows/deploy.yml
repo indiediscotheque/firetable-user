@@ -3,7 +3,10 @@
 # Uploads over SFTP (works with an SFTP-only DreamHost user). Every file type
 # and folder is included, files are sent exactly as they are in git, nothing
 # on the server is deleted, and config.js and api/soundcloud-config.php (which
-# live only on the server) are never touched. Before uploading, it checks the target folder already holds
+# live only on the server) are never touched. The root .htaccess (security
+# headers) is only uploaded when the server has none yet or its copy came from
+# this repo (it contains the line "# firetable-managed"); a hand-made one is
+# left alone and the run shows a warning. Before uploading, it checks the target folder already holds
 # config.js, so a wrong path or login stops the publish instead of copying the
 # site somewhere else.
 #
@@ -101,6 +104,18 @@ jobs:
           fi
           echo "Found $DEST/config.js - target folder looks right."
 
+      - name: Check the server's .htaccess
+        run: |
+          remote=$(lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; cat \"$DEST/.htaccess\"" 2>/dev/null || true)
+          if [ -z "$remote" ]; then
+            echo "No .htaccess on the server yet - the repo's one will be uploaded."
+          elif printf '%s' "$remote" | grep -q 'firetable-managed'; then
+            echo "Server .htaccess came from this repo - it will be kept up to date."
+          else
+            echo "::warning::The server has its own .htaccess (no 'firetable-managed' line), so it was left as is and the security headers were NOT deployed. Merge the repo's .htaccess into it, keeping the '# firetable-managed' line, to let future deploys manage it."
+            echo "SKIP_HTACCESS=1" >> "$GITHUB_ENV"
+          fi
+
       - name: Upload changed files
         run: |
           flags=""
@@ -108,13 +123,50 @@ jobs:
             flags="--dry-run"
             echo "Dry run: nothing will be uploaded."
           fi
+          # Only the root .htaccess; api/.htaccess is always uploaded
+          if [ "$SKIP_HTACCESS" = "1" ]; then
+            flags="$flags --exclude '^\.htaccess\$'"
+          fi
           lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
             mirror --reverse --verbose --no-perms --parallel=4 $flags \
               --exclude-glob .git/ \
               --exclude-glob .github/ \
+              --exclude-glob tools/ \
+              --exclude-glob node_modules/ \
+              --exclude-glob package.json \
+              --exclude-glob package-lock.json \
+              --exclude-glob eslint.config.mjs \
               --exclude-glob .gitignore \
               --exclude-glob .DS_Store \
               --exclude-glob config.js \
               --exclude-glob soundcloud-config.php \
               --exclude-glob README.md \
               ./ \"$DEST/\""
+
+      - name: Remove files that were deleted from the repo
+        # Only files git deleted in the pushed commits (never config.js,
+        # server-only files or anything else not tracked here).
+        if: github.event_name == 'push'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "No earlier commit to compare with - nothing to remove."
+            exit 0
+          fi
+          script=$(mktemp)
+          printf 'open --env-password -u "%s" "sftp://%s"\n' "$SFTP_USER" "$HOST" > "$script"
+          count=0
+          while IFS= read -r -d '' f; do
+            case "$f" in
+              config.js|api/soundcloud-config.php|.htaccess|README.md|.gitignore|.github/*|tools/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
+            esac
+            printf 'rm -f "%s/%s"\n' "$DEST" "$f" >> "$script"
+            echo "Removing $f"
+            count=$((count + 1))
+          done < <(git diff --name-only --diff-filter=D -z "$BEFORE" HEAD)
+          if [ "$count" -eq 0 ]; then
+            echo "Nothing to remove."
+            exit 0
+          fi
+          lftp -f "$script"

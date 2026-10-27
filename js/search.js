@@ -5,7 +5,6 @@
  * - Track search via YouTube Data API v3 + SoundCloud (through api/soundcloud.php)
  * - Direct link detection (youtube.com/watch, soundcloud.com/…, on.soundcloud.com/…)
  * - Playlist/import search via YouTube + SoundCloud
- * - Dubtrack import file parsing + import
  * - Search source toggle buttons (#ytsearchSelect, #scsearchSelect)
  * - Import source toggle tabs
  */
@@ -70,31 +69,24 @@ firetable.ui.setupSearchEvents = function () {
   var bindSearchResultButtons = function ($srli, mediaCid, mediaType) {
     $srli.find('.addtolist').on('click', function () {
       var listid = $("#listpicker").val();
-      var title = firetable.utilities.htmlEscape($srli.find('.listwords').text());
-      var cuteid = ftapi.actions.addToList(mediaType, title, mediaCid, listid);
-      if (!listid || listid === "0") {
-        ftapi.actions.moveTrackToTop(cuteid, ftapi.queueRef, firetable.preview, function(changePV) {
-          if (changePV) firetable.preview = changePV;
-        });
-      } else {
-        var plRef = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + listid + "/list");
-        ftapi.actions.moveTrackToTop(cuteid, plRef);
-      }
+      var title = $srli.find('.listwords').text();
+      ftapi.actions.addTrackToTop(ftapi.lookup.listRef(listid), { type: mediaType, name: title, cid: mediaCid },
+        firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
       var $fb = $srli.find('.search-feedback');
       $fb.text('added').addClass('visible');
       setTimeout(function () { $fb.removeClass('visible'); }, 2000);
     });
 
     $srli.find('.queuetrack').on('click', function () {
-      var title = firetable.utilities.htmlEscape($srli.find('.listwords').text());
+      var title = $srli.find('.listwords').text();
       firetable.actions.openStealPicker($(this), { cid: mediaCid, type: mediaType, title: title });
     });
   };
 
   // ── Track Search (Enter in #qsearch) ──
-  $("#qsearch").bind("keyup", function (e) {
+  $("#qsearch").on("keyup", function (e) {
     if (e.which !== 13) return;
-    var txt = $.trim($("#qsearch").val());
+    var txt = String($("#qsearch").val() || "").trim();
     if (!txt) return;
     var source = firetable.utilities.isSCLink(txt) ? MEDIA_SOUNDCLOUD : firetable.searchSelectsChoice;
 
@@ -204,27 +196,27 @@ firetable.ui.setupSearchEvents = function () {
   });
 
   // ── Search Source Toggle Buttons ──
-  $("#ytsearchSelect").bind("click", function () {
+  $("#ytsearchSelect").on("click", function () {
     $("#scsearchSelect").removeClass("on").attr("aria-selected", "false");
     $(this).addClass("on").attr("aria-selected", "true");
     firetable.searchSelectsChoice = MEDIA_YOUTUBE;
   });
-  $("#scsearchSelect").bind("click", function () {
+  $("#scsearchSelect").on("click", function () {
     $("#ytsearchSelect").removeClass("on").attr("aria-selected", "false");
     $(this).addClass("on").attr("aria-selected", "true");
     firetable.searchSelectsChoice = MEDIA_SOUNDCLOUD;
   });
 
   // ── Import Source Toggle Tabs ──
-  $("#ytimportchoice").bind("click", function () {
+  $("#ytimportchoice").on("click", function () {
     firetable.debug && console.log("yt import");
     firetable.importSelectsChoice = MEDIA_YOUTUBE;
   });
-  $("#scimportchoice").bind("click", function () {
+  $("#scimportchoice").on("click", function () {
     firetable.debug && console.log("sc import");
     firetable.importSelectsChoice = MEDIA_SOUNDCLOUD;
   });
-  $("#importSources .tab").bind("click", function () {
+  $("#importSources .tab").on("click", function () {
     $(this).siblings().removeClass('on');
     $(this).addClass('on');
   });
@@ -248,7 +240,7 @@ firetable.ui.setupSearchEvents = function () {
   };
 
   // ── Playlist/Import Search (#plMachine) ──
-  $("#plMachine").bind("keyup", function (e) {
+  $("#plMachine").on("keyup", function (e) {
     if (e.which !== 13) return;
     var val = $("#plMachine").val();
     if (!val) return;

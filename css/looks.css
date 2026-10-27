@@ -2163,6 +2163,7 @@ html .ui-button.ui-state-disabled:active {
     width: auto;
     max-width: 100%;
     aspect-ratio: 16 / 9;
+    overflow: hidden;
 }
 
 #scScreen,
@@ -2172,6 +2173,25 @@ html .ui-button.ui-state-disabled:active {
     left: 0;
     height: 100%;
     width: 100%;
+}
+
+/* Hide YouTube's own chrome. The player is made taller than the visible 16:9
+   frame; YouTube centres the video (adding black bars above and below), and
+   its title bar, share / logo / "more videos" row sit on those bars, which
+   the frame crops away. The video itself stays exactly the same size. */
+#playerArea {
+    --yt-crop: max(100px, 20%);
+    top: calc(-1 * var(--yt-crop));
+    height: calc(100% + 2 * var(--yt-crop));
+    /* Each new video stays invisible until it is actually playing, so the
+       thumbnail, title and big play button YouTube shows while loading never
+       flash on the stage; then it fades in. */
+    opacity: 0;
+}
+
+body.yt-revealed #playerArea {
+    opacity: 1;
+    transition: opacity 0.8s ease 0.5s;
 }
 
 #screenover {
@@ -2385,11 +2405,6 @@ ul.lightrope li {
         background: color-mix(in srgb, var(--color-accent) 40%, transparent);
         box-shadow: 0 2.333px 12px 1.5px color-mix(in srgb, var(--color-accent) 20%, transparent);
     }
-}
-
-:root {
-    /* the only thing needed is a grainy/noisy background image */
-    --glitter: url("/img/fire-noise.png");
 }
 
 #stageTopRight {
@@ -3432,12 +3447,17 @@ a.importLinkCheck {
     position: absolute;
     right: 0;
     top: 0;
+    font: inherit;
     font-size: 1rem;
+    line-height: inherit;
     padding: 0 0.25rem;
     font-weight: 400;
     background-color: #333;
+    border: 0;
+    border-radius: 0;
     cursor: pointer;
-    display: none;
+    /* hidden until hover, but still reachable with the keyboard */
+    opacity: 0;
     color: #999;
 }
 
@@ -3498,8 +3518,9 @@ a.importLinkCheck {
     background-color: var(--color-bg-t2);
 }
 
-.chatText.deleteMe:hover .modDelete {
-    display: block;
+.chatText.deleteMe:hover .modDelete,
+.modDelete:focus-visible {
+    opacity: 1;
 }
 
 .chatText a {
@@ -3844,6 +3865,12 @@ img.emoji,
         background: var(--color-text-muted);
         pointer-events: none;
     }
+}
+
+/* "Show older plays" at the bottom of Recent */
+#histMore {
+    display: flex;
+    margin: var(--pad3, 1rem) auto;
 }
 
 .hist-hour-marker {
