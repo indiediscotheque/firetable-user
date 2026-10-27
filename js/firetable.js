@@ -826,19 +826,26 @@ ftapi.actions = {
     var sep = tag.indexOf(" - ");
     var theartist = sep === -1 ? tag : tag.slice(0, sep);
     var thetitle = sep === -1 ? "" : tag.slice(sep + 3);
-    var updates = {};
-    if (!list || list === "songHistory") {
-      updates["songHistory/" + histID + "/artist"] = theartist;
-      updates["songHistory/" + histID + "/title"] = thetitle;
-    }
-    updates["globalTracks/" + type + cid + "/artist"] = theartist;
-    updates["globalTracks/" + type + cid + "/title"] = thetitle;
-    ftapi.db().ref().update(updates, function(error) {
-      if (error) {
-        console.error("[firetable] tag edit failed:", error);
-      } else {
-        ftapi.events.emit("editedHistory", { histID: histID, artist: theartist, title: thetitle, list: list || "songHistory" });
+    var isHistory = !list || list === "songHistory";
+    // The bot keeps only the latest plays; writing to a play it has already
+    // removed would create a bogus entry in Recent (#147), so check first.
+    var exists = isHistory && histID
+      ? ftapi.db().ref("songHistory/" + histID + "/cid").once("value").then(function(snap) { return snap.exists(); })
+      : Promise.resolve(false);
+    exists.then(function(inHistory) {
+      var updates = {};
+      if (inHistory) {
+        updates["songHistory/" + histID + "/artist"] = theartist;
+        updates["songHistory/" + histID + "/title"] = thetitle;
       }
+      updates["globalTracks/" + type + cid + "/artist"] = theartist;
+      updates["globalTracks/" + type + cid + "/title"] = thetitle;
+      return ftapi.db().ref().update(updates);
+    }).then(function() {
+      ftapi.events.emit("editedHistory", { histID: histID, artist: theartist, title: thetitle, list: list || "songHistory" });
+      if (callback) callback(null);
+    }, function(error) {
+      console.error("[firetable] tag edit failed:", error);
       if (callback) callback(error);
     });
   }
