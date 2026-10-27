@@ -265,7 +265,10 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     // ── Start playing the preview from the beginning ──
     if (type == MEDIA_YOUTUBE) {
       if (firetable.scLoaded) firetable.scwidget.pause();
-      if (!firetable.disableMediaPlayback) player.loadVideoById(cid, 0, "large");
+      if (!firetable.disableMediaPlayback) {
+        firetable.media.videoLoading();
+        player.loadVideoById(cid, 0, "large");
+      }
     } else if (type == MEDIA_SOUNDCLOUD) {
       if (firetable.ytLoaded) player.stopVideo();
       firetable.scSeek = 0;
@@ -307,6 +310,8 @@ firetable.media = {
   directTap: false,
   /** @type {boolean}  Screen was lowered only so the user could tap YouTube's play button */
   forcedScreen: false,
+  /** @type {boolean}  The loaded video has started playing, so it may be shown (see yt-revealed in CSS) */
+  revealed: false,
   STALL_MS: 1500,
   _stallTimer: null,
   _tapTimer: null,
@@ -320,6 +325,7 @@ firetable.media = {
     var m = firetable.media;
     m.ytState = state;
     clearTimeout(m._stallTimer);
+    if (state === 1) m.revealed = true; // first real playback → fade the video in
     if (m._isPlaying(state)) {
       m.ytError = false;
       m.directTap = false;
@@ -340,12 +346,19 @@ firetable.media = {
     firetable.media.refresh();
   },
 
+  /** A new YouTube video is being loaded: hide it until it plays. */
+  videoLoading: function () {
+    firetable.media.revealed = false;
+    firetable.media.refresh();
+  },
+
   /** A new room song started: forget the old player state. */
   songChanged: function () {
     var m = firetable.media;
     clearTimeout(m._stallTimer);
     m.ytState = null;
     m.ytError = false;
+    m.revealed = false; // hide the video again until the new one is playing
     m.refresh();
   },
 
@@ -361,6 +374,8 @@ firetable.media = {
     var blocked = stalled && !firetable.preview && !firetable.disableMediaPlayback &&
       !m.ytError && (s === -1 || s === 2 || s === 5); // UNSTARTED, PAUSED, CUED
     document.body.classList.toggle('yt-stalled', stalled);
+    // Video fades in once it plays (or when the user must tap YouTube's own button)
+    document.body.classList.toggle('yt-revealed', !!(m.revealed || m.directTap));
     document.body.classList.toggle('media-blocked', blocked);
   },
 

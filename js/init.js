@@ -91,7 +91,8 @@ firetable.init = function () {
     var $screenFrame = $('#screenFrame');
     var frameW = $screenFrame.outerWidth() || $('#djStage').outerWidth();
     var frameH = $screenFrame.outerHeight() || $('#djStage').outerHeight();
-    $('#playerArea, #scScreen')
+    // (the YouTube player is sized in CSS, taller than the frame, to crop its chrome)
+    $('#scScreen')
       .width(frameW)
       .height(frameH);
     setup(); // Re-create the p5.js canvas at the new size
