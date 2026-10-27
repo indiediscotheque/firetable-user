@@ -1554,6 +1554,9 @@ firetable.ui.init = function () {
   // Check for Last.fm auth token / setup scrobble link
   firetable.ui.checkLastfmToken();
 
+  // Volume slider + mute button (independent of which player loads first)
+  firetable.ui.initVolume();
+
   // Initialize all event groups
   firetable.ui.setupChatEvents();
   firetable.ui.setupSearchEvents();
