@@ -3447,12 +3447,17 @@ a.importLinkCheck {
     position: absolute;
     right: 0;
     top: 0;
+    font: inherit;
     font-size: 1rem;
+    line-height: inherit;
     padding: 0 0.25rem;
     font-weight: 400;
     background-color: #333;
+    border: 0;
+    border-radius: 0;
     cursor: pointer;
-    display: none;
+    /* hidden until hover, but still reachable with the keyboard */
+    opacity: 0;
     color: #999;
 }
 
@@ -3513,8 +3518,9 @@ a.importLinkCheck {
     background-color: var(--color-bg-t2);
 }
 
-.chatText.deleteMe:hover .modDelete {
-    display: block;
+.chatText.deleteMe:hover .modDelete,
+.modDelete:focus-visible {
+    opacity: 1;
 }
 
 .chatText a {

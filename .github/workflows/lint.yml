@@ -1,0 +1,33 @@
+# Checks every push and pull request: ESLint on the site's scripts and a PHP
+# syntax check on the SoundCloud proxy. Run the same locally with:
+#   npm ci && npm run lint && php -l api/soundcloud.php
+
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: ESLint
+        run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+
+      - name: PHP syntax
+        run: |
+          for f in api/*.php api/*.php.example; do php -l "$f"; done

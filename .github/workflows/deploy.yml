@@ -132,9 +132,41 @@ jobs:
               --exclude-glob .git/ \
               --exclude-glob .github/ \
               --exclude-glob tools/ \
+              --exclude-glob node_modules/ \
+              --exclude-glob package.json \
+              --exclude-glob package-lock.json \
+              --exclude-glob eslint.config.mjs \
               --exclude-glob .gitignore \
               --exclude-glob .DS_Store \
               --exclude-glob config.js \
               --exclude-glob soundcloud-config.php \
               --exclude-glob README.md \
               ./ \"$DEST/\""
+
+      - name: Remove files that were deleted from the repo
+        # Only files git deleted in the pushed commits (never config.js,
+        # server-only files or anything else not tracked here).
+        if: github.event_name == 'push'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "No earlier commit to compare with - nothing to remove."
+            exit 0
+          fi
+          script=$(mktemp)
+          printf 'open --env-password -u "%s" "sftp://%s"\n' "$SFTP_USER" "$HOST" > "$script"
+          count=0
+          while IFS= read -r -d '' f; do
+            case "$f" in
+              config.js|api/soundcloud-config.php|.htaccess|README.md|.gitignore|.github/*|tools/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
+            esac
+            printf 'rm -f "%s/%s"\n' "$DEST" "$f" >> "$script"
+            echo "Removing $f"
+            count=$((count + 1))
+          done < <(git diff --name-only --diff-filter=D -z "$BEFORE" HEAD)
+          if [ "$count" -eq 0 ]; then
+            echo "Nothing to remove."
+            exit 0
+          fi
+          lftp -f "$script"

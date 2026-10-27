@@ -151,8 +151,7 @@ firetable.actions.loggedIn = function (user) {
     $("#djlistpicker").html('<option value="0">Default Playlist</option>');
     for (var key in allPlaylists) {
       if (allPlaylists.hasOwnProperty(key)) {
-        $("#listpicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name, 'pdopt' + key));
-        $("#djlistpicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
+        firetable.utilities.addPlaylistToPickers(key, allPlaylists[key].name);
       }
     }
 
@@ -174,11 +173,7 @@ firetable.actions.loggedIn = function (user) {
         var val = $("#listpicker").val();
         $("#plDeleteLauncher").prop("disabled", !val || val === "0");
         // Switch the view/edit list (does not affect DJ queue)
-        $("#mainqueuestuff, #filterMachine").css("display", "block");
-        $("#searchMachine").css("display", "none");
-        $("#addbox").css("display", "none");
-        $("#cancelqsearch").hide();
-        $("#qControlButtons").show();
+        firetable.ui.showQueuePanel();
         $("#plmanager").css("display", "none");
         $("#listpickerWrap").show();
         $("#plAddLauncher i").text("add");
@@ -253,24 +248,24 @@ firetable.actions.unban = function (userid) {
  */
 firetable.ui.loginEventsInit = function () {
   // Tab switching
-  $("#resetpass").bind("click", function () {
+  $("#resetpass").on("click", function () {
     $("#logscreen, #createscreen").css("display", "none");
     $("#resetscreen").css("display", "block");
     firetable.ui.loginLinkToggle(this.id);
   });
-  $("#loginlink").bind("click", function () {
+  $("#loginlink").on("click", function () {
     $("#logscreen").css("display", "block");
     $("#createscreen, #resetscreen").css("display", "none");
     firetable.ui.loginLinkToggle(this.id);
   });
-  $("#signuplink").bind("click", function () {
+  $("#signuplink").on("click", function () {
     $("#createscreen").css("display", "block");
     $("#logscreen, #resetscreen").css("display", "none");
     firetable.ui.loginLinkToggle(this.id);
   });
 
   // Login via Enter
-  $("#loginpass").bind("keyup", function (e) {
+  $("#loginpass").on("keyup", function (e) {
     if (e.which === 13) {
       var email = $("#loginemail").val();
       var pass = $("#loginpass").val();
@@ -281,14 +276,14 @@ firetable.ui.loginEventsInit = function () {
 
   // Signup via Enter — runs the same checks as the Create Account button
   // (including the Terms of Service checkbox)
-  $("#newpass2").bind("keyup", function (e) {
+  $("#newpass2").on("keyup", function (e) {
     if (e.which === 13) {
       $("#createAccountBttn").trigger("click");
     }
   });
 
   // Password reset via Enter
-  $("#theAddress").bind("keyup", function (e) {
+  $("#theAddress").on("keyup", function (e) {
     if (e.which === 13) {
       firetable.debug && console.log("reset email return");
       $("#resetPassBttn").trigger("click");
@@ -296,7 +291,7 @@ firetable.ui.loginEventsInit = function () {
   });
 
   // Create Account button
-  $("#createAccountBttn").bind("click", function () {
+  $("#createAccountBttn").on("click", function () {
     var email = $("#newemail").val();
     var pass = $("#newpass").val();
     var pass2 = $("#newpass2").val();
@@ -312,7 +307,7 @@ firetable.ui.loginEventsInit = function () {
   });
 
   // Reset Password button
-  $("#resetPassBttn").bind("click", function () {
+  $("#resetPassBttn").on("click", function () {
     var email = $("#theAddress").val();
     firetable.debug && console.log("reset email click button");
     // Success shows right away; a real error (bad address, rate limit,
@@ -327,7 +322,7 @@ firetable.ui.loginEventsInit = function () {
   });
 
   // Login button
-  $("#loginBttn").bind("click", function () {
+  $("#loginBttn").on("click", function () {
     var email = $("#loginemail").val();
     var pass = $("#loginpass").val();
     $("#loginemail, #loginpass").val("");
@@ -363,13 +358,6 @@ firetable.ui.loginLinkToggle = function (id) {
  */
 function buildUserHTML(data) {
   var blockcon = data.blocked ? "block" : "";
-  var herecon = "lens";
-  var isIdle = "";
-
-  if (data.idle) {
-    if (data.idle.isIdle && !data.hostbot) isIdle = "idle";
-    if (data.idle.audio === 2) herecon = "label_important";
-  }
 
   if (!data.username) data.username = data.userid;
   var roleicon = "person";
@@ -378,7 +366,7 @@ function buildUserHTML(data) {
   if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; }
   if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; }
 
-  return '<div class="ft-avatar" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username, null, firetable.roomAvatarStyle || data.avatarStyle)) + ');">' +
+  return '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + firetable.utilities.htmlEscape(data.username) + ' — profile" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username, null, firetable.roomAvatarStyle || data.avatarStyle)) + ');">' +
          '<span class="material-symbols-outlined blockon">' + blockcon + '</span>' +
          '</div>' +
          '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
@@ -530,7 +518,7 @@ firetable.ui.setupUserEvents = function () {
   
 
   // ── Username change ──
-  $("#changeUsername").bind("keyup", function (e) {
+  $("#changeUsername").on("keyup", function (e) {
     if (e.which !== 13) return;
     var newDjName = $(this).val();
     $("#usernameResponse").html("");
@@ -547,24 +535,35 @@ firetable.ui.setupUserEvents = function () {
   });
 
   // ── Supermod ban search ──
-  $("#supercopSearch").bind("keyup", function (e) {
+  // Two steps: Enter looks the person up and asks; Enter again confirms.
+  var pendingSuspend = null;
+  $("#supercopSearch").on("input", function () {
+    pendingSuspend = null;
+    $("#supercopResponse").text("");
+  });
+  $("#supercopSearch").on("keyup", function (e) {
     if (e.which !== 13) return;
-    var val = $(this).val();
-    $("#supercopResponse").html("");
-    if (val) {
-      ftapi.lookup.userByName(val, function (person) {
-        if (person) {
-          if (!person.supermod) {
-            ftapi.actions.banUser(person.userid);
-            $("#supercopResponse").text(person.username + " suspended.");
-          } else {
-            $("#supercopResponse").text("Can not suspend that (or any) supermod.");
-          }
-        } else {
-          $("#supercopResponse").text(val + " not found...");
-        }
-      });
+    var val = $(this).val().trim();
+    if (!val) return;
+    if (pendingSuspend && pendingSuspend.name === val) {
+      var who = pendingSuspend;
+      pendingSuspend = null;
+      ftapi.actions.banUser(who.userid);
+      $("#supercopResponse").text(who.username + " suspended.");
+      $(this).val("");
+      return;
     }
+    $("#supercopResponse").text("");
+    ftapi.lookup.userByName(val, function (person) {
+      if (!person) {
+        $("#supercopResponse").text(val + " not found...");
+      } else if (person.supermod) {
+        $("#supercopResponse").text("Can not suspend that (or any) supermod.");
+      } else {
+        pendingSuspend = { name: val, userid: person.userid, username: person.username };
+        $("#supercopResponse").text("Suspend " + person.username + "? Press Enter again to confirm.");
+      }
+    });
   });
 };
 

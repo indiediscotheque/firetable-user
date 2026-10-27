@@ -152,6 +152,17 @@ firetable.utilities = {
     return $opt;
   },
 
+  /**
+   * Add a playlist to both pickers: the one choosing which list is shown
+   * (#listpicker) and the one choosing what the DJ plays (#djlistpicker).
+   * @param {string} listID
+   * @param {*} name
+   */
+  addPlaylistToPickers: function (listID, name) {
+    $("#listpicker").append(firetable.utilities.playlistOption(listID, name, 'pdopt' + listID));
+    $("#djlistpicker").append(firetable.utilities.playlistOption(listID, name));
+  },
+
   // ─── Song Title Parsing ──────────────────────────────────────────────────
 
   /**
@@ -454,7 +465,7 @@ firetable.utilities = {
    * @param {jQuery} element - jQuery-wrapped DOM element
    */
   chatAt: function (element) {
-    element.bind("click", function () {
+    element.on("click", function () {
       var nameToAt;
       if (element.hasClass("prson")) {
         nameToAt = $(this).find(".prsnName").text();
@@ -586,6 +597,7 @@ firetable.utilities = {
 
     if (data.type === MEDIA_YOUTUBE) {
       if (firetable.scLoaded) firetable.scwidget.pause();
+      if (!firetable.ytLoaded) return; // the YouTube player starts this song itself once it's ready
       player.setVolume(vol);
       if (!firetable.disableMediaPlayback) {
         firetable.media.videoLoading();
@@ -602,6 +614,7 @@ firetable.utilities = {
             firetable.scwidget.play();
           }
         });
+        firetable.media.watchSoundCloud();
       }
     }
   }

@@ -27,6 +27,11 @@ var ftapi = {
   blockedUsers: {}
 };
 
+/** The room's Realtime Database (the "firetable" Firebase app). */
+ftapi.db = function() {
+  return firebase.app("firetable").database();
+};
+
 /** Server clock minus this device's clock, in ms (kept current from .info/serverTimeOffset). */
 ftapi.serverTimeOffset = 0;
 
@@ -80,7 +85,7 @@ ftapi.init = function(firebaseConfig) {
 
   // Track how far this device's clock is from Firebase's, so song positions
   // and timers don't drift on devices whose clock is off.
-  firebase.app("firetable").database().ref(".info/serverTimeOffset").on("value", function(snap) {
+  ftapi.db().ref(".info/serverTimeOffset").on("value", function(snap) {
     ftapi.serverTimeOffset = Number(snap.val()) || 0;
   });
 
@@ -91,7 +96,7 @@ ftapi.init = function(firebaseConfig) {
   These will persist regardless of auth state changes
   */
   // users change event emitter
-  var ref2 = firebase.app("firetable").database().ref("users");
+  var ref2 = ftapi.db().ref("users");
   ref2.orderByChild('status').equalTo(true).on('child_added', function(dataSnapshot) {
     var okdata = dataSnapshot.val();
     okdata.userid = dataSnapshot.key;
@@ -135,14 +140,14 @@ ftapi.init = function(firebaseConfig) {
     if (ftapi.uid) {
       if (!ftapi.users[ftapi.uid]) {
         //Firebase thinks you are not here (but you are totally here!)
-        ftapi.presenceDetectRef = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/status");
+        ftapi.presenceDetectRef = ftapi.db().ref("users/" + ftapi.uid + "/status");
         ftapi.presenceDetectEvent = ftapi.presenceDetectRef.onDisconnect().set(false);
         ftapi.presenceDetectRef.set(true);
       } else {
         if (ftapi.users[ftapi.uid].supermod) {
           if (!ftapi.superCopBanUpdates) {
             //begin event listener for ban updates
-            ftapi.superCopRef = firebase.app("firetable").database().ref("banned");
+            ftapi.superCopRef = ftapi.db().ref("banned");
             ftapi.superCopBanUpdates = ftapi.superCopRef.on('value', function(dataSnapshot) {
               ftapi.events.emit("banListChanged", dataSnapshot.val());
             });
@@ -153,14 +158,14 @@ ftapi.init = function(firebaseConfig) {
   });
 
   // new song event emitter
-  var s2p = firebase.app("firetable").database().ref("songToPlay");
+  var s2p = ftapi.db().ref("songToPlay");
   s2p.on('value', function(dataSnapshot) {
     var songData = dataSnapshot.val();
     ftapi.events.emit("newSong", songData);
   });
 
   // song tag update emitter
-  var tagUpdate = firebase.app("firetable").database().ref("tagUpdate");
+  var tagUpdate = ftapi.db().ref("tagUpdate");
   tagUpdate.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
     if (!data) return;
@@ -170,7 +175,7 @@ ftapi.init = function(firebaseConfig) {
   // history emitter: the latest plays only; older ones load on request
   // (ftapi.lookup.olderHistory). Both listeners use the same limited query,
   // so the full history is never downloaded.
-  var recentz = firebase.app("firetable").database().ref("songHistory").limitToLast(HISTORY_PAGE_SIZE);
+  var recentz = ftapi.db().ref("songHistory").limitToLast(HISTORY_PAGE_SIZE);
   ftapi.historyLoaded = 0;
   recentz.on('child_added', function(dataSnapshot, prev) {
     var data = dataSnapshot.val();
@@ -187,7 +192,7 @@ ftapi.init = function(firebaseConfig) {
   });
 
   // new songs emitter
-  var freshproduce = firebase.app("firetable").database().ref("newMusic");
+  var freshproduce = ftapi.db().ref("newMusic");
   freshproduce.on('child_added', function(dataSnapshot, prev) {
     var data = dataSnapshot.val();
     data.histID = dataSnapshot.key;
@@ -196,61 +201,61 @@ ftapi.init = function(firebaseConfig) {
 
 
   // table change emitter
-  var tbl = firebase.app("firetable").database().ref("table");
+  var tbl = ftapi.db().ref("table");
   tbl.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
     ftapi.events.emit("tableChanged", data);
   });
 
   // spotlight state changed emitter
-  var pldx = firebase.app("firetable").database().ref("playdex");
+  var pldx = ftapi.db().ref("playdex");
   pldx.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
     ftapi.events.emit("spotlightStateChanged", data);
   });
 
   // playlimit change emitter
-  var plc = firebase.app("firetable").database().ref("playlimit");
+  var plc = ftapi.db().ref("playlimit");
   plc.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
     ftapi.events.emit("playLimitChanged", data);
   });
 
   // waitlist change emitter
-  var wl = firebase.app("firetable").database().ref("waitlist");
+  var wl = ftapi.db().ref("waitlist");
   wl.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
     ftapi.events.emit("waitlistChanged", data);
   });
 
   // new theme emitter
-  var themeChange = firebase.app("firetable").database().ref("theme");
+  var themeChange = ftapi.db().ref("theme");
   themeChange.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
     ftapi.events.emit("newTheme", data);
   });
 
   // dance state emitter
-  var danceCheck = firebase.app("firetable").database().ref("dance");
+  var danceCheck = ftapi.db().ref("dance");
   danceCheck.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
     ftapi.events.emit("danceStateChanged", data);
   });
 
   // festive lights emitter
-  var lightsCheck = firebase.app("firetable").database().ref("lights");
+  var lightsCheck = ftapi.db().ref("lights");
   lightsCheck.on('value', function(dataSnapshot) {
     ftapi.events.emit("lightsChanged", dataSnapshot.val());
   });
 
   // screen sync change emitter
-  var thescreen = firebase.app("firetable").database().ref("thescreen");
+  var thescreen = ftapi.db().ref("thescreen");
   thescreen.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
     ftapi.events.emit("screenStateChanged", data);
   });
 
-  var colors = firebase.app("firetable").database().ref("colors");
+  var colors = ftapi.db().ref("colors");
   colors.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
     ftapi.events.emit("colorsChanged", data);
@@ -266,10 +271,10 @@ ftapi.init = function(firebaseConfig) {
       if (user) {
         ftapi.loggedIn = true; // this stays true until the logout function is called
         ftapi.detachSession(); // in case an earlier session left anything behind
-        ftapi.connectedRef = firebase.app("firetable").database().ref('.info/connected');
+        ftapi.connectedRef = ftapi.db().ref('.info/connected');
         ftapi.connectedEvent = ftapi.connectedRef.on('value', function(snap) {
           if (snap.val() === true && ftapi.uid) {
-            ftapi.presenceDetectRef = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/status");
+            ftapi.presenceDetectRef = ftapi.db().ref("users/" + ftapi.uid + "/status");
             ftapi.presenceDetectEvent = ftapi.presenceDetectRef.onDisconnect().set(false);
             ftapi.presenceDetectRef.set(true);
           }
@@ -301,13 +306,13 @@ ftapi.init = function(firebaseConfig) {
         ftapi.actions.changeIdleStatus(false, 1);
 
         // setup ban check event emitters
-        ftapi.banRef = firebase.app("firetable").database().ref("banned/" + ftapi.uid);
+        ftapi.banRef = ftapi.db().ref("banned/" + ftapi.uid);
         ftapi.banEvent = ftapi.banRef.on('value', function(dataSnapshot) {
           var data = dataSnapshot.val();
           if (data) {
             if (!ftapi.banned) {
               ftapi.banned = true;
-              var ref0 = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/status");
+              var ref0 = ftapi.db().ref("users/" + ftapi.uid + "/status");
               ftapi.uid = null;
               ref0.set(false);
               ftapi.events.emit("userBanned");
@@ -320,7 +325,7 @@ ftapi.init = function(firebaseConfig) {
         // chat event emitter
         if (!ftapi.chatEvent) {
           // Only the latest messages; the chat shows a limited history anyway
-          var chatRef = firebase.app("firetable").database().ref("chatFeed").limitToLast(CHAT_HISTORY_LIMIT);
+          var chatRef = ftapi.db().ref("chatFeed").limitToLast(CHAT_HISTORY_LIMIT);
           var chatChain = Promise.resolve();
           ftapi.chatEvent = chatRef.on('child_added', function(childSnapshot) {
             var feedData = childSnapshot.val() || {};
@@ -348,7 +353,7 @@ ftapi.init = function(firebaseConfig) {
         if (ftapi.blockEvent) {
           ftapi.blockRef.off("value", ftapi.blockEvent);
         }
-        ftapi.blockRef = firebase.app("firetable").database().ref("blocks/" + ftapi.uid);
+        ftapi.blockRef = ftapi.db().ref("blocks/" + ftapi.uid);
         ftapi.blockEvent = ftapi.blockRef.on("value", function(snap) {
           var data = snap.val();
           if (data) {
@@ -357,19 +362,11 @@ ftapi.init = function(firebaseConfig) {
             ftapi.blockedUsers = {};
           }
           for (var key in ftapi.users) {
-            if (ftapi.blockedUsers[key]) {
-              // person is here
-              ftapi.users[key].blocked = true;
-              var changeData = ftapi.users[key];
-              changeData.userid = key;
-              ftapi.events.emit("userChanged", changeData);
-            } else {
-              if (ftapi.users[key].blocked) {
-                ftapi.users[key].blocked = false;
-                var changeData = ftapi.users[key];
-                changeData.userid = key;
-                ftapi.events.emit("userChanged", changeData);
-              }
+            var isBlocked = !!ftapi.blockedUsers[key];
+            if (isBlocked !== !!ftapi.users[key].blocked) {
+              ftapi.users[key].blocked = isBlocked;
+              ftapi.users[key].userid = key;
+              ftapi.events.emit("userChanged", ftapi.users[key]);
             }
           }
           if (ftapi.users) {
@@ -402,7 +399,7 @@ ftapi.init = function(firebaseConfig) {
         }
 
         // set join date if needed
-        var joinRef = firebase.app("firetable").database().ref("users/" + user.uid + "/joined");
+        var joinRef = ftapi.db().ref("users/" + user.uid + "/joined");
         joinRef.once('value')
           .then(function(joinsnap) {
             var data = joinsnap.val();
@@ -436,8 +433,8 @@ ftapi.actions = {
   GENERAL USER ACTIONS
   */
   sendChat: function(txt, cardid) {
-    var chatFeed = firebase.app("firetable").database().ref("chatFeed");
-    var chatData = firebase.app("firetable").database().ref("chatData");
+    var chatFeed = ftapi.db().ref("chatFeed");
+    var chatData = ftapi.db().ref("chatData");
     var data = {
       time: firebase.database.ServerValue.TIMESTAMP,
       id: ftapi.uid,
@@ -455,8 +452,8 @@ ftapi.actions = {
     });
   },
   sendBotCommand: function(txt) {
-    var chatFeed = firebase.app("firetable").database().ref("chatFeed");
-    var chatData = firebase.app("firetable").database().ref("chatData");
+    var chatFeed = ftapi.db().ref("chatFeed");
+    var chatData = ftapi.db().ref("chatData");
     var data = {
       time: firebase.database.ServerValue.TIMESTAMP,
       id: ftapi.uid,
@@ -473,12 +470,12 @@ ftapi.actions = {
   },
   // Save which playlist the DJ bot should draw from, without changing the local queue view.
   switchDjList: function(listID) {
-    var uref = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/selectedList");
+    var uref = ftapi.db().ref("users/" + ftapi.uid + "/selectedList");
     uref.set(listID);
     ftapi.selectedListThing = listID;
   },
   switchList: function(listID) {
-    var uref = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/selectedList");
+    var uref = ftapi.db().ref("users/" + ftapi.uid + "/selectedList");
     uref.set(listID);
     ftapi.selectedListThing = listID;
 
@@ -498,7 +495,7 @@ ftapi.actions = {
 
   },
   createList: function(listname) {
-    var plref = firebase.app("firetable").database().ref("playlists/" + ftapi.uid);
+    var plref = ftapi.db().ref("playlists/" + ftapi.uid);
     var newlist = plref.push();
     var listid = newlist.key;
     var obj = {
@@ -584,7 +581,7 @@ ftapi.actions = {
     removeThis.remove();
   },
   deleteList: function(listID) {
-    var removeThis = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + listID);
+    var removeThis = ftapi.db().ref("playlists/" + ftapi.uid + "/" + listID);
     removeThis.remove();
   },
   mergeLists: function(source, dest, callback) {
@@ -598,7 +595,6 @@ ftapi.actions = {
     destref.once("value")
       .then(function(snapshot2) {
         snapshot2.forEach(function(childSnapshot) {
-          var key = childSnapshot.key;
           var childData = childSnapshot.val();
           if (childData) {
             if (childData.cid) destObj[childData.cid] = childData.type;
@@ -608,7 +604,6 @@ ftapi.actions = {
           .then(function(snapshot3) {
             var writes = [];
             snapshot3.forEach(function(childSnapshot3) {
-              var key = childSnapshot3.key;
               var childData = childSnapshot3.val();
               if (childData) {
                 if (childData.cid) {
@@ -681,6 +676,7 @@ ftapi.actions = {
   blockUser: function(username, callback) {
     ftapi.lookup.userByName(username, function(data) {
       if (!data) return callback("There is no " + username);
+      var response;
       if (data.mod || data.supermod || data.hostbot) {
         response = "You can not block this person.";
       } else {
@@ -693,6 +689,7 @@ ftapi.actions = {
   unblockUser: function(username, callback) {
     ftapi.lookup.userByName(username, function(data) {
       if (!data) return callback("There is no " + username);
+      var response;
       if (ftapi.blockedUsers[data.userid]) {
         ftapi.blockRef.child(data.userid).remove();
         response = username + " has been unblocked. You will now see their chats, and they will see your chats.";
@@ -712,7 +709,7 @@ ftapi.actions = {
     var state = ftapi.uid + "|" + idle + "|" + audio;
     if (state === ftapi._lastIdleState) return;
     ftapi._lastIdleState = state;
-    var ref = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/idle");
+    var ref = ftapi.db().ref("users/" + ftapi.uid + "/idle");
     ref.set({
       isIdle: idle,
       audio: audio,
@@ -726,18 +723,18 @@ ftapi.actions = {
     var validateName = ftapi.utilities.validateUsername(newName);
     if (!validateName.valid) return callback(validateName.reason);
     // claim before we can change
-    var claimRef = firebase.app("firetable").database().ref("nameClaim/" + newName);
+    var claimRef = ftapi.db().ref("nameClaim/" + newName);
     claimRef.set(ftapi.uid, function(error) {
       if (error) return callback("This username is not available");
       // name claimed, now we can set it
-      var setRef = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/username");
+      var setRef = ftapi.db().ref("users/" + ftapi.uid + "/username");
       setRef.set(newName, function(error) {
         callback(error ? "This username is not available" : undefined);
       });
     });
   },
   logOut: function() {
-    var ref0 = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/status");
+    var ref0 = ftapi.db().ref("users/" + ftapi.uid + "/status");
     ref0.set(false);
     ftapi.detachSession();
     ftapi.uid = null;
@@ -779,23 +776,23 @@ ftapi.actions = {
   ADMIN ACTIONS
   */
   unbanUser: function(userid) {
-    var ref = firebase.app("firetable").database().ref("banned/" + userid);
+    var ref = ftapi.db().ref("banned/" + userid);
     ref.set(false);
   },
   banUser: function(userid) {
-    var ref = firebase.app("firetable").database().ref("banned/" + userid);
+    var ref = ftapi.db().ref("banned/" + userid);
     ref.set(true);
   },
   modUser: function(userid) {
-    var modp = firebase.app("firetable").database().ref("users/" + userid + "/mod");
+    var modp = ftapi.db().ref("users/" + userid + "/mod");
     modp.set(true);
   },
   unmodUser: function(userid) {
-    var modp = firebase.app("firetable").database().ref("users/" + userid + "/mod");
+    var modp = ftapi.db().ref("users/" + userid + "/mod");
     modp.set(false);
   },
   deleteChat: function(feedID) {
-    var feedEntry = firebase.app("firetable").database().ref("chatFeed/" + feedID + "/hidden");
+    var feedEntry = ftapi.db().ref("chatFeed/" + feedID + "/hidden");
     feedEntry.set(true);
   },
   /**
@@ -823,7 +820,7 @@ ftapi.actions = {
     }
     updates["globalTracks/" + type + cid + "/artist"] = theartist;
     updates["globalTracks/" + type + cid + "/title"] = thetitle;
-    firebase.app("firetable").database().ref().update(updates, function(error) {
+    ftapi.db().ref().update(updates, function(error) {
       if (error) {
         console.error("[firetable] tag edit failed:", error);
       } else {
@@ -844,7 +841,7 @@ ftapi.lookup = {
    * @param {string|number} listID
    */
   listRef: function(listID) {
-    var db = firebase.app("firetable").database();
+    var db = ftapi.db();
     return (listID === undefined || listID === null || String(listID) === "0")
       ? db.ref("queues/" + ftapi.uid)
       : db.ref("playlists/" + ftapi.uid + "/" + listID + "/list");
@@ -857,7 +854,7 @@ ftapi.lookup = {
    * @returns {Promise<Object|null>}
    */
   chatData: function(chatID, callback) {
-    var chatData = firebase.app("firetable").database().ref("chatData/" + chatID);
+    var chatData = ftapi.db().ref("chatData/" + chatID);
     return chatData.once('value')
       .then(function(snap) { return snap.val(); }, function() { return null; })
       .then(function(data) {
@@ -872,7 +869,7 @@ ftapi.lookup = {
   olderHistory: function(callback) {
     var before = ftapi.oldestHistoryKey;
     if (!before) return callback([], false);
-    firebase.app("firetable").database().ref("songHistory")
+    ftapi.db().ref("songHistory")
       .orderByKey().endBefore(before).limitToLast(HISTORY_PAGE_SIZE).once("value")
       .then(function(snap) {
         var plays = [];
@@ -890,7 +887,7 @@ ftapi.lookup = {
       });
   },
   card: function(cardid, callback) {
-    var thecard = firebase.app("firetable").database().ref("cards/" + cardid);
+    var thecard = ftapi.db().ref("cards/" + cardid);
     thecard.once('value')
       .then(function(snap) {
         var data = snap.val();
@@ -898,7 +895,7 @@ ftapi.lookup = {
       });
   },
   cardCollection: function(callback) {
-    var niceref = firebase.app("firetable").database().ref("cards");
+    var niceref = ftapi.db().ref("cards");
     niceref.orderByChild('owner').equalTo(ftapi.uid).once("value")
       .then(function(snapshot) {
         var cards = snapshot.val();
@@ -906,7 +903,7 @@ ftapi.lookup = {
       });
   },
   usernameTaken: function(name, callback) {
-    var searchByName = firebase.app("firetable").database().ref("users");
+    var searchByName = ftapi.db().ref("users");
     searchByName.orderByChild('username').equalTo(name).once("value")
       .then(function(snapshot) {
         var data = snapshot.val();
@@ -918,7 +915,7 @@ ftapi.lookup = {
       });
   },
   userByName: function(name, callback) {
-    var searchByName = firebase.app("firetable").database().ref("users");
+    var searchByName = ftapi.db().ref("users");
     var ppl = [];
     searchByName.orderByChild('username').equalTo(name).once("value")
       .then(function(snapshot) {
@@ -936,7 +933,7 @@ ftapi.lookup = {
       });
   },
   userByID: function(userid, callback) {
-    var searchByID = firebase.app("firetable").database().ref("users/" + userid);
+    var searchByID = ftapi.db().ref("users/" + userid);
     var person = null;
     searchByID.once("value")
       .then(function(snapshot2) {
@@ -951,16 +948,16 @@ ftapi.lookup = {
       });
   },
   selectedList: function(callback) {
-    var getSelect = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/selectedList");
+    var getSelect = ftapi.db().ref("users/" + ftapi.uid + "/selectedList");
     getSelect.once('value')
       .then(function(snappy) {
-        data = snappy.val();
+        var data = snappy.val();
         if (!data) data = "0";
         return callback(data);
       });
   },
   allLists: function(callback) {
-    var allQueues = firebase.app("firetable").database().ref("playlists/" + ftapi.uid);
+    var allQueues = ftapi.db().ref("playlists/" + ftapi.uid);
     allQueues.once('value')
       .then(function(allQueuesSnap) {
         var allPlaylists = allQueuesSnap.val();
@@ -1072,35 +1069,8 @@ ftapi.utilities = {
 };
 
 /*
-POLYFILL EVENT EMITTER
+EVENT EMITTER
 */
-var indexOf;
-
-if (typeof Array.prototype.indexOf === 'function') {
-  indexOf = function(haystack, needle) {
-    return haystack.indexOf(needle);
-  };
-} else {
-  indexOf = function(haystack, needle) {
-    var i = 0,
-      length = haystack.length,
-      idx = -1,
-      found = false;
-
-    while (i < length && !found) {
-      if (haystack[i] === needle) {
-        idx = i;
-        found = true;
-      }
-
-      i++;
-    }
-
-    return idx;
-  };
-};
-
-
 var EventEmitter = function() {
   this.events = {};
 };
@@ -1117,7 +1087,7 @@ EventEmitter.prototype.removeListener = function(event, listener) {
   var idx;
 
   if (typeof this.events[event] === 'object') {
-    idx = indexOf(this.events[event], listener);
+    idx = this.events[event].indexOf(listener);
 
     if (idx > -1) {
       this.events[event].splice(idx, 1);

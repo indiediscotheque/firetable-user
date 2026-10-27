@@ -84,14 +84,7 @@ firetable.actions.renderCardStats = function (data) {
   var maxTemp = null;
   var perDj = {};
 
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  var escapeHtml = firetable.utilities.htmlEscape;
 
   keys.forEach(function (key) {
     var card = data[key] || {};

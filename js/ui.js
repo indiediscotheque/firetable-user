@@ -427,69 +427,39 @@ firetable.ui.LinkGrabber = {
  */
 firetable.ui.initSettings = function () {
 
-  // ── Disable Media Playback ──
-  var disableMediaPlayback = localStorage[STORAGE.disableMedia];
-  if (typeof disableMediaPlayback == "undefined") {
-    localStorage[STORAGE.disableMedia] = false;
-    firetable.disableMediaPlayback = false;
-    $("#mediaDisableToggle").prop("checked", false);
-  } else {
-    disableMediaPlayback = JSON.parse(disableMediaPlayback);
-    firetable.disableMediaPlayback = disableMediaPlayback;
-    $("#mediaDisableToggle").prop("checked", disableMediaPlayback);
-    if (disableMediaPlayback) firetable.ui.hidePlayerControls();
+  /**
+   * Read an on/off setting. Anything other than "true"/"false" (missing, or
+   * mangled by an extension) falls back to the default and is rewritten.
+   */
+  function readSetting(key, fallback) {
+    var raw = localStorage[key];
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+    localStorage[key] = fallback;
+    return fallback;
   }
+
+  // ── Disable Media Playback ──
+  firetable.disableMediaPlayback = readSetting(STORAGE.disableMedia, false);
+  $("#mediaDisableToggle").prop("checked", firetable.disableMediaPlayback);
+  if (firetable.disableMediaPlayback) firetable.ui.hidePlayerControls();
 
   // ── Show Inline Images ──
-  var showImages = localStorage[STORAGE.showImages];
-  if (typeof showImages == "undefined") {
-    localStorage[STORAGE.showImages] = false;
-    firetable.showImages = false;
-    $("#showImagesToggle").prop("checked", false);
-  } else {
-    showImages = JSON.parse(showImages);
-    firetable.showImages = showImages;
-    $("#showImagesToggle").prop("checked", showImages);
-  }
+  firetable.showImages = readSetting(STORAGE.showImages, false);
+  $("#showImagesToggle").prop("checked", firetable.showImages);
 
   // ── Show Avatars ──
-  var showAvatars = localStorage[STORAGE.showAvatars];
-  if (typeof showAvatars == "undefined") {
-    localStorage[STORAGE.showAvatars] = true;
-    firetable.showAvatars = true;
-    $("#showAvatarsToggle").prop("checked", true);
-  } else {
-    showAvatars = JSON.parse(showAvatars);
-    firetable.showAvatars = showAvatars;
-    $("#showAvatarsToggle").prop("checked", showAvatars);
-    if (showAvatars == false) {
-      document.getElementById("actualChat").classList.add("avatarsOff");
-    }
-  }
+  firetable.showAvatars = readSetting(STORAGE.showAvatars, true);
+  $("#showAvatarsToggle").prop("checked", firetable.showAvatars);
+  if (!firetable.showAvatars) document.getElementById("actualChat").classList.add("avatarsOff");
 
   // ── Show Song Announcements ──
-  var showSongAnnouncements = localStorage[STORAGE.showSongAnnouncements];
-  if (typeof showSongAnnouncements == "undefined") {
-    localStorage[STORAGE.showSongAnnouncements] = true;
-    firetable.showSongAnnouncements = true;
-    $("#showSongAnnouncementsToggle").prop("checked", true);
-  } else {
-    showSongAnnouncements = JSON.parse(showSongAnnouncements);
-    firetable.showSongAnnouncements = showSongAnnouncements;
-    $("#showSongAnnouncementsToggle").prop("checked", showSongAnnouncements);
-  }
+  firetable.showSongAnnouncements = readSetting(STORAGE.showSongAnnouncements, true);
+  $("#showSongAnnouncementsToggle").prop("checked", firetable.showSongAnnouncements);
 
   // ── Chat Sound (Badoop) ──
-  var playBadoop = localStorage[STORAGE.badoop];
-  if (typeof playBadoop == "undefined") {
-    localStorage[STORAGE.badoop] = true;
-    firetable.playBadoop = true;
-    $("#badoopToggle").prop("checked", true);
-  } else {
-    playBadoop = JSON.parse(playBadoop);
-    firetable.playBadoop = playBadoop;
-    $("#badoopToggle").prop("checked", playBadoop);
-  }
+  firetable.playBadoop = readSetting(STORAGE.badoop, true);
+  $("#badoopToggle").prop("checked", firetable.playBadoop);
 
   // ── Desktop Notifications for Mentions ──
   // Older versions saved this setting under the key "undefined"; move it.
@@ -499,20 +469,12 @@ firetable.ui.initSettings = function () {
     localStorage[STORAGE.notifyMentions] = legacyDtnm;
   }
   if (legacyDtnm === "true" || legacyDtnm === "false") localStorage.removeItem("undefined");
-  var dtnmt = localStorage[STORAGE.notifyMentions];
-  if (typeof dtnmt == "undefined") {
-    localStorage[STORAGE.notifyMentions] = false;
-    firetable.desktopNotifyMentions = false;
-    $("#desktopNotifyMentionsToggle").prop("checked", false);
-  } else {
-    dtnmt = JSON.parse(dtnmt);
-    firetable.desktopNotifyMentions = dtnmt;
-    $("#desktopNotifyMentionsToggle").prop("checked", dtnmt);
-  }
+  firetable.desktopNotifyMentions = readSetting(STORAGE.notifyMentions, false);
+  $("#desktopNotifyMentionsToggle").prop("checked", firetable.desktopNotifyMentions);
 
   // ── Screen Control (on/off/sync) ──
   var screenControl = localStorage[STORAGE.screenControl];
-  if (typeof screenControl == "undefined") {
+  if (["sync", "on", "off"].indexOf(screenControl) === -1) {
     localStorage[STORAGE.screenControl] = "sync";
     firetable.screenControl = "sync";
   } else {
@@ -918,7 +880,6 @@ firetable.ui.tooltip = (function () {
 
     // ── User list: rich user info tooltip on .prson hover ──
     var userTipEl = document.getElementById('ft-user-tip');
-    var userTipArrowEl = document.getElementById('ft-user-tip-arrow');
     var userTipTooltipEl = document.getElementById('ft-user-tip-tooltip');
     var $userTip  = $(userTipEl);
     var _cardCountCache = {};
@@ -1113,7 +1074,7 @@ firetable.ui.tooltip = (function () {
       if (_cardCountCache.hasOwnProperty(userid)) {
         $userTip.find('.utt-cards-val').text(_cardCountCache[userid]);
       } else {
-        firebase.app("firetable").database().ref("cards")
+        ftapi.db().ref("cards")
           .orderByChild('owner').equalTo(userid)
           .once("value")
           .then(function (snap) {
@@ -1203,20 +1164,20 @@ firetable.ui.setupMiscEvents = function () {
   firetable.ui.tooltip.bind();
 
   // ── Mini mode discover/login tabs (pre-login only) ──
-  $("#minidiscover").bind("click", function () {
+  $("#minidiscover").on("click", function () {
     firetable.nav.setView('discover');
   });
-  $("#minijoin").bind("click", function () {
+  $("#minijoin").on("click", function () {
     firetable.nav.setView('playlists');
   });
 
   // ── Mini-mode tabs ──
-  $("#minimodeoptions .tab").bind("click", function () {
+  $("#minimodeoptions .tab").on("click", function () {
     firetable.nav.setMobileTab($(this).attr('id'));
   });
 
   // ── Side-panel tabs (Chat / People at 640px+) ──
-  $("#sidepanel-tabs .tab").bind("click", function () {
+  $("#sidepanel-tabs .tab").on("click", function () {
     var id = $(this).attr('id');
     if (id === 'sp-chat') firetable.nav.setSide('chat');
     else if (id === 'sp-people') firetable.nav.setSide('people');
@@ -1231,7 +1192,7 @@ firetable.ui.setupMiscEvents = function () {
   });
 
   // ── Grab (steal to another playlist) ──
-  $("#grab").bind("click", function () {
+  $("#grab").on("click", function () {
     var isHidden = $("#stealContain").is(":hidden");
     if (isHidden) {
       ftapi.lookup.allLists(function (allPlaylists) {
@@ -1343,15 +1304,15 @@ firetable.ui.setupMiscEvents = function () {
   });
 
   // ── Reload Track ──
-  $("#reloadtrack").bind("click", firetable.actions.reloadtrack);
+  $("#reloadtrack").on("click", firetable.actions.reloadtrack);
 
   // ── Volume ──
-  $("#volstatus").bind("click", function () {
+  $("#volstatus").on("click", function () {
     firetable.actions.muteToggle();
   });
 
   // ── Modals ──
-  $(".openModal").bind("click", function () {
+  $(".openModal").on("click", function () {
     var modalContentID = $(this).attr('data-modal');
     var targetTab = $(this).attr('data-tab');
     document.getElementById(modalContentID).showModal();
@@ -1371,7 +1332,7 @@ firetable.ui.setupMiscEvents = function () {
     $('#accountSettingsBox .tabPanel').removeClass('active');
     $('#' + targetTab).addClass('active');
   });
-  $(".closeModal").bind("click", function () {
+  $(".closeModal").on("click", function () {
     var dlg = $(this).closest("dialog")[0];
     if (dlg) dlg.close();
     $("#plMachine").val("");
@@ -1402,7 +1363,7 @@ firetable.ui.setupMiscEvents = function () {
       firetable.emojis.sec($(this)[0].id);
     } catch (s) { /* ignore */ }
   });
-  $("#pickEmoji").bind("click", function () {
+  $("#pickEmoji").on("click", function () {
     if ($("#emojiPicker").is(":hidden")) {
       $(this).addClass('on');
       $("#emojiPicker").slideDown(function () {
@@ -1540,7 +1501,7 @@ firetable.ui.setupMiscEvents = function () {
     var val = $(this).val();
     firetable.avatarStyle = val;
     localStorage[STORAGE.avatarStyle] = val;
-    firebase.app("firetable").database().ref("users/" + ftapi.uid + "/avatarStyle").set(val)
+    ftapi.db().ref("users/" + ftapi.uid + "/avatarStyle").set(val)
       .catch(function (err) { console.error("[firetable] Avatar style save failed:", err); });
     $("#loggedInUser .ft-avatar").css("background-image",
       "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname, null, firetable.roomAvatarStyle || val) + ")");
