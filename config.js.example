@@ -21,6 +21,7 @@ var ftconfigs = {
                  // Robohash: "set1" robots, "set2" monsters, "set3" robot heads, "set4" cats
                  // (or any "dicebear:<style>", e.g. "dicebear:bottts").
   // avatarSeasons: [{ months: [10], style: "set2" }], // optional: replace the built-in seasonal themes (months 1-12), or false to turn them off
+  // lightsMonths: [12], // optional: months (1-12) the stage string lights turn on by themselves, or false to turn off. The manual Firebase "lights" switch still works any month.
    firebase:{ // put the info from your Firebase app here. can be found in the Firebase console
     apiKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     authDomain: "xxxxxxxxxxxxxxxxx.firebaseapp.com",

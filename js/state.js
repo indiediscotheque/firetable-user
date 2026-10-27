@@ -68,8 +68,10 @@ var firetable = {
   showImages: false,
   /** @type {string}  Screen control mode: "sync" | "on" | "off" */
   screenControl: "sync",
-  /** @type {boolean}  Are festive lights enabled? */
+  /** @type {boolean}  Are festive lights showing? (manual switch OR season) */
   lights: false,
+  /** @type {boolean}  Manual "lights" switch from Firebase */
+  lightsManual: false,
   /** @type {boolean}  Server-side screen-up/down position (used when screenControl == "sync") */
   screenSyncPos: false,
   /** @type {boolean}  Should media playback be completely disabled? */
@@ -173,7 +175,7 @@ var firetable = {
 };
 
 // ─── Version ─────────────────────────────────────────────────────────────────
-firetable.version = "01.11.03";
+firetable.version = "01.11.04";
 
 // ─── Chat Scroll Container ──────────────────────────────────────────────────
 /** Native scroll container wrapper preserving the legacy chatScroll API shape. */
