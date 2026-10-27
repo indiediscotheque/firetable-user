@@ -2163,7 +2163,6 @@ html .ui-button.ui-state-disabled:active {
     width: auto;
     max-width: 100%;
     aspect-ratio: 16 / 9;
-    overflow: hidden;
 }
 
 #scScreen,
@@ -2175,23 +2174,18 @@ html .ui-button.ui-state-disabled:active {
     width: 100%;
 }
 
-/* Hide YouTube's own chrome. The player is made taller than the visible 16:9
-   frame; YouTube centres the video (adding black bars above and below), and
-   its title bar, share / logo / "more videos" row sit on those bars, which
-   the frame crops away. The video itself stays exactly the same size. */
+/* YouTube shows its own title bar, share buttons and logo for a few seconds
+   whenever a video starts or resumes. The player (sized exactly like the
+   screen, so videos and cover art scale as they always have) stays hidden
+   until the video has been playing long enough for those to go away, then
+   fades in. player.js sets body.yt-revealed. */
 #playerArea {
-    --yt-crop: max(100px, 20%);
-    top: calc(-1 * var(--yt-crop));
-    height: calc(100% + 2 * var(--yt-crop));
-    /* Each new video stays invisible until it is actually playing, so the
-       thumbnail, title and big play button YouTube shows while loading never
-       flash on the stage; then it fades in. */
     opacity: 0;
 }
 
 body.yt-revealed #playerArea {
     opacity: 1;
-    transition: opacity 0.8s ease 0.5s;
+    transition: opacity 0.8s ease;
 }
 
 #screenover {
