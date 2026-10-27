@@ -680,6 +680,7 @@ firetable.actions.importList = function (id, name, type) {
 firetable.actions.editTagsPrompt = function (songid, tag, anchorEl) {
   var popoverEl = document.getElementById('tagEditorPopover');
   if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
+  firetable.tagEditNowPlaying = null;
   $('.pvbar.editing').removeClass('editing');
   var $pvbar = $('.pvbar[data-key="' + songid + '"]').first();
   $pvbar.addClass('editing');
@@ -1224,6 +1225,22 @@ firetable.ui.setupPlaylistEvents = function () {
   // ── Tag editing (Enter in .tagMachine) ──
   $(document).on("keyup", ".tagMachine", function (e) {
     if (e.which !== 13) return;
+    var np = firetable.tagEditNowPlaying;
+    if (np) {
+      var tag = String($(this).val() || "").trim();
+      if (tag.indexOf(" - ") < 1 || tag.indexOf(" - ") > tag.length - 4) {
+        firetable.ui.toast("Check yr tags: use Artist - Song Title.", "error");
+        return;
+      }
+      if (firetable.song && String(firetable.song.cid) === String(np.cid)) {
+        ftapi.actions.sendBotCommand("!fixtags " + tag);
+        firetable.ui.toast("Tags sent: " + tag, "success");
+      } else {
+        firetable.ui.toast("That song has ended. Fix it from Recent instead.", "error");
+      }
+      document.getElementById('tagEditorPopover').hidePopover();
+      return;
+    }
     var $pvbar = firetable.editingPvbar;
     if (!$pvbar || !$pvbar.length) return;
     var val = $(this).val();
@@ -1249,6 +1266,7 @@ firetable.ui.setupPlaylistEvents = function () {
 
   // ── Tag editor popover cleanup on auto-dismiss ──
   document.getElementById('tagEditorPopover').addEventListener('toggle', function (e) {
+    if (e.newState === 'closed') firetable.tagEditNowPlaying = null;
     if (e.newState === 'closed' && firetable.editingPvbar) {
       firetable.editingPvbar.removeClass('editing');
       firetable.editingPvbar = null;

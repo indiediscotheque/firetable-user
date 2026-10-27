@@ -615,6 +615,25 @@ firetable.ui.setupRoomEvents = function () {
   // ── Mod Check (show edit buttons for mods) ──
   ftapi.events.on('modCheck', function (data) {
     if (data) $(".edittags").show();
+    $("body").toggleClass("is-mod", !!data);
+  });
+  ftapi.events.on('loggedOut', function () { $("body").removeClass("is-mod"); });
+
+  // ── Fix the tags of the song playing now (mods, #136) ──
+  // Same editor as Recent rows; saving sends the bot's !fixtags, which
+  // corrects the global tags and what everyone sees right away.
+  $("#npFixTags").on("click", function () {
+    var popoverEl = document.getElementById('tagEditorPopover');
+    if (popoverEl.matches(':popover-open') && firetable.tagEditNowPlaying) { popoverEl.hidePopover(); return; }
+    if (!firetable.song || firetable.song.cid == 0) return;
+    if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
+    firetable.tagEditNowPlaying = { cid: firetable.song.cid, type: firetable.song.type };
+    $(popoverEl).find('.tagMachine').val(firetable.ui.strip(firetable.song.artist + " - " + firetable.song.title));
+    popoverEl.style.visibility = 'hidden';
+    popoverEl.showPopover();
+    firetable.ui.positionPopover(this, popoverEl, document.getElementById('tagEditorArrow'), 'bottom').then(function () {
+      $(popoverEl).find('.tagMachine')[0].focus();
+    });
   });
 
   // ── Theme ──

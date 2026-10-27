@@ -5584,3 +5584,27 @@ body.media-off .q-art.no-art {
 }
 #mainGrid.login #djlistOpen,
 #mainGrid.pre-auth #djlistOpen { display: none; }
+
+/* Mods: fix the tags of the song playing now (#136) */
+.npFixTags {
+    display: none;
+    align-self: flex-start;
+    align-items: center;
+    gap: 0.2rem;
+    margin-top: var(--pad1);
+    padding: 0.1rem 0.45rem 0.1rem 0.3rem;
+    font: inherit;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(0, 0, 0, 0.3);
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+}
+.npFixTags [class*="material-symbols-"] { font-size: 0.85rem; }
+body.is-mod .npFixTags { display: inline-flex; }
+@media (hover: hover) {
+    body.is-mod .npFixTags { opacity: 0; transition: opacity 150ms ease; }
+    body.is-mod #nowplaying:hover .npFixTags,
+    body.is-mod .npFixTags:focus-visible { opacity: 1; }
+}
