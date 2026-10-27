@@ -3059,6 +3059,9 @@ input.ft-filter {
 }
 
 a.importLinkCheck {
+    display: inline-flex;
+    margin-left: var(--pad2);
+    font-size: 1.1rem;
     color: var(--color-text-light);
     line-height: 0;
 }
@@ -5457,4 +5460,12 @@ body.media-off .q-art.no-art {
     background-size: 70%;
     background-repeat: no-repeat;
     opacity: .6;
+}
+
+/* Platform logo in the ⋮ track menu's "Open on YouTube / SoundCloud" item */
+.ft-menu-open-logo {
+    display: inline-flex;
+    font-size: 1.2rem;
+    width: 1.5rem;
+    justify-content: center;
 }

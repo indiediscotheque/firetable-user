@@ -434,7 +434,12 @@ ftapi.actions = {
   /*
   GENERAL USER ACTIONS
   */
-  sendChat: function(txt, cardid) {
+  /**
+   * @param {string} txt
+   * @param {string} [cardid] - Trading card shared with the message
+   * @param {Object} [extra] - More fields to save with it (e.g. forSong)
+   */
+  sendChat: function(txt, cardid, extra) {
     var chatFeed = ftapi.db().ref("chatFeed");
     var chatData = ftapi.db().ref("chatData");
     var data = {
@@ -444,6 +449,11 @@ ftapi.actions = {
       name: ftapi.uname
     };
     if (cardid) data.card = cardid;
+    if (extra) {
+      for (var k in extra) {
+        if (extra.hasOwnProperty(k) && extra[k] !== undefined && extra[k] !== null) data[k] = extra[k];
+      }
+    }
     var chatItem = chatData.push(data, function() {
       var feedObj = {
         chatID: chatItem.key

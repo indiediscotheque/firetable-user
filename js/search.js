@@ -229,7 +229,11 @@ firetable.ui.setupSearchEvents = function () {
   var appendImportResult = function (label, href, listID, importName, type) {
     var $row = $('<div class="importResult"></div>');
     $('<div class="imtxt"></div>').text(firetable.ui.strip(label)).appendTo($row);
-    var $link = $('<a target="_blank" class="importLinkCheck"><i class="material-symbols-filled">&#xE250;</i></a>');
+    // Platform logo, like every other link to YouTube / SoundCloud
+    var platform = type === MEDIA_SOUNDCLOUD ? 'SoundCloud' : 'YouTube';
+    var $link = $('<a target="_blank" rel="noopener" class="importLinkCheck"></a>')
+      .attr({ title: 'Open on ' + platform, 'aria-label': 'Open on ' + platform })
+      .html(type === MEDIA_SOUNDCLOUD ? SC_LOGO_SVG : YT_LOGO_SVG);
     if (/^https:\/\//i.test(href || '')) $link.attr('href', href);
     $row.append($link).append(' ');
     $('<i role="button" class="material-symbols-filled" title="Import">&#xE02E;</i>')

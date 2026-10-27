@@ -51,6 +51,21 @@ firetable.actions.updateFireReactionDisplay = function () {
   }
 };
 
+/** Is this chat text a 🔥 / 🌧 reaction? */
+firetable.actions.isReactionText = function (txt) {
+  return txt === ":fire:" || txt === "🔥" || txt === ":cloud_with_rain:" || txt === "🌧" || txt === ":fire_off:";
+};
+
+/**
+ * Send a 🔥 / 🌧 reaction stamped with the song it's for, so one sent just
+ * before a song ends doesn't count towards the next song (#90).
+ * @param {string} txt
+ */
+firetable.actions.sendReaction = function (txt) {
+  var started = firetable.song && firetable.song.cid != 0 && firetable.song.started;
+  ftapi.actions.sendChat(txt, null, started ? { forSong: started } : null);
+};
+
 firetable.actions.processFireReactionMessage = function (chatData) {
   var rawTxt = firetable.ui.strip(chatData.txt || "");
   var isFire = rawTxt === ":fire:" || rawTxt === "🔥";
@@ -65,6 +80,10 @@ firetable.actions.processFireReactionMessage = function (chatData) {
   }
 
   if (chatData.time < firetable.song.started) {
+    return true;
+  }
+  // Sent for another song (it arrived after the song changed)
+  if (chatData.forSong && chatData.forSong !== firetable.song.started) {
     return true;
   }
 
@@ -510,12 +529,12 @@ firetable.ui.setupChatEvents = function () {
             }
             break;
           case "hot":
-            ftapi.actions.sendChat(":fire:");
+            firetable.actions.sendReaction(":fire:");
             $("#cloud_with_rain").removeClass("on");
             $("#fire").addClass("on");
             break;
           case "storm":
-            ftapi.actions.sendChat(":cloud_with_rain:");
+            firetable.actions.sendReaction(":cloud_with_rain:");
             $("#cloud_with_rain").addClass("on");
             $("#fire").removeClass("on");
             break;
@@ -530,8 +549,9 @@ firetable.ui.setupChatEvents = function () {
             break;
         }
       } else {
-        // Regular chat message
-        ftapi.actions.sendChat(txt);
+        // Regular chat message (🔥 / 🌧 typed on their own are reactions)
+        if (firetable.actions.isReactionText(txt)) firetable.actions.sendReaction(txt);
+        else ftapi.actions.sendChat(txt);
       }
 
       $("#newchat").val("").trigger('input');
@@ -680,15 +700,15 @@ firetable.ui.setupChatEvents = function () {
   // ── Fire / Rain reaction buttons ──
   $("#fire").on("click", function () {
     if (ftapi.uid && firetable.fireReactors[ftapi.uid]) {
-      ftapi.actions.sendChat(":cloud_with_rain:");
+      firetable.actions.sendReaction(":cloud_with_rain:");
       $("#cloud_with_rain").addClass("on");
       $("#fire").removeClass("on");
     } else {
-      ftapi.actions.sendChat(":fire:");
+      firetable.actions.sendReaction(":fire:");
     }
   });
   $("#cloud_with_rain").on("click", function () {
-    ftapi.actions.sendChat(":cloud_with_rain:");
+    firetable.actions.sendReaction(":cloud_with_rain:");
     $("#cloud_with_rain").addClass("on");
     $("#fire").removeClass("on");
   });

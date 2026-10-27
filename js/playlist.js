@@ -855,6 +855,7 @@ firetable.ui.setupPlaylistEvents = function () {
     var $menu = $(trackMenuEl);
     $menu.find('[data-act="open"]').attr('href', $link.attr('href') || '#');
     $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
+    $menu.find('.ft-menu-open-logo').html($link.find('svg').prop('outerHTML') || '');
     $(btn).addClass('on').attr('aria-expanded', 'true');
     trackMenuEl.style.visibility = 'hidden';
     trackMenuEl.showPopover();
