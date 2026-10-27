@@ -175,8 +175,11 @@ jobs:
             echo "Dry run: api/lastfm-config.php would be written."
             exit 0
           fi
-          remote "mkdir -p \"$DEST/api\""
-          remote "put \"$work/new\" -o \"$target\"; chmod 600 \"$target\""
+          # api/ already exists after the first deploy; SFTP's mkdir fails then, so ignore it
+          remote "mkdir -p \"$DEST/api\"" >/dev/null 2>&1 || true
+          remote "put \"$work/new\" -o \"$target\""
+          remote "chmod 600 \"$target\"" >/dev/null 2>&1 \
+            || echo "::warning::Couldn't make api/lastfm-config.php owner-only; api/.htaccess still keeps it off the web."
           echo "api/lastfm-config.php written."
 
       - name: Upload changed files
