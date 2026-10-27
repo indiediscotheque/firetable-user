@@ -1,0 +1,31 @@
+<?php
+/*
+ * Settings for api/lastfm.php (Last.fm scrobbling).
+ *
+ * 1.) copy this file to lastfm-config.php (same folder)
+ * 2.) fill in your Last.fm API account's key and shared secret
+ *     (https://www.last.fm/api/accounts)
+ *
+ * Or skip this file: set the LASTFM_API_KEY and LASTFM_SECRET repository
+ * secrets on GitHub and the deploy writes lastfm-config.php for you.
+ *
+ * lastfm-config.php is git-ignored and only ever lives on the server. Env vars
+ * LASTFM_API_KEY and LASTFM_SECRET work too and take priority.
+ */
+return [
+    'api_key' => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    'secret'  => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+
+    // Optional. Other sites allowed to use this proxy, e.g. when it lives on a
+    // different host than firetable (see lastfmProxyURL in config.js).
+    // Requests from any other website are refused.
+    // 'allowed_origins' => ['https://example.com'],
+
+    // Optional. Calls allowed per visitor IP address: [requests, seconds].
+    // Default [60, 600]. false turns it off.
+    // 'rate_limit' => [60, 600],
+
+    // Optional. Private folder for the rate limit counters. Default: a folder
+    // in the system temp directory that only this account can read.
+    // 'cache_dir' => '/home/youruser/.firetable-cache',
+];

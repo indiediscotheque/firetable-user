@@ -20,13 +20,27 @@ SoundCloud's API only accepts OAuth requests, which need your app's client secre
 
 Without it, pasted soundcloud.com links and playlist imports still work through the legacy resolver; keyword search shows a message asking for a link.
 
+## last.fm scrobbling
+Last.fm signs every scrobble with your API account's shared secret, so the browser never gets it: `api/lastfm.php` (PHP 8.1+ with cURL) adds the API key, signs the call and relays Last.fm's answer. It only signs connecting an account, now playing, scrobbles and loves.
+- easiest: add repository secrets `LASTFM_API_KEY` and `LASTFM_SECRET` (Settings → Secrets and variables → Actions) with the values from https://www.last.fm/api/accounts. The deploy writes `api/lastfm-config.php` on the server from them, readable only by your account, and checks the proxy answers afterwards
+- or by hand: copy `api/lastfm-config.php.example` to `api/lastfm-config.php` on the server and fill it in (or set the `LASTFM_API_KEY` / `LASTFM_SECRET` environment variables). The deploy leaves a hand-made file alone
+- the file is git-ignored, so the secret never enters git
+- same caller check as the SoundCloud proxy; each visitor IP gets 60 calls per 10 minutes by default (`rate_limit`)
+
+Without it, the "Set up Last.fm scrobbling" link and scrobbling stop working; nothing else is affected.
+
+Both proxies share `api/common.php` (config loading, caller check, rate limit, HTTP); `api/.htaccess` keeps it and the config files from being served.
+
+## hostbot
+Works with the original bot ([mxew/firetable-hostbot](https://github.com/mxew/firetable-hostbot)): the site only uses bot commands and database paths it already has. A few extras need [indiediscotheque/firetable-hostbot](https://github.com/indiediscotheque/firetable-hostbot): `!lights` / `!lightson` / `!lightsoff` outside the lights months, seasonal trading-card avatars, and timing stamped with the database clock (with the original bot, song positions follow the bot server's clock).
+
 ## checks
 `npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every push and pull request. None of these tooling files are deployed.
 
 ## security headers
 `.htaccess` sends a Content Security Policy plus the usual hardening headers (no framing by other sites, HSTS, nosniff, referrer and permissions policies). The policy allows no inline scripts or event handlers, so add new behavior in the `js/` files with `addEventListener` / jQuery `.on()`, not `onclick="…"`. If you load something from a new host, add it to the matching directive in `.htaccess`.
 
-The deploy uploads `.htaccess` only when the server has none or its copy contains `# firetable-managed`; a hand-made one is left alone (the run shows a warning).
+The deploy never overwrites the server's `.htaccess`: it puts this file inside a `# BEGIN firetable` … `# END firetable` block at the top and keeps every other rule (DreamHost's, redirects, anything added by hand). The previous copy is saved as `.htaccess.firetable-previous`. If the site answers with a server error afterwards, the old file is restored and the run fails. Set the repository variable `SITE_URL` if the site's address isn't the last part of `DREAMHOST_PATH`.
 
 ## third-party libraries
 CDN scripts in `index.html` are pinned to exact versions and checked with Subresource Integrity. When upgrading one, update its `integrity` hash too:

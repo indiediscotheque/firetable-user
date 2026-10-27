@@ -2,11 +2,12 @@
  * lastfm.js — Last.fm scrobbling integration.
  *
  * Handles: session management (connect/disconnect), nowPlaying updates,
- * scrobble submissions, and track.love. Uses the MD5 implementation from
- * md5.js to sign API requests.
+ * scrobble submissions, and track.love.
  *
- * The Last.fm API key and secret are defined here. Session keys are stored
- * in localStorage so scrobbling persists across page reloads.
+ * Every call goes through this site's signing proxy (api/lastfm.php,
+ * LASTFM_PROXY_URL), which holds the app's API key and shared secret, so
+ * neither ships to the browser. Session keys are stored in localStorage so
+ * scrobbling persists across page reloads.
  */
 
 firetable.lastfm = {
@@ -14,11 +15,8 @@ firetable.lastfm = {
   /** @type {string|false}  Last.fm session key, or false if not connected */
   sk: false,
 
-  /** @type {string}  Last.fm API key */
-  key: "e86f3b80e48769c03f2b4e0609e12924",
-
-  /** @type {string}  Last.fm API shared secret (used for signing requests) */
-  secret: "838d63e62b556f74176656640b75e33e",
+  /** @type {boolean}  The proxy said Last.fm isn't set up on this server; stop calling it */
+  unavailable: false,
 
   /** @type {number|null}  Unix timestamp (seconds) when the current song started */
   songStart: null,
@@ -54,93 +52,78 @@ firetable.lastfm = {
         '<a href="#" class="lastfmDisconnect">Disconnect Last.fm scrobbling</a>'
       );
     } else {
-      $("#scrobtoggle").html(
-        '<a href="https://www.last.fm/api/auth/?api_key=' + firetable.lastfm.key +
-        '&cb=' + encodeURIComponent(window.location.href) + '">Set up Last.fm scrobbling</a>'
+      $("#scrobtoggle").empty().append(
+        $('<a>').attr('href', firetable.lastfm.connectURL()).text('Set up Last.fm scrobbling')
       );
     }
   },
 
   /**
-   * Handle a successful auth.getSession response from Last.fm.
-   * Parses the session key from the XHR response and stores it.
-   * @param {XMLHttpRequest} xhr - The completed XHR object
-   * @returns {Function} onload callback
+   * The "Set up" link: the proxy sends the visitor to Last.fm's "allow
+   * access" page, which comes back here with ?token=.
+   * @returns {string}
    */
-  newSession: function (xhr) {
-    return function () {
-      var jsonResponse = null;
-      try { jsonResponse = JSON.parse(xhr.responseText); } catch (e) { /* handled below */ }
-      if (!jsonResponse || !jsonResponse.session || !jsonResponse.session.key) {
-        // e.g. expired/used token — leave the "Set up" link in place
-        console.error("Last.fm auth.getSession failed:", jsonResponse || xhr.responseText);
-        return;
-      }
-      firetable.lastfm.sk = jsonResponse.session.key;
+  connectURL: function () {
+    var back = new URL(window.location.href);
+    back.searchParams.delete('token');
+    back.hash = '';
+    var url = new URL(LASTFM_PROXY_URL);
+    url.searchParams.set('action', 'connect');
+    url.searchParams.set('cb', back.href);
+    return url.href;
+  },
+
+  /**
+   * Swap the one-time ?token= from Last.fm's redirect for a session key.
+   * @param {string} token
+   * @returns {Promise<void>}
+   */
+  connect: function (token) {
+    return firetable.lastfm.call('auth.getSession', { token: token }, 'auth.getSession').then(function (res) {
+      if (!res || !res.session || !res.session.key) return; // e.g. expired/used token: "Set up" stays
+      firetable.lastfm.sk = res.session.key;
       localStorage[STORAGE.lastfmSession] = firetable.lastfm.sk;
       firetable.lastfm.renderToggle();
-    };
+    });
   },
 
   // ─── API Calls ─────────────────────────────────────────────────────────
 
-  /**
-   * Submit a scrobble (track.scrobble) for the current song.
-   * Called automatically after ~(duration - 3s) of playback.
-   */
   /** Is the user actually hearing the room right now? (not muted, media on, no preview) */
   _listening: function () {
     return !firetable.disableMediaPlayback && !firetable.preview &&
       firetable.utilities.getEffectiveVolume() > 0;
   },
 
-  scrobble: function () {
-    if (!firetable.lastfm._listening()) return;
+  /** The current song's artist and cleaned-up title as plain text, plus the session key (null when nothing is playing). */
+  _trackFields: function () {
     var song = firetable.song;
-    var track = firetable.lastfm._cleanForScrobble(firetable.utilities.decodeEntities(song.title));
-
-    var params = {
-      artist:    firetable.utilities.decodeEntities(song.artist),
-      track:     track,
-      timestamp: firetable.lastfm.songStart,
-      api_key:   firetable.lastfm.key,
-      sk:        firetable.lastfm.sk,
-      method:    "track.scrobble"
+    if (!song || !song.artist || !song.title || !firetable.lastfm.sk) return null;
+    return {
+      sk:     firetable.lastfm.sk,
+      artist: firetable.utilities.decodeEntities(song.artist),
+      track:  firetable.lastfm._cleanForScrobble(firetable.utilities.decodeEntities(song.title))
     };
-
-    params.api_sig = firetable.lastfm.getApiSignature(params);
-    var requestUrl = LASTFM_API_URL + '?' + serialize(params) + '&format=json'; // format isn't signed
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', requestUrl, true);
-    xhr.onload = firetable.lastfm._onResponse(xhr, "scrobbled");
-    xhr.onerror = firetable.lastfm._onAjaxError;
-    xhr.send();
   },
 
   /**
-   * Send a track.love for the current song.
+   * Submit a scrobble (track.scrobble) for the current song.
+   * Scheduled by room.js once enough of the track has played.
    */
+  scrobble: function () {
+    if (!firetable.lastfm._listening()) return;
+    var fields = firetable.lastfm._trackFields();
+    if (!fields) return;
+    fields.timestamp = firetable.lastfm.songStart;
+    if (firetable.lastfm.duration) fields.duration = firetable.lastfm.duration;
+    firetable.lastfm.call('track.scrobble', fields, 'scrobbled');
+  },
+
+  /** Send a track.love for the current song. */
   love: function () {
-    var song = firetable.song;
-    var track = firetable.lastfm._cleanForScrobble(firetable.utilities.decodeEntities(song.title));
-
-    var params = {
-      artist:  firetable.utilities.decodeEntities(song.artist),
-      track:   track,
-      api_key: firetable.lastfm.key,
-      sk:      firetable.lastfm.sk,
-      method:  "track.love"
-    };
-
-    params.api_sig = firetable.lastfm.getApiSignature(params);
-    var requestUrl = LASTFM_API_URL + '?' + serialize(params) + '&format=json'; // format isn't signed
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', requestUrl, true);
-    xhr.onload = firetable.lastfm._onResponse(xhr, "loved");
-    xhr.onerror = firetable.lastfm._onAjaxError;
-    xhr.send();
+    var fields = firetable.lastfm._trackFields();
+    if (!fields) return;
+    firetable.lastfm.call('track.love', fields, 'loved');
   },
 
   /**
@@ -149,49 +132,34 @@ firetable.lastfm = {
    */
   nowPlaying: function () {
     if (!firetable.lastfm._listening()) return;
-    var song = firetable.song;
-    var track = firetable.lastfm._cleanForScrobble(firetable.utilities.decodeEntities(song.title));
-
-    var params = {
-      artist:   firetable.utilities.decodeEntities(song.artist),
-      track:    track,
-      duration: firetable.lastfm.duration,
-      api_key:  firetable.lastfm.key,
-      sk:       firetable.lastfm.sk,
-      method:   "track.updateNowPlaying"
-    };
-
-    params.api_sig = firetable.lastfm.getApiSignature(params);
-    var requestUrl = LASTFM_API_URL + '?' + serialize(params) + '&format=json'; // format isn't signed
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', requestUrl, true);
-    xhr.onload = firetable.lastfm._onResponse(xhr, "nowplaying updated");
-    xhr.onerror = firetable.lastfm._onAjaxError;
-    xhr.send();
+    var fields = firetable.lastfm._trackFields();
+    if (!fields) return;
+    if (firetable.lastfm.duration) fields.duration = firetable.lastfm.duration;
+    firetable.lastfm.call('track.updateNowPlaying', fields, 'nowplaying updated');
   },
 
-  // ─── Internal Helpers ──────────────────────────────────────────────────
-
   /**
-   * Build the api_sig parameter for a Last.fm request.
-   * Sorts params alphabetically, concatenates key+value pairs,
-   * appends the shared secret, and returns the MD5 hash.
-   * @param {Object} params - API parameters (excluding api_sig)
-   * @returns {string} 32-char hex MD5 signature
+   * POST one Last.fm call to the signing proxy.
+   * @param {string} method - Last.fm method, e.g. "track.scrobble"
+   * @param {Object} fields - the call's fields (no api_key/api_sig: the proxy adds them)
+   * @param {string} what - label for log messages
+   * @returns {Promise<Object|null>} Last.fm's answer, or null when the call failed
    */
-  getApiSignature: function (params) {
-    var keys = [];
-    for (var key in params) {
-      if (params.hasOwnProperty(key)) keys.push(key);
-    }
-    keys.sort();
-
-    var paramString = "";
-    for (var i = 0; i < keys.length; i++) {
-      paramString += keys[i] + params[keys[i]];
-    }
-    return calcMD5(paramString + firetable.lastfm.secret);
+  call: function (method, fields, what) {
+    if (firetable.lastfm.unavailable) return Promise.resolve(null);
+    var body = new URLSearchParams({ method: method });
+    $.each(fields, function (k, v) {
+      if (v !== undefined && v !== null && v !== '') body.append(k, String(v));
+    });
+    return fetch(LASTFM_PROXY_URL, { method: 'POST', body: body, credentials: 'omit', cache: 'no-store' })
+      .then(function (r) {
+        return r.json().catch(function () { return { error: 'HTTP ' + r.status }; })
+          .then(function (res) { return firetable.lastfm._handle(res, what, r.status); });
+      })
+      .catch(function (err) {
+        console.error("Last.fm " + what + " failed:", err);
+        return null;
+      });
   },
 
   /**
@@ -205,30 +173,24 @@ firetable.lastfm = {
   },
 
   /**
-   * Log Last.fm API errors to the console.
-   * @param {XMLHttpRequest} xhr
-   * @param {string} status
-   * @param {string} error
+   * Check an answer from the proxy. Last.fm's own errors carry a numeric
+   * code; an invalid/revoked session (9) disconnects, so the "Set up Last.fm
+   * scrobbling" link comes back instead of failing silently forever. The
+   * proxy's errors are text; 501 means Last.fm isn't set up on this server.
+   * @param {Object} res - parsed JSON answer
+   * @param {string} what - label for log messages
+   * @param {number} [status] - HTTP status
+   * @returns {Object|null} res when it succeeded, otherwise null
    */
-  /**
-   * onload handler for an API call. Last.fm answers errors with a JSON body;
-   * an invalid/revoked session (error 9) disconnects, so the "Set up Last.fm
-   * scrobbling" link comes back instead of failing silently forever.
-   */
-  _onResponse: function (xhr, what) {
-    return function () {
-      var res = null;
-      try { res = JSON.parse(xhr.responseText); } catch (e) { /* not JSON */ }
-      if (res && res.error) {
-        console.warn("Last.fm " + what + " failed:", res.error, res.message);
-        if (res.error === 9) firetable.lastfm.killSession();
-        return;
-      }
+  _handle: function (res, what, status) {
+    if (res && !res.error) {
       firetable.debug && console.log("Last.fm " + what);
-    };
-  },
-
-  _onAjaxError: function (xhr, status, error) {
-    console.error("Last.fm API error:", xhr, status, error);
+      return res;
+    }
+    var err = res && res.error;
+    console.warn("Last.fm " + what + " failed:", err, (res && res.message) || '');
+    if (err === 9) firetable.lastfm.killSession();
+    if (status === 501) firetable.lastfm.unavailable = true;
+    return null;
   }
 };

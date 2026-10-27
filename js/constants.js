@@ -85,8 +85,15 @@ var SC_RESOLVE_URL = "https://thompsn.com/resolvesc/";
 var SC_PROXY_URL = "https://thompsn.com/soundcloud/";
 /** SoundCloud API track base URL */
 var SC_API_TRACK_URL = "https://api.soundcloud.com/tracks/";
-/** Last.fm API base URL */
-var LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
+/**
+ * This site's Last.fm signing proxy (api/lastfm.php), which keeps the app's
+ * shared secret on the server. Override with ftconfigs.lastfmProxyURL if it
+ * lives elsewhere.
+ */
+var LASTFM_PROXY_URL = new URL(
+  (typeof ftconfigs !== "undefined" && ftconfigs.lastfmProxyURL) || "api/lastfm.php",
+  document.baseURI
+).href;
 
 // ─── Emoji Data Sources ─────────────────────────────────────────────────────
 /** Exact versions, checked with Subresource Integrity when fetched */

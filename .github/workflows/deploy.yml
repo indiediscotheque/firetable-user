@@ -2,13 +2,17 @@
 #
 # Uploads over SFTP (works with an SFTP-only DreamHost user). Every file type
 # and folder is included, files are sent exactly as they are in git, nothing
-# on the server is deleted, and config.js and api/soundcloud-config.php (which
-# live only on the server) are never touched. The root .htaccess (security
-# headers) is only uploaded when the server has none yet or its copy came from
-# this repo (it contains the line "# firetable-managed"); a hand-made one is
-# left alone and the run shows a warning. Before uploading, it checks the target folder already holds
-# config.js, so a wrong path or login stops the publish instead of copying the
-# site somewhere else.
+# on the server is deleted, and config.js, api/soundcloud-config.php and
+# api/lastfm-config.php (which live only on the server) are never touched.
+# Before uploading, it checks the target folder already holds config.js, so a
+# wrong path or login stops the publish instead of copying the site somewhere
+# else.
+#
+# The root .htaccess (security headers) is merged, not overwritten: the repo's
+# file goes into a "# BEGIN firetable" … "# END firetable" block at the top of
+# the server's .htaccess and every other rule there is kept. The previous copy
+# is saved as .htaccess.firetable-previous, and if the site starts answering
+# with a server error the old file is put back and the run fails.
 #
 # Repository secrets (Settings → Secrets and variables → Actions):
 #   DREAMHOST_HOST      server hostname, e.g. iad1-shared-b8-12.dreamhost.com
@@ -16,6 +20,20 @@
 #   DREAMHOST_PASSWORD  that user's password
 #   DREAMHOST_PATH      site folder, e.g. indiediscotheque.com (relative to
 #                       the user's home; "/indiediscotheque.com" also works)
+#
+# Optional repository secrets for Last.fm scrobbling (api/lastfm.php):
+#   LASTFM_API_KEY      Last.fm API key
+#   LASTFM_SECRET       Last.fm shared secret
+# When both are set, the deploy writes api/lastfm-config.php on the server
+# from them (owner-only permissions), so the secret never sits in git. A
+# hand-made lastfm-config.php without the "firetable-deploy-managed" line is
+# left alone.
+#
+# Optional repository variable (same page, "Variables" tab):
+#   SITE_URL            the site's address, for the check after the .htaccess
+#                       update (redirects are followed). Default:
+#                       https://<last part of DREAMHOST_PATH>/ when that looks
+#                       like a domain, e.g. https://indiediscotheque.com/.
 #
 # Manual run: Actions → "Deploy to DreamHost" → Run workflow. "Dry run" lists
 # what would change without uploading anything.
@@ -49,11 +67,13 @@ jobs:
       LFTP_PASSWORD: ${{ secrets.DREAMHOST_PASSWORD }}
       DEST_RAW: ${{ secrets.DREAMHOST_PATH }}
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      SITE_URL: ${{ vars.SITE_URL }}
     steps:
       - name: Check out master
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history, to give files their last-commit times
+          persist-credentials: false
 
       - name: Check secrets
         run: |
@@ -89,6 +109,11 @@ jobs:
           esac
           DEST="${DEST%/}"
           echo "DEST=$DEST" >> "$GITHUB_ENV"
+          # Site address for the checks after upload (default: the folder name)
+          if [ -z "$SITE_URL" ]; then
+            d=$(basename "$DEST")
+            case "$d" in *.*) echo "SITE_URL=https://$d/" >> "$GITHUB_ENV" ;; esac
+          fi
           cat > ~/.lftprc <<EOF
           set sftp:connect-program "ssh -a -x -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o BatchMode=no"
           set net:max-retries 3
@@ -104,17 +129,55 @@ jobs:
           fi
           echo "Found $DEST/config.js - target folder looks right."
 
-      - name: Check the server's .htaccess
+      - name: Write the Last.fm settings (api/lastfm-config.php)
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
         run: |
-          remote=$(lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; cat \"$DEST/.htaccess\"" 2>/dev/null || true)
-          if [ -z "$remote" ]; then
-            echo "No .htaccess on the server yet - the repo's one will be uploaded."
-          elif printf '%s' "$remote" | grep -q 'firetable-managed'; then
-            echo "Server .htaccess came from this repo - it will be kept up to date."
-          else
-            echo "::warning::The server has its own .htaccess (no 'firetable-managed' line), so it was left as is and the security headers were NOT deployed. Merge the repo's .htaccess into it, keeping the '# firetable-managed' line, to let future deploys manage it."
-            echo "SKIP_HTACCESS=1" >> "$GITHUB_ENV"
+          remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
+          target="$DEST/api/lastfm-config.php"
+          work=$(mktemp -d)
+          trap 'rm -rf "$work"' EXIT
+          have=0
+          if remote "cls -1 \"$target\"" >/dev/null 2>&1; then
+            remote "get \"$target\" -o \"$work/current\""
+            have=1
           fi
+          if [ -z "$LASTFM_API_KEY" ] || [ -z "$LASTFM_SECRET" ]; then
+            if [ "$have" = 1 ]; then
+              echo "No LASTFM_API_KEY / LASTFM_SECRET secrets; using the lastfm-config.php already on the server."
+            else
+              echo "::warning::Last.fm scrobbling is not set up: add the LASTFM_API_KEY and LASTFM_SECRET repository secrets (or create api/lastfm-config.php on the server)."
+            fi
+            exit 0
+          fi
+          hex32() { printf '%s' "$1" | grep -Eqx '[0-9a-fA-F]{32}'; }
+          if ! hex32 "$LASTFM_API_KEY" || ! hex32 "$LASTFM_SECRET"; then
+            echo "::error::LASTFM_API_KEY and LASTFM_SECRET should each be 32 hex characters, as Last.fm shows them."
+            exit 1
+          fi
+          if [ "$have" = 1 ] && ! grep -q 'firetable-deploy-managed' "$work/current"; then
+            echo "::notice::api/lastfm-config.php on the server was made by hand, so it was left as is (the secrets are not used). Delete it to let the deploy manage it."
+            exit 0
+          fi
+          php -r '
+            echo "<?php\n";
+            echo "// firetable-deploy-managed: written by the deploy from the LASTFM_API_KEY and\n";
+            echo "// LASTFM_SECRET repository secrets. Change those, not this file.\n";
+            echo "return ", var_export(["api_key" => getenv("LASTFM_API_KEY"), "secret" => getenv("LASTFM_SECRET")], true), ";\n";
+          ' > "$work/new"
+          php -l "$work/new" >/dev/null
+          if [ "$have" = 1 ] && cmp -s "$work/current" "$work/new"; then
+            echo "api/lastfm-config.php is up to date."
+            exit 0
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run: api/lastfm-config.php would be written."
+            exit 0
+          fi
+          remote "mkdir -p \"$DEST/api\""
+          remote "put \"$work/new\" -o \"$target\"; chmod 600 \"$target\""
+          echo "api/lastfm-config.php written."
 
       - name: Upload changed files
         run: |
@@ -123,10 +186,9 @@ jobs:
             flags="--dry-run"
             echo "Dry run: nothing will be uploaded."
           fi
-          # Only the root .htaccess; api/.htaccess is always uploaded
-          if [ "$SKIP_HTACCESS" = "1" ]; then
-            flags="$flags --exclude '^\.htaccess\$'"
-          fi
+          # The root .htaccess is merged by the next step; api/.htaccess is
+          # uploaded like any other file
+          flags="$flags --exclude '^\.htaccess\$'"
           lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
             mirror --reverse --verbose --no-perms --parallel=4 $flags \
               --exclude-glob .git/ \
@@ -140,8 +202,85 @@ jobs:
               --exclude-glob .DS_Store \
               --exclude-glob config.js \
               --exclude-glob soundcloud-config.php \
+              --exclude-glob lastfm-config.php \
               --exclude-glob README.md \
               ./ \"$DEST/\""
+
+      - name: Check the Last.fm proxy
+        if: env.DRY_RUN != 'true'
+        run: |
+          [ -n "$SITE_URL" ] || { echo "No SITE_URL; skipped."; exit 0; }
+          home=$(curl -s -L --max-redirs 5 -o /dev/null -m 20 -w '%{url_effective}' "$SITE_URL" || true)
+          [ -n "$home" ] || { echo "::warning::Couldn't reach $SITE_URL to check the Last.fm proxy."; exit 0; }
+          cb=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$home")
+          code=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "${home%/}/api/lastfm.php?action=connect&cb=$cb" || true)
+          case "$code" in
+            302) echo "Last.fm proxy is set up." ;;
+            501) echo "::warning::api/lastfm.php is live but has no Last.fm key/secret, so scrobbling is off. Add the LASTFM_API_KEY and LASTFM_SECRET repository secrets." ;;
+            *)   echo "::warning::api/lastfm.php answered $code (expected 302)." ;;
+          esac
+
+      - name: Merge the security headers into the server's .htaccess
+        run: |
+          work=$(mktemp -d)
+          remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
+          had=0
+          if remote "cls -1 \"$DEST/.htaccess\"" >/dev/null 2>&1; then
+            remote "get \"$DEST/.htaccess\" -o \"$work/server\""
+            had=1
+          fi
+          rc=0
+          python3 .github/scripts/merge-htaccess.py .htaccess "$work/server" "$work/merged" || rc=$?
+          if [ "$rc" -eq 3 ]; then
+            echo "Server .htaccess is already up to date."
+            exit 0
+          elif [ "$rc" -ne 0 ]; then
+            exit "$rc"
+          fi
+          if [ "$had" = 1 ]; then
+            echo "Changes to the server's .htaccess:"
+            diff -u "$work/server" "$work/merged" || true
+          else
+            echo "No .htaccess on the server yet - uploading the repo's block."
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run: .htaccess not changed."
+            exit 0
+          fi
+
+          url="$SITE_URL"
+          # Follows redirects (indiediscotheque.com → www.) and reports the final page
+          status() { curl -s -L --max-redirs 5 -o /dev/null -m 20 -w '%{http_code}' "$url" || true; }
+          before=""
+          [ -n "$url" ] && before=$(status)
+
+          [ "$had" = 1 ] && remote "put \"$work/server\" -o \"$DEST/.htaccess.firetable-previous\""
+          remote "put \"$work/merged\" -o \"$DEST/.htaccess\""
+          echo "Server .htaccess updated."
+
+          if [ -z "$url" ]; then
+            echo "::warning::Set the SITE_URL repository variable so the deploy can check the site still loads after an .htaccess change."
+            exit 0
+          fi
+          sleep 3
+          after=$(status)
+          echo "Site check: $url answered $after (before the change: ${before:-n/a})."
+          case "$after" in
+            5*)
+              case "$before" in 5*) echo "::warning::The site was already answering $before before this change." ; exit 0 ;; esac
+              if [ "$had" = 1 ]; then
+                remote "put \"$work/server\" -o \"$DEST/.htaccess\""
+              else
+                remote "rm \"$DEST/.htaccess\""
+              fi
+              echo "::error::The site answered $after after the .htaccess update, so the previous .htaccess was restored. The server may not allow one of the directives in the repo's .htaccess."
+              exit 1
+              ;;
+          esac
+          csp=$(curl -s -L --max-redirs 5 -o /dev/null -m 20 -w '%header{content-security-policy}' "$url" || true)
+          if [ -z "$csp" ]; then
+            echo "::warning::The site loads but sends no Content-Security-Policy header (is mod_headers enabled?)."
+          fi
 
       - name: Remove files that were deleted from the repo
         # Only files git deleted in the pushed commits (never config.js,
@@ -159,7 +298,7 @@ jobs:
           count=0
           while IFS= read -r -d '' f; do
             case "$f" in
-              config.js|api/soundcloud-config.php|.htaccess|README.md|.gitignore|.github/*|tools/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
+              config.js|api/soundcloud-config.php|api/lastfm-config.php|.htaccess|.htaccess.firetable-previous|README.md|.gitignore|.github/*|tools/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
             esac
             printf 'rm -f "%s/%s"\n' "$DEST" "$f" >> "$script"
             echo "Removing $f"
