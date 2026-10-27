@@ -1523,33 +1523,14 @@ firetable.ui.checkLastfmToken = function () {
   if (thingo) firetable.lastfm.sk = thingo;
   firetable.lastfm.renderToggle();
 
-  // Check if URL contains a token param (redirect from Last.fm auth)
-  var pattern = /[?&]token=/;
-  var URL = location.search;
-  if (pattern.test(URL) && !firetable.lastfm.sk) {
-    var queries = {};
-    $.each(document.location.search.substr(1).split('&'), function (c, q) {
-      var i = q.split('=');
-      queries[i[0].toString()] = i[1].toString();
-    });
-
-    var params = {
-      api_key: firetable.lastfm.key,
-      token: queries.token,
-      method: "auth.getSession"
-    };
-    var sig = firetable.lastfm.getApiSignature(params);
-    params.api_sig = sig;
-
-    var request_url = LASTFM_API_URL + '?' + serialize(params) + "&format=json";
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', request_url, true);
-    // newSession() returns the onload handler — assign it, don't just call it
-    xhr.onload = firetable.lastfm.newSession(xhr);
-    xhr.onerror = firetable.lastfm._onAjaxError;
-    xhr.send();
-  }
-
+  // Back from Last.fm's "allow access" page with a one-time ?token=
+  var url = new URL(window.location.href);
+  var token = url.searchParams.get('token');
+  if (!token) return;
+  // Take it out of the address bar (and out of later reloads/bookmarks)
+  url.searchParams.delete('token');
+  try { history.replaceState(history.state, '', url.href); } catch (e) { /* ignore */ }
+  if (!firetable.lastfm.sk) firetable.lastfm.connect(token);
 };
 
 // ─── Master UI Initializer ──────────────────────────────────────────────────

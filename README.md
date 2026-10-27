@@ -20,6 +20,17 @@ SoundCloud's API only accepts OAuth requests, which need your app's client secre
 
 Without it, pasted soundcloud.com links and playlist imports still work through the legacy resolver; keyword search shows a message asking for a link.
 
+## last.fm scrobbling
+Last.fm signs every scrobble with your API account's shared secret, so the browser never gets it: `api/lastfm.php` (PHP 8.1+ with cURL) adds the API key, signs the call and relays Last.fm's answer. It only signs connecting an account, now playing, scrobbles and loves.
+- copy `api/lastfm-config.php.example` to `api/lastfm-config.php` on the server
+- add your Last.fm API key and shared secret from https://www.last.fm/api/accounts (or set `LASTFM_API_KEY` / `LASTFM_SECRET`)
+- the file is git-ignored and the deploy never uploads or overwrites it
+- same caller check as the SoundCloud proxy; each visitor IP gets 60 calls per 10 minutes by default (`rate_limit`)
+
+Without it, the "Set up Last.fm scrobbling" link and scrobbling stop working; nothing else is affected.
+
+Both proxies share `api/common.php` (config loading, caller check, rate limit, HTTP); `api/.htaccess` keeps it and the config files from being served.
+
 ## checks
 `npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every push and pull request. None of these tooling files are deployed.
 

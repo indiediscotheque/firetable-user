@@ -31,6 +31,9 @@ var ftconfigs = {
   youtubeKey: "xxxxxxxxxxxxxxxxxxxxxx", // Your youtube api client key. Be sure to whitelist your domain for this key in the google api console.
   // SoundCloud search runs through api/soundcloud.php, which keeps the
   // client secret on the server. See api/soundcloud-config.php.example.
-  // soundcloudProxyURL: "https://example.com/api/soundcloud.php" // optional, only if the proxy lives on another host
+  // soundcloudProxyURL: "https://example.com/api/soundcloud.php", // optional, only if the proxy lives on another host
   //                                                                  (then also add that host to connect-src in .htaccess)
+  // Last.fm scrobbling runs through api/lastfm.php, which keeps the Last.fm
+  // secret on the server. See api/lastfm-config.php.example.
+  // lastfmProxyURL: "https://example.com/api/lastfm.php" // optional, only if the proxy lives on another host
 };
