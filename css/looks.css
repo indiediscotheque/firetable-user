@@ -2796,10 +2796,13 @@ input.ft-filter {
 /* Large playlists: let the browser skip layout/paint for rows that are
    off-screen, so redrawing a 2,000+ track list stays fast. "auto" remembers
    each row's real height once it has been shown. The drag placeholder and the
-   row being dragged are excluded so drag-to-reorder positions are unchanged. */
+   row being dragged are excluded so drag-to-reorder positions are unchanged.
+   The size is the row's content box (34px row minus its 1px borders): any
+   other value makes rows that haven't been shown yet the wrong height, so the
+   list jumps when it is redrawn (send to top / bottom). */
 #mainqueue > .pvbar:not(.ui-sortable-placeholder):not(.ui-sortable-helper) {
     content-visibility: auto;
-    contain-intrinsic-size: auto 34px;
+    contain-intrinsic-size: auto 32px;
 }
 
 #queuelist .q-art,
@@ -5560,4 +5563,13 @@ html#about body {
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
+}
+
+/* Tracks with no artwork: blank tile while the preview button sits on it;
+   the room logo when media playback is off (no preview button to fill it). */
+body.media-off .q-art.no-art {
+    background-image: url("../img/idlogo.png");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    opacity: .6;
 }

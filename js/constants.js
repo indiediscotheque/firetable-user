@@ -83,8 +83,10 @@ var SC_API_PROXY_URL = new URL(
 var SC_RESOLVE_URL = "https://thompsn.com/resolvesc/";
 /** Legacy SoundCloud lookup-by-id proxy (fallback; ?type=…&q=ID) */
 var SC_PROXY_URL = "https://thompsn.com/soundcloud/";
-/** SoundCloud API track base URL */
+/** SoundCloud API track base URL (for the player widget; opening it in a tab gives 401) */
 var SC_API_TRACK_URL = "https://api.soundcloud.com/tracks/";
+/** SoundCloud's player page: a working link for tracks saved without their page URL */
+var SC_PLAYER_PAGE_URL = "https://w.soundcloud.com/player/?visual=true&url=";
 /**
  * This site's Last.fm signing proxy (api/lastfm.php), which keeps the app's
  * shared secret on the server. Override with ftconfigs.lastfmProxyURL if it
