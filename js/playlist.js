@@ -63,9 +63,11 @@ firetable.ui.showSearchPanel = function () {
  * @param {string} name     - Track display name "Artist - Title"
  * @param {number} type     - MEDIA_YOUTUBE (1) or MEDIA_SOUNDCLOUD (2)
  * @param {boolean} [tobottom] - If true, don't bump to top of queue
+ * @param {{img: string, url: string}} [extra] - Artwork / page URL to save with it
  */
-firetable.actions.queueTrack = function (cid, name, type, tobottom) {
-  var info = { type: type, name: name, cid: cid };
+firetable.actions.queueTrack = function (cid, name, type, tobottom, extra) {
+  extra = extra || {};
+  var info = { type: type, name: name, cid: cid, img: extra.img, url: extra.url };
 
   // Visual feedback: checkmark on the queue button
   $("#apv" + type + cid).find(".material-symbols-filled").text("check");
@@ -77,7 +79,7 @@ firetable.actions.queueTrack = function (cid, name, type, tobottom) {
   }, 3000);
 
   if (tobottom) {
-    ftapi.actions.addToList(type, name, cid, false);
+    ftapi.actions.addToList(type, name, cid, false, null, extra.img, extra.url);
   } else {
     // Added and moved to the top in one atomic step
     ftapi.actions.addTrackToTop(ftapi.queueRef, info, firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
@@ -134,10 +136,10 @@ firetable.actions.mergeFinished = function (err) {
  * Move a track to the top of the queue.
  * @param {string} songid - Track key in the playlist
  */
-firetable.actions.bumpSongInQueue = function (songid) {
+firetable.actions.bumpSongInQueue = function (songid, cid) {
   ftapi.actions.moveTrackToTop(songid, ftapi.queueRef, firetable.preview, function (changePV) {
     if (changePV) firetable.preview = changePV;
-  });
+  }, cid);
 };
 
 /**
@@ -469,7 +471,8 @@ firetable.actions.queueFromLink = function (link) {
     firetable.actions.resolveSCLink(incomingLink, function (item) {
       if (item && item.kind === "track") {
         var parsed = firetable.utilities.parseArtistTitle(item.title, item.user.username);
-        firetable.actions.queueTrack(item.id, parsed.artist + " - " + parsed.title, MEDIA_SOUNDCLOUD);
+        firetable.actions.queueTrack(item.id, parsed.artist + " - " + parsed.title, MEDIA_SOUNDCLOUD, false,
+          firetable.utilities.soundCloudExtras(item));
       } else {
         firetable.actions.localChatResponse("That SoundCloud link isn't a track. Use Import to add a whole playlist.");
       }
@@ -657,7 +660,8 @@ firetable.actions.importList = function (id, name, type) {
         } else {
           goodTitle = "Unknown";
         }
-        ftapi.actions.addToList(MEDIA_SOUNDCLOUD, goodTitle, tracks[i].id, listid);
+        var extras = firetable.utilities.soundCloudExtras(tracks[i]);
+        ftapi.actions.addToList(MEDIA_SOUNDCLOUD, goodTitle, tracks[i].id, listid, null, extras.img, extras.url);
       }
       firetable.actions.localChatResponse("Imported " + firetable.utilities.pluralize(tracks.length, "song") + " from SoundCloud into \"" + name + "\".");
     }, function (err) {
@@ -708,11 +712,11 @@ function buildQueueItemHTML(key, track, isPreview) {
   var artUrl = isYT
     ? 'https://i.ytimg.com/vi/' + track.cid + '/mqdefault.jpg'
     : (track.img || (firetable.imgCache && firetable.imgCache[track.cid]) || '');
-  var artStyle = artUrl ? ' style="background-image:url(' + artUrl + ')"' : '';
+  if (!artUrl && ftconfigs.defaultAlbumArtUrl) artUrl = ftconfigs.defaultAlbumArtUrl;
+  var artStyle = artUrl ? ' style="background-image:url(' + firetable.utilities.htmlEscape(artUrl) + ')"' : '';
+  var artClass = artUrl ? 'q-art' : 'q-art no-art';
 
-  var trackUrl = isYT
-    ? 'https://www.youtube.com/watch?v=' + track.cid
-    : SC_API_TRACK_URL + track.cid;
+  var trackUrl = firetable.utilities.htmlEscape(firetable.utilities.trackPageUrl(track));
   var platform = isYT ? 'YouTube' : 'SoundCloud';
 
   var flagHtml = '';
@@ -729,13 +733,13 @@ function buildQueueItemHTML(key, track, isPreview) {
   }
 
   return (
-    '<div class="pvbar" id="pvbar' + key + '"' +
+    '<div class="pvbar' + (isPreview ? ' previewing' : '') + '" id="pvbar' + key + '"' +
     ' data-key="' + key + '" data-type="' + track.type + '"' +
     ' data-cid="' + firetable.utilities.htmlEscape(String(track.cid)) + '"' +
     ' data-tags="' + safeTrackName + '" data-broken="' + (track.flagged ? '1' : '0') + '"' +
     ' data-track-seconds="' + (trackSeconds || '') + '">' +
     '<div class="pvbarWrap">' +
-    '<div class="q-art"' + artStyle + '></div>' +
+    '<div class="' + artClass + '"' + artStyle + '></div>' +
     '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
     '<span class="track-warning"' + (track.flagged ? flagHtml : '>') + '</span>' +
     '<div class="listwords">' + safeTrackName + durationHtml + '</div>' +
@@ -777,16 +781,18 @@ firetable.ui.setupPlaylistEvents = function () {
       firetable.actions.pview($p.attr('data-key'), false, $p.attr('data-type'));
     })
     .on('click', '.bumpsongs', function () {
-      firetable.actions.bumpSongInQueue($(this).closest('.pvbar').attr('data-key'));
+      var $p = $(this).closest('.pvbar');
+      firetable.actions.bumpSongInQueue($p.attr('data-key'), $p.attr('data-cid'));
     })
     .on('click', '.bottomsongs', function () {
-      var oldID = $(this).closest('.pvbar').attr('data-key');
+      var $p = $(this).closest('.pvbar');
+      var oldID = $p.attr('data-key');
       ftapi.actions.moveTrackToBottom(oldID, function (newID) {
         if (firetable.preview && firetable.preview === oldID) {
           firetable.preview = newID;
           $('#pv' + newID).html('&#xE034;');
         }
-      });
+      }, $p.attr('data-cid'));
     })
     .on('click', '.track-warning', function () {
       var $p = $(this).closest('.pvbar');
@@ -823,10 +829,13 @@ firetable.ui.setupPlaylistEvents = function () {
 
   /** Track info used by the "add to playlist" picker for a playlist row. */
   function queueRowTarget($p) {
+    var track = (firetable.queue && firetable.queue[$p.attr('data-key')]) || {};
     return {
       cid: $p.attr('data-cid'),
       type: $p.attr('data-type'),
-      title: $p.attr('data-tags') || $p.find('.listwords').text()
+      title: $p.attr('data-tags') || $p.find('.listwords').text(),
+      img: track.img || '',
+      url: track.url || ''
     };
   }
 

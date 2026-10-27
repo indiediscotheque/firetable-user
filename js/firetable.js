@@ -271,6 +271,10 @@ ftapi.init = function(firebaseConfig) {
       if (user) {
         ftapi.loggedIn = true; // this stays true until the logout function is called
         ftapi.detachSession(); // in case an earlier session left anything behind
+        // Set the uid first: .info/connected is usually known already, so its
+        // first event can fire right away and must see who is signed in.
+        ftapi.uid = user.uid;
+        ftapi.uname = user.uid;
         ftapi.connectedRef = ftapi.db().ref('.info/connected');
         ftapi.connectedEvent = ftapi.connectedRef.on('value', function(snap) {
           if (snap.val() === true && ftapi.uid) {
@@ -283,8 +287,6 @@ ftapi.init = function(firebaseConfig) {
           email: user.email,
           uid: user.uid
         };
-        ftapi.uid = user.uid;
-        ftapi.uname = user.uid;
         ftapi.lookup.userByID(user.uid, function(data) {
           if (data) {
             returnData.user = data;
@@ -505,7 +507,7 @@ ftapi.actions = {
     newlist.set(obj);
     return listid;
   },
-  addToList: function(type, name, cid, dest, callback, img) {
+  addToList: function(type, name, cid, dest, callback, img, url) {
     var destref;
     if (dest) {
       destref = ftapi.lookup.listRef(dest);
@@ -518,6 +520,7 @@ ftapi.actions = {
       cid: cid
     };
     if (img) info.img = img;
+    if (url) info.url = url;
     var newTrack = destref.push(info, function() {
       if (callback) callback();
     });
@@ -526,7 +529,7 @@ ftapi.actions = {
   /**
    * Add a track as the next one to play, in one atomic step.
    * @param {Object} ref - Playlist ref (defaults to the list on screen)
-   * @param {Object} info - {type, name, cid[, img]}
+   * @param {Object} info - {type, name, cid[, img][, url]}
    * @param {string} [preview] - Key of a track being previewed in this list
    * @param {Function} [pvChangeCallback] - Gets the preview's new key if it moved
    * @param {Function} [callback] - (error, newKey)
@@ -537,6 +540,7 @@ ftapi.actions = {
     var newKey = ref.push().key; // sorts after every existing key
     var track = { type: info.type, name: info.name, cid: info.cid };
     if (info.img) track.img = info.img;
+    if (info.url) track.url = info.url;
     var finalKey = newKey;
     ftapi.utilities.rearrangeList(ref, function(items) {
       return [{ key: newKey, track: track }].concat(items);
@@ -547,26 +551,35 @@ ftapi.actions = {
     }, newKey);
     return newKey;
   },
-  moveTrackToTop: function(trackID, ref, preview, pvChangeCallback) {
+  /**
+   * @param {string} trackID - Row key
+   * @param {Object} [ref] - Playlist ref (defaults to the list on screen)
+   * @param {string} [preview]
+   * @param {Function} [pvChangeCallback]
+   * @param {string} [cid] - The track the row showed; if that slot now holds
+   *   another track (the list changed meanwhile), that track is found instead
+   */
+  moveTrackToTop: function(trackID, ref, preview, pvChangeCallback, cid) {
     ftapi.utilities.rearrangeList(ref || ftapi.queueRef, function(items) {
-      var idx = -1;
-      for (var i = 0; i < items.length; i++) if (items[i].key === trackID) idx = i;
+      var idx = ftapi.utilities.findTrack(items, trackID, cid);
       if (idx <= 0) return; // already on top or gone: change nothing
       var moved = items.splice(idx, 1)[0];
       return [moved].concat(items);
     }, ftapi.utilities.previewMover(preview, pvChangeCallback));
   },
-  moveTrackToBottom: function(trackID, callback) {
+  /** See moveTrackToTop for `cid`. callback gets the track's new key. */
+  moveTrackToBottom: function(trackID, callback, cid) {
     var ref = ftapi.queueRef;
+    var movedKey = trackID;
     ftapi.utilities.rearrangeList(ref, function(items) {
-      var idx = -1;
-      for (var i = 0; i < items.length; i++) if (items[i].key === trackID) idx = i;
+      var idx = ftapi.utilities.findTrack(items, trackID, cid);
       if (idx === -1 || idx === items.length - 1) return; // gone, or already last
+      movedKey = items[idx].key;
       var moved = items.splice(idx, 1)[0];
       items.push(moved);
       return items;
     }, function(err, moves) {
-      if (!err && moves && callback) callback(moves[trackID] || trackID);
+      if (!err && moves && callback) callback(moves[movedKey] || movedKey);
     });
   },
   deleteTrack: function(trackID, callback) {
@@ -813,19 +826,26 @@ ftapi.actions = {
     var sep = tag.indexOf(" - ");
     var theartist = sep === -1 ? tag : tag.slice(0, sep);
     var thetitle = sep === -1 ? "" : tag.slice(sep + 3);
-    var updates = {};
-    if (!list || list === "songHistory") {
-      updates["songHistory/" + histID + "/artist"] = theartist;
-      updates["songHistory/" + histID + "/title"] = thetitle;
-    }
-    updates["globalTracks/" + type + cid + "/artist"] = theartist;
-    updates["globalTracks/" + type + cid + "/title"] = thetitle;
-    ftapi.db().ref().update(updates, function(error) {
-      if (error) {
-        console.error("[firetable] tag edit failed:", error);
-      } else {
-        ftapi.events.emit("editedHistory", { histID: histID, artist: theartist, title: thetitle, list: list || "songHistory" });
+    var isHistory = !list || list === "songHistory";
+    // The bot keeps only the latest plays; writing to a play it has already
+    // removed would create a bogus entry in Recent (#147), so check first.
+    var exists = isHistory && histID
+      ? ftapi.db().ref("songHistory/" + histID + "/cid").once("value").then(function(snap) { return snap.exists(); })
+      : Promise.resolve(false);
+    exists.then(function(inHistory) {
+      var updates = {};
+      if (inHistory) {
+        updates["songHistory/" + histID + "/artist"] = theartist;
+        updates["songHistory/" + histID + "/title"] = thetitle;
       }
+      updates["globalTracks/" + type + cid + "/artist"] = theartist;
+      updates["globalTracks/" + type + cid + "/title"] = thetitle;
+      return ftapi.db().ref().update(updates);
+    }).then(function() {
+      ftapi.events.emit("editedHistory", { histID: histID, artist: theartist, title: thetitle, list: list || "songHistory" });
+      if (callback) callback(null);
+    }, function(error) {
+      console.error("[firetable] tag edit failed:", error);
       if (callback) callback(error);
     });
   }
@@ -1022,6 +1042,25 @@ ftapi.utilities = {
       if (err) console.error("[firetable] playlist update failed:", err);
       if (onDone) onDone(err, committed ? moves : null);
     });
+  },
+  /**
+   * Index of a row in rearrangeList items: the slot `key` if it still holds
+   * track `cid` (or no cid is given), otherwise the first slot holding `cid`.
+   * @returns {number} -1 when not found
+   */
+  findTrack: function(items, key, cid) {
+    var i;
+    for (i = 0; i < items.length; i++) {
+      if (items[i].key === key) {
+        if (!cid || !items[i].track || String(items[i].track.cid) === String(cid)) return i;
+        break;
+      }
+    }
+    if (!cid) return -1;
+    for (i = 0; i < items.length; i++) {
+      if (items[i].track && String(items[i].track.cid) === String(cid)) return i;
+    }
+    return -1;
   },
   /** onDone for rearrangeList that keeps a running preview pointed at its track. */
   previewMover: function(preview, pvChangeCallback) {

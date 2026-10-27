@@ -68,6 +68,8 @@ firetable.ui.positionPopover = function (anchorEl, floatingEl, arrowEl, preferre
  * Hide player/preview controls (when media playback is disabled).
  */
 firetable.ui.hidePlayerControls = function () {
+  document.body.classList.add("media-off");
+  $(".playerControlsHider").remove();
   $("head").append(
     "<style class='playerControlsHider'>" +
     ".previewicon { display: none !important; } " +
@@ -79,6 +81,7 @@ firetable.ui.hidePlayerControls = function () {
  * Show player/preview controls (re-enables media playback UI).
  */
 firetable.ui.showPlayerControls = function () {
+  document.body.classList.remove("media-off");
   $(".playerControlsHider").remove();
 };
 
@@ -1248,7 +1251,8 @@ firetable.ui.setupMiscEvents = function () {
       cid: firetable.song.cid,
       type: firetable.song.type,
       title: firetable.utilities.decodeEntities(firetable.song.artist + " - " + firetable.song.title),
-      img: (firetable.imgCache && firetable.imgCache[firetable.song.cid]) || ''
+      img: (firetable.imgCache && firetable.imgCache[firetable.song.cid]) || '',
+      url: firetable.song.url || ''
     });
     if (src) {
       var $sourceBtn = firetable.stealSourceBtn;
@@ -1265,10 +1269,10 @@ firetable.ui.setupMiscEvents = function () {
       // Now-playing track goes to the bottom; any other source (history,
       // discover, search) goes to the top, added and moved in one step.
       if (isNowPlaying) {
-        ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
+        ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img, firetable.utilities.soundCloudPageUrl(src.url));
       } else {
         ftapi.actions.addTrackToTop(ftapi.lookup.listRef(dest),
-          { type: src.type, name: src.title, cid: src.cid, img: src.img },
+          { type: src.type, name: src.title, cid: src.cid, img: src.img, url: firetable.utilities.soundCloudPageUrl(src.url) },
           firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
       }
       $("#stealContain").hide();
@@ -1549,6 +1553,9 @@ firetable.ui.init = function () {
 
   // Check for Last.fm auth token / setup scrobble link
   firetable.ui.checkLastfmToken();
+
+  // Volume slider + mute button (independent of which player loads first)
+  firetable.ui.initVolume();
 
   // Initialize all event groups
   firetable.ui.setupChatEvents();

@@ -163,6 +163,46 @@ firetable.utilities = {
     $("#djlistpicker").append(firetable.utilities.playlistOption(listID, name));
   },
 
+  // ─── Track links ─────────────────────────────────────────────────────────
+
+  /**
+   * A soundcloud.com page URL, or "" when `url` isn't one (only https links to
+   * soundcloud.com are used as hrefs).
+   * @param {*} url
+   * @returns {string}
+   */
+  soundCloudPageUrl: function (url) {
+    url = String(url || "");
+    return /^https:\/\/(?:www\.|m\.)?soundcloud\.com\/[^\s"'<>]+$/i.test(url) ? url : "";
+  },
+
+  /**
+   * Where a saved track's "Open on YouTube / SoundCloud" button goes.
+   * SoundCloud tracks link to their page when it was saved with the track,
+   * otherwise to SoundCloud's player page (the API URL needs a login).
+   * @param {{type:number|string, cid:*, url:string}} track
+   * @returns {string}
+   */
+  trackPageUrl: function (track) {
+    if (String(track.type) === String(MEDIA_SOUNDCLOUD)) {
+      return firetable.utilities.soundCloudPageUrl(track.url) ||
+        SC_PLAYER_PAGE_URL + encodeURIComponent(SC_API_TRACK_URL + track.cid);
+    }
+    return "https://www.youtube.com/watch?v=" + encodeURIComponent(track.cid);
+  },
+
+  /**
+   * Fields worth saving with a SoundCloud track (its page and artwork).
+   * @param {Object} item - SoundCloud API track
+   * @returns {{url: string, img: string}}
+   */
+  soundCloudExtras: function (item) {
+    return {
+      url: firetable.utilities.soundCloudPageUrl(item && item.permalink_url),
+      img: /^https:\/\//i.test((item && item.artwork_url) || "") ? item.artwork_url : ""
+    };
+  },
+
   // ─── Song Title Parsing ──────────────────────────────────────────────────
 
   /**

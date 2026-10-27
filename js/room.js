@@ -119,7 +119,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
       ? $trackArtist.text().trim() + ' - ' + $trackTitle.text().trim()
       : $histlink.text();
 
-    firetable.actions.openStealPicker($btn, { cid: btnCid, type: btnType, title: btnTitle, img: btnImg });
+    firetable.actions.openStealPicker($btn, { cid: btnCid, type: btnType, title: btnTitle, img: btnImg, url: data.url || '' });
   });
 
   // Album art
@@ -276,6 +276,17 @@ firetable.ui.setupRoomEvents = function () {
         var dj = data[key];
         if (dj.id === ftapi.uid) isSelfOnDeck = true;
         allDjs.push({ tableKey: key, id: dj.id, name: dj.name, plays: dj.plays, removeAfter: dj.removeAfter });
+      }
+
+      // Seats can shift mid-song (a DJ joins or leaves before the spotlight).
+      // Unless a song change is still being animated in, keep the highlight on
+      // the DJ whose song is playing.
+      var songDj = firetable.song && firetable.song.djid;
+      if (songDj && firetable._djActiveTimer === undefined &&
+          !(allDjs[activeIdx] && allDjs[activeIdx].id === songDj)) {
+        for (var d = 0; d < allDjs.length; d++) {
+          if (allDjs[d].id === songDj) { activeIdx = d; break; }
+        }
       }
 
       if (activeIdx < allDjs.length) {
@@ -1043,6 +1054,16 @@ firetable.ui.setupRoomEvents = function () {
   // ── Spotlight (Active DJ Index) ──
   ftapi.events.on("spotlightStateChanged", function (data) {
     firetable.playdex = data;
+
+    // Same song, seats just moved (someone joined or left): update right away
+    var seat = firetable.tableData && firetable.tableData[data];
+    if (seat && firetable.song && seat.id === firetable.song.djid) {
+      clearTimeout(firetable._djActiveTimer);
+      firetable._djActiveTimer = undefined;
+      firetable.displayedPlaydex = data;
+      applyDjActive(data);
+      return;
+    }
 
     // Defer both avatar animation and djActive plaque switch until colorsChanged
     // fires so they switch at the same moment the color transition starts.

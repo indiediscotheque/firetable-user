@@ -229,7 +229,11 @@ firetable.actions.uidLookup = function (name) {
 firetable.actions.grab = function () {
   if (firetable.song.cid !== 0) {
     var title = firetable.utilities.decodeEntities(firetable.song.artist + " - " + firetable.song.title);
-    firetable.actions.queueTrack(firetable.song.cid, title, firetable.song.type, true);
+    var isSC = firetable.song.type == MEDIA_SOUNDCLOUD;
+    firetable.actions.queueTrack(firetable.song.cid, title, firetable.song.type, true, {
+      url: isSC ? firetable.utilities.soundCloudPageUrl(firetable.song.url) : '',
+      img: isSC && /^https:\/\//.test(firetable.song.image || '') ? firetable.song.image : ''
+    });
   }
 };
 
