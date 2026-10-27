@@ -28,8 +28,11 @@ firetable.utilities = {
   /**
    * Build an avatar URL for a user.
    * Supports Robohash (via proxy) and DiceBear (SVG).
-   * Style lookup order: explicit `style` param → ftapi.users[uid].avatarStyle
-   * → firetable.avatarStyle (own user cache) → "robohash:set1" fallback.
+   * Style lookup order:
+   *   explicit `style` param (e.g. a trading card's stamped set)
+   *   → ftconfigs.avatarset room theme (forces every avatar, e.g. "set2" for Halloween)
+   *   → ftapi.users[uid].avatarStyle → firetable.avatarStyle (own user cache)
+   *   → "robohash:" + firetable.avatarset
    * @param {string} uid - User ID
    * @param {string} username - Display name
    * @param {string|null} [size="110x110"] - Dimensions (Robohash only)
@@ -39,15 +42,29 @@ firetable.utilities = {
   avatarURL: function (uid, username, size, style) {
     size = size || "110x110";
     if (!style) {
-      style = (ftapi.users && ftapi.users[uid] && ftapi.users[uid].avatarStyle)
+      style = firetable.roomAvatarStyle
+           || (ftapi.users && ftapi.users[uid] && ftapi.users[uid].avatarStyle)
            || (uid === ftapi.uid ? firetable.avatarStyle : null)
-           || "robohash:set1";
+           || firetable.utilities.normalizeAvatarStyle(firetable.avatarset);
     }
     if (style.indexOf("dicebear:") === 0) {
       return "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + username);
     }
-    var set = style.indexOf("robohash:") === 0 ? style.slice(9) : firetable.avatarset;
-    return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + set;
+    var set = style.indexOf("robohash:") === 0 ? style.slice(9) : style;
+    return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + (set || "set1");
+  },
+
+  /**
+   * Turn a config avatar value into a full style key.
+   * Accepts a bare Robohash set ("set2") or a full key ("robohash:set2",
+   * "dicebear:bottts"). Returns null for empty values.
+   * @param {string} val
+   * @returns {string|null}
+   */
+  normalizeAvatarStyle: function (val) {
+    val = String(val || "").trim();
+    if (!val) return null;
+    return /^(robohash|dicebear):/.test(val) ? val : "robohash:" + val;
   },
 
   // ─── Playlist <option> Builder ───────────────────────────────────────────

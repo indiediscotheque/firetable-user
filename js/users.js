@@ -108,7 +108,7 @@ firetable.actions.loggedIn = function (user) {
   }
   $("#loggedInName").text(displayName);
   $("#loggedInUser .ft-avatar").removeClass('skel').css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, displayName) + ")");
-  $("#avatarStylePicker").val(firetable.avatarStyle);
+  $("#avatarStylePicker").val(firetable.avatarStyle || "robohash:" + firetable.avatarset);
 
   // Load all playlists into the picker
   ftapi.lookup.allLists(function (allPlaylists) {
@@ -343,7 +343,7 @@ function buildUserHTML(data) {
   if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; }
   if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; }
 
-  return '<div class="ft-avatar" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username, null, data.avatarStyle)) + ');">' +
+  return '<div class="ft-avatar" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username, null, firetable.roomAvatarStyle || data.avatarStyle)) + ');">' +
          '<span class="material-symbols-outlined blockon">' + blockcon + '</span>' +
          '</div>' +
          '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
