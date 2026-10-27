@@ -302,8 +302,11 @@ firetable.media = {
   directTap: false,
   /** @type {boolean}  Screen was lowered only so the user could tap YouTube's play button */
   forcedScreen: false,
-  /** @type {boolean}  The loaded video has started playing, so it may be shown (see yt-revealed in CSS) */
+  /** @type {boolean}  The video has played long enough for YouTube's own bars to hide (see yt-revealed in CSS) */
   revealed: false,
+  /** How long a video must play before it's shown: YouTube hides its title bar and logo by then */
+  REVEAL_MS: 3000,
+  _revealTimer: null,
   /** @type {boolean}  A SoundCloud song should be playing but the browser blocked it */
   scBlocked: false,
   _scTimer: null,
@@ -321,7 +324,21 @@ firetable.media = {
     var m = firetable.media;
     m.ytState = state;
     clearTimeout(m._stallTimer);
-    if (state === 1) m.revealed = true; // first real playback → fade the video in
+    if (state === 1) {
+      // Playing: show the video once YouTube's start-of-play bars are gone
+      if (!m.revealed && !m._revealTimer) {
+        m._revealTimer = setTimeout(function () {
+          m._revealTimer = null;
+          m.revealed = true;
+          m.refresh();
+        }, m.REVEAL_MS);
+      }
+    } else if (state !== 3) {
+      // Paused, ended, cued or unstarted: YouTube shows its bars again when
+      // play resumes, so hide until it has been playing a moment (buffering
+      // doesn't bring them back, so it leaves the video showing)
+      m.hideVideo();
+    }
     if (m._isPlaying(state)) {
       m.ytError = false;
       m.directTap = false;
@@ -381,8 +398,18 @@ firetable.media = {
 
   /** A new YouTube video is being loaded: hide it until it plays. */
   videoLoading: function () {
-    firetable.media.revealed = false;
+    firetable.media.hideVideo();
     firetable.media.refresh();
+  },
+
+  /** Hide the YouTube player until it has played for REVEAL_MS again. */
+  hideVideo: function () {
+    var m = firetable.media;
+    clearTimeout(m._revealTimer);
+    m._revealTimer = null;
+    m.revealed = false;
+    // right away (refresh() runs later on purpose, to ignore short gaps)
+    if (!m.directTap) document.body.classList.remove('yt-revealed');
   },
 
   /** A new room song started: forget the old player state. */
@@ -391,7 +418,7 @@ firetable.media = {
     clearTimeout(m._stallTimer);
     m.ytState = null;
     m.ytError = false;
-    m.revealed = false; // hide the video again until the new one is playing
+    m.hideVideo(); // hide the video again until the new one has been playing a moment
     clearTimeout(m._scTimer);
     m.scBlocked = false;
     m._scErrorShown = false;
