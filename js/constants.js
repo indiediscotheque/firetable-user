@@ -49,6 +49,14 @@ var STORAGE = {
 /** Avatar / Robohash image base URL */
 var AVATAR_BASE_URL = "https://indiediscotheque.com/robots/";
 /**
+ * Seasonal room avatar themes, checked against the visitor's local date.
+ * months are 1-12. Used only when ftconfigs.avatarset is empty.
+ * Override with ftconfigs.avatarSeasons, or set it to false to turn off.
+ */
+var AVATAR_SEASONS = [
+  { months: [10], style: "set2" } // October: spooky monsters
+];
+/**
  * This site's SoundCloud API proxy (api/soundcloud.php). Handles keyword
  * search, link resolving and playlist import with an OAuth token.
  * Override with ftconfigs.soundcloudProxyURL if it lives elsewhere.
