@@ -200,7 +200,7 @@ firetable.actions.uidLookup = function (name) {
  */
 firetable.actions.grab = function () {
   if (firetable.song.cid !== 0) {
-    var title = firetable.song.artist + " - " + firetable.song.title;
+    var title = firetable.utilities.decodeEntities(firetable.song.artist + " - " + firetable.song.title);
     firetable.actions.queueTrack(firetable.song.cid, title, firetable.song.type, true);
   }
 };

@@ -36,7 +36,7 @@ var STORAGE = {
   showAvatars:        "firetableShowAvatars",
   showSongAnnouncements: "firetableShowSongAnnouncements",
   badoop:             "firetableBadoop",
-  desktopNotify:      "firetableDTNM",
+  notifyMentions:     "firetableDTNM",
   screenControl:      "firetableScreenControl",
   avatarStyle:        "firetableAvatarStyle",
   lastfmSession:      "ftLastfmSession",

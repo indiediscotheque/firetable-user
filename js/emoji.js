@@ -160,10 +160,13 @@ firetable.utilities.getEmojiMap = function () {
  * @returns {string} Text with shortnames replaced by unicode or custom HTML
  */
 firetable.utilities.emojiShortnamestoUnicode = function (str) {
-  return str.replace(/\:(.*?)\:/g, function (match) {
-    var shortname = match.replace(/\:/g, "");
-    if (firetable.emojiMap[shortname]) {
-      return '<span title="' + match + '">' + firetable.emojiMap[shortname] + '</span>';
+  // HTML tags are matched first and passed through untouched, so a
+  // shortname-like run inside an attribute (e.g. a URL) is never replaced.
+  return str.replace(/(<[^>]*>)|:([a-z0-9_+-]+):/gi, function (match, tag, shortname) {
+    if (tag) return tag;
+    var map = firetable.emojiMap;
+    if (map && Object.prototype.hasOwnProperty.call(map, shortname)) {
+      return '<span title="' + match + '">' + map[shortname] + '</span>';
     } else if (shortname === "rohn") {
       return '<span class="rohnmoji" title=":rohn:"></span>';
     }

@@ -70,7 +70,7 @@ firetable.ui.setupSearchEvents = function () {
   var bindSearchResultButtons = function ($srli, mediaCid, mediaType) {
     $srli.find('.addtolist').on('click', function () {
       var listid = $("#listpicker").val();
-      var title = firetable.utilities.htmlEscape($srli.find('.listwords').text());
+      var title = $srli.find('.listwords').text();
       var cuteid = ftapi.actions.addToList(mediaType, title, mediaCid, listid);
       if (!listid || listid === "0") {
         ftapi.actions.moveTrackToTop(cuteid, ftapi.queueRef, firetable.preview, function(changePV) {
@@ -86,7 +86,7 @@ firetable.ui.setupSearchEvents = function () {
     });
 
     $srli.find('.queuetrack').on('click', function () {
-      var title = firetable.utilities.htmlEscape($srli.find('.listwords').text());
+      var title = $srli.find('.listwords').text();
       firetable.actions.openStealPicker($(this), { cid: mediaCid, type: mediaType, title: title });
     });
   };

@@ -338,6 +338,37 @@ firetable.utilities = {
       .replace(/[\r\n]/g, preserveCR);
   },
 
+  /**
+   * Return the normalized URL if `raw` is an http(s) link to a .jpg/.jpeg/
+   * .gif/.png image, otherwise null. URL() percent-encodes quotes and spaces,
+   * so the result is safe to put in an attribute.
+   * @param {string} raw
+   * @returns {string|null}
+   */
+  imageLinkUrl: function (raw) {
+    var u;
+    try { u = new URL(String(raw || "")); } catch (e) { return null; }
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    return /\.(?:jpe?g|gif|png)$/i.test(u.pathname) ? u.href : null;
+  },
+
+  /**
+   * Decode HTML entities ("&amp;" → "&", "&#39;" → "'") without treating
+   * anything as markup: a <textarea> parses its content as plain text, so no
+   * elements are created and nothing loads or runs. Track names are stored as
+   * plain text; this cleans up older names that were saved escaped and the
+   * escaped titles the YouTube API returns.
+   * @param {*} str
+   * @returns {string}
+   */
+  decodeEntities: function (str) {
+    str = String(str == null ? "" : str);
+    if (str.indexOf("&") === -1) return str;
+    var ta = document.createElement("textarea");
+    ta.innerHTML = str;
+    return ta.value;
+  },
+
   // ─── Date / Time Formatting ──────────────────────────────────────────────
 
   /**
@@ -523,8 +554,7 @@ firetable.utilities = {
     if (firetable.preview) return; // don't interrupt a preview
 
     var data = firetable.song;
-    var nownow = Date.now();
-    var timeSince = nownow - data.started;
+    var timeSince = ftapi.now() - data.started;
     if (timeSince <= 0) timeSince = 0;
 
     var secSince = Math.floor(timeSince / 1000);

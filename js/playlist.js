@@ -403,7 +403,8 @@ firetable.actions.queueYoutubeWithFallback = function (youtubeId) {
 
   var queueFromTitle = function (id, rawTitle, rawArtist) {
     var artist = String(rawArtist || "").replace(" - Topic", "");
-    var parsed = firetable.utilities.parseArtistTitle(rawTitle || ("YouTube - " + id), artist);
+    var title = firetable.utilities.decodeEntities(rawTitle || ("YouTube - " + id));
+    var parsed = firetable.utilities.parseArtistTitle(title, firetable.utilities.decodeEntities(artist));
     firetable.actions.queueTrack(id, parsed.artist + " - " + parsed.title, MEDIA_YOUTUBE);
   };
 
@@ -651,7 +652,7 @@ firetable.actions.importList = function (id, name, type) {
           $("#listpicker").append(firetable.utilities.playlistOption(listid, name, 'pdopt' + listid));
           $("#djlistpicker").append(firetable.utilities.playlistOption(listid, name));
           for (var i = 0; i < finalList.length; i++) {
-            var goodTitle = finalList[i].snippet.title;
+            var goodTitle = firetable.utilities.decodeEntities(finalList[i].snippet.title);
             if (goodTitle !== "Private video" && goodTitle !== "Deleted video") {
               ftapi.actions.addToList(MEDIA_YOUTUBE, goodTitle, finalList[i].snippet.resourceId.videoId, listid);
             }
@@ -778,7 +779,8 @@ firetable.actions.editTagsPrompt = function (songid, tag, anchorEl) {
 // ─── Queue item HTML builder ─────────────────────────────────────────────────
 
 function buildQueueItemHTML(key, track, isPreview) {
-  var trackName = String(track.name || "Unknown");
+  // Names are plain text; decode ones older code saved HTML-escaped
+  var trackName = firetable.utilities.decodeEntities(track.name || "Unknown");
   var safeTrackName = firetable.utilities.htmlEscape(trackName);
 
   var trackSeconds = firetable.actions.parseTrackDurationSeconds(
@@ -911,7 +913,7 @@ firetable.ui.setupPlaylistEvents = function () {
     return {
       cid: $p.attr('data-cid'),
       type: $p.attr('data-type'),
-      title: firetable.utilities.htmlEscape($p.attr('data-tags') || $p.find('.listwords').text())
+      title: $p.attr('data-tags') || $p.find('.listwords').text()
     };
   }
 

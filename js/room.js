@@ -117,8 +117,8 @@ function renderHistoryItem(data, $template, containerSel) {
     var $trackTitle = $histlink.find('.fresh-track-title');
     var $trackArtist = $histlink.find('.fresh-track-artist');
     var btnTitle = ($trackTitle.length && $trackArtist.length)
-      ? firetable.utilities.htmlEscape($trackArtist.text().trim() + ' - ' + $trackTitle.text().trim())
-      : firetable.utilities.htmlEscape($histlink.text());
+      ? $trackArtist.text().trim() + ' - ' + $trackTitle.text().trim()
+      : $histlink.text();
 
     firetable.actions.openStealPicker($btn, { cid: btnCid, type: btnType, title: btnTitle, img: btnImg });
   });
@@ -342,29 +342,23 @@ firetable.ui.setupRoomEvents = function () {
     $("#ondeck").off('click.addme').on('click.addme', '.ondeck-slot.empty', function () {
       ftapi.actions.sendBotCommand("!addme");
     });
+    // Only your own departure button is drawn. The bot keeps its own copy of
+    // the deck (and the rules only let the bot write table/), so this always
+    // goes through a bot command.
     $("#deck").off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
       var $btn = $(this);
-      var tableKey = $btn.data('tablekey');
-      var userId = $btn.data('userid');
-      var djName = $btn.data('djname');
-      var isSelf = userId === ftapi.uid;
-      var isOn = $btn.hasClass('on');
-      var newIsOn = !isOn;
+      var userId = $btn.attr('data-userid');
+      if (userId !== ftapi.uid) return;
+      var newIsOn = !$btn.hasClass('on');
       $btn.toggleClass('on', newIsOn);
-      var newTitle = newIsOn
-        ? (isSelf ? 'You are taking the bus after your next play'           : djName + ' is taking the bus after their next play')
-        : (isSelf ? 'You will not be taking the bus after your next play' : djName + ' will not be taking the bus after their next play');
-      $btn.attr('title', newTitle);
-      if (isSelf) {
-        _pendingDeparture[userId] = newIsOn ? true : null;
-        ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
-      } else {
-        _pendingDeparture[userId] = newIsOn ? true : null;
-        firebase.app("firetable").database().ref("table/" + tableKey + "/removeAfter").set(newIsOn ? true : null);
-      }
+      $btn.attr('title', newIsOn
+        ? 'You are taking the bus after your next play'
+        : 'You will not be taking the bus after your next play');
+      _pendingDeparture[userId] = newIsOn ? true : null;
+      ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
     });
     $("#deck").off('click.remove').on('click.remove', '.deckRemoveBtn', function () {
-      var userId = $(this).data('userid');
+      var userId = $(this).attr('data-userid');
       if (userId === ftapi.uid) {
         ftapi.actions.sendBotCommand("!removeme");
       } else {
@@ -657,8 +651,7 @@ firetable.ui.setupRoomEvents = function () {
     });
 
     // Calculate elapsed time
-    var nownow = Date.now();
-    var timeSince = nownow - data.started;
+    var timeSince = ftapi.now() - data.started;
     if (timeSince <= 0) timeSince = 0;
     var secSince = Math.floor(timeSince / 1000);
     var timeLeft = data.duration - secSince;
@@ -673,7 +666,7 @@ firetable.ui.setupRoomEvents = function () {
     }
     if (firetable.lastfm.sk) {
       firetable.lastfm.duration = Math.floor(timeLeft);
-      firetable.lastfm.songStart = Math.floor(Date.now() / 1000);
+      firetable.lastfm.songStart = Math.floor(ftapi.now() / 1000);
       firetable.lastfm.timer = setTimeout(function () {
         firetable.lastfm.timer = null;
         firetable.lastfm.scrobble();
@@ -761,7 +754,8 @@ firetable.ui.setupRoomEvents = function () {
 
     // ── Count-up timer (elapsed) ──
     $("#timrUp").countdown({
-      since: new Date(data.started),
+      // The plugin counts on this device's clock, so convert server → local
+      since: new Date(data.started - ftapi.serverTimeOffset),
       compact: true,
       description: "",
       format: "MS"
@@ -769,8 +763,7 @@ firetable.ui.setupRoomEvents = function () {
 
     // ── Progress bar ──
     firetable.moveBar = setInterval(function () {
-      var now = Date.now();
-      var sofar = now - firetable.song.started;
+      var sofar = ftapi.now() - firetable.song.started;
       var pcnt = (sofar / (firetable.song.duration * 1000)) * 100;
       $("#prgbar").css("background", "linear-gradient(90deg, " + firetable.color + " " + pcnt + "%, color-mix(in srgb, " + firetable.color + " 50%, black) " + pcnt + "%)");
     }, PROGRESS_BAR_INTERVAL);
@@ -913,35 +906,29 @@ firetable.ui.setupRoomEvents = function () {
     $('#usersWaitlist').off('click.wladdme').on('click.wladdme', '.waitlist-addme-row .ft-avatar, .wlAddMeBtn', function () {
       ftapi.actions.sendBotCommand('!addme');
     });
+    // Waitlist changes go through the bot: it owns waitlist/ and would
+    // overwrite direct writes (which the database rules refuse anyway).
     $('#usersWaitlist').off('click.wlremove').on('click.wlremove', 'button.waitlist-pos', function () {
-      var $btn = $(this);
-      var wlKey = $btn.data('wlkey');
-      var userId = $btn.data('userid');
-      var isSelf = userId === ftapi.uid;
-      if (isSelf) {
+      var userId = $(this).attr('data-userid');
+      if (userId === ftapi.uid) {
         ftapi.actions.sendBotCommand('!removeme');
-      } else {
-        firebase.app('firetable').database().ref('waitlist/' + wlKey).remove();
+        return;
       }
+      var entry = null;
+      for (var k in firetable.waitlistData || {}) {
+        if (firetable.waitlistData.hasOwnProperty(k) && firetable.waitlistData[k].id === userId) entry = firetable.waitlistData[k];
+      }
+      var person = ftapi.users && ftapi.users[userId];
+      var name = (person && person.username) || (entry && entry.name);
+      if (name) ftapi.actions.sendBotCommand('!remove ' + name); // mod-only on the bot side
     });
     $('#usersWaitlist').off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
       var $btn = $(this);
-      var wlKey = $btn.data('wlkey');
-      var userId = $btn.data('userid');
-      var djName = $btn.data('djname');
-      var isSelf = userId === ftapi.uid;
-      var isOn = $btn.hasClass('on');
-      var newIsOn = !isOn;
+      if ($btn.attr('data-userid') !== ftapi.uid) return; // only drawn for yourself
+      var newIsOn = !$btn.hasClass('on');
       $btn.toggleClass('on', newIsOn);
-      var newTitle = newIsOn
-        ? (isSelf ? "Don't step down after your next play" : "Don't have " + djName + ' step down after their next play')
-        : (isSelf ? 'Step down after your next play'       : 'Have ' + djName + ' step down after their next play');
-      $btn.attr('title', newTitle);
-      if (isSelf) {
-        ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
-      } else {
-        firebase.app('firetable').database().ref('waitlist/' + wlKey + '/removeAfter').set(newIsOn ? true : null);
-      }
+      $btn.attr('title', newIsOn ? "Don't step down after your next play" : 'Step down after your next play');
+      ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
     });
 
     if (firetable.ui && firetable.ui.syncGhostUsers) firetable.ui.syncGhostUsers();
