@@ -27,6 +27,18 @@ var ftapi = {
   blockedUsers: {}
 };
 
+/** Server clock minus this device's clock, in ms (kept current from .info/serverTimeOffset). */
+ftapi.serverTimeOffset = 0;
+
+/**
+ * Current time on the server's clock, in ms. Use this (not Date.now()) when
+ * comparing against server timestamps like song.started or chat time.
+ * @returns {number}
+ */
+ftapi.now = function() {
+  return Date.now() + ftapi.serverTimeOffset;
+};
+
 ftapi.ready = function() {
   ftapi.events = new EventEmitter();
 };
@@ -38,6 +50,12 @@ ftapi.init = function(firebaseConfig) {
 
   // init firebase app
   firebase.initializeApp(firebaseConfig, "firetable");
+
+  // Track how far this device's clock is from Firebase's, so song positions
+  // and timers don't drift on devices whose clock is off.
+  firebase.app("firetable").database().ref(".info/serverTimeOffset").on("value", function(snap) {
+    ftapi.serverTimeOffset = Number(snap.val()) || 0;
+  });
 
 
   /*
@@ -698,24 +716,18 @@ ftapi.actions = {
   changeName: function(newName, callback) {
     if (!newName) return;
     // locally validate name for length and char requirements before sending to firebase
+    callback = callback || function() {};
     var validateName = ftapi.utilities.validateUsername(newName);
     if (!validateName.valid) return callback(validateName.reason);
     // claim before we can change
     var claimRef = firebase.app("firetable").database().ref("nameClaim/" + newName);
     claimRef.set(ftapi.uid, function(error) {
-      if (error && callback) {
-        return callback("This username is not available");
-      } else {
-        // name claimed, now we can set it
-        var setRef = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/username");
-        setRef.set(newName, function(error) {
-          if (error && callback) {
-            return callback("This username is not available");
-          } else if (!error && callback) {
-            return callback(); // ALL GOOD GREAT WORK
-          }
-        });
-      }
+      if (error) return callback("This username is not available");
+      // name claimed, now we can set it
+      var setRef = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/username");
+      setRef.set(newName, function(error) {
+        callback(error ? "This username is not available" : undefined);
+      });
     });
   },
   logOut: function() {
@@ -727,7 +739,7 @@ ftapi.actions = {
     firebase.app("firetable").auth().signOut();
   },
   logIn: function(email, password, errorCallback) {
-    nameChangeAfterSignUp = null; // make sure this is cleared
+    ftapi.nameChangeAfterSignUp = null; // a failed sign-up must not rename this account
     firebase.app("firetable").auth().signInWithEmailAndPassword(email, password).catch(function(error) {
       return errorCallback(error);
     });
@@ -750,9 +762,8 @@ ftapi.actions = {
           username: username
         };
         firebase.app("firetable").auth().createUserWithEmailAndPassword(email, password).catch(function(error) {
-          var errorCode = error.code;
-          var errorMessage = error.message;
-          return errorCallback(errorMessage);
+          ftapi.nameChangeAfterSignUp = null;
+          return errorCallback(error.message);
         });
       }
     })

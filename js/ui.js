@@ -492,6 +492,13 @@ firetable.ui.initSettings = function () {
   }
 
   // ── Desktop Notifications for Mentions ──
+  // Older versions saved this setting under the key "undefined"; move it.
+  var legacyDtnm = localStorage["undefined"];
+  if ((legacyDtnm === "true" || legacyDtnm === "false") &&
+      typeof localStorage[STORAGE.notifyMentions] == "undefined") {
+    localStorage[STORAGE.notifyMentions] = legacyDtnm;
+  }
+  if (legacyDtnm === "true" || legacyDtnm === "false") localStorage.removeItem("undefined");
   var dtnmt = localStorage[STORAGE.notifyMentions];
   if (typeof dtnmt == "undefined") {
     localStorage[STORAGE.notifyMentions] = false;
@@ -1271,7 +1278,7 @@ firetable.ui.setupMiscEvents = function () {
     var src = firetable.stealTarget || (firetable.song && firetable.song.cid != 0 && {
       cid: firetable.song.cid,
       type: firetable.song.type,
-      title: firetable.song.artist + " - " + firetable.song.title,
+      title: firetable.utilities.decodeEntities(firetable.song.artist + " - " + firetable.song.title),
       img: (firetable.imgCache && firetable.imgCache[firetable.song.cid]) || ''
     });
     if (src) {
@@ -1449,18 +1456,17 @@ firetable.ui.setupMiscEvents = function () {
     firetable.debug && console.log("show images " + (this.checked ? "on" : "off"));
     localStorage[STORAGE.showImages] = this.checked;
     firetable.showImages = this.checked;
-    var imageUrlRegex = /((http(s?):)([/|.|\w|\s|-])*\.(?:jpe?g|gif|png))/g;
     if (this.checked) {
-      // Convert plain image links → inline images
+      // Convert plain image links → inline images. Built with attr(), never
+      // string concatenation: hrefs come from chat and can contain quotes.
       $('#actualChat a[href]').not('.inlineImgLink').each(function () {
-        var url = $(this).attr('href');
-        if (url && imageUrlRegex.test(url)) {
-          var $img = $('<a class="inlineImgLink" target="_blank" tabindex="-1">' +
-            '<img src="' + url + '" class="inlineImage" />' +
-            '<span role="button" class="hideImage">&times;</span></a>').attr('href', url);
-          $(this).replaceWith($img);
-        }
-        imageUrlRegex.lastIndex = 0;
+        var url = firetable.utilities.imageLinkUrl($(this).attr('href'));
+        if (!url) return;
+        var $img = $('<a class="inlineImgLink" target="_blank" rel="noopener noreferrer" tabindex="-1"></a>')
+          .attr('href', url)
+          .append($('<img class="inlineImage" alt="" />').attr('src', url))
+          .append('<span role="button" class="hideImage">&times;</span>');
+        $(this).replaceWith($img);
       });
     } else {
       // Convert inline images → plain links

@@ -116,7 +116,7 @@ firetable.init = function () {
     // If a SC song was already loaded before the widget was ready, start it now
     if (firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD) {
       var data = firetable.song;
-      var timeSince = Date.now() - data.started;
+      var timeSince = ftapi.now() - data.started;
       if (timeSince <= 0) timeSince = 0;
       if (!firetable.preview) {
         firetable.scSeek = timeSince;
