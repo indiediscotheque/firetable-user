@@ -89,10 +89,11 @@ var SC_API_TRACK_URL = "https://api.soundcloud.com/tracks/";
 var LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 
 // ─── Emoji Data Sources ─────────────────────────────────────────────────────
+/** Exact versions, checked with Subresource Integrity when fetched */
 var EMOJI_URLS = [
-  "https://unpkg.com/unicode-emoji-json@0.3.0/data-by-group.json",
-  "https://unpkg.com/emojilib@2.4.0/emojis.json",
-  "https://unpkg.com/emojilib@3.0.4/dist/emoji-en-US.json"
+  { url: "https://unpkg.com/unicode-emoji-json@0.3.0/data-by-group.json", integrity: "sha384-d1qaRGroEtfyQyqsz7inMLNoSB7O4uGtKgKXB9DdiE1gm1xuOOxPF+ljQj/vwB0F" },
+  { url: "https://unpkg.com/emojilib@2.4.0/emojis.json", integrity: "sha384-uPYLJyYHqrmSMGbd6WnbkvIvF3ta0lPsa9FU0u5mU/ea8G11HlacTMpr2IyplN2d" },
+  { url: "https://unpkg.com/emojilib@3.0.4/dist/emoji-en-US.json", integrity: "sha384-SKTZEsmwjSonhLYsjUIm1DdaCmnRLA3oASU0EG7srbWYeiwjuVoD7AQNLVA+88Ux" }
 ];
 
 // ─── Search Result Limits ───────────────────────────────────────────────────

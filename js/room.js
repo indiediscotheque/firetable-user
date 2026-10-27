@@ -173,6 +173,17 @@ function renderHistoryItem(data, $template, containerSel) {
 }
 
 /**
+ * Format whole seconds as MM:SS (minutes keep counting past 59, e.g. 62:08).
+ * @param {number} secs
+ * @returns {string}
+ */
+function formatClock(secs) {
+  secs = Math.max(0, secs || 0);
+  var m = Math.floor(secs / 60), sec = secs % 60;
+  return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
+}
+
+/**
  * Make a song title / artist / DJ name safe to place inside HTML.
  * strip() matches how #track and #artist display these values (entities
  * decoded, tags dropped); htmlEscape() stops the result being parsed as HTML.
@@ -592,7 +603,6 @@ firetable.ui.setupRoomEvents = function () {
     $("#playCount, #lastPlay, #firstPlay").text("");
     window.dispatchEvent(new Event('resize'));
     $("#cloud_with_rain, #fire").removeClass("on");
-    $("#timr, #timrUp").countdown("destroy");
 
     // Fade the progress bar out, then reset it
     var $prg = $("#prgbar");
@@ -608,6 +618,9 @@ firetable.ui.setupRoomEvents = function () {
       $prg.css("background", "color-mix(in srgb, " + emptyColor + " 50%, black)");
       $prg.css("opacity", "1");
     }, 450);
+
+    // Empty room (no song): stop here instead of crashing on missing fields
+    if (!data) return;
 
     // Check if tagUpdate has pre-corrected metadata for this track
     var showPlaycount = false;
@@ -744,29 +757,19 @@ firetable.ui.setupRoomEvents = function () {
 
     firetable.actions.replayPendingFireReactions();
 
-    // ── Countdown timer ──
-    $("#timr").countdown({
-      until: timeLeft,
-      compact: true,
-      description: "",
-      format: "MS"
-    });
-
-    // ── Count-up timer (elapsed) ──
-    $("#timrUp").countdown({
-      // The plugin counts on this device's clock, so convert server → local
-      since: new Date(data.started - ftapi.serverTimeOffset),
-      compact: true,
-      description: "",
-      format: "MS"
-    });
-
-    // ── Progress bar ──
-    firetable.moveBar = setInterval(function () {
-      var sofar = ftapi.now() - firetable.song.started;
-      var pcnt = (sofar / (firetable.song.duration * 1000)) * 100;
+    // ── Time left, time elapsed and progress bar (one timer, server clock) ──
+    var tick = function (withBar) {
+      var song = firetable.song;
+      if (!song) return;
+      var elapsed = Math.max(0, (ftapi.now() - song.started) / 1000);
+      $("#timrUp").text(formatClock(Math.floor(elapsed)));
+      $("#timr").text(formatClock(Math.ceil((song.duration || 0) - elapsed)));
+      if (!withBar) return;
+      var pcnt = (elapsed / song.duration) * 100;
       $("#prgbar").css("background", "linear-gradient(90deg, " + firetable.color + " " + pcnt + "%, color-mix(in srgb, " + firetable.color + " 50%, black) " + pcnt + "%)");
-    }, PROGRESS_BAR_INTERVAL);
+    };
+    tick(false); // the bar fades in on its own (above), so just the clocks now
+    firetable.moveBar = setInterval(function () { tick(true); }, PROGRESS_BAR_INTERVAL);
   });
 
   // ── Screen State ──
@@ -1003,20 +1006,25 @@ firetable.ui.setupRoomEvents = function () {
         ftapi.lookup.userByName(key, function (person) {
           $("#activeSuspensions").append(
             '<div class="importResult"><div class="imtxt">' + firetable.utilities.htmlEscape(person.username) + '</div>' +
-            '<button type="button" onclick="firetable.actions.unban(\'' + person.userid + '\')" class="material-symbols-filled row-icon" title="Unsuspend" aria-label="Unsuspend ' + firetable.utilities.htmlEscape(person.username) + '">&#xE5C9;</button></div>'
+            '<button type="button" data-userid="' + firetable.utilities.htmlEscape(person.userid) + '" class="material-symbols-filled row-icon unbanButton" title="Unsuspend" aria-label="Unsuspend ' + firetable.utilities.htmlEscape(person.username) + '">&#xE5C9;</button></div>'
           );
         });
       }
     }
   });
 
+  $("#activeSuspensions").off('click.unban').on('click.unban', '.unbanButton', function () {
+    firetable.actions.unban($(this).attr('data-userid'));
+  });
+
   // ── Colors Changed (Accent Color) ──
   ftapi.events.on("colorsChanged", function (data) {
     firetable.debug && console.log("COLOR CHANGE!", data);
 
+    data = data || {}; // no colors saved yet → fall back to the default orange
     firetable.color = data.color;
     firetable.countcolor = data.txt;
-    if (data.color === "#fff" || data.color === "#7f7f7f") {
+    if (!data.color || data.color === "#fff" || data.color === "#7f7f7f") {
       firetable.color = firetable.orange;
       firetable.countcolor = "#fff";
     }

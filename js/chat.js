@@ -182,15 +182,27 @@ firetable.ui.showImages = function (chatTxt) {
     var imageUrl = firetable.utilities.imageLinkUrl(decoded);
     if (!imageUrl) return anchor;
     var safeUrl = firetable.utilities.htmlEscape(imageUrl);
-    var onload = "if(firetable.utilities.isChatPrettyMuchAtBottom())firetable.utilities.scrollToBottom();";
-    var onerror = "var w=this.closest('.inlineImgLink');if(w)w.style.display='none';";
+    // load/error are handled by the listeners below (no inline handlers)
     return '<a class="inlineImgLink" href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" tabindex="-1">' +
-           '<img src="' + safeUrl + '" class="inlineImage" alt=""' +
-           ' onload="' + onload + '"' +
-           ' onerror="' + onerror + '" />' +
+           '<img src="' + safeUrl + '" class="inlineImage" alt="" />' +
            '<span role="button" class="hideImage">&times;</span></a>';
   });
 };
+
+// Inline chat images: keep the chat pinned to the bottom when one loads while
+// the user is already there, and hide ones that fail. load/error don't
+// bubble, so these listen in the capture phase.
+document.addEventListener('load', function (e) {
+  if (e.target && e.target.classList && e.target.classList.contains('inlineImage') &&
+      firetable.utilities.isChatPrettyMuchAtBottom()) {
+    firetable.utilities.scrollToBottom();
+  }
+}, true);
+document.addEventListener('error', function (e) {
+  var link = e.target && e.target.classList && e.target.classList.contains('inlineImage') &&
+    e.target.closest('.inlineImgLink');
+  if (link) link.style.display = 'none';
+}, true);
 
 /**
  * Strip HTML from a string using DOMParser.

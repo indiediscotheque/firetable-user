@@ -20,6 +20,15 @@ firetable.actions.markCardRendered = function (cardid) {
 };
 
 $(document)
+  // Card action buttons (delegated; no inline handlers so the CSP can stay strict)
+  .off('click.cardActions')
+  .on('click.cardActions', '#cardsMain .cardActions .butt', function () {
+    var key = $(this).closest('.caseCardSpot').data('cardkey');
+    if (!key) return;
+    if ($(this).hasClass('cardShareChat')) firetable.actions.chatCard(key);
+    else if ($(this).hasClass('cardGiftChat')) firetable.actions.giftCardPrompt(key, this);
+    else if ($(this).hasClass('cardViewLarger')) firetable.actions.viewLargerCard(key);
+  })
   .off('click.cardStatsToggle')
   .on('click.cardStatsToggle', '#cardStats .hist-day-header', function () {
     var $group = $(this).closest('.hist-day-group');
@@ -201,9 +210,9 @@ firetable.actions.cardCase = function () {
         '<span id="caseCardSpot' + key + '" class="caseCardSpot">' +
         '<canvas width="225" height="300" class="caseCard" id="cardMaker' + key + '"></canvas>' +
         '<div class="cardActions">' +
-        '<button type="button" class="butt graybutt cardShareChat" onclick="firetable.actions.chatCard(\'' + key + '\')" >Share In Chat</button>' +
-        '<button type="button" class="butt graybutt cardGiftChat" onclick="firetable.actions.giftCardPrompt(\'' + key + '\', this)">Gift to DJ</button>' +
-        '<button type="button" class="butt graybutt cardViewLarger" onclick="firetable.actions.viewLargerCard(\'' + key + '\')">View Larger</button>' +
+        '<button type="button" class="butt graybutt cardShareChat">Share In Chat</button>' +
+        '<button type="button" class="butt graybutt cardGiftChat">Gift to DJ</button>' +
+        '<button type="button" class="butt graybutt cardViewLarger">View Larger</button>' +
         '</div>' +
         '</span>'
       );

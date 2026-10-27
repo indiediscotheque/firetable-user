@@ -94,7 +94,7 @@ firetable.ui.setupSearchEvents = function () {
   // ── Track Search (Enter in #qsearch) ──
   $("#qsearch").bind("keyup", function (e) {
     if (e.which !== 13) return;
-    var txt = $.trim($("#qsearch").val());
+    var txt = String($("#qsearch").val() || "").trim();
     if (!txt) return;
     var source = firetable.utilities.isSCLink(txt) ? MEDIA_SOUNDCLOUD : firetable.searchSelectsChoice;
 

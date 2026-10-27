@@ -45,9 +45,13 @@ firetable.lastfm = {
    * Render the Settings link: "Set up" when disconnected, "Disconnect" when connected.
    */
   renderToggle: function () {
+    $("#scrobtoggle").off('click.lastfm').on('click.lastfm', '.lastfmDisconnect', function (e) {
+      e.preventDefault();
+      firetable.lastfm.killSession();
+    });
     if (firetable.lastfm.sk) {
       $("#scrobtoggle").html(
-        '<a onclick="firetable.lastfm.killSession(); return false;" href="#">Disconnect Last.fm scrobbling</a>'
+        '<a href="#" class="lastfmDisconnect">Disconnect Last.fm scrobbling</a>'
       );
     } else {
       $("#scrobtoggle").html(

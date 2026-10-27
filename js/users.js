@@ -23,14 +23,47 @@ firetable.ui = firetable.ui || {};
  * @param {string} email
  * @param {string} password
  */
+/**
+ * Turn a Firebase Auth error (or a plain message string) into friendly text.
+ * Sign-in failures share one message so the form never reveals whether an
+ * email address has an account.
+ * @param {Object|string} error
+ * @returns {string}
+ */
+firetable.ui.authErrorMessage = function (error) {
+  if (!error) return "Something went wrong. Please try again.";
+  if (typeof error === "string") return error;
+  switch (error.code) {
+    case 'auth/invalid-credential':
+    case 'auth/invalid-login-credentials':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return "That email and password don't match. Check them, or reset your password.";
+    case 'auth/invalid-email':
+    case 'auth/missing-email':
+      return "That doesn't look like a valid email address.";
+    case 'auth/missing-password':
+      return "Enter your password.";
+    case 'auth/email-already-in-use':
+      return "That email already has an account. Try logging in, or reset your password.";
+    case 'auth/weak-password':
+    case 'auth/password-does-not-meet-requirements':
+      return "Choose a stronger password (at least 6 characters).";
+    case 'auth/user-disabled':
+      return "This account has been disabled.";
+    case 'auth/too-many-requests':
+      return "Too many attempts. Wait a few minutes and try again.";
+    case 'auth/network-request-failed':
+      return "Couldn't reach the server. Check your connection and try again.";
+  }
+  return "Something went wrong (" + (error.code || error.message || "unknown error") + "). Please try again.";
+};
+
 firetable.actions.logIn = function (email, password) {
   firetable.debug && console.log("login");
-    firetable.ui.formMessage('#loginFormShell', '');
+  firetable.ui.formMessage('#loginFormShell', '');
   ftapi.actions.logIn(email, password, function (error) {
-    var errorCode = error.code;
-    var errorMessage = error.message;
-    firetable.ui.formMessage('#loginFormShell',
-      errorCode === 'auth/wrong-password' ? 'Wrong password.' : errorMessage);
+    firetable.ui.formMessage('#loginFormShell', firetable.ui.authErrorMessage(error));
     firetable.debug && console.log("log in error:", error);
   });
 };
@@ -50,10 +83,9 @@ firetable.actions.logOut = function () {
  */
 firetable.actions.signUp = function (email, password, username) {
   firetable.debug && console.log("signup");
-    firetable.ui.formMessage('#createAccountFormShell', '');
+  firetable.ui.formMessage('#createAccountFormShell', '');
   ftapi.actions.signUp(email, password, username, function (error) {
-    firetable.ui.formMessage('#createAccountFormShell',
-      (error && error.message) ? error.message : String(error));
+    firetable.ui.formMessage('#createAccountFormShell', firetable.ui.authErrorMessage(error));
   });
 };
 
@@ -282,11 +314,13 @@ firetable.ui.loginEventsInit = function () {
   $("#resetPassBttn").bind("click", function () {
     var email = $("#theAddress").val();
     firetable.debug && console.log("reset email click button");
-        // Success shows right away; an error from Firebase replaces it.
-    firetable.ui.formMessage('#resetPasswordFormShell', "Reset email sent. Click the reset link when it arrives, thanks.", 'success');
+    // Success shows right away; a real error (bad address, rate limit,
+    // network) replaces it. "No such user" keeps the success message so the
+    // form doesn't reveal which emails have accounts.
+    firetable.ui.formMessage('#resetPasswordFormShell', "If that email has an account, a reset link is on its way.", 'success');
     ftapi.actions.resetPassword(email, function (error) {
-      firetable.ui.formMessage('#resetPasswordFormShell',
-        error.code === 'auth/wrong-password' ? 'Wrong password.' : error.message);
+      if (error && error.code === 'auth/user-not-found') return;
+      firetable.ui.formMessage('#resetPasswordFormShell', firetable.ui.authErrorMessage(error));
       firetable.debug && console.log('send pass reset error:', error);
     });
   });

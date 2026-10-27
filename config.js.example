@@ -32,4 +32,5 @@ var ftconfigs = {
   // SoundCloud search runs through api/soundcloud.php, which keeps the
   // client secret on the server. See api/soundcloud-config.php.example.
   // soundcloudProxyURL: "https://example.com/api/soundcloud.php" // optional, only if the proxy lives on another host
+  //                                                                  (then also add that host to connect-src in .htaccess)
 };
