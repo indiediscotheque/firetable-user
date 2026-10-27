@@ -1037,6 +1037,7 @@ firetable.ui.setupRoomEvents = function () {
     });
 
     if (firetable.ui && firetable.ui.syncGhostUsers) firetable.ui.syncGhostUsers();
+    if (firetable.ui && firetable.ui.renderRoomPulse) firetable.ui.renderRoomPulse();
     // Re-render the waitlist UI so the Play button reflects updated deck membership
     if (firetable.waitlistData !== undefined) {
       ftapi.events.emit('waitlistChanged', firetable.waitlistData);

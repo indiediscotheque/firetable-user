@@ -445,6 +445,12 @@
 		</div><!-- /#appShell -->
 
 		<div id="discover" class="scroll-view">
+			<!-- Shown only while logged out, when Fresh sits next to the sign-up form -->
+			<div id="freshIntro">
+				<h3>Fresh in the room</h3>
+				<p>New music people played here lately.</p>
+				<button type="button" id="minijoin" class="butt small">Sign up / Log in</button>
+			</div>
 			<div id="thediscovers">
 				<div class="pvbar">
 					<div class="pv-art discart">
@@ -477,6 +483,7 @@
 					Want to jump on the DJ table and pick some h0t tunes to play? Just want to join the
 					conversation?
 				</p>
+				<div id="roomPulse" aria-live="polite"></div>
 				<div class="miniLoginNavOnly"><br/><br/><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
 			</div>
 			<div id="logscreen" style="display: none">

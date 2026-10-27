@@ -5274,12 +5274,12 @@ html#about body {
     }
 
     #mainGrid.login {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         grid-template-rows: auto auto 1fr;
         grid-template-areas:
-            "head"
-            "stage"
-            "login";
+            "head  head"
+            "stage stage"
+            "login fresh";
     }
 
     /* At 640px+: active view panel shows via view-class regardless of layout mode */
@@ -5303,6 +5303,8 @@ html#about body {
 /* ── max 799px ── */
 @media only screen and (max-width: 799px) {
     .miniLoginInvisible { display: none !important; }
+}
+@media only screen and (max-width: 639px) {
     .miniLoginNavOnly { display: block !important; }
 
 
@@ -5347,11 +5349,11 @@ html#about body {
     }
 
     #mainGrid.login {
-        grid-template-columns: 24vw 46vw auto;
+        grid-template-columns: 24vw 46vw minmax(0, 1fr);
         grid-template-rows: auto 1fr;
         grid-template-areas:
-            "people  stage ."
-            "people  login .";
+            "people  stage fresh"
+            "people  login fresh";
     }
 
     #mainGrid.login #topbar {
@@ -5468,4 +5470,60 @@ body.media-off .q-art.no-art {
     font-size: 1.2rem;
     width: 1.5rem;
     justify-content: center;
+}
+
+
+/* ─── Logged out: live room preview (#9) ──────────────────────────────────── */
+#freshIntro { display: none; }
+
+#roomPulse:empty { display: none; }
+#roomPulse {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--pad2);
+    margin-top: var(--pad3);
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+}
+#roomPulse .pulse-faces { display: flex; }
+#roomPulse .pulse-faces .ft-avatar {
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-right: -0.5rem;
+    border: 2px solid var(--color-bg);
+    background-size: cover;
+}
+#roomPulse .pulse-text { padding-left: 0.5rem; }
+
+/* Things only members can do */
+#mainGrid.login #thediscovers .histeal { display: none; }
+
+/* Phones: Fresh replaces the form when "learn more" is tapped */
+#mainGrid.login.view-discover #freshIntro { display: block; }
+
+@media only screen and (min-width: 640px) {
+    /* Fresh sits next to the sign-up form */
+    #mainGrid.login #discover {
+        grid-area: fresh;
+        display: flex;
+        min-height: 0;
+    }
+    #mainGrid.login #freshIntro { display: block; }
+    #mainGrid.login #minijoin { display: none; }
+    /* the form stays even if the last view used was Fresh */
+    #mainGrid.login.view-discover #login { display: block; }
+}
+
+#freshIntro {
+    padding: var(--pad4) var(--pad3) var(--pad2);
+}
+#freshIntro h3 {
+    font-size: 1.25rem;
+    font-weight: 300;
+}
+#freshIntro p {
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+    margin-bottom: var(--pad2);
 }

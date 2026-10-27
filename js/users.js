@@ -112,6 +112,7 @@ firetable.actions.showLoginScreen = function () {
     $("#mainGrid").append('<div id="login" class="scroll-view">' + firetable.loginForm + '</div>');
     firetable.ui.loginEventsInit();
   }
+  firetable.ui.renderRoomPulse();
 };
 
 /**
@@ -243,6 +244,39 @@ firetable.actions.grab = function () {
  */
 firetable.actions.unban = function (userid) {
   ftapi.actions.unbanUser(userid);
+};
+
+// ─── Logged-out room preview ─────────────────────────────────────────────────
+
+/**
+ * "N people here now" with their avatars and who's DJing, above the sign-up
+ * form, so visitors see the room is alive before joining (#9).
+ */
+firetable.ui.renderRoomPulse = function () {
+  var el = document.getElementById("roomPulse");
+  if (!el) return;
+  var people = [];
+  for (var uid in ftapi.users || {}) {
+    if (ftapi.users.hasOwnProperty(uid) && !ftapi.users[uid].hostbot) {
+      people.push({ id: uid, name: ftapi.users[uid].username || uid });
+    }
+  }
+  var djs = [];
+  for (var k in firetable.tableData || {}) {
+    if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k]) djs.push(firetable.tableData[k].name);
+  }
+  var $el = $(el).empty();
+  if (!people.length) return;
+  var $faces = $('<div class="pulse-faces" aria-hidden="true"></div>');
+  people.slice(0, 8).forEach(function (u) {
+    $('<span class="ft-avatar"></span>')
+      .css("background-image", "url(" + firetable.utilities.avatarURL(u.id, u.name, "40x40") + ")")
+      .attr("title", u.name)
+      .appendTo($faces);
+  });
+  var text = firetable.utilities.pluralize(people.length, "person", "people") + " here now";
+  if (djs.length) text += " · DJing: " + djs.join(", ");
+  $el.append($faces).append($('<span class="pulse-text"></span>').text(text));
 };
 
 // ─── Login Form Events ──────────────────────────────────────────────────────
@@ -517,6 +551,7 @@ firetable.ui.setupUserEvents = function () {
     firetable.debug && console.log('users:', okdata);
     // Re-insert any ghost deck users that were cleared by the full rebuild
     firetable.ui.syncGhostUsers();
+    firetable.ui.renderRoomPulse();
   }));
 
   
