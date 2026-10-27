@@ -1917,10 +1917,14 @@ html .ui-button.ui-state-disabled:active {
     position: absolute;
     inset: 0;
     z-index: 0;
+    /* Fit the whole :id: logo inside the stage with breathing room on every side. */
+    padding: clamp(1rem, 6%, 3.5rem);
     background-image: url(../img/idlogo2.png);
     background-repeat: no-repeat;
     background-position: center;
-    background-size: cover;
+    background-origin: content-box;
+    background-clip: content-box;
+    background-size: contain;
     pointer-events: none;
     opacity: 0.05;
 }
