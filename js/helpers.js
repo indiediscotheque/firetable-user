@@ -30,7 +30,7 @@ firetable.utilities = {
    * Supports Robohash (via proxy) and DiceBear (SVG).
    * Style lookup order:
    *   explicit `style` param (e.g. a trading card's stamped set)
-   *   → ftconfigs.avatarset room theme (forces every avatar, e.g. "set2" for Halloween)
+   *   → room theme: ftconfigs.avatarset, else the seasonal theme (monsters in October)
    *   → ftapi.users[uid].avatarStyle → firetable.avatarStyle (own user cache)
    *   → "robohash:" + firetable.avatarset
    * @param {string} uid - User ID
@@ -52,6 +52,27 @@ firetable.utilities = {
     }
     var set = style.indexOf("robohash:") === 0 ? style.slice(9) : style;
     return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + (set || "set1");
+  },
+
+  /**
+   * Seasonal room avatar style for a date, from ftconfigs.avatarSeasons or
+   * AVATAR_SEASONS. Returns null when no season matches or seasons are off.
+   * @param {Date} [date=new Date()]
+   * @returns {string|null}
+   */
+  seasonalAvatarStyle: function (date) {
+    var seasons = (typeof ftconfigs !== "undefined" && ftconfigs.avatarSeasons !== undefined)
+      ? ftconfigs.avatarSeasons
+      : AVATAR_SEASONS;
+    if (!Array.isArray(seasons)) return null;
+    var month = (date || new Date()).getMonth() + 1;
+    for (var i = 0; i < seasons.length; i++) {
+      var season = seasons[i];
+      if (season && Array.isArray(season.months) && season.months.indexOf(month) !== -1) {
+        return firetable.utilities.normalizeAvatarStyle(season.style);
+      }
+    }
+    return null;
   },
 
   /**

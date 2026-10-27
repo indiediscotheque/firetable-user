@@ -36,9 +36,10 @@ firetable.init = function () {
   // ── Room Branding ──
   $("#welcomeName").text(ftconfigs.roomName);
 
-  // Room avatar theme: when config.js sets avatarset (e.g. "set2" for the
-  // spooky monsters), it overrides every user's saved avatar style.
-  firetable.roomAvatarStyle = firetable.utilities.normalizeAvatarStyle(ftconfigs.avatarset);
+  // Room avatar theme: config.js avatarset (e.g. "set2") if set, otherwise the
+  // seasonal theme (monsters in October). It overrides every user's saved style.
+  firetable.roomAvatarStyle = firetable.utilities.normalizeAvatarStyle(ftconfigs.avatarset)
+    || firetable.utilities.seasonalAvatarStyle(new Date());
   if (firetable.roomAvatarStyle && firetable.roomAvatarStyle.indexOf("robohash:") === 0) {
     firetable.avatarset = firetable.roomAvatarStyle.slice(9);
   }
