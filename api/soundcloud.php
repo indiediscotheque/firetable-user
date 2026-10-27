@@ -15,11 +15,13 @@
  *       → { "item": { ...playlist..., "tracks": [ ...playable tracks... ] } }
  *
  * Errors come back as { "error": "message" } with a matching HTTP status;
- * 501 means the proxy has no credentials yet.
+ * 501 means the proxy has no credentials yet, 403 a request from another
+ * website, 429 too many requests from one address.
  *
  * Credentials: set SOUNDCLOUD_CLIENT_ID and SOUNDCLOUD_CLIENT_SECRET in the
  * environment, or copy soundcloud-config.php.example to soundcloud-config.php
  * (next to this file) and fill it in. That file is never committed or deployed.
+ * It also holds the optional allowed_origins, rate_limit and cache_dir settings.
  */
 
 declare(strict_types=1);
@@ -32,6 +34,8 @@ const SC_MAX_QUERY_LEN = 200;
 const SC_PAGE_SIZE     = 200;   // playlist track page size
 const SC_MAX_TRACKS    = 2000;  // cap on tracks returned for one playlist import
 const SC_HTTP_TIMEOUT  = 15;
+const SC_RATE_LIMIT    = [120, 600]; // default: 120 requests per 10 minutes per IP
+const SC_ACTION_COST   = ['search' => 1, 'resolve' => 1, 'playlist' => 5];
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -57,23 +61,116 @@ final class ScError extends RuntimeException
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
+/** soundcloud-config.php as an array (empty when missing). */
+function load_config(): array
+{
+    static $cfg = null;
+    if ($cfg === null) {
+        $file = __DIR__ . '/soundcloud-config.php';
+        $cfg = is_file($file) ? (require $file) : [];
+        if (!is_array($cfg)) $cfg = [];
+    }
+    return $cfg;
+}
+
 /** @return array{client_id: string, client_secret: string} */
 function load_credentials(): array
 {
-    $id = getenv('SOUNDCLOUD_CLIENT_ID') ?: '';
-    $secret = getenv('SOUNDCLOUD_CLIENT_SECRET') ?: '';
-    $file = __DIR__ . '/soundcloud-config.php';
-    if ((!$id || !$secret) && is_file($file)) {
-        $cfg = require $file;
-        if (is_array($cfg)) {
-            $id = $id ?: (string)($cfg['client_id'] ?? '');
-            $secret = $secret ?: (string)($cfg['client_secret'] ?? '');
-        }
-    }
+    $cfg = load_config();
+    $id = getenv('SOUNDCLOUD_CLIENT_ID') ?: (string)($cfg['client_id'] ?? '');
+    $secret = getenv('SOUNDCLOUD_CLIENT_SECRET') ?: (string)($cfg['client_secret'] ?? '');
     if (!$id || !$secret || str_contains($id, 'xxxx') || str_contains($secret, 'xxxx')) {
         throw new ScError('SoundCloud proxy is not configured (missing client ID/secret).', 501);
     }
     return ['client_id' => $id, 'client_secret' => $secret];
+}
+
+/**
+ * A private folder for the token and rate-limit files: cache_dir from the
+ * config, or one in the system temp folder that only this account can read
+ * (shared hosts share /tmp between accounts).
+ */
+function cache_dir(): string
+{
+    $dir = (string)(load_config()['cache_dir'] ?? '');
+    if ($dir === '') {
+        $owner = function_exists('posix_geteuid') ? (string)posix_geteuid() : get_current_user();
+        $dir = rtrim(sys_get_temp_dir(), '/') . '/firetable-sc-' . substr(sha1(__DIR__ . '|' . $owner), 0, 16);
+    }
+    if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
+        throw new ScError('Cache folder is not writable.', 500);
+    }
+    @chmod($dir, 0700);
+    return $dir;
+}
+
+// ─── Who may call this ─────────────────────────────────────────────────────
+
+/**
+ * Only this site's pages (and origins listed in allowed_origins) may use the
+ * proxy. Browsers say where a request comes from in Sec-Fetch-Site; requests
+ * from other websites are refused. Allowed cross-origin callers get CORS
+ * headers so a proxy on another host works.
+ */
+function check_caller(): void
+{
+    $origin = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+    $site = strtolower((string)($_SERVER['HTTP_SEC_FETCH_SITE'] ?? ''));
+    $allowed = array_map(fn($o) => rtrim((string)$o, '/'), (array)(load_config()['allowed_origins'] ?? []));
+    $originAllowed = $origin !== '' && in_array(rtrim($origin, '/'), $allowed, true);
+
+    if ($originAllowed) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Vary: Origin');
+    }
+    if (($site === 'cross-site' || $site === 'same-site') && !$originAllowed) {
+        throw new ScError('This proxy only serves its own site.', 403);
+    }
+}
+
+/**
+ * Fixed-window rate limit per client IP, so nobody can burn the app's
+ * SoundCloud quota. rate_limit in the config: [requests, seconds], or false.
+ */
+function rate_limit(string $action): void
+{
+    $cfg = load_config();
+    $limit = array_key_exists('rate_limit', $cfg) ? $cfg['rate_limit'] : SC_RATE_LIMIT;
+    if (!$limit) return;
+    [$max, $window] = [max(1, (int)$limit[0]), max(1, (int)$limit[1])];
+    $cost = SC_ACTION_COST[$action] ?? 1;
+
+    $dir = cache_dir();
+    $ip = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    $path = $dir . '/rl-' . sha1($ip) . '.json';
+    $old = umask(0077);
+    $fh = fopen($path, 'c+');
+    umask($old);
+    if (!$fh) return; // never block the site because of the limiter
+    try {
+        flock($fh, LOCK_EX);
+        $now = time();
+        $state = json_decode((string)stream_get_contents($fh), true) ?: [];
+        if (($state['start'] ?? 0) + $window <= $now) $state = ['start' => $now, 'used' => 0];
+        if ($state['used'] + $cost > $max) {
+            header('Retry-After: ' . max(1, $state['start'] + $window - $now));
+            throw new ScError('Too many SoundCloud requests. Try again in a few minutes.', 429);
+        }
+        $state['used'] += $cost;
+        ftruncate($fh, 0);
+        rewind($fh);
+        fwrite($fh, json_encode($state));
+        fflush($fh);
+    } finally {
+        flock($fh, LOCK_UN);
+        fclose($fh);
+    }
+    // Now and then, clear out other addresses' expired windows
+    if (mt_rand(1, 100) === 1) {
+        foreach (glob($dir . '/rl-*.json') ?: [] as $f) {
+            if (filemtime($f) < time() - 2 * $window) @unlink($f);
+        }
+    }
 }
 
 // ─── HTTP ──────────────────────────────────────────────────────────────────
@@ -118,7 +215,7 @@ function http_request(string $method, string $url, array $headers = [], ?string 
 
 function token_cache_path(string $clientId): string
 {
-    return rtrim(sys_get_temp_dir(), '/') . '/firetable-sc-token-' . sha1($clientId) . '.json';
+    return cache_dir() . '/token-' . sha1($clientId) . '.json';
 }
 
 /**
@@ -129,9 +226,10 @@ function token_cache_path(string $clientId): string
 function access_token(array $creds, bool $forceNew = false): string
 {
     $path = token_cache_path($creds['client_id']);
+    $old = umask(0077); // created owner-only from the start (no readable moment)
     $fh = fopen($path, 'c+');
+    umask($old);
     if (!$fh) throw new ScError('Token cache is not writable.', 500);
-    @chmod($path, 0600);
     try {
         flock($fh, LOCK_EX);
         $cached = json_decode((string)stream_get_contents($fh), true) ?: [];
@@ -320,8 +418,10 @@ function clamp_limit(mixed $raw): int
 
 try {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') throw new ScError('Only GET is supported.', 405);
-    $creds = load_credentials();
+    check_caller();
     $action = (string)($_GET['action'] ?? '');
+    rate_limit($action);
+    $creds = load_credentials();
 
     switch ($action) {
         case 'search': {

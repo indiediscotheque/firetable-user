@@ -88,12 +88,19 @@ firetable.lastfm = {
    * Submit a scrobble (track.scrobble) for the current song.
    * Called automatically after ~(duration - 3s) of playback.
    */
+  /** Is the user actually hearing the room right now? (not muted, media on, no preview) */
+  _listening: function () {
+    return !firetable.disableMediaPlayback && !firetable.preview &&
+      firetable.utilities.getEffectiveVolume() > 0;
+  },
+
   scrobble: function () {
+    if (!firetable.lastfm._listening()) return;
     var song = firetable.song;
-    var track = firetable.lastfm._cleanForScrobble(song.title);
+    var track = firetable.lastfm._cleanForScrobble(firetable.utilities.decodeEntities(song.title));
 
     var params = {
-      artist:    song.artist,
+      artist:    firetable.utilities.decodeEntities(song.artist),
       track:     track,
       timestamp: firetable.lastfm.songStart,
       api_key:   firetable.lastfm.key,
@@ -102,11 +109,11 @@ firetable.lastfm = {
     };
 
     params.api_sig = firetable.lastfm.getApiSignature(params);
-    var requestUrl = LASTFM_API_URL + '?' + serialize(params);
+    var requestUrl = LASTFM_API_URL + '?' + serialize(params) + '&format=json'; // format isn't signed
 
     var xhr = new XMLHttpRequest();
     xhr.open('POST', requestUrl, true);
-    xhr.onload = function () { console.log("scrobbled"); };
+    xhr.onload = firetable.lastfm._onResponse(xhr, "scrobbled");
     xhr.onerror = firetable.lastfm._onAjaxError;
     xhr.send();
   },
@@ -116,10 +123,10 @@ firetable.lastfm = {
    */
   love: function () {
     var song = firetable.song;
-    var track = firetable.lastfm._cleanForScrobble(song.title);
+    var track = firetable.lastfm._cleanForScrobble(firetable.utilities.decodeEntities(song.title));
 
     var params = {
-      artist:  song.artist,
+      artist:  firetable.utilities.decodeEntities(song.artist),
       track:   track,
       api_key: firetable.lastfm.key,
       sk:      firetable.lastfm.sk,
@@ -127,11 +134,11 @@ firetable.lastfm = {
     };
 
     params.api_sig = firetable.lastfm.getApiSignature(params);
-    var requestUrl = LASTFM_API_URL + '?' + serialize(params);
+    var requestUrl = LASTFM_API_URL + '?' + serialize(params) + '&format=json'; // format isn't signed
 
     var xhr = new XMLHttpRequest();
     xhr.open('POST', requestUrl, true);
-    xhr.onload = function () { console.log("loved"); };
+    xhr.onload = firetable.lastfm._onResponse(xhr, "loved");
     xhr.onerror = firetable.lastfm._onAjaxError;
     xhr.send();
   },
@@ -141,11 +148,12 @@ firetable.lastfm = {
    * Called immediately when a new song starts.
    */
   nowPlaying: function () {
+    if (!firetable.lastfm._listening()) return;
     var song = firetable.song;
-    var track = firetable.lastfm._cleanForScrobble(song.title);
+    var track = firetable.lastfm._cleanForScrobble(firetable.utilities.decodeEntities(song.title));
 
     var params = {
-      artist:   song.artist,
+      artist:   firetable.utilities.decodeEntities(song.artist),
       track:    track,
       duration: firetable.lastfm.duration,
       api_key:  firetable.lastfm.key,
@@ -154,11 +162,11 @@ firetable.lastfm = {
     };
 
     params.api_sig = firetable.lastfm.getApiSignature(params);
-    var requestUrl = LASTFM_API_URL + '?' + serialize(params);
+    var requestUrl = LASTFM_API_URL + '?' + serialize(params) + '&format=json'; // format isn't signed
 
     var xhr = new XMLHttpRequest();
     xhr.open('POST', requestUrl, true);
-    xhr.onload = function () { console.log("nowplaying updated"); };
+    xhr.onload = firetable.lastfm._onResponse(xhr, "nowplaying updated");
     xhr.onerror = firetable.lastfm._onAjaxError;
     xhr.send();
   },
@@ -202,6 +210,24 @@ firetable.lastfm = {
    * @param {string} status
    * @param {string} error
    */
+  /**
+   * onload handler for an API call. Last.fm answers errors with a JSON body;
+   * an invalid/revoked session (error 9) disconnects, so the "Set up Last.fm
+   * scrobbling" link comes back instead of failing silently forever.
+   */
+  _onResponse: function (xhr, what) {
+    return function () {
+      var res = null;
+      try { res = JSON.parse(xhr.responseText); } catch (e) { /* not JSON */ }
+      if (res && res.error) {
+        console.warn("Last.fm " + what + " failed:", res.error, res.message);
+        if (res.error === 9) firetable.lastfm.killSession();
+        return;
+      }
+      firetable.debug && console.log("Last.fm " + what);
+    };
+  },
+
   _onAjaxError: function (xhr, status, error) {
     console.error("Last.fm API error:", xhr, status, error);
   }

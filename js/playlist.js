@@ -33,6 +33,26 @@ firetable.actions.switchViewList = function (listID) {
   });
 };
 
+// ─── Panel switching ──────────────────────────────────────────────────────────
+
+/** Show the playlist itself (and its filter); hide the "add a track" search. */
+firetable.ui.showQueuePanel = function () {
+  $("#mainqueuestuff, #filterMachine").css("display", "block");
+  $("#searchMachine, #addbox").css("display", "none");
+  $("#cancelqsearch").hide();
+  $("#qControlButtons").show();
+};
+
+/** Show the "add a track" search in place of the playlist. */
+firetable.ui.showSearchPanel = function () {
+  $("#mainqueuestuff, #filterMachine").css("display", "none");
+  $("#searchMachine").css("display", "block");
+  $("#addbox").css("display", "flex");
+  $("#cancelqsearch").show();
+  $("#qControlButtons").hide();
+  $("#plmanager").css("display", "none");
+};
+
 // ─── Queue Track ─────────────────────────────────────────────────────────────
 
 /**
@@ -67,12 +87,7 @@ firetable.actions.queueTrack = function (cid, name, type, tobottom) {
   firetable.utilities.cancelSearchPreview();
 
   // Switch view back to queue
-  $("#mainqueuestuff").css("display", "block");
-  $("#filterMachine").css("display", "block");
-  $("#searchMachine").css("display", "none");
-  $("#addbox").css("display", "none");
-  $("#cancelqsearch").hide();
-  $("#qControlButtons").show();
+  firetable.ui.showQueuePanel();
 };
 
 // ─── Queue Reorder (Sortable) ────────────────────────────────────────────────
@@ -145,13 +160,7 @@ firetable.actions.deleteSongAndSearch = function (id, tags, type) {
   if (!query) return;
 
   // Switch to Add to Playlist/search view before filling and submitting.
-  $("#mainqueuestuff").css("display", "none");
-  $("#filterMachine").css("display", "none");
-  $("#searchMachine").css("display", "block");
-  $("#addbox").css("display", "flex");
-  $("#cancelqsearch").show();
-  $("#qControlButtons").hide();
-  $("#plmanager").css("display", "none");
+  firetable.ui.showSearchPanel();
 
   if (String(type) === String(MEDIA_SOUNDCLOUD)) {
     $("#scsearchSelect").trigger("click");
@@ -327,8 +336,7 @@ firetable.actions.mergeLists = function (source, dest, sourceName) {
   if (dest == -1) {
     var newname = firetable.utilities.format_date(Date.now()) + " Copy of " + sourceName;
     dest = ftapi.actions.createList(newname);
-    $("#listpicker").append(firetable.utilities.playlistOption(dest, newname, 'pdopt' + dest));
-    $("#djlistpicker").append(firetable.utilities.playlistOption(dest, newname));
+    firetable.utilities.addPlaylistToPickers(dest, newname);
   }
   ftapi.actions.mergeLists(source, dest, firetable.actions.mergeFinished);
 };
@@ -623,8 +631,7 @@ firetable.actions.importList = function (id, name, type) {
           // All pages fetched — create the list
           firetable.debug && console.log(finalList);
           var listid = ftapi.actions.createList(name);
-          $("#listpicker").append(firetable.utilities.playlistOption(listid, name, 'pdopt' + listid));
-          $("#djlistpicker").append(firetable.utilities.playlistOption(listid, name));
+          firetable.utilities.addPlaylistToPickers(listid, name);
           for (var i = 0; i < finalList.length; i++) {
             var goodTitle = firetable.utilities.decodeEntities(finalList[i].snippet.title);
             if (goodTitle !== "Private video" && goodTitle !== "Deleted video") {
@@ -641,8 +648,7 @@ firetable.actions.importList = function (id, name, type) {
       var tracks = (listinfo && listinfo.tracks) || [];
       firetable.debug && console.log('sc tracks:', tracks);
       var listid = ftapi.actions.createList(name);
-      $("#listpicker").append(firetable.utilities.playlistOption(listid, name, 'pdopt' + listid));
-      $("#djlistpicker").append(firetable.utilities.playlistOption(listid, name));
+      firetable.utilities.addPlaylistToPickers(listid, name);
       for (var i = 0; i < tracks.length; i++) {
         var goodTitle;
         if (tracks[i].title) {
@@ -658,73 +664,6 @@ firetable.actions.importList = function (id, name, type) {
       firetable.actions.localChatResponse("SoundCloud import failed: " + err.message);
     });
   }
-};
-
-// ─── Dubtrack Import ─────────────────────────────────────────────────────────
-
-/**
- * Import tracks from the parsed Dubtrack export file.
- * Expects firetable.dtImportList and firetable.dtImportName to be populated
- * by dubtrackImportFileSelect().
- */
-firetable.actions.dubtrackImport = function () {
-  $("#importDubResults").html("importing (0/" + firetable.dtImportList.length + ")...");
-  $("#dubimportButton").hide();
-  var listid = ftapi.actions.createList(firetable.dtImportName);
-  var name = firetable.dtImportName;
-  $("#listpicker").append(firetable.utilities.playlistOption(listid, name, 'pdopt' + listid));
-  $("#djlistpicker").append(firetable.utilities.playlistOption(listid, name));
-
-  var trackarray = firetable.dtImportList;
-  for (var e = 0; e < trackarray.length; e++) {
-    var thetype = trackarray[e].type === "soundcloud" ? MEDIA_SOUNDCLOUD : MEDIA_YOUTUBE;
-    var numbo = e + 1;
-    $("#importDubResults").html("importing (" + numbo + "/" + firetable.dtImportList.length + ")...");
-    if (numbo === firetable.dtImportList.length) {
-      $("#importDubResults").html("Import complete! You can now select another file if you'd like to do another!");
-    }
-    ftapi.actions.addToList(thetype, trackarray[e].name, trackarray[e].cid, listid);
-  }
-};
-
-/**
- * Parse a Dubtrack HTML export file and prepare it for import.
- * Populates firetable.dtImportName and firetable.dtImportList.
- * @param {Event} evt - File input change event
- */
-firetable.ui.dubtrackImportFileSelect = function (evt) {
-  var file = evt.target.files[0];
-  var reader = new FileReader();
-  reader.readAsText(file);
-  reader.onload = function (event) {
-    try {
-      var allthestuff = event.currentTarget.result;
-      firetable.dtImportName = firetable.ui.strip(allthestuff.split('<h4>')[1].split('</h4>')[0]);
-      var hams = allthestuff.split('<li class="list-group-item list-group-item-dark" ');
-      hams.shift();
-      firetable.dtImportList = [];
-      for (var i = 0; i < hams.length; i++) {
-        var thingsRegex = /(type\=\"(.*))(" id\=\"(.*)\")>(.*)<\/li>/gm;
-        var matches = thingsRegex.exec(hams[i]);
-        firetable.dtImportList.push({
-          type: matches[2],
-          cid: matches[4],
-          name: firetable.ui.strip(matches[5])
-        });
-      }
-      if (firetable.dtImportList.length) {
-        $("#importDubResults").text("Ok... import " + firetable.dtImportName + " (" + firetable.utilities.pluralize(firetable.dtImportList.length, "track") + ")?");
-        $("#dubimportButton").show();
-      } else {
-        $("#importDubResults").text("ERROR... NO TRAX?");
-        $("#dubimportButton").hide();
-      }
-    } catch (e) {
-      console.log(e);
-      $("#importDubResults").text("ERROR");
-      $("#dubimportButton").hide();
-    }
-  };
 };
 
 // ─── Tag Editing ─────────────────────────────────────────────────────────────
@@ -1040,29 +979,16 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   // ── Add-to-queue toggle ──
-  $("#addToQueueBttn").bind("click", function () {
-    $("#mainqueuestuff").css("display", "none");
-    $("#filterMachine").css("display", "none");
-    $("#searchMachine").css("display", "block");
-    $("#addbox").css("display", "flex");
-    $("#cancelqsearch").show();
-    $("#qControlButtons").hide();
-    $("#plmanager").css("display", "none");
-  });
+  $("#addToQueueBttn").on("click", firetable.ui.showSearchPanel);
 
   // ── Cancel search / back to queue ──
-  $("#cancelqsearch").bind("click", function () {
-    $("#mainqueuestuff").css("display", "block");
-    $("#filterMachine").css("display", "block");
-    $("#searchMachine").css("display", "none");
-    $("#cancelqsearch").hide();
-    $("#qControlButtons").show();
-    $("#addbox").css("display", "none");
+  $("#cancelqsearch").on("click", function () {
+    firetable.ui.showQueuePanel();
     firetable.utilities.cancelSearchPreview();
   });
 
   // ── Create new playlist ──
-  $("#plmaker").bind("keyup", function (e) {
+  $("#plmaker").on("keyup", function (e) {
     if (e.key === 'Escape') {
       $(this).val('');
       exitCreateMode();
@@ -1072,8 +998,7 @@ firetable.ui.setupPlaylistEvents = function () {
     var val = $(this).val();
     if (val) {
       var listid = ftapi.actions.createList(val);
-      $("#listpicker").append(firetable.utilities.playlistOption(listid, val, 'pdopt' + listid));
-      $("#djlistpicker").append(firetable.utilities.playlistOption(listid, val));
+      firetable.utilities.addPlaylistToPickers(listid, val);
       $("#listpicker").val(listid).change();
       $("#djlistpicker").val(listid);
       ftapi.actions.switchDjList(listid);
@@ -1102,7 +1027,7 @@ firetable.ui.setupPlaylistEvents = function () {
   }
 
   // ── Delete playlist ──
-  $("#pldeleteButton").bind("click", function () {
+  $("#pldeleteButton").on("click", function () {
     var val = $("#listpicker").val();
     if (!val || val === "0") return;
     firetable.debug && console.log('playlist delete:', val);
@@ -1120,13 +1045,13 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   // ── Delete confirm input live check ──
-  $("#deleteConfirmInput").bind("input", function () {
+  $("#deleteConfirmInput").on("input", function () {
     var target = $("#deleteConfirmTarget").text();
     $("#pldeleteButton").prop('disabled', $(this).val() !== target);
   });
 
   // ── Delete launcher ──
-  $("#plDeleteLauncher").bind("click", function () {
+  $("#plDeleteLauncher").on("click", function () {
     var val = $("#listpicker").val();
     if (!val || val === "0") {
       return; // nothing to delete
@@ -1158,7 +1083,7 @@ firetable.ui.setupPlaylistEvents = function () {
     if (returnFocus) $("#plAddLauncher").focus();
   }
 
-  $("#plAddLauncher").bind("click", function (e) {
+  $("#plAddLauncher").on("click", function (e) {
     e.stopPropagation();
     // If we're in create mode, this button acts as cancel
     if ($("#plmanager").is(":visible")) {
@@ -1175,7 +1100,7 @@ firetable.ui.setupPlaylistEvents = function () {
     openPlAddMenu();
   });
 
-  $("#plAddPopover").bind("keydown", function (e) {
+  $("#plAddPopover").on("keydown", function (e) {
     var $items = $(this).find('[role=menuitem]');
     var $focused = $items.filter(':focus');
     var idx = $items.index($focused);
@@ -1199,22 +1124,22 @@ firetable.ui.setupPlaylistEvents = function () {
     }
   });
 
-  $(document).bind("click.plAddPopover", function () {
+  $(document).on("click.plAddPopover", function () {
     closePlAddMenu(false);
   });
 
-  $("#plAddPopover").bind("click", function (e) {
+  $("#plAddPopover").on("click", function (e) {
     e.stopPropagation();
   });
 
   // ── Popover: Create Playlist ──
-  $("#plAddCreate").bind("click", function () {
+  $("#plAddCreate").on("click", function () {
     closePlAddMenu(false);
     enterCreateMode();
   });
 
   // ── Popover: Import Playlist ──
-  $("#plAddImport").bind("click", function () {
+  $("#plAddImport").on("click", function () {
     closePlAddMenu(false);
     document.getElementById("importPromptBox").showModal();
   });
@@ -1228,7 +1153,7 @@ firetable.ui.setupPlaylistEvents = function () {
     $("#mergeLists").removeClass('on');
   }
 
-  $("#mergeLists").bind("click", function () {
+  $("#mergeLists").on("click", function () {
     var $this = $(this);
     var isHidden = $("#mergeContain").is(":hidden");
     if (isHidden) {
@@ -1258,7 +1183,7 @@ firetable.ui.setupPlaylistEvents = function () {
       closeMergeContain();
     }
   });
-  $("#startMerge").bind("click", function () {
+  $("#startMerge").on("click", function () {
     var source = $("#mergepicker").val();
     var sourceName = $("#mergepicker option:selected").text();
     var dest = $("#mergepicker2").val();
@@ -1267,7 +1192,7 @@ firetable.ui.setupPlaylistEvents = function () {
     firetable.debug && console.log(sourceName + " -> " + $("#mergepicker2 option:selected").text());
     firetable.actions.mergeLists(source, dest, sourceName);
   });
-  $("#mergeOK").bind("click", function () {
+  $("#mergeOK").on("click", function () {
     closeMergeContain();
   });
 

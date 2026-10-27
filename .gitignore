@@ -1,2 +1,4 @@
 config.js
 api/soundcloud-config.php
+.DS_Store
+node_modules/

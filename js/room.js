@@ -94,11 +94,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
       );
     }
   });
-  try {
-    if (!ftapi.isMod) $histItem.find('.edittags').hide();
-  } catch (e) {
-    console.log(e);
-  }
+  if (!ftapi.isMod) $histItem.find('.edittags').hide();
 
   // Metadata
   $histItem.find('.histdj').text(data.dj);
@@ -284,7 +280,7 @@ firetable.ui.setupRoomEvents = function () {
 
       if (activeIdx < allDjs.length) {
         var activeEntry = allDjs[activeIdx];
-        var key = activeEntry.tableKey;
+        var tableKey = activeEntry.tableKey;
         var djId = activeEntry.id;
         var djName = activeEntry.name;
         var djPlays = activeEntry.plays;
@@ -299,7 +295,7 @@ firetable.ui.setupRoomEvents = function () {
         var btnIcon = isSelf ? 'close' : 'person_remove';
         var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
         var actionBtn = showBtn
-          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + djId + '" data-tablekey="' + key + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
+          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + djId + '" data-tablekey="' + tableKey + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
           : '';
         var departureIndicator;
         if (showDeparture) {
@@ -312,7 +308,7 @@ firetable.ui.setupRoomEvents = function () {
           var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + djDisplayName + ' step down after their next play';
           var departureTitleOn  = isSelf ? "Don't step down after your next play" : "Don't have " + djDisplayName + ' step down after their next play';
           var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
-          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + key + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
+          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + tableKey + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
         } else if (activeEntry.removeAfter) {
           departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down after this song">departure_board</span>';
         } else {
@@ -765,13 +761,18 @@ firetable.ui.setupRoomEvents = function () {
       clearTimeout(firetable.lastfm.timer);
       firetable.lastfm.timer = null;
     }
-    if (firetable.lastfm.sk) {
+    if (firetable.lastfm.sk && data.cid !== 0) {
       firetable.lastfm.duration = Math.floor(timeLeft);
       firetable.lastfm.songStart = Math.floor(ftapi.now() / 1000);
-      firetable.lastfm.timer = setTimeout(function () {
-        firetable.lastfm.timer = null;
-        firetable.lastfm.scrobble();
-      }, (timeLeft * 1000) - 3000);
+      // Last.fm's rule: scrobble tracks over 30 s once at least half of
+      // them (or 4 minutes) has been heard — not when joining near the end.
+      var willHear = timeLeft - 3;
+      if (data.duration > 30 && willHear >= Math.min(data.duration / 2, 240)) {
+        firetable.lastfm.timer = setTimeout(function () {
+          firetable.lastfm.timer = null;
+          firetable.lastfm.scrobble();
+        }, willHear * 1000);
+      }
       firetable.lastfm.nowPlaying();
     }
 
@@ -808,12 +809,14 @@ firetable.ui.setupRoomEvents = function () {
             single_active: false,
             callback: function () {
               var vol = firetable.utilities.getEffectiveVolume();
-              player.setVolume(vol);
+              // (YouTube may not have loaded, e.g. blocked by an extension)
+              if (firetable.ytLoaded) player.setVolume(vol);
               firetable.scwidget.setVolume(vol);
               // Explicitly play — auto_play can be suppressed in background tabs
               firetable.scwidget.play();
             }
           });
+          firetable.media.watchSoundCloud();
         }
       }
     }
@@ -960,7 +963,7 @@ firetable.ui.setupRoomEvents = function () {
             '</span>' +
             departureBtn +
             '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
-            '<div class="ft-avatar" style="background-image:url(' +
+            '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + wlName + ' — profile" style="background-image:url(' +
             firetable.utilities.htmlEscape(firetable.utilities.avatarURL(userId, data[key].name)) +
             ');"></div>' +
             '</div>';

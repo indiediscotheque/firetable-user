@@ -1,6 +1,6 @@
 <?php
 /*
- * SoundCloud API credentials for api/soundcloud.php.
+ * Settings for api/soundcloud.php.
  *
  * 1.) copy this file to soundcloud-config.php (same folder)
  * 2.) fill in your SoundCloud app's client ID and client secret
@@ -13,4 +13,18 @@
 return [
     'client_id'     => 'xxxxxxxxxxxxxxxxxxxx',
     'client_secret' => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+
+    // Optional. Other sites allowed to use this proxy, e.g. when it lives on a
+    // different host than firetable (see soundcloudProxyURL in config.js).
+    // Requests from any other website are refused.
+    // 'allowed_origins' => ['https://example.com'],
+
+    // Optional. Requests allowed per visitor IP address: [requests, seconds].
+    // Default [120, 600]; a playlist import counts as 5. false turns it off.
+    // 'rate_limit' => [120, 600],
+
+    // Optional. Private folder for the cached SoundCloud token and the rate
+    // limit counters. Default: a folder in the system temp directory that only
+    // this account can read.
+    // 'cache_dir' => '/home/youruser/.firetable-cache',
 ];

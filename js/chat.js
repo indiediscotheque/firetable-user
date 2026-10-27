@@ -348,7 +348,13 @@ firetable.ui.setupChatEvents = function () {
     // ── @-mention detection ──
     // Mention styling should apply even for older messages loaded from history,
     // but sound/desktop alerts should only fire for recent messages.
-    var hasMention = !!(chatData.txt.match("@" + you, 'i') || chatData.txt.match(/\@everyone/));
+    // "@name" must be the whole name (@bob isn't @bobby); any case.
+    // Only mods, supermods and the bot can ping the whole room with @everyone.
+    var nameRe = new RegExp("@" + String(you).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![A-Za-z0-9_])", "i");
+    var sender = ftapi.users[chatData.id] || {};
+    var canPingAll = !!(sender.mod || sender.supermod || sender.hostbot);
+    var hasMention = nameRe.test(chatData.txt || "") ||
+      (canPingAll && /@everyone(?![A-Za-z0-9_])/i.test(chatData.txt || ""));
     if (hasMention) {
       var timeSinceMessage = ftapi.now() - chatData.time;
       if (timeSinceMessage < 10 * 1000) {
@@ -386,7 +392,7 @@ firetable.ui.setupChatEvents = function () {
 
       if (canDelete()) {
         $("#chattxt" + chatData.chatID).addClass("deleteMe");
-        $("#chattxt" + chatData.chatID).append('<div class="modDelete">x</div>');
+        $("#chattxt" + chatData.chatID).append('<button type="button" class="modDelete" aria-label="Delete message">&times;</button>');
         $("#chattxt" + chatData.chatID).find(".modDelete").on('click', function () {
           ftapi.actions.deleteChat(chatData.feedID);
         });
@@ -430,7 +436,7 @@ firetable.ui.setupChatEvents = function () {
 
       if (canDelete()) {
         $chatthing.find(".chatText").addClass("deleteMe");
-        $chatthing.find(".chatText").append('<div class="modDelete">x</div>');
+        $chatthing.find(".chatText").append('<button type="button" class="modDelete" aria-label="Delete message">&times;</button>');
         $chatthing.find(".modDelete").on('click', function () {
           ftapi.actions.deleteChat(chatData.feedID);
         });
@@ -497,7 +503,7 @@ firetable.ui.setupChatEvents = function () {
   $("#newchat").on('input', growChatInput);
 
   // ── Chat Input: Send Message + Slash Commands ──
-  $("#newchat").bind("keydown", function (e) {
+  $("#newchat").on("keydown", function (e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       var txt = $("#newchat").val();
@@ -619,7 +625,7 @@ firetable.ui.setupChatEvents = function () {
   });
 
   // ── @-mention: backspace/arrow navigation ──
-  $("#newchat").bind("keyup", function (e) {
+  $("#newchat").on("keyup", function (e) {
     if (!firetable.atLand) return;
     if (e.key === "Backspace") {
       if (!firetable.atString) {
@@ -636,7 +642,7 @@ firetable.ui.setupChatEvents = function () {
   });
 
   // ── @-mention: Tab to auto-complete (selects the highlighted item) ──
-  $("#newchat").bind("keydown", function (e) {
+  $("#newchat").on("keydown", function (e) {
     if (!firetable.atLand) return;
     if (e.key === "Tab") {
       e.preventDefault();
@@ -705,12 +711,12 @@ firetable.ui.setupChatEvents = function () {
   });
 
   // ── "More chats" scroll-to-bottom button ──
-  $("#morechats .butt").bind("click", function () {
+  $("#morechats .butt").on("click", function () {
     firetable.utilities.scrollToBottom();
   });
 
   // ── Fire / Rain reaction buttons ──
-  $("#fire").bind("click", function () {
+  $("#fire").on("click", function () {
     if (ftapi.uid && firetable.fireReactors[ftapi.uid]) {
       ftapi.actions.sendChat(":cloud_with_rain:");
       $("#cloud_with_rain").addClass("on");
@@ -719,7 +725,7 @@ firetable.ui.setupChatEvents = function () {
       ftapi.actions.sendChat(":fire:");
     }
   });
-  $("#cloud_with_rain").bind("click", function () {
+  $("#cloud_with_rain").on("click", function () {
     ftapi.actions.sendChat(":cloud_with_rain:");
     $("#cloud_with_rain").addClass("on");
     $("#fire").removeClass("on");

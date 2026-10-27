@@ -5,7 +5,6 @@
  * - Track search via YouTube Data API v3 + SoundCloud (through api/soundcloud.php)
  * - Direct link detection (youtube.com/watch, soundcloud.com/…, on.soundcloud.com/…)
  * - Playlist/import search via YouTube + SoundCloud
- * - Dubtrack import file parsing + import
  * - Search source toggle buttons (#ytsearchSelect, #scsearchSelect)
  * - Import source toggle tabs
  */
@@ -85,7 +84,7 @@ firetable.ui.setupSearchEvents = function () {
   };
 
   // ── Track Search (Enter in #qsearch) ──
-  $("#qsearch").bind("keyup", function (e) {
+  $("#qsearch").on("keyup", function (e) {
     if (e.which !== 13) return;
     var txt = String($("#qsearch").val() || "").trim();
     if (!txt) return;
@@ -197,27 +196,27 @@ firetable.ui.setupSearchEvents = function () {
   });
 
   // ── Search Source Toggle Buttons ──
-  $("#ytsearchSelect").bind("click", function () {
+  $("#ytsearchSelect").on("click", function () {
     $("#scsearchSelect").removeClass("on").attr("aria-selected", "false");
     $(this).addClass("on").attr("aria-selected", "true");
     firetable.searchSelectsChoice = MEDIA_YOUTUBE;
   });
-  $("#scsearchSelect").bind("click", function () {
+  $("#scsearchSelect").on("click", function () {
     $("#ytsearchSelect").removeClass("on").attr("aria-selected", "false");
     $(this).addClass("on").attr("aria-selected", "true");
     firetable.searchSelectsChoice = MEDIA_SOUNDCLOUD;
   });
 
   // ── Import Source Toggle Tabs ──
-  $("#ytimportchoice").bind("click", function () {
+  $("#ytimportchoice").on("click", function () {
     firetable.debug && console.log("yt import");
     firetable.importSelectsChoice = MEDIA_YOUTUBE;
   });
-  $("#scimportchoice").bind("click", function () {
+  $("#scimportchoice").on("click", function () {
     firetable.debug && console.log("sc import");
     firetable.importSelectsChoice = MEDIA_SOUNDCLOUD;
   });
-  $("#importSources .tab").bind("click", function () {
+  $("#importSources .tab").on("click", function () {
     $(this).siblings().removeClass('on');
     $(this).addClass('on');
   });
@@ -241,7 +240,7 @@ firetable.ui.setupSearchEvents = function () {
   };
 
   // ── Playlist/Import Search (#plMachine) ──
-  $("#plMachine").bind("keyup", function (e) {
+  $("#plMachine").on("keyup", function (e) {
     if (e.which !== 13) return;
     var val = $("#plMachine").val();
     if (!val) return;

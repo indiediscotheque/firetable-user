@@ -112,6 +112,10 @@ firetable.init = function () {
       if (firetable.scSeek) firetable.scwidget.seekTo(firetable.scSeek);
       // Clear reload spinner once SC audio actually starts playing
       $('#reloadtrack').removeClass('on working');
+      firetable.media.onSoundCloudPlay();
+    });
+    firetable.scwidget.bind(SC.Widget.Events.ERROR, function () {
+      firetable.media.onSoundCloudError();
     });
 
     // If a SC song was already loaded before the widget was ready, start it now
@@ -126,6 +130,7 @@ firetable.init = function () {
             auto_play: true,
             callback: function () { firetable.scwidget.play(); }
           });
+          firetable.media.watchSoundCloud();
         }
       }
     }
