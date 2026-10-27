@@ -32,6 +32,18 @@
     75% { transform: rotate(3deg) translateY(0.1rem); }
 }
 
+@keyframes avatarDance {
+    0%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+    25% { transform: translate(-0.02rem, 0.3rem) rotate(-2deg); }
+    75% { transform: translate(0.02rem, 0.3rem) rotate(2deg); }
+}
+
+@keyframes avatarDanceBg {
+    0%, 50%, 100% { background-position: var(--avatar-bg-x) calc(var(--avatar-bg-y) + 12%); }
+    25% { background-position: calc(var(--avatar-bg-x) + 16%) calc(var(--avatar-bg-y) - 8%); }
+    75% { background-position: calc(var(--avatar-bg-x) - 16%) calc(var(--avatar-bg-y) - 8%); }
+}
+
 @keyframes pulse {
     from { opacity: 1; }
     to { opacity: 0.5; }
@@ -1258,19 +1270,22 @@ button.waitlist-pos {
 
 /* ── Reusable avatar component ── */
 .ft-avatar {
+    --avatar-bg-x: 50%;
+    --avatar-bg-y: 66%;
     display: block;
     width: 100%;
     height: 100%;
     border-radius: var(--radius-pill);
     background-color: #000;
     background-size: auto 125%;
-    background-position: center 66%;
+    background-position: var(--avatar-bg-x) var(--avatar-bg-y);
     background-repeat: no-repeat;
     flex-shrink: 0;
     overflow: hidden;
 }
 
 #allUsers .ft-avatar {
+    --avatar-bg-y: 72%;
     display: flex;
     align-items: center;
     position: relative;
@@ -1775,6 +1790,22 @@ html .ui-button.ui-state-disabled:active {
 #deck.dance .avtr:not(.animate) {
     transform-origin: bottom;
     animation: MoveSideSide 2s linear infinite;
+}
+
+body.dance-mode .ft-avatar:not(.skel) {
+    will-change: background-position;
+    animation: avatarDanceBg 1.15s ease-in-out infinite;
+    animation-delay: var(--dance-delay, 0s);
+}
+
+body.dance-mode .avtr {
+    transform-origin: 50% 200%;
+    animation: avatarDance 1.15s ease-in-out infinite;
+    animation-delay: var(--dance-delay, 0s);
+}
+
+body.dance-mode .dance-start-right {
+    animation-direction: reverse;
 }
 
 @container (width < 520px) {

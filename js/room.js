@@ -791,8 +791,24 @@ firetable.ui.setupRoomEvents = function () {
   // ── Dance Mode ──
   ftapi.events.on("danceStateChanged", function (data) {
     firetable.debug && console.log('dance check:', data);
-    if (data) $("#deck").addClass("dance");
-    else $("#deck").removeClass("dance");
+    if (data) {
+      var danceTempoSec = 1.15;
+      document.querySelectorAll('.ft-avatar:not(.skel), .avtr').forEach(function (el) {
+        el.classList.toggle('dance-start-right', Math.random() >= 0.5);
+        el.style.setProperty('--dance-delay', (-Math.random() * danceTempoSec).toFixed(3) + 's');
+      });
+      $("#deck").addClass("dance");
+      $("body").addClass("dance-mode");
+    } else {
+      $("#deck").removeClass("dance");
+      $("body").removeClass("dance-mode");
+      document.querySelectorAll('.ft-avatar, .avtr').forEach(function (el) {
+        el.style.removeProperty('--dance-delay');
+      });
+      document.querySelectorAll('.dance-start-right').forEach(function (el) {
+        el.classList.remove('dance-start-right');
+      });
+    }
   });
 
   // ── Festive Lights ──
