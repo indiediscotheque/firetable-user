@@ -1,5 +1,9 @@
-# Only the proxy itself is reachable over the web.
-<FilesMatch "^soundcloud-config">
+# Only the proxies themselves are reachable over the web: their server-only
+# config files and the shared helpers are not.
+<FilesMatch "^(soundcloud-config|lastfm-config|common)\.php">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.example$">
   Require all denied
 </FilesMatch>
 Options -Indexes

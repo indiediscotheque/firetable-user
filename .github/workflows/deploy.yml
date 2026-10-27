@@ -2,11 +2,12 @@
 #
 # Uploads over SFTP (works with an SFTP-only DreamHost user). Every file type
 # and folder is included, files are sent exactly as they are in git, nothing
-# on the server is deleted, and config.js and api/soundcloud-config.php (which
-# live only on the server) are never touched. The root .htaccess (security
-# headers) is only uploaded when the server has none yet or its copy came from
-# this repo (it contains the line "# firetable-managed"); a hand-made one is
-# left alone and the run shows a warning. Before uploading, it checks the target folder already holds
+# on the server is deleted, and config.js, api/soundcloud-config.php and
+# api/lastfm-config.php (which live only on the server) are never touched.
+# The root .htaccess (security headers) is only uploaded when the server has
+# none yet or its copy came from this repo (it contains the line
+# "# firetable-managed"); a hand-made one is left alone and the run shows a
+# warning. Before uploading, it checks the target folder already holds
 # config.js, so a wrong path or login stops the publish instead of copying the
 # site somewhere else.
 #
@@ -140,6 +141,7 @@ jobs:
               --exclude-glob .DS_Store \
               --exclude-glob config.js \
               --exclude-glob soundcloud-config.php \
+              --exclude-glob lastfm-config.php \
               --exclude-glob README.md \
               ./ \"$DEST/\""
 
@@ -159,7 +161,7 @@ jobs:
           count=0
           while IFS= read -r -d '' f; do
             case "$f" in
-              config.js|api/soundcloud-config.php|.htaccess|README.md|.gitignore|.github/*|tools/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
+              config.js|api/soundcloud-config.php|api/lastfm-config.php|.htaccess|README.md|.gitignore|.github/*|tools/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
             esac
             printf 'rm -f "%s/%s"\n' "$DEST" "$f" >> "$script"
             echo "Removing $f"
