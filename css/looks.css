@@ -2328,6 +2328,22 @@ body.lights-on .lightrope {
     display: block;
 }
 
+/* Seasonal snowfall (js/snow.js): over the backdrop and screen, behind the DJs. */
+#djStage > #stageSnow {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 2s ease;
+}
+
+#djStage > #stageSnow.on {
+    opacity: 0.8;
+}
+
 ul.lightrope li {
     position: relative;
     list-style: none;

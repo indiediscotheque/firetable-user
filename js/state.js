@@ -175,7 +175,7 @@ var firetable = {
 };
 
 // ─── Version ─────────────────────────────────────────────────────────────────
-firetable.version = "01.11.04";
+firetable.version = "01.11.05";
 
 // ─── Chat Scroll Container ──────────────────────────────────────────────────
 /** Native scroll container wrapper preserving the legacy chatScroll API shape. */

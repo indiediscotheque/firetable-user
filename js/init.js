@@ -197,6 +197,7 @@ firetable.init = function () {
 
   // ── UI Init (wires everything up) ──
   firetable.ui.init();
+  firetable.snow.init();
 };
 
 // ─── Auto-start ──────────────────────────────────────────────────────────────
