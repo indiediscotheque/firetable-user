@@ -1,9 +1,14 @@
-# firetable-managed
-# This file is deployed from the firetable-user repo. The deploy only replaces
-# a server .htaccess that contains the "firetable-managed" line above, so a
-# hand-made one is never overwritten (see .github/workflows/deploy.yml).
+# Security headers for firetable. The deploy merges this file into the
+# server's .htaccess as a "# BEGIN firetable" … "# END firetable" block and
+# keeps every other rule there (see .github/workflows/deploy.yml), so edit it
+# here, not on the server.
 
 Options -Indexes
+
+# Never serve .htaccess files or the deploy's backup copy
+<FilesMatch "^\.ht">
+  Require all denied
+</FilesMatch>
 
 <IfModule mod_headers.c>
   # Content Security Policy: only these sources may run scripts, load frames
@@ -12,7 +17,8 @@ Options -Indexes
   #              YouTube and SoundCloud player APIs, and Firebase's fallback
   #              transport
   #   connect  — Firebase (auth + realtime database), YouTube Data API and
-  #              oEmbed, Last.fm, emoji data, the legacy SoundCloud resolver
+  #              oEmbed, emoji data, the legacy SoundCloud resolver (Last.fm and
+  #              SoundCloud go through this site's api/ proxies)
   #   frames   — YouTube and SoundCloud players, Firebase auth helper
   #   images   — any https source (chat images, album art, avatars, emoji)
   #   styles   — inline style attributes are still used, so 'unsafe-inline'

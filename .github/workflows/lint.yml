@@ -1,5 +1,5 @@
 # Checks every push and pull request: ESLint on the site's scripts and a PHP
-# syntax check on the SoundCloud proxy. Run the same locally with:
+# syntax check on the API proxies. Run the same locally with:
 #   npm ci && npm run lint && php -l api/*.php
 
 name: Lint
@@ -16,9 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
