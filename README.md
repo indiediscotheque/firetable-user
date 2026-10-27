@@ -22,9 +22,9 @@ Without it, pasted soundcloud.com links and playlist imports still work through 
 
 ## last.fm scrobbling
 Last.fm signs every scrobble with your API account's shared secret, so the browser never gets it: `api/lastfm.php` (PHP 8.1+ with cURL) adds the API key, signs the call and relays Last.fm's answer. It only signs connecting an account, now playing, scrobbles and loves.
-- copy `api/lastfm-config.php.example` to `api/lastfm-config.php` on the server
-- add your Last.fm API key and shared secret from https://www.last.fm/api/accounts (or set `LASTFM_API_KEY` / `LASTFM_SECRET`)
-- the file is git-ignored and the deploy never uploads or overwrites it
+- easiest: add repository secrets `LASTFM_API_KEY` and `LASTFM_SECRET` (Settings → Secrets and variables → Actions) with the values from https://www.last.fm/api/accounts. The deploy writes `api/lastfm-config.php` on the server from them, readable only by your account, and checks the proxy answers afterwards
+- or by hand: copy `api/lastfm-config.php.example` to `api/lastfm-config.php` on the server and fill it in (or set the `LASTFM_API_KEY` / `LASTFM_SECRET` environment variables). The deploy leaves a hand-made file alone
+- the file is git-ignored, so the secret never enters git
 - same caller check as the SoundCloud proxy; each visitor IP gets 60 calls per 10 minutes by default (`rate_limit`)
 
 Without it, the "Set up Last.fm scrobbling" link and scrobbling stop working; nothing else is affected.

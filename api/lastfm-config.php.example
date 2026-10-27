@@ -6,9 +6,11 @@
  * 2.) fill in your Last.fm API account's key and shared secret
  *     (https://www.last.fm/api/accounts)
  *
- * lastfm-config.php is git-ignored and skipped by the deploy, so it only ever
- * lives on the server. Env vars LASTFM_API_KEY and LASTFM_SECRET work too and
- * take priority.
+ * Or skip this file: set the LASTFM_API_KEY and LASTFM_SECRET repository
+ * secrets on GitHub and the deploy writes lastfm-config.php for you.
+ *
+ * lastfm-config.php is git-ignored and only ever lives on the server. Env vars
+ * LASTFM_API_KEY and LASTFM_SECRET work too and take priority.
  */
 return [
     'api_key' => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
