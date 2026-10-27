@@ -303,6 +303,48 @@ firetable.media = {
   STALL_MS: 1500,
   _stallTimer: null,
   _tapTimer: null,
+  /** Seconds a room song may be off from the room before it is moved back in step
+      (YouTube re-buffers on every seek, SoundCloud barely notices) */
+  DRIFT_S: 3,
+  SC_DRIFT_S: 1.5,
+  /** How many times to retry starting a SoundCloud song in a background tab */
+  SC_RETRIES: 6,
+
+  /** Seconds into the room's song right now (server clock), or null. */
+  roomPosition: function () {
+    var song = firetable.song;
+    if (!song || !song.started || song.cid == 0) return null;
+    var pos = Math.max(0, (ftapi.now() - song.started) / 1000);
+    return (song.duration && pos >= song.duration - 1) ? null : pos;
+  },
+
+  /**
+   * Keep the room's YouTube song in step with everyone else. A video that
+   * starts late (slow load, or a background tab whose timers the browser
+   * throttles) would otherwise play from where it was when it was loaded.
+   */
+  syncYouTube: function () {
+    var m = firetable.media;
+    if (firetable.preview || !firetable.ytLoaded || !firetable.song || firetable.song.type !== MEDIA_YOUTUBE) return;
+    var want = m.roomPosition();
+    if (want === null) return;
+    var data = player.getVideoData && player.getVideoData();
+    if (data && data.video_id && data.video_id !== firetable.song.cid) return;
+    var at = player.getCurrentTime && player.getCurrentTime();
+    if (typeof at === "number" && Math.abs(at - want) > m.DRIFT_S) player.seekTo(want, true);
+  },
+
+  /** Same as syncYouTube, for the room's SoundCloud song. */
+  syncSoundCloud: function () {
+    var m = firetable.media;
+    if (firetable.preview || !firetable.scLoaded || !firetable.song || firetable.song.type != MEDIA_SOUNDCLOUD) return;
+    var want = m.roomPosition();
+    if (want === null) return;
+    firetable.scwidget.getPosition(function (ms) {
+      if (firetable.preview || Math.abs(ms / 1000 - want) <= m.SC_DRIFT_S) return;
+      firetable.scwidget.seekTo(Math.round(m.roomPosition() * 1000));
+    });
+  },
 
   _isPlaying: function (state) {
     return state === 1 || state === 3; // PLAYING or BUFFERING
@@ -314,6 +356,7 @@ firetable.media = {
     m.ytState = state;
     clearTimeout(m._stallTimer);
     if (state === 1) {
+      m.syncYouTube();
       // Playing: show the video once YouTube's start-of-play bars are gone
       if (!m.revealed && !m._revealTimer) {
         m._revealTimer = setTimeout(function () {
@@ -353,18 +396,27 @@ firetable.media = {
    * actually playing. If the browser blocked autoplay, show "Tap to start
    * audio" (the same pill YouTube uses).
    */
-  watchSoundCloud: function () {
+  watchSoundCloud: function (tries) {
     var m = firetable.media;
+    tries = tries || 0;
     clearTimeout(m._scTimer);
-    m.scBlocked = false;
+    if (!tries) m.scBlocked = false;
+    var song = firetable.song;
     m._scTimer = setTimeout(function () {
       if (!firetable.scLoaded || firetable.preview || firetable.disableMediaPlayback) return;
-      if (!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD)) return;
+      if (!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD) || firetable.song !== song) return;
       firetable.scwidget.isPaused(function (paused) {
+        // In a background tab the widget often hasn't started yet (the
+        // browser runs its timers late): keep nudging it instead of giving up
+        if (paused && document.hidden && tries < m.SC_RETRIES) {
+          firetable.scwidget.play();
+          m.watchSoundCloud(tries + 1);
+          return;
+        }
         m.scBlocked = !!paused;
         m.refresh();
       });
-    }, 4000);
+    }, tries ? 5000 : 4000);
   },
 
   /** The SoundCloud widget started playing. */
