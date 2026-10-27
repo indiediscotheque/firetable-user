@@ -5586,8 +5586,13 @@ body.media-off .q-art.no-art {
 #mainGrid.pre-auth #djlistOpen { display: none; }
 
 /* Mods: fix the tags of the song playing now (#136) */
-.npFixTags {
+.npModActions {
     display: none;
+    gap: var(--pad1);
+}
+body.is-mod .npModActions { display: flex; }
+.npFixTags {
+    display: inline-flex;
     align-self: flex-start;
     align-items: center;
     gap: 0.2rem;
@@ -5602,9 +5607,22 @@ body.media-off .q-art.no-art {
     cursor: pointer;
 }
 .npFixTags [class*="material-symbols-"] { font-size: 0.85rem; }
-body.is-mod .npFixTags { display: inline-flex; }
 @media (hover: hover) {
-    body.is-mod .npFixTags { opacity: 0; transition: opacity 150ms ease; }
-    body.is-mod #nowplaying:hover .npFixTags,
-    body.is-mod .npFixTags:focus-visible { opacity: 1; }
+    body.is-mod .npModActions { opacity: 0; transition: opacity 150ms ease; }
+    body.is-mod #nowplaying:hover .npModActions,
+    body.is-mod .npModActions:focus-within { opacity: 1; }
+}
+
+/* Recent rows: Flag button for mods (#167) */
+#thehistory .flagplay { display: none; }
+body.is-mod #thehistory .flagplay { display: inline-flex; }
+
+.ft-menu-title {
+    padding: 0.2rem 0.5rem 0.4rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

@@ -96,6 +96,11 @@ function renderHistoryItem(data, $template, containerSel, older) {
   });
   if (!ftapi.isMod) $histItem.find('.edittags').hide();
 
+  // Flag (mods, #167): flags this track in the DJ's playlists via the bot
+  $histItem.find('.flagplay').on('click', function () {
+    firetable.ui.openFlagMenu(this, { histID: data.histID, label: (data.artist || '') + ' - ' + (data.title || '') });
+  });
+
   // Metadata
   $histItem.find('.histdj').text(data.dj);
   $histItem.find('.pv-dj-avatar')
@@ -618,6 +623,47 @@ firetable.ui.setupRoomEvents = function () {
     $("body").toggleClass("is-mod", !!data);
   });
   ftapi.events.on('loggedOut', function () { $("body").removeClass("is-mod"); });
+
+  // ── Flag a track (mods): now playing (#125) or a play in Recent (#167) ──
+  var flagMenuEl = document.getElementById('flagMenuPopover');
+  firetable.ui.openFlagMenu = function (btn, target) {
+    var same = firetable.flagTarget && firetable.flagBtn === btn;
+    if (flagMenuEl.matches(':popover-open')) flagMenuEl.hidePopover();
+    if (same) return;
+    firetable.flagTarget = target;
+    firetable.flagBtn = btn;
+    $('#flagMenuTitle').text('Flag "' + firetable.ui.strip(target.label || '') + '" as');
+    flagMenuEl.style.visibility = 'hidden';
+    flagMenuEl.showPopover();
+    firetable.ui.positionPopover(btn, flagMenuEl, document.getElementById('flagMenuArrow'), 'bottom').then(function () {
+      var first = flagMenuEl.querySelector('[role="menuitem"]');
+      if (first) first.focus();
+    });
+  };
+  flagMenuEl.addEventListener('toggle', function (e) {
+    if (e.newState === 'closed') { firetable.flagTarget = null; firetable.flagBtn = null; }
+  });
+  $(flagMenuEl).on('click', '[data-flag]', function () {
+    var t = firetable.flagTarget, reason = $(this).attr('data-flag');
+    flagMenuEl.hidePopover();
+    if (!t) return;
+    if (t.histID) {
+      ftapi.actions.sendBotCommand('!flagplay ' + t.histID + ' ' + reason);
+    } else if (firetable.song && firetable.song.started === t.started) {
+      ftapi.actions.sendBotCommand('!flag ' + reason);
+    } else {
+      firetable.ui.toast("That song has ended. Flag it from Recent instead.", "error");
+    }
+  }).on('keydown', function (e) {
+    var $items = $(flagMenuEl).find('[role="menuitem"]');
+    var idx = $items.index($items.filter(':focus'));
+    if (e.key === 'ArrowDown') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
+  });
+  $('#npFlag').on('click', function () {
+    if (!firetable.song || firetable.song.cid == 0) return;
+    firetable.ui.openFlagMenu(this, { started: firetable.song.started, label: firetable.song.artist + ' - ' + firetable.song.title });
+  });
 
   // ── Fix the tags of the song playing now (mods, #136) ──
   // Same editor as Recent rows; saving sends the bot's !fixtags, which

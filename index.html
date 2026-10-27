@@ -150,7 +150,10 @@
 					<div id="firstPlay"></div>
 					<div id="lastPlay"></div>
 				</div>
-				<button type="button" id="npFixTags" class="npFixTags" title="Fix tags" aria-label="Fix this song's tags"><i class="material-symbols-outlined">edit</i> Fix tags</button>
+				<div class="npModActions">
+					<button type="button" id="npFixTags" class="npFixTags" title="Fix tags" aria-label="Fix this song's tags"><i class="material-symbols-outlined">edit</i> Fix tags</button>
+					<button type="button" id="npFlag" class="npFixTags" title="Flag track" aria-label="Flag this track" aria-haspopup="menu"><i class="material-symbols-outlined">flag</i> Flag</button>
+				</div>
 				<div id="themeLine">
 					<span class="themeLabel">Theme</span>
 					<div id="currentThemeWrap"><div id="currentTheme"></div></div>
@@ -436,6 +439,7 @@
 					<a class="row-icon tracklink-btn" target="_blank" rel="noopener" href="" title="Open track" aria-label="Open track"></a>
 					<button type="button" class="histeal material-symbols-outlined row-icon" title="Add to playlist" aria-label="Add to playlist">&#xE03B;</button>
 					<button type="button" class="material-symbols-outlined row-icon edittags" title="Edit tags" aria-label="Edit tags">edit</button>
+					<button type="button" class="material-symbols-outlined row-icon flagplay" title="Flag track" aria-label="Flag this track in the DJ's playlists" aria-haspopup="menu">flag</button>
 				</div>
 				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:15rem"></div></div>
 				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:11rem"></div></div>
@@ -761,6 +765,17 @@
 			<button type="button" role="menuitem" class="butt graybutt" data-act="add"><i class="material-symbols-outlined">playlist_add</i> Add to playlist</button>
 			<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><span class="ft-menu-open-logo" aria-hidden="true"></span> <span class="ft-menu-open-label">Open track</span></a>
 			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete</button>
+		</div>
+	</div>
+
+	<!-- Mods: flag a track (now playing, or a play in Recent) -->
+	<div id="flagMenuPopover" popover="auto" class="ft-popover">
+		<div id="flagMenuArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu" role="menu" aria-label="Flag track as">
+			<div class="ft-menu-title" id="flagMenuTitle">Flag track as</div>
+			<button type="button" role="menuitem" class="butt graybutt" data-flag="broken"><i class="material-symbols-outlined">warning</i> Broken</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-flag="quality"><i class="material-symbols-outlined">disc_full</i> Low audio quality</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-flag="offtheme"><i class="material-symbols-outlined">flag</i> Off theme</button>
 		</div>
 	</div>
 
