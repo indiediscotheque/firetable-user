@@ -66,11 +66,12 @@ firetable.ui.setupSearchEvents = function () {
   };
 
   // ── Shared helper: bind addtolist + queuetrack buttons on a search result row ──
-  var bindSearchResultButtons = function ($srli, mediaCid, mediaType) {
+  var bindSearchResultButtons = function ($srli, mediaCid, mediaType, extra) {
+    extra = extra || {};
     $srli.find('.addtolist').on('click', function () {
       var listid = $("#listpicker").val();
       var title = $srli.find('.listwords').text();
-      ftapi.actions.addTrackToTop(ftapi.lookup.listRef(listid), { type: mediaType, name: title, cid: mediaCid },
+      ftapi.actions.addTrackToTop(ftapi.lookup.listRef(listid), { type: mediaType, name: title, cid: mediaCid, img: extra.img, url: extra.url },
         firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
       var $fb = $srli.find('.search-feedback');
       $fb.text('added').addClass('visible');
@@ -79,7 +80,7 @@ firetable.ui.setupSearchEvents = function () {
 
     $srli.find('.queuetrack').on('click', function () {
       var title = $srli.find('.listwords').text();
-      firetable.actions.openStealPicker($(this), { cid: mediaCid, type: mediaType, title: title });
+      firetable.actions.openStealPicker($(this), { cid: mediaCid, type: mediaType, title: title, img: extra.img, url: extra.url });
     });
   };
 
@@ -170,7 +171,7 @@ firetable.ui.setupSearchEvents = function () {
           var $scLink = $('<a class="tracklink-btn" target="_blank" rel="noopener" title="Open on SoundCloud"></a>').html(SC_LOGO_SVG);
           if (/^https:\/\/(?:[a-z0-9-]+\.)?soundcloud\.com\//i.test(item.permalink_url || '')) $scLink.attr('href', item.permalink_url);
           $srli.find('.pvbarWrap').append($scLink);
-          bindSearchResultButtons($srli, item.id, MEDIA_SOUNDCLOUD);
+          bindSearchResultButtons($srli, item.id, MEDIA_SOUNDCLOUD, firetable.utilities.soundCloudExtras(item));
           $("#searchResults").append($srli);
         });
       };

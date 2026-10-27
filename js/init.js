@@ -191,7 +191,7 @@ firetable.init = function () {
         player.setVolume(vol);
         player.playVideo();
       }
-    } else if (firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD && firetable.scLoaded) {
+    } else if (firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD && firetable.scLoaded && !firetable.preview) {
       firetable.scwidget.isPaused(function (paused) {
         if (paused) {
           firetable.scwidget.setVolume(vol);
