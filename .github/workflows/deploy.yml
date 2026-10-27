@@ -4,12 +4,15 @@
 # and folder is included, files are sent exactly as they are in git, nothing
 # on the server is deleted, and config.js, api/soundcloud-config.php and
 # api/lastfm-config.php (which live only on the server) are never touched.
-# The root .htaccess (security headers) is only uploaded when the server has
-# none yet or its copy came from this repo (it contains the line
-# "# firetable-managed"); a hand-made one is left alone and the run shows a
-# warning. Before uploading, it checks the target folder already holds
-# config.js, so a wrong path or login stops the publish instead of copying the
-# site somewhere else.
+# Before uploading, it checks the target folder already holds config.js, so a
+# wrong path or login stops the publish instead of copying the site somewhere
+# else.
+#
+# The root .htaccess (security headers) is merged, not overwritten: the repo's
+# file goes into a "# BEGIN firetable" … "# END firetable" block at the top of
+# the server's .htaccess and every other rule there is kept. The previous copy
+# is saved as .htaccess.firetable-previous, and if the site starts answering
+# with a server error the old file is put back and the run fails.
 #
 # Repository secrets (Settings → Secrets and variables → Actions):
 #   DREAMHOST_HOST      server hostname, e.g. iad1-shared-b8-12.dreamhost.com
@@ -17,6 +20,11 @@
 #   DREAMHOST_PASSWORD  that user's password
 #   DREAMHOST_PATH      site folder, e.g. indiediscotheque.com (relative to
 #                       the user's home; "/indiediscotheque.com" also works)
+#
+# Optional repository variable (same page, "Variables" tab):
+#   SITE_URL            the site's address, for the check after the .htaccess
+#                       update. Default: https://<last part of DREAMHOST_PATH>/
+#                       when that looks like a domain.
 #
 # Manual run: Actions → "Deploy to DreamHost" → Run workflow. "Dry run" lists
 # what would change without uploading anything.
@@ -52,9 +60,10 @@ jobs:
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
     steps:
       - name: Check out master
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history, to give files their last-commit times
+          persist-credentials: false
 
       - name: Check secrets
         run: |
@@ -105,18 +114,6 @@ jobs:
           fi
           echo "Found $DEST/config.js - target folder looks right."
 
-      - name: Check the server's .htaccess
-        run: |
-          remote=$(lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; cat \"$DEST/.htaccess\"" 2>/dev/null || true)
-          if [ -z "$remote" ]; then
-            echo "No .htaccess on the server yet - the repo's one will be uploaded."
-          elif printf '%s' "$remote" | grep -q 'firetable-managed'; then
-            echo "Server .htaccess came from this repo - it will be kept up to date."
-          else
-            echo "::warning::The server has its own .htaccess (no 'firetable-managed' line), so it was left as is and the security headers were NOT deployed. Merge the repo's .htaccess into it, keeping the '# firetable-managed' line, to let future deploys manage it."
-            echo "SKIP_HTACCESS=1" >> "$GITHUB_ENV"
-          fi
-
       - name: Upload changed files
         run: |
           flags=""
@@ -124,10 +121,9 @@ jobs:
             flags="--dry-run"
             echo "Dry run: nothing will be uploaded."
           fi
-          # Only the root .htaccess; api/.htaccess is always uploaded
-          if [ "$SKIP_HTACCESS" = "1" ]; then
-            flags="$flags --exclude '^\.htaccess\$'"
-          fi
+          # The root .htaccess is merged by the next step; api/.htaccess is
+          # uploaded like any other file
+          flags="$flags --exclude '^\.htaccess\$'"
           lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
             mirror --reverse --verbose --no-perms --parallel=4 $flags \
               --exclude-glob .git/ \
@@ -145,6 +141,72 @@ jobs:
               --exclude-glob README.md \
               ./ \"$DEST/\""
 
+      - name: Merge the security headers into the server's .htaccess
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          work=$(mktemp -d)
+          remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
+          had=0
+          if remote "cls -1 \"$DEST/.htaccess\"" >/dev/null 2>&1; then
+            remote "get \"$DEST/.htaccess\" -o \"$work/server\""
+            had=1
+          fi
+          rc=0
+          python3 .github/scripts/merge-htaccess.py .htaccess "$work/server" "$work/merged" || rc=$?
+          if [ "$rc" -eq 3 ]; then
+            echo "Server .htaccess is already up to date."
+            exit 0
+          elif [ "$rc" -ne 0 ]; then
+            exit "$rc"
+          fi
+          if [ "$had" = 1 ]; then
+            echo "Changes to the server's .htaccess:"
+            diff -u "$work/server" "$work/merged" || true
+          else
+            echo "No .htaccess on the server yet - uploading the repo's block."
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run: .htaccess not changed."
+            exit 0
+          fi
+
+          url="$SITE_URL"
+          if [ -z "$url" ]; then
+            d=$(basename "$DEST")
+            case "$d" in *.*) url="https://$d/" ;; esac
+          fi
+          status() { curl -s -o /dev/null -m 20 -w '%{http_code}' "$url" || true; }
+          before=""
+          [ -n "$url" ] && before=$(status)
+
+          [ "$had" = 1 ] && remote "put \"$work/server\" -o \"$DEST/.htaccess.firetable-previous\""
+          remote "put \"$work/merged\" -o \"$DEST/.htaccess\""
+          echo "Server .htaccess updated."
+
+          if [ -z "$url" ]; then
+            echo "::warning::Set the SITE_URL repository variable so the deploy can check the site still loads after an .htaccess change."
+            exit 0
+          fi
+          sleep 3
+          after=$(status)
+          echo "Site check: $url answered $after (before the change: ${before:-n/a})."
+          case "$after" in
+            5*)
+              case "$before" in 5*) echo "::warning::The site was already answering $before before this change." ; exit 0 ;; esac
+              if [ "$had" = 1 ]; then
+                remote "put \"$work/server\" -o \"$DEST/.htaccess\""
+              else
+                remote "rm \"$DEST/.htaccess\""
+              fi
+              echo "::error::The site answered $after after the .htaccess update, so the previous .htaccess was restored. The server may not allow one of the directives in the repo's .htaccess."
+              exit 1
+              ;;
+          esac
+          if ! curl -s -I -m 20 "$url" | grep -qi '^content-security-policy:'; then
+            echo "::warning::The site loads but sends no Content-Security-Policy header (is mod_headers enabled?)."
+          fi
+
       - name: Remove files that were deleted from the repo
         # Only files git deleted in the pushed commits (never config.js,
         # server-only files or anything else not tracked here).
@@ -161,7 +223,7 @@ jobs:
           count=0
           while IFS= read -r -d '' f; do
             case "$f" in
-              config.js|api/soundcloud-config.php|api/lastfm-config.php|.htaccess|README.md|.gitignore|.github/*|tools/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
+              config.js|api/soundcloud-config.php|api/lastfm-config.php|.htaccess|.htaccess.firetable-previous|README.md|.gitignore|.github/*|tools/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
             esac
             printf 'rm -f "%s/%s"\n' "$DEST" "$f" >> "$script"
             echo "Removing $f"

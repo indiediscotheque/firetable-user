@@ -37,7 +37,7 @@ Both proxies share `api/common.php` (config loading, caller check, rate limit, H
 ## security headers
 `.htaccess` sends a Content Security Policy plus the usual hardening headers (no framing by other sites, HSTS, nosniff, referrer and permissions policies). The policy allows no inline scripts or event handlers, so add new behavior in the `js/` files with `addEventListener` / jQuery `.on()`, not `onclick="…"`. If you load something from a new host, add it to the matching directive in `.htaccess`.
 
-The deploy uploads `.htaccess` only when the server has none or its copy contains `# firetable-managed`; a hand-made one is left alone (the run shows a warning).
+The deploy never overwrites the server's `.htaccess`: it puts this file inside a `# BEGIN firetable` … `# END firetable` block at the top and keeps every other rule (DreamHost's, redirects, anything added by hand). The previous copy is saved as `.htaccess.firetable-previous`. If the site answers with a server error afterwards, the old file is restored and the run fails. Set the repository variable `SITE_URL` if the site's address isn't the last part of `DREAMHOST_PATH`.
 
 ## third-party libraries
 CDN scripts in `index.html` are pinned to exact versions and checked with Subresource Integrity. When upgrading one, update its `integrity` hash too:
