@@ -19,5 +19,14 @@ SoundCloud's API only accepts OAuth requests, which need your app's client secre
 
 Without it, pasted soundcloud.com links and playlist imports still work through the legacy resolver; keyword search shows a message asking for a link.
 
+## security headers
+`.htaccess` sends a Content Security Policy plus the usual hardening headers (no framing by other sites, HSTS, nosniff, referrer and permissions policies). The policy allows no inline scripts or event handlers, so add new behavior in the `js/` files with `addEventListener` / jQuery `.on()`, not `onclick="…"`. If you load something from a new host, add it to the matching directive in `.htaccess`.
+
+The deploy uploads `.htaccess` only when the server has none or its copy contains `# firetable-managed`; a hand-made one is left alone (the run shows a warning).
+
+## third-party libraries
+CDN scripts in `index.html` are pinned to exact versions and checked with Subresource Integrity. When upgrading one, update its `integrity` hash too:
+`curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`
+
 ## avatars
 Robot avatars provided by [robohash.org](https://robohash.org/).

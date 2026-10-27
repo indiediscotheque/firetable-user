@@ -3,7 +3,10 @@
 # Uploads over SFTP (works with an SFTP-only DreamHost user). Every file type
 # and folder is included, files are sent exactly as they are in git, nothing
 # on the server is deleted, and config.js and api/soundcloud-config.php (which
-# live only on the server) are never touched. Before uploading, it checks the target folder already holds
+# live only on the server) are never touched. The root .htaccess (security
+# headers) is only uploaded when the server has none yet or its copy came from
+# this repo (it contains the line "# firetable-managed"); a hand-made one is
+# left alone and the run shows a warning. Before uploading, it checks the target folder already holds
 # config.js, so a wrong path or login stops the publish instead of copying the
 # site somewhere else.
 #
@@ -101,12 +104,28 @@ jobs:
           fi
           echo "Found $DEST/config.js - target folder looks right."
 
+      - name: Check the server's .htaccess
+        run: |
+          remote=$(lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; cat \"$DEST/.htaccess\"" 2>/dev/null || true)
+          if [ -z "$remote" ]; then
+            echo "No .htaccess on the server yet - the repo's one will be uploaded."
+          elif printf '%s' "$remote" | grep -q 'firetable-managed'; then
+            echo "Server .htaccess came from this repo - it will be kept up to date."
+          else
+            echo "::warning::The server has its own .htaccess (no 'firetable-managed' line), so it was left as is and the security headers were NOT deployed. Merge the repo's .htaccess into it, keeping the '# firetable-managed' line, to let future deploys manage it."
+            echo "SKIP_HTACCESS=1" >> "$GITHUB_ENV"
+          fi
+
       - name: Upload changed files
         run: |
           flags=""
           if [ "$DRY_RUN" = "true" ]; then
             flags="--dry-run"
             echo "Dry run: nothing will be uploaded."
+          fi
+          # Only the root .htaccess; api/.htaccess is always uploaded
+          if [ "$SKIP_HTACCESS" = "1" ]; then
+            flags="$flags --exclude '^\.htaccess\$'"
           fi
           lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
             mirror --reverse --verbose --no-perms --parallel=4 $flags \

@@ -94,7 +94,9 @@ firetable.utilities.getEmojiMap = function () {
   firetable.emojiMap = {};
   (async function () {
     try {
-      var requests = EMOJI_URLS.map(function (url) { return fetch(url); });
+      var requests = EMOJI_URLS.map(function (src) {
+        return fetch(src.url, { integrity: src.integrity, mode: "cors", credentials: "omit" });
+      });
       var responses = await Promise.all(requests);
       var promises = responses.map(function (response) { return response.json(); });
       var data = await Promise.all(promises);

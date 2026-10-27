@@ -1599,6 +1599,10 @@ firetable.ui.checkLastfmToken = function () {
  * Orchestrates all sub-setup functions and restores persisted settings.
  */
 firetable.ui.init = function () {
+  // Every form is handled in JS: stop Enter from submitting/reloading the page
+  // (replaces inline onsubmit="return false;", which a strict CSP blocks)
+  $(document).on('submit', 'form', function (e) { e.preventDefault(); });
+
   // Restore settings from localStorage
   firetable.ui.initSettings();
 

@@ -395,7 +395,7 @@ firetable.actions.normalizeQueueLink = function (link) {
 
 /**
  * Queue YouTube by id with layered metadata fallbacks.
- * Why: YouTube API/gapi can be unavailable or hang in some sessions; oEmbed keeps
+ * Why: the YouTube Data API can be unavailable or hang in some sessions; oEmbed keeps
  * artist/title labels working, and final ID fallback avoids silent no-op.
  */
 firetable.actions.queueYoutubeWithFallback = function (youtubeId) {
@@ -452,22 +452,6 @@ firetable.actions.queueYoutubeWithFallback = function (youtubeId) {
 
   if (typeof ytAPI === "function") {
     ytAPI("videos", { id: youtubeId, part: "snippet", maxResults: 1 }, queueFromResponse);
-    return;
-  }
-
-  if (typeof youtubeAPIReady === "function") {
-    youtubeAPIReady(function () {
-      try {
-        gapi.client.youtube.videos.list({
-          id: youtubeId,
-          part: "snippet",
-          maxResults: 1
-        }).execute(queueFromResponse);
-      } catch (err) {
-        firetable.debug && console.log("queueFromLink yt gapi error:", err);
-        queueFromOEmbed("gapi error");
-      }
-    });
     return;
   }
 

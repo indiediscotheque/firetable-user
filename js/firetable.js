@@ -763,7 +763,7 @@ ftapi.actions = {
         };
         firebase.app("firetable").auth().createUserWithEmailAndPassword(email, password).catch(function(error) {
           ftapi.nameChangeAfterSignUp = null;
-          return errorCallback(error.message);
+          return errorCallback(error);
         });
       }
     })

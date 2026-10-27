@@ -1,0 +1,33 @@
+# firetable-managed
+# This file is deployed from the firetable-user repo. The deploy only replaces
+# a server .htaccess that contains the "firetable-managed" line above, so a
+# hand-made one is never overwritten (see .github/workflows/deploy.yml).
+
+Options -Indexes
+
+<IfModule mod_headers.c>
+  # Content Security Policy: only these sources may run scripts, load frames
+  # or open connections. No inline scripts or event handlers, no eval.
+  #   scripts  — this site, the pinned CDN libraries (checked with SRI), the
+  #              YouTube and SoundCloud player APIs, and Firebase's fallback
+  #              transport
+  #   connect  — Firebase (auth + realtime database), YouTube Data API and
+  #              oEmbed, Last.fm, emoji data, the legacy SoundCloud resolver
+  #   frames   — YouTube and SoundCloud players, Firebase auth helper
+  #   images   — any https source (chat images, album art, avatars, emoji)
+  #   styles   — inline style attributes are still used, so 'unsafe-inline'
+  # If config.js sets soundcloudProxyURL to another host, add it to connect-src.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://www.gstatic.com https://w.soundcloud.com https://www.youtube.com https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; media-src 'self' blob: https:; connect-src 'self' https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://www.youtube.com https://ws.audioscrobbler.com https://unpkg.com https://thompsn.com https://*.sndcdn.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://w.soundcloud.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+
+  # The page can't be framed by other sites (clickjacking), MIME types are
+  # trusted as sent, and other sites only see our origin in the Referer.
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+
+  # Browsers remember to use HTTPS for a year (sent over HTTPS only)
+  <If "%{HTTPS} == 'on'">
+    Header always set Strict-Transport-Security "max-age=31536000"
+  </If>
+</IfModule>
