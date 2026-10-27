@@ -2248,7 +2248,9 @@ body.screen:not(.yt-stalled) #screenBox::after {
     left: 0;
     z-index: 55;
     margin: -6px 0 0 0;
-    padding: 0;
+    /* Room below the bulbs so their glow fades out instead of being cut off
+       by overflow: hidden (needed to clip the strand's sides). */
+    padding: 0 0 40px;
     pointer-events: none;
     width: 100%;
     display: none;
