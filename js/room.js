@@ -622,6 +622,9 @@ firetable.ui.setupRoomEvents = function () {
     var el = document.getElementById("currentTheme");
     if (!el) return;
     var container = el.parentElement;
+    // undo an earlier ticker before measuring
+    var copy = el.querySelector('.ticker-copy');
+    if (copy) el.innerHTML = copy.innerHTML;
     el.classList.remove('is-ticker');
     if (el.scrollWidth > container.offsetWidth) {
       var originalHTML = el.innerHTML;
@@ -630,9 +633,11 @@ firetable.ui.setupRoomEvents = function () {
     }
   }
 
+  $(window).on("resize.themeTicker", firetable.utilities.debounce(checkThemeTicker, 250));
   ftapi.events.on("newTheme", function (data) {
+    $("#themeLine").toggleClass("no-theme", !data);
     if (!data) {
-      $("#currentTheme").text("!suggest a theme");
+      $("#currentTheme").text("none yet · !suggest one");
     } else {
       var txtOut = firetable.ui.strip(data);
       txtOut = firetable.ui.textToLinks(txtOut, true);
