@@ -18,6 +18,8 @@
  * Creates the YT.Player instance inside #playerArea.
  */
 function onYouTubeIframeAPIReady() {
+  if (firetable._ytPlayerCreated) return; // called by YouTube and by the check below
+  firetable._ytPlayerCreated = true;
   var $screenFrame = $('#screenFrame');
   var frameH = $screenFrame.outerHeight() || $('#djStage').outerHeight();
   var frameW = $screenFrame.outerWidth() || (frameH * ASPECT_RATIO);
@@ -63,24 +65,48 @@ function onYouTubeIframeAPIReady() {
  */
 function onPlayerReady(event) {
   firetable.ytLoaded = true;
+  player.setVolume(firetable.utilities.getEffectiveVolume());
 
-  // ── Restore volume ──
-  var vol = firetable.utilities.getEffectiveVolume();
-  player.setVolume(vol);
+  // ── Resume song if one was already playing when YT loaded ──
+  if (firetable.song && firetable.song.type === MEDIA_YOUTUBE) {
+    firetable.utilities.resumeCurrentSong();
+  }
+}
 
-  // ── Restore mute state ──
+// The YouTube API script can finish loading before this file defines
+// onYouTubeIframeAPIReady (it loads asynchronously), and then never calls it,
+// so the player was sometimes never created (#8).
+if (window.YT && window.YT.loaded && typeof window.YT.Player === "function") {
+  onYouTubeIframeAPIReady();
+}
+
+// ─── Mute / Volume Toggle ────────────────────────────────────────────────────
+
+firetable.actions = firetable.actions || {};
+firetable.ui = firetable.ui || {};
+
+/** Set both players' volume (whichever have loaded). */
+firetable.utilities.setPlayersVolume = function (vol) {
+  if (firetable.ytLoaded && player && player.setVolume) player.setVolume(vol);
+  if (firetable.scwidget) firetable.scwidget.setVolume(vol);
+};
+
+/** Show the mute button's state (icon, pressed state, label, tooltip). */
+firetable.ui.renderMuteButton = function () {
   var muted = localStorage[STORAGE.mute];
-  if (typeof muted === "undefined") {
-    localStorage[STORAGE.mute] = false;
-    muted = "false";
-    $("#volstatus").removeClass('on');
-  }
-  if (muted !== "false") {
-    $("#volstatus i").html("&#xE04E;");
-    $("#volstatus").addClass('on');
-  }
+  var isMuted = !!(muted && muted !== "false");
+  var label = isMuted ? "Unmute" : "Mute";
+  $("#volstatus").toggleClass("on", isMuted).attr({ "aria-label": label, "aria-pressed": String(isMuted) });
+  $("#volstatus i").html(isMuted ? "&#xE04E;" : "&#xE050;");
+  $("#tip-volstatus").text(label);
+};
 
-  // ── Volume slider ──
+/**
+ * Volume slider + mute button. Set up with the rest of the UI, so they work
+ * whichever player loads first (or if YouTube doesn't load at all).
+ */
+firetable.ui.initVolume = function () {
+  if (typeof localStorage[STORAGE.mute] === "undefined") localStorage[STORAGE.mute] = false;
   var sliderVol = parseInt(localStorage[STORAGE.volume], 10);
   if (isNaN(sliderVol)) sliderVol = DEFAULT_VOLUME;
   $("#slider").slider({
@@ -91,32 +117,19 @@ function onPlayerReady(event) {
     value: sliderVol,
     step: 5,
     slide: function (event, ui) {
-      player.setVolume(ui.value);
-      firetable.scwidget.setVolume(ui.value);
+      firetable.utilities.setPlayersVolume(ui.value);
       localStorage[STORAGE.volume] = ui.value;
-
-      var isMuted = localStorage[STORAGE.mute];
-      if (isMuted !== "false") {
-        // Un-mute since user is dragging the slider
+      if (localStorage[STORAGE.mute] !== "false") {
+        // Dragging the slider un-mutes
         localStorage[STORAGE.mute] = false;
-        $("#volstatus i").html("&#xE050;");
-        $("#volstatus").removeClass('on');
       } else if (ui.value === 0) {
         firetable.actions.muteToggle(true);
-        $("#volstatus").addClass('on');
       }
+      firetable.ui.renderMuteButton();
     }
   });
-
-  // ── Resume song if one was already playing when YT loaded ──
-  if (firetable.song && firetable.song.type === MEDIA_YOUTUBE) {
-    firetable.utilities.resumeCurrentSong();
-  }
-}
-
-// ─── Mute / Volume Toggle ────────────────────────────────────────────────────
-
-firetable.actions = firetable.actions || {};
+  firetable.ui.renderMuteButton();
+};
 
 /**
  * Toggle mute on/off. Stores previous volume to restore when un-muting.
@@ -126,57 +139,33 @@ firetable.actions = firetable.actions || {};
  */
 firetable.actions.muteToggle = function (zeroMute) {
   var muted = localStorage[STORAGE.mute];
-  var icon = "&#xE050;"; // volume_up icon
+  var $slider = $("#slider");
+  var sliderValue = function (v) {
+    if (!$slider.hasClass("ui-slider")) return v === undefined ? parseInt(localStorage[STORAGE.volume], 10) || 0 : undefined;
+    return v === undefined ? $slider.slider("value") : $slider.slider("value", v);
+  };
 
   if (zeroMute) {
     // Slider was dragged to 0 — mark as zero-muted
-    icon = "&#xE04E;"; // volume_off icon
     muted = 0;
-
-  } else if (typeof muted !== 'undefined') {
-    if (muted !== "false") {
-      // Currently muted → un-mute, restore saved volume
-      if (parseInt(muted) === 0) {
-        // Was zero-muted — restore to default volume
-        $("#slider").slider("value", DEFAULT_VOLUME);
-        player.setVolume(DEFAULT_VOLUME);
-        firetable.scwidget.setVolume(DEFAULT_VOLUME);
-        localStorage[STORAGE.volume] = DEFAULT_VOLUME;
-      } else {
-        // Restore the volume that was saved before muting
-        var savedVol = parseInt(muted);
-        $("#slider").slider("value", savedVol);
-        player.setVolume(savedVol);
-        firetable.scwidget.setVolume(savedVol);
-        localStorage[STORAGE.volume] = savedVol;
-      }
-      muted = false;
-    } else {
-      // Not muted → mute: save current volume, set to 0
-      icon = "&#xE04E;";
-      muted = $("#slider").slider("value");
-      $("#slider").slider('value', 0);
-      player.setVolume(0);
-      firetable.scwidget.setVolume(0);
-      localStorage[STORAGE.volume] = 0;
-    }
+  } else if (muted && muted !== "false") {
+    // Currently muted → un-mute, restore the volume saved when muting
+    var savedVol = parseInt(muted, 10);
+    if (!savedVol) savedVol = DEFAULT_VOLUME; // was zero-muted
+    sliderValue(savedVol);
+    firetable.utilities.setPlayersVolume(savedVol);
+    localStorage[STORAGE.volume] = savedVol;
+    muted = false;
   } else {
-    // First time — mute
-    icon = "&#xE04E;";
-    muted = $("#slider").slider("value");
-    $("#slider").slider('value', 0);
-    player.setVolume(0);
-    firetable.scwidget.setVolume(0);
+    // Not muted → mute: remember the current volume, set to 0
+    muted = sliderValue() || parseInt(localStorage[STORAGE.volume], 10) || DEFAULT_VOLUME;
+    sliderValue(0);
+    firetable.utilities.setPlayersVolume(0);
     localStorage[STORAGE.volume] = 0;
   }
 
-  if (muted) {
-    $("#volstatus").addClass('on');
-  } else {
-    $("#volstatus").removeClass('on');
-  }
-  $("#volstatus i").html(icon);
   localStorage[STORAGE.mute] = muted;
+  firetable.ui.renderMuteButton();
 };
 
 // ─── Track Preview ───────────────────────────────────────────────────────────
