@@ -236,8 +236,15 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     firetable.movePvBar = setInterval(function () {
       var pcnt = (firetable.pvCount / 29) * 100; // 29 = PREVIEW_DURATION/1000 - 1
       firetable.pvCount += 0.2;
+      // The playlist may have been redrawn (or the track moved to another
+      // row) since the preview started: keep the bar, pause icon and hover
+      // style on the row that's playing, and off every other row (#62)
+      var $row = $("#pvbar" + firetable.preview);
+      $("#mainqueue .pvbar.previewing").not($row).removeClass("previewing")
+        .css("background-image", "none").find(".previewicon").html("&#xE037;");
+      $row.addClass("previewing").find(".previewicon").html("&#xE034;");
       // Same accent as the rest of the app (not a separate hardcoded orange)
-      $("#pvbar" + firetable.preview).css(
+      $row.css(
         "background-image",
         "linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 27%, transparent) " + pcnt + "%, var(--color-bg-t1) " + pcnt + "%)"
       );

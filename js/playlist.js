@@ -733,7 +733,7 @@ function buildQueueItemHTML(key, track, isPreview) {
   }
 
   return (
-    '<div class="pvbar" id="pvbar' + key + '"' +
+    '<div class="pvbar' + (isPreview ? ' previewing' : '') + '" id="pvbar' + key + '"' +
     ' data-key="' + key + '" data-type="' + track.type + '"' +
     ' data-cid="' + firetable.utilities.htmlEscape(String(track.cid)) + '"' +
     ' data-tags="' + safeTrackName + '" data-broken="' + (track.flagged ? '1' : '0') + '"' +
