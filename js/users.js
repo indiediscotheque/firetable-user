@@ -201,6 +201,7 @@ firetable.actions.loggedIn = function (user) {
   $("#logOutButton").show().on('click', firetable.actions.logOut);
   firetable.debug && console.log('remove login class from mainGrid');
   $('#mainGrid').removeClass('login').removeClass('pre-auth');
+  firetable.nav._cardsShown = false; // fresh login → reload the card collection
   firetable.nav.restore();
   firetable.nav.apply();
   $("#grab").css("display", "inline-block");
@@ -465,43 +466,17 @@ firetable.ui.setupUserEvents = function () {
 
   // ── Auth state events (already bound in init.js, but user-list events here) ──
 
-  ftapi.events.on("userJoined", function (data) {
-    console.log(data);
-    rememberGhostRole(data);
-    // Remove any existing entry (ghost or duplicate) before inserting
-    $("#user" + data.userid).remove();
-    var isIdle = "";
-    if (data.idle && data.idle.isIdle && !data.hostbot) isIdle = "idle";
-    var $el = $("<div></div>")
-      .addClass("prson" + (data.blocked ? " blockd" : "") + (isIdle ? " " + isIdle : ""))
-      .attr("id", "user" + data.userid)
-      .attr("data-userid", data.userid)
-      .html(buildUserHTML(data));
-    $(getUserDestination(data)).append($el);
-  });
+  // Single joins/leaves/changes need no work of their own: Firebase follows
+  // each one with "usersChanged", which rebuilds the list (once per frame).
+  // Only remember roles, so a DJ who drops off still shows the right icon.
+  ftapi.events.on("userJoined", rememberGhostRole);
+  ftapi.events.on("userChanged", rememberGhostRole);
 
-  ftapi.events.on("userLeft", function (data) {
-    // If this user still occupies a deck slot, keep them in the list
-    // instead of removing them — the ghost user will clear once the bot removes them from the deck.
-    var onDeck = firetable.tableData && (function () {
-      for (var k in firetable.tableData) {
-        if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === data.userid) return true;
-      }
-    })();
-    if (!onDeck) {
-      $("#user" + data.userid).remove();
-    }
-  });
-
-  ftapi.events.on("userChanged", function (data) {
-    console.log("CHANGE", data);
-    rememberGhostRole(data);
-    $("#user" + data.userid).html(buildUserHTML(data));
-  });
-
-  ftapi.events.on("usersChanged", function (okdata) {
+  // Several updates can land at once (presence, idle, blocks); rebuild the
+  // list at most once per frame, with the latest data.
+  ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function (okdata) {
     // Rebuild the user list sections from scratch — handles the timing case
-    // where userJoined fires while #appShell is detached (login screen).
+    // where a user joins while #appShell is detached (login screen).
     $("#usersBot, #usersSuper, #usersMod, #usersRegular").empty();
     if (okdata) {
       // Track which IDs are on the waitlist so we skip them
@@ -550,7 +525,7 @@ firetable.ui.setupUserEvents = function () {
     firetable.debug && console.log('users:', okdata);
     // Re-insert any ghost deck users that were cleared by the full rebuild
     firetable.ui.syncGhostUsers();
-  });
+  }));
 
   
 

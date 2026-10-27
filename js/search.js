@@ -71,15 +71,8 @@ firetable.ui.setupSearchEvents = function () {
     $srli.find('.addtolist').on('click', function () {
       var listid = $("#listpicker").val();
       var title = $srli.find('.listwords').text();
-      var cuteid = ftapi.actions.addToList(mediaType, title, mediaCid, listid);
-      if (!listid || listid === "0") {
-        ftapi.actions.moveTrackToTop(cuteid, ftapi.queueRef, firetable.preview, function(changePV) {
-          if (changePV) firetable.preview = changePV;
-        });
-      } else {
-        var plRef = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + listid + "/list");
-        ftapi.actions.moveTrackToTop(cuteid, plRef);
-      }
+      ftapi.actions.addTrackToTop(ftapi.lookup.listRef(listid), { type: mediaType, name: title, cid: mediaCid },
+        firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
       var $fb = $srli.find('.search-feedback');
       $fb.text('added').addClass('visible');
       setTimeout(function () { $fb.removeClass('visible'); }, 2000);

@@ -29,8 +29,10 @@
  * @param {Object} data          - Track data from ftapi
  * @param {jQuery} $template     - Cloneable template element
  * @param {string} containerSel  - jQuery selector for the target container
+ * @param {boolean} [older]      - Recent plays only: add below everything shown
+ *                                 (for "Show older plays") instead of on top
  */
-function renderHistoryItem(data, $template, containerSel) {
+function renderHistoryItem(data, $template, containerSel, older) {
   if (data.img === "img/idlogo.png" && ftconfigs.defaultAlbumArtUrl.length) {
     data.img = ftconfigs.defaultAlbumArtUrl;
   }
@@ -45,6 +47,7 @@ function renderHistoryItem(data, $template, containerSel) {
   $histItem.attr('id', "pvbar" + pkey)
            .attr("data-key", pkey)
            .attr("data-histid", data.histID)
+           .attr("data-list", containerSel === "#thediscovers" ? "newMusic" : "songHistory")
            .attr("data-cid", data.cid)
            .attr("data-type", data.type)
            .attr("data-tag", data.artist + " - " + data.title);
@@ -144,16 +147,35 @@ function renderHistoryItem(data, $template, containerSel) {
         '<div class="hist-day-items"></div>' +
         '</div>'
       );
-      $dayGroup.prependTo('#thehistory');
+      if (!older) $dayGroup.prependTo('#thehistory');
+      else if ($('#histMore').length) $dayGroup.insertBefore('#histMore');
+      else $dayGroup.appendTo('#thehistory');
     }
     var timeStr = firetable.utilities.format_time(data.when);
     var $avatar = $histItem.find('.dj-avatar-tip').detach();
     var entryHour = new Date(data.when).getHours();
-    var $entry = $('<div class="hist-entry" data-hour="' + entryHour + '"></div>');
+    var $entry = $('<div class="hist-entry" data-hour="' + entryHour + '" data-when="' + Number(data.when) + '"></div>');
     $('<span class="hist-timestamp">' + timeStr + '</span>').appendTo($entry);
     $avatar.appendTo($entry);
     $histItem.appendTo($entry);
     var $dayItems = $dayGroup.find('.hist-day-items');
+
+    if (older) {
+      // Below the newer plays; an hour marker (labelled with the newer play's
+      // hour, like the ones added on top) goes between them when the hour changes
+      var $prevEntry = $dayItems.children('.hist-entry').last();
+      $entry.appendTo($dayItems);
+      if ($prevEntry.length) {
+        var prevHour = parseInt($prevEntry.attr('data-hour'), 10);
+        if (prevHour !== entryHour) {
+          var prevDate = new Date(parseInt($prevEntry.attr('data-when'), 10));
+          prevDate.setMinutes(0, 0, 0);
+          $('<div class="hist-hour-marker"><span class="hist-hour-label">' +
+            prevDate.toLocaleTimeString(undefined, { hour: 'numeric' }) + '</span></div>').insertAfter($prevEntry);
+        }
+      }
+      return;
+    }
     $entry.prependTo($dayItems);
 
     // Insert an hour marker when crossing an hour boundary
@@ -486,10 +508,56 @@ firetable.ui.setupRoomEvents = function () {
     $(this).attr('aria-expanded', String(!$group.hasClass('collapsed')));
   });
 
+  // Only the latest plays load at first. Scrolling near the bottom of the
+  // list loads the next page automatically (the button is a fallback), all
+  // the way back through the stored history.
+  firetable._historyHasOlder = true;
+  var historyLoading = false;
+  var historyObserver = ('IntersectionObserver' in window)
+    ? new IntersectionObserver(function (entries) {
+        if (entries.some(function (e) { return e.isIntersecting; })) loadOlderHistory();
+      }, { root: document.getElementById('thehistory'), rootMargin: '0px 0px 600px 0px' })
+    : null;
+
+  function syncHistoryMoreButton() {
+    var show = firetable._historyHasOlder && ftapi.historyLoaded >= HISTORY_PAGE_SIZE;
+    var $btn = $('#histMore');
+    if (!show) {
+      if ($btn.length && historyObserver) historyObserver.unobserve($btn[0]);
+      $btn.remove();
+      return;
+    }
+    if (!$btn.length) {
+      $btn = $('<button type="button" id="histMore" class="butt graybutt small">Show older plays</button>');
+    }
+    $btn.prop('disabled', false).text('Show older plays').appendTo('#thehistory'); // always last
+    if (historyObserver) { historyObserver.unobserve($btn[0]); historyObserver.observe($btn[0]); }
+  }
+
+  function loadOlderHistory() {
+    if (historyLoading || !firetable._historyHasOlder) return;
+    historyLoading = true;
+    $('#histMore').prop('disabled', true).text('Loading older plays…');
+    ftapi.lookup.olderHistory(function (plays, hasMore) {
+      historyLoading = false;
+      firetable._historyHasOlder = hasMore;
+      // plays come oldest-first; add newest-first below what's shown
+      for (var i = plays.length - 1; i >= 0; i--) {
+        renderHistoryItem(plays[i], $historyItem, "#thehistory", true);
+      }
+      firetable._historyCache = plays.concat(firetable._historyCache);
+      applyHistoryFilter();
+      syncHistoryMoreButton(); // re-observing loads the next page if still in view
+    });
+  }
+  $(document).on('click', '#histMore', loadOlderHistory);
+
+  var historyButtonSoon = firetable.utilities.oncePerFrame(syncHistoryMoreButton);
   ftapi.events.on('newHistory', function (data) {
     firetable._historyCache.push(data);
     renderHistoryItem(data, $historyItem, "#thehistory");
     applyHistoryFilter();
+    historyButtonSoon();
   });
 
   // ── Re-render history/discover after re-login ──
@@ -508,13 +576,33 @@ firetable.ui.setupRoomEvents = function () {
         renderHistoryItem(data, $historyItem, "#thehistory");
       });
       applyHistoryFilter();
+      syncHistoryMoreButton();
     }
   });
 
   // ── Edited History (tag correction) ──
+  // A tag correction: from a mod here, or from the live window of recent plays
   ftapi.events.on('editedHistory', function (data) {
-    console.log("HIST EDIT", data);
-    $("#" + data.histID).text(data.artist + " - " + data.title);
+    var tag = data.artist + " - " + data.title;
+    var el = document.getElementById(data.histID);
+    if (el) {
+      var $el = $(el);
+      var $title = $el.find('.fresh-track-title'), $artist = $el.find('.fresh-track-artist');
+      if ($title.length && $artist.length) {
+        $title.text(firetable.ui.strip(data.title || ''));
+        $artist.text(firetable.ui.strip(data.artist || ''));
+      } else {
+        $el.text(firetable.ui.strip(data.artist || '') + " - " + firetable.ui.strip(data.title || ''));
+      }
+      $el.closest('.pvbar').attr('data-tag', tag);
+    }
+    // keep the cached copies (used to redraw after logging back in) in step
+    [firetable._historyCache, firetable._produceCache].forEach(function (cache) {
+      (cache || []).forEach(function (item) {
+        if (item.histID === data.histID) { item.artist = data.artist; item.title = data.title; }
+      });
+    });
+    applyHistoryFilter();
   });
 
   // ── Mod Check (show edit buttons for mods) ──
@@ -941,12 +1029,13 @@ firetable.ui.setupRoomEvents = function () {
     }
   });
 
-  // Re-render deck when user data arrives (mod status affects button visibility)
-  ftapi.events.on("usersChanged", function () {
+  // Re-render deck when user data arrives (mod status affects button visibility),
+  // at most once per frame however many updates arrive together
+  ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () {
     if (firetable.tableData !== undefined) {
       ftapi.events.emit("tableChanged", firetable.tableData);
     }
-  });
+  }));
 
   // ── Spotlight (Active DJ Index) ──
   ftapi.events.on("spotlightStateChanged", function (data) {

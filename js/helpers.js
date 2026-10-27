@@ -397,6 +397,29 @@ firetable.utilities = {
     return hours + ":" + min + ampm;
   },
 
+  // ─── Once per frame ──────────────────────────────────────────────────────
+
+  /**
+   * Wrap fn so any number of calls within one frame run it once, with the
+   * arguments of the last call. In a hidden tab it waits until the tab is
+   * shown again (no work nobody can see).
+   * @param {Function} fn
+   * @returns {Function}
+   */
+  oncePerFrame: function (fn) {
+    var queued = false, lastArgs, lastThis;
+    return function () {
+      lastArgs = arguments;
+      lastThis = this;
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () {
+        queued = false;
+        fn.apply(lastThis, lastArgs);
+      });
+    };
+  },
+
   // ─── Debounce ────────────────────────────────────────────────────────────
 
   /**

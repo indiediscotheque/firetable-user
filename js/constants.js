@@ -96,6 +96,12 @@ var EMOJI_URLS = [
   { url: "https://unpkg.com/emojilib@3.0.4/dist/emoji-en-US.json", integrity: "sha384-SKTZEsmwjSonhLYsjUIm1DdaCmnRLA3oASU0EG7srbWYeiwjuVoD7AQNLVA+88Ux" }
 ];
 
+// ─── History Limits ──────────────────────────────────────────────────────────
+/** Chat messages loaded when joining (older ones are pruned by the bot anyway) */
+var CHAT_HISTORY_LIMIT = 50;
+/** Recent plays loaded at first; "Show older plays" loads this many more each time */
+var HISTORY_PAGE_SIZE = 100;
+
 // ─── Search Result Limits ───────────────────────────────────────────────────
 /** Max results returned from YouTube / SoundCloud searches */
 var SEARCH_MAX_RESULTS = 15;

@@ -2407,11 +2407,6 @@ ul.lightrope li {
     }
 }
 
-:root {
-    /* the only thing needed is a grainy/noisy background image */
-    --glitter: url("/img/fire-noise.png");
-}
-
 #stageTopRight {
     position: absolute;
     top: var(--pad3);
@@ -3864,6 +3859,12 @@ img.emoji,
         background: var(--color-text-muted);
         pointer-events: none;
     }
+}
+
+/* "Show older plays" at the bottom of Recent */
+#histMore {
+    display: flex;
+    margin: var(--pad3, 1rem) auto;
 }
 
 .hist-hour-marker {

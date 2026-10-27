@@ -359,12 +359,17 @@ class Stage
 
 		// Pause/resume animation intervals to avoid burning CPU/GPU when fire
 		// is not visible (no one is DJing).
+		// The renderer stops too: hidden fire draws nothing, so it would only
+		// redraw an empty canvas 60 times a second. One last render clears it.
 		if (visible) {
 			for (var j = 0; j < this.flames.length; j++) { this.flames[j].resume(); }
 			this.ember.resume();
+			this.app.ticker.start();
 		} else {
 			for (var j = 0; j < this.flames.length; j++) { this.flames[j].pause(); }
 			this.ember.pause();
+			this.app.render();
+			this.app.ticker.stop();
 		}
 	}
 
