@@ -1161,7 +1161,46 @@ firetable.ui.tooltip = (function () {
   return { bind: bind, show: show, hide: hide };
 })();
 
+/**
+ * Phones: when the on-screen keyboard opens it can cover the field being
+ * typed in (#163). Android Chrome resizes the page for it (see the viewport
+ * meta tag); iOS doesn't, so whenever the visible area shrinks or scrolls
+ * while a field has focus, smoothly scroll the field back into view.
+ */
+firetable.ui.keepFocusedFieldVisible = function () {
+  var vv = window.visualViewport;
+  var isField = function (el) {
+    return el && (el.tagName === "TEXTAREA" || el.tagName === "SELECT" ||
+      (el.tagName === "INPUT" && !/^(checkbox|radio|button|submit|range|color|file)$/i.test(el.type)) ||
+      el.isContentEditable);
+  };
+  var timer = null;
+  var reveal = function () {
+    var el = document.activeElement;
+    if (!isField(el)) return;
+    var r = el.getBoundingClientRect();
+    var top = vv ? vv.offsetTop : 0;
+    var bottom = top + (vv ? vv.height : window.innerHeight);
+    if (r.top >= top + 8 && r.bottom <= bottom - 8) return; // already visible
+    var smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "center", inline: "nearest", behavior: smooth ? "smooth" : "auto" });
+  };
+  var soon = function () {
+    clearTimeout(timer);
+    timer = setTimeout(reveal, 120); // let the keyboard finish opening
+  };
+  if (vv) {
+    vv.addEventListener("resize", soon);
+    vv.addEventListener("scroll", soon);
+  }
+  window.addEventListener("resize", soon);
+  document.addEventListener("focusin", function (e) {
+    if (isField(e.target)) setTimeout(reveal, 350); // after the keyboard animation
+  });
+};
+
 firetable.ui.setupMiscEvents = function () {
+  firetable.ui.keepFocusedFieldVisible();
 
   // ── Floating UI tooltips ──
   firetable.ui.tooltip.bind();
