@@ -131,6 +131,7 @@ jobs:
             mirror --reverse --verbose --no-perms --parallel=4 $flags \
               --exclude-glob .git/ \
               --exclude-glob .github/ \
+              --exclude-glob tools/ \
               --exclude-glob .gitignore \
               --exclude-glob .DS_Store \
               --exclude-glob config.js \

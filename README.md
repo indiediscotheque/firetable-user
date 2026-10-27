@@ -28,5 +28,10 @@ The deploy uploads `.htaccess` only when the server has none or its copy contain
 CDN scripts in `index.html` are pinned to exact versions and checked with Subresource Integrity. When upgrading one, update its `integrity` hash too:
 `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`
 
+## icons
+`fonts/material-symbols-outlined.woff2` holds only the icons the site uses (about 260 KB instead of ~4 MB). After using an icon the site hasn't used before, rebuild it:
+`pip install "fonttools[woff]" && python3 tools/subset-icons.py`
+The full font lives in `tools/fonts/` (never deployed).
+
 ## avatars
 Robot avatars provided by [robohash.org](https://robohash.org/).

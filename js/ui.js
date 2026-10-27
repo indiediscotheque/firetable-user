@@ -761,7 +761,10 @@ firetable.nav = {
       this.setAttribute('aria-selected', this.classList.contains('on') ? 'true' : 'false');
     });
 
-    if (n.view === 'cards') firetable.actions.cardCase();
+    // Load the card collection when the Cards view is opened, not on every
+    // layout pass (breakpoint changes, tab clicks, logins all call apply)
+    if (n.view === 'cards' && n._cardsShown !== true) firetable.actions.cardCase();
+    n._cardsShown = n.view === 'cards';
   }
 };
 
@@ -1293,18 +1296,14 @@ firetable.ui.setupMiscEvents = function () {
         String(src.cid) === String(firetable.song.cid) &&
         String(src.type) === String(firetable.song.type));
       firetable.stealTarget = null;
-      var cuteid = ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
-      // Now-playing track goes to the bottom (Firebase push already appends there).
-      // Any other source (history, discover, search) goes to the top.
-      if (!isNowPlaying) {
-        if (!dest || dest === "0") {
-          ftapi.actions.moveTrackToTop(cuteid, ftapi.queueRef, firetable.preview, function(changePV) {
-            if (changePV) firetable.preview = changePV;
-          });
-        } else {
-          var plRef = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + String(dest) + "/list");
-          ftapi.actions.moveTrackToTop(cuteid, plRef);
-        }
+      // Now-playing track goes to the bottom; any other source (history,
+      // discover, search) goes to the top, added and moved in one step.
+      if (isNowPlaying) {
+        ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img);
+      } else {
+        ftapi.actions.addTrackToTop(ftapi.lookup.listRef(dest),
+          { type: src.type, name: src.title, cid: src.cid, img: src.img },
+          firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
       }
       $("#stealContain").hide();
       // Show "added" feedback if the source button was inside a search result row

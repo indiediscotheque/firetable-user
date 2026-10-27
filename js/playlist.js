@@ -24,11 +24,7 @@ firetable.actions = firetable.actions || {};
 
 firetable.actions.switchViewList = function (listID) {
   ftapi.queueRef.off("value", ftapi.queueBind);
-  if (listID == "0") {
-    ftapi.queueRef = firebase.app("firetable").database().ref("queues/" + ftapi.uid);
-  } else {
-    ftapi.queueRef = firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + listID + "/list");
-  }
+  ftapi.queueRef = ftapi.lookup.listRef(listID);
   ftapi.queueBind = ftapi.queueRef.on('value', function (dataSnapshot) {
     var data = dataSnapshot.val();
     if (!data) data = {};
@@ -60,10 +56,12 @@ firetable.actions.queueTrack = function (cid, name, type, tobottom) {
     $("#apv" + type + cid).removeAttr("style");
   }, 3000);
 
-  var cuteid = ftapi.actions.addToList(type, name, cid, false, function () {
-    firetable.debug && console.log('queue track id:', cuteid);
-    if (!tobottom) firetable.actions.bumpSongInQueue(cuteid);
-  });
+  if (tobottom) {
+    ftapi.actions.addToList(type, name, cid, false);
+  } else {
+    // Added and moved to the top in one atomic step
+    ftapi.actions.addTrackToTop(ftapi.queueRef, info, firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
+  }
 
   // Cancel any active search preview
   firetable.utilities.cancelSearchPreview();
@@ -87,16 +85,8 @@ firetable.actions.updateQueue = function () {
   var arr = $('#mainqueue > div').map(function () {
     return this.id.slice(5);
   }).get();
-  // Large playlists render in chunks; if the drag happened before every row
-  // was on screen, keep the not-yet-rendered tracks after the dragged ones
-  // in their existing order (otherwise reorderList ignores the change).
-  if (firetable.queue) {
-    var inDom = {};
-    for (var i = 0; i < arr.length; i++) inDom[arr[i]] = true;
-    Object.keys(firetable.queue).forEach(function (key) {
-      if (!inDom[key]) arr.push(key);
-    });
-  }
+  // Rows not on screen yet (long lists render in chunks) keep their order
+  // after the dragged ones; reorderList handles that.
   ftapi.actions.reorderList(arr, firetable.preview, function (changePV) {
     if (changePV) firetable.preview = changePV;
   });
@@ -1311,7 +1301,11 @@ firetable.ui.setupPlaylistEvents = function () {
         $pvbar.attr('data-type'),
         $pvbar.attr('data-cid'),
         val,
-        $pvbar.attr('data-histid')
+        $pvbar.attr('data-histid'),
+        $pvbar.attr('data-list'),
+        function (error) {
+          if (error) firetable.ui.toast("Couldn't save those tags. Please try again.", "error");
+        }
       );
       $pvbar.attr('data-tag', val);
       document.getElementById('tagEditorPopover').hidePopover();
