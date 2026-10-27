@@ -21,6 +21,14 @@
 #   DREAMHOST_PATH      site folder, e.g. indiediscotheque.com (relative to
 #                       the user's home; "/indiediscotheque.com" also works)
 #
+# Optional repository secrets for Last.fm scrobbling (api/lastfm.php):
+#   LASTFM_API_KEY      Last.fm API key
+#   LASTFM_SECRET       Last.fm shared secret
+# When both are set, the deploy writes api/lastfm-config.php on the server
+# from them (owner-only permissions), so the secret never sits in git. A
+# hand-made lastfm-config.php without the "firetable-deploy-managed" line is
+# left alone.
+#
 # Optional repository variable (same page, "Variables" tab):
 #   SITE_URL            the site's address, for the check after the .htaccess
 #                       update (redirects are followed). Default:
@@ -59,6 +67,7 @@ jobs:
       LFTP_PASSWORD: ${{ secrets.DREAMHOST_PASSWORD }}
       DEST_RAW: ${{ secrets.DREAMHOST_PATH }}
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      SITE_URL: ${{ vars.SITE_URL }}
     steps:
       - name: Check out master
         uses: actions/checkout@v7
@@ -100,6 +109,11 @@ jobs:
           esac
           DEST="${DEST%/}"
           echo "DEST=$DEST" >> "$GITHUB_ENV"
+          # Site address for the checks after upload (default: the folder name)
+          if [ -z "$SITE_URL" ]; then
+            d=$(basename "$DEST")
+            case "$d" in *.*) echo "SITE_URL=https://$d/" >> "$GITHUB_ENV" ;; esac
+          fi
           cat > ~/.lftprc <<EOF
           set sftp:connect-program "ssh -a -x -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o BatchMode=no"
           set net:max-retries 3
@@ -114,6 +128,56 @@ jobs:
             exit 1
           fi
           echo "Found $DEST/config.js - target folder looks right."
+
+      - name: Write the Last.fm settings (api/lastfm-config.php)
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+        run: |
+          remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
+          target="$DEST/api/lastfm-config.php"
+          work=$(mktemp -d)
+          trap 'rm -rf "$work"' EXIT
+          have=0
+          if remote "cls -1 \"$target\"" >/dev/null 2>&1; then
+            remote "get \"$target\" -o \"$work/current\""
+            have=1
+          fi
+          if [ -z "$LASTFM_API_KEY" ] || [ -z "$LASTFM_SECRET" ]; then
+            if [ "$have" = 1 ]; then
+              echo "No LASTFM_API_KEY / LASTFM_SECRET secrets; using the lastfm-config.php already on the server."
+            else
+              echo "::warning::Last.fm scrobbling is not set up: add the LASTFM_API_KEY and LASTFM_SECRET repository secrets (or create api/lastfm-config.php on the server)."
+            fi
+            exit 0
+          fi
+          hex32() { printf '%s' "$1" | grep -Eqx '[0-9a-fA-F]{32}'; }
+          if ! hex32 "$LASTFM_API_KEY" || ! hex32 "$LASTFM_SECRET"; then
+            echo "::error::LASTFM_API_KEY and LASTFM_SECRET should each be 32 hex characters, as Last.fm shows them."
+            exit 1
+          fi
+          if [ "$have" = 1 ] && ! grep -q 'firetable-deploy-managed' "$work/current"; then
+            echo "::notice::api/lastfm-config.php on the server was made by hand, so it was left as is (the secrets are not used). Delete it to let the deploy manage it."
+            exit 0
+          fi
+          php -r '
+            echo "<?php\n";
+            echo "// firetable-deploy-managed: written by the deploy from the LASTFM_API_KEY and\n";
+            echo "// LASTFM_SECRET repository secrets. Change those, not this file.\n";
+            echo "return ", var_export(["api_key" => getenv("LASTFM_API_KEY"), "secret" => getenv("LASTFM_SECRET")], true), ";\n";
+          ' > "$work/new"
+          php -l "$work/new" >/dev/null
+          if [ "$have" = 1 ] && cmp -s "$work/current" "$work/new"; then
+            echo "api/lastfm-config.php is up to date."
+            exit 0
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run: api/lastfm-config.php would be written."
+            exit 0
+          fi
+          remote "mkdir -p \"$DEST/api\""
+          remote "put \"$work/new\" -o \"$target\"; chmod 600 \"$target\""
+          echo "api/lastfm-config.php written."
 
       - name: Upload changed files
         run: |
@@ -142,9 +206,21 @@ jobs:
               --exclude-glob README.md \
               ./ \"$DEST/\""
 
+      - name: Check the Last.fm proxy
+        if: env.DRY_RUN != 'true'
+        run: |
+          [ -n "$SITE_URL" ] || { echo "No SITE_URL; skipped."; exit 0; }
+          home=$(curl -s -L --max-redirs 5 -o /dev/null -m 20 -w '%{url_effective}' "$SITE_URL" || true)
+          [ -n "$home" ] || { echo "::warning::Couldn't reach $SITE_URL to check the Last.fm proxy."; exit 0; }
+          cb=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$home")
+          code=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "${home%/}/api/lastfm.php?action=connect&cb=$cb" || true)
+          case "$code" in
+            302) echo "Last.fm proxy is set up." ;;
+            501) echo "::warning::api/lastfm.php is live but has no Last.fm key/secret, so scrobbling is off. Add the LASTFM_API_KEY and LASTFM_SECRET repository secrets." ;;
+            *)   echo "::warning::api/lastfm.php answered $code (expected 302)." ;;
+          esac
+
       - name: Merge the security headers into the server's .htaccess
-        env:
-          SITE_URL: ${{ vars.SITE_URL }}
         run: |
           work=$(mktemp -d)
           remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
@@ -173,10 +249,6 @@ jobs:
           fi
 
           url="$SITE_URL"
-          if [ -z "$url" ]; then
-            d=$(basename "$DEST")
-            case "$d" in *.*) url="https://$d/" ;; esac
-          fi
           # Follows redirects (indiediscotheque.com → www.) and reports the final page
           status() { curl -s -L --max-redirs 5 -o /dev/null -m 20 -w '%{http_code}' "$url" || true; }
           before=""
