@@ -565,6 +565,7 @@ firetable.utilities = {
       if (firetable.scLoaded) firetable.scwidget.pause();
       player.setVolume(vol);
       if (!firetable.disableMediaPlayback) {
+        firetable.media.videoLoading();
         player.loadVideoById(data.cid, secSince, "large");
       }
     } else if (data.type === MEDIA_SOUNDCLOUD) {
