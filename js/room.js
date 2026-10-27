@@ -887,8 +887,9 @@ firetable.ui.setupRoomEvents = function () {
   // ── Dance Mode ──
   ftapi.events.on("danceStateChanged", function (data) {
     firetable.debug && console.log('dance check:', data);
-    if (data) $("#deck").addClass("dance");
-    else $("#deck").removeClass("dance");
+    // On <body>: the on-deck avatars can sit in the stage or the People panel
+    $("#deck").toggleClass("dance", !!data);
+    $("body").toggleClass("dance", !!data);
   });
 
   // ── Festive Lights ──

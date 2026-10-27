@@ -1959,6 +1959,25 @@ html .ui-button.ui-state-disabled:active {
     animation: MoveSideSide 2s linear infinite;
 }
 
+/* !dance: the DJs waiting on deck dance too (#166), each a little out of step */
+body.dance .ondeck-slot:not(.empty) .ft-avatar {
+    transform-origin: 50% 90%;
+    animation: OnDeckDance 1.2s ease-in-out infinite;
+}
+
+@keyframes OnDeckDance {
+    0%, 100% { transform: rotate(-9deg) translateY(0); }
+    25%      { transform: rotate(0deg) translateY(-0.2rem); }
+    50%      { transform: rotate(9deg) translateY(0); }
+    75%      { transform: rotate(0deg) translateY(-0.2rem); }
+}
+body.dance .ondeck-slot:nth-child(2) .ft-avatar { animation-delay: -0.4s; }
+body.dance .ondeck-slot:nth-child(3) .ft-avatar { animation-delay: -0.8s; }
+
+@media (prefers-reduced-motion: reduce) {
+    body.dance .ondeck-slot .ft-avatar { animation: none; }
+}
+
 @container (width < 520px) {
     #deck {
         padding-inline-start: var(--stageactions-right, 0px);
@@ -5527,3 +5546,11 @@ body.media-off .q-art.no-art {
     color: var(--color-text-light);
     margin-bottom: var(--pad2);
 }
+
+/* Open the DJ playlist in Playlists (#162) */
+#djlistOpen {
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.7);
+}
+#mainGrid.login #djlistOpen,
+#mainGrid.pre-auth #djlistOpen { display: none; }

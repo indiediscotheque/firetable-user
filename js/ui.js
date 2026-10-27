@@ -1233,6 +1233,14 @@ firetable.ui.setupMiscEvents = function () {
     firetable.nav.apply();
   });
 
+  // ── Open the DJ playlist in the Playlists view (#162) ──
+  $("#djlistOpen").on("click", function () {
+    var listID = $("#djlistpicker").val() || "0";
+    if (firetable.nav.view !== "playlists" || firetable.nav.mobileSection !== "view") firetable.nav.setView("playlists");
+    if ($("#listpicker").val() !== listID) $("#listpicker").val(listID).trigger("change");
+    else firetable.ui.showQueuePanel();
+  });
+
   // ── Grab (steal to another playlist) ──
   $("#grab").on("click", function () {
     var isHidden = $("#stealContain").is(":hidden");
