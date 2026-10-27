@@ -16,6 +16,9 @@ var ftconfigs = {
    lastfmURL: "",
    discordURL: "",
    roomInfoUrl: "", // Change what the "?" button at the top of the page links to. This can be any URL
+  avatarset: "", // Room-wide avatar theme that overrides everyone's avatar. Leave empty for normal avatars.
+                 // Robohash: "set1" robots, "set2" monsters, "set3" robot heads, "set4" cats
+                 // (or any "dicebear:<style>", e.g. "dicebear:bottts"). Set the hostbot's AVATARSET to match for trading cards.
    firebase:{ // put the info from your Firebase app here. can be found in the Firebase console
     apiKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     authDomain: "xxxxxxxxxxxxxxxxx.firebaseapp.com",
