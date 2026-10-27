@@ -91,9 +91,30 @@ firetable.utilities = {
    * @returns {boolean}
    */
   seasonalLights: function (date) {
-    var months = (typeof ftconfigs !== "undefined" && ftconfigs.lightsMonths !== undefined)
-      ? ftconfigs.lightsMonths
-      : LIGHTS_MONTHS;
+    return firetable.utilities.inConfiguredMonths("lightsMonths", LIGHTS_MONTHS, date);
+  },
+
+  /**
+   * Should the stage snow fall by season (January and February by default)?
+   * Uses ftconfigs.snowMonths when set, else SNOW_MONTHS.
+   * @param {Date} [date=new Date()]
+   * @returns {boolean}
+   */
+  seasonalSnow: function (date) {
+    return firetable.utilities.inConfiguredMonths("snowMonths", SNOW_MONTHS, date);
+  },
+
+  /**
+   * inMonths() against ftconfigs[key] when config.js sets it, else defaults.
+   * @param {string} key - ftconfigs key, e.g. "snowMonths"
+   * @param {number[]} defaults
+   * @param {Date} [date=new Date()]
+   * @returns {boolean}
+   */
+  inConfiguredMonths: function (key, defaults, date) {
+    var months = (typeof ftconfigs !== "undefined" && ftconfigs[key] !== undefined)
+      ? ftconfigs[key]
+      : defaults;
     return firetable.utilities.inMonths(months, date);
   },
 
