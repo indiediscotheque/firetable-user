@@ -78,7 +78,9 @@ ftapi.init = function(firebaseConfig) {
         okdata[key].blocked = true;
       }
     }
-    ftapi.users = okdata;
+    // No one online => Firebase returns null; keep users an object (as it
+    // starts out) so lookups like ftapi.users[id] don't throw.
+    ftapi.users = okdata || {};
     if (ftapi.users[ftapi.uid]) {
       if (ftapi.users[ftapi.uid].username) {
         ftapi.uname = ftapi.users[ftapi.uid].username;
@@ -233,8 +235,11 @@ ftapi.init = function(firebaseConfig) {
           if (data) {
             returnData.user = data;
             if (data.username) ftapi.uname = data.username;
-            console.log("LOOK HERE",data)
-            if (data.mod || data.supermod){
+            if (data.avatarStyle) {
+              firetable.avatarStyle = data.avatarStyle;
+              localStorage[STORAGE.avatarStyle] = data.avatarStyle;
+            }
+            if (data.mod || data.supermod) {
               ftapi.isMod = true;
               ftapi.events.emit("modCheck", true);
             }
@@ -397,6 +402,29 @@ ftapi.actions = {
       });
     });
   },
+  sendBotCommand: function(txt) {
+    var chatFeed = firebase.app("firetable").database().ref("chatFeed");
+    var chatData = firebase.app("firetable").database().ref("chatData");
+    var data = {
+      time: firebase.database.ServerValue.TIMESTAMP,
+      id: ftapi.uid,
+      txt: txt,
+      name: ftapi.uname,
+      botCmd: true
+    };
+    var chatItem = chatData.push(data, function() {
+      var feedObj = { chatID: chatItem.key };
+      var feedItem = chatFeed.push(feedObj, function() {
+        chatItem.child("feedID").set(feedItem.key);
+      });
+    });
+  },
+  // Save which playlist the DJ bot should draw from, without changing the local queue view.
+  switchDjList: function(listID) {
+    var uref = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/selectedList");
+    uref.set(listID);
+    ftapi.selectedListThing = listID;
+  },
   switchList: function(listID) {
     var uref = firebase.app("firetable").database().ref("users/" + ftapi.uid + "/selectedList");
     uref.set(listID);
@@ -432,7 +460,7 @@ ftapi.actions = {
     newlist.set(obj);
     return listid;
   },
-  addToList: function(type, name, cid, dest, callback) {
+  addToList: function(type, name, cid, dest, callback, img) {
     var destref;
     if (dest) {
       if (dest == 0) {
@@ -448,60 +476,44 @@ ftapi.actions = {
       name: name,
       cid: cid
     };
+    if (img) info.img = img;
     var newTrack = destref.push(info, function() {
       if (callback) callback();
     });
     return newTrack.key;
   },
-  moveTrackToTop: function(trackID, preview, pvChangeCallback) {
-    // this is a stupid way of doing this,
-    // but i couldn't find a way to re-order a fb ref
-    // or add to the top of it (fb has a push() but no unshift() equivalent)
-    if (!ftapi.queue) return false;
-    var okdata = ftapi.queue;
-    var qtemp = [];
-    var ids = [];
-    var indx = false;
-    var countr = 0;
-    for (var key in okdata) {
-      if (okdata.hasOwnProperty(key)) {
-        var thisone = okdata[key];
-        var obj = {
-          data: thisone,
-          key: key
-        };
-        qtemp.push(obj);
-        ids.push(key);
-        if (key == trackID) indx = countr;
-        countr++;
-      }
-    }
-    var newobj = {};
-    if (indx) {
-      var thingo = qtemp[indx];
-      qtemp.splice(indx, 1); //take song out of temp array
-      qtemp.unshift(thingo); //add it to the top
+  moveTrackToTop: function(trackID, ref, preview, pvChangeCallback) {
+    // Firebase has no unshift() equivalent, so we read, rotate, and write back.
+    if (!ref) ref = ftapi.queueRef;
+    ref.once('value', function(snap) {
+      var data = snap.val();
+      if (!data) return;
+      var keys = Object.keys(data);
+      var idx = keys.indexOf(trackID);
+      if (idx <= 0) return; // already at top or not found
+      var rotated = keys.slice();
+      rotated.splice(idx, 1);
+      rotated.unshift(trackID);
       var changePv = false;
-      //now we have to rebuild the object keeping the oldkeys in the same order
-      //we have to do it this way (i think) because firebase orders based on its ids
-      for (var i = 0; i < qtemp.length; i++) {
-        var theid = ids[i];
-        if (preview) {
-          if (preview == qtemp[i].key) {
-            changePv = theid;
-          }
-        }
-        newobj[theid] = qtemp[i].data;
+      var newobj = {};
+      for (var i = 0; i < keys.length; i++) {
+        if (preview && preview === rotated[i]) changePv = keys[i];
+        newobj[keys[i]] = data[rotated[i]];
       }
-      if (changePv) pvChangeCallback(changePv);
-      ftapi.queueRef.set(newobj); //send it off to firebase!
-    }
+      if (changePv && pvChangeCallback) pvChangeCallback(changePv);
+      ref.set(newobj);
+    });
   },
   moveTrackToBottom: function(trackID, callback) {
-    var theTrack = ftapi.queue[trackID];
+    if (!ftapi.queue || !ftapi.queue[trackID]) return;
+    // Copy every stored field (album art, broken/off-theme flag, ...), not
+    // just type/name/cid, so nothing is lost when the track is re-added.
+    var theTrack = JSON.parse(JSON.stringify(ftapi.queue[trackID]));
+    delete theTrack.key; // older code tagged queue entries with .key locally
+    var ref = ftapi.queueRef;
     ftapi.actions.deleteTrack(trackID, function() {
-      var newID = ftapi.actions.addToList(theTrack.type, theTrack.name, theTrack.cid, false, function() {
-        if (callback) return callback(newID);
+      var newTrack = ref.push(theTrack, function() {
+        if (callback) return callback(newTrack.key);
       });
     });
   },
@@ -547,6 +559,7 @@ ftapi.actions = {
         });
         sourceref.once("value")
           .then(function(snapshot3) {
+            var writes = [];
             snapshot3.forEach(function(childSnapshot3) {
               var key = childSnapshot3.key;
               var childData = childSnapshot3.val();
@@ -558,13 +571,19 @@ ftapi.actions = {
                   }
                   if (!dupe) {
                     // NOT A DUPLICATE! GO GO GO
-                    destref.push(childData);
+                    writes.push(destref.push(childData));
                   }
                 }
               }
 
             });
-            return callback();
+            // Report completion only once every copy has been saved
+            Promise.all(writes).then(function() {
+              callback();
+            }, function(err) {
+              console.error("[firetable] merge failed:", err);
+              callback(err || true);
+            });
           });
       });
   },
@@ -593,22 +612,30 @@ ftapi.actions = {
     if (changePv) pvChangeCallback(changePv);
     ftapi.queueRef.set(newobj);
   },
-  removeDuplicatesFromList: function() {
-    var okdata = ftapi.queue;
-    var arr = [];
-    for (var key in okdata) {
-      if (okdata.hasOwnProperty(key)) {
-        var entry = ftapi.queue[key];
-        entry.key = key;
-        arr.push(entry);
-      }
-    }
-    var dupes = arr.filter((obj, pos, arr2) => {
-      return arr2.map(mapObj => mapObj.cid).indexOf(obj.cid) !== pos;
+  removeDuplicatesFromList: function(listID, callback) {
+    // Read the chosen list itself (not whichever list is on screen), then
+    // delete every later copy of a track id, keeping the first one.
+    var ref = (listID == 0)
+      ? firebase.app("firetable").database().ref("queues/" + ftapi.uid)
+      : firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + listID + "/list");
+    ref.once("value").then(function(snap) {
+      var seen = {};
+      var dupes = [];
+      snap.forEach(function(child) {
+        var track = child.val();
+        if (!track) return;
+        if (seen.hasOwnProperty(track.cid)) dupes.push(child.key);
+        else seen[track.cid] = true;
+      });
+      return Promise.all(dupes.map(function(key) {
+        return ref.child(key).remove();
+      }));
+    }).then(function() {
+      if (callback) callback();
+    }, function(err) {
+      console.error("[firetable] duplicate cleanup failed:", err);
+      if (callback) callback(err || true);
     });
-    for (var i = 0; i < dupes.length; i++) {
-      ftapi.actions.deleteTrack(dupes[i].key);
-    }
   },
   reorderList: function(arr, preview, pvChangeCallback) {
     if (!arr.length) return;
@@ -757,9 +784,11 @@ ftapi.actions = {
   },
   editTag: function(type, cid, tag, histID){
     console.log(type+" "+cid+" "+tag+ " "+histID);
-    var yargo = tag.split(" - ");
-    var theartist = yargo[0];
-    var thetitle = yargo[1];
+    // Split on the FIRST " - " only, so titles that contain " - "
+    // (e.g. "Song - Live Version") keep everything after it.
+    var sep = tag.indexOf(" - ");
+    var theartist = sep === -1 ? tag : tag.slice(0, sep);
+    var thetitle = sep === -1 ? "" : tag.slice(sep + 3);
     //UPDATE HISTORY
     var histRef = firebase.app("firetable").database().ref("songHistory/" + histID);
     histRef.child("artist").set(theartist);
