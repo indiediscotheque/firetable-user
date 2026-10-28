@@ -98,7 +98,7 @@ firetable.ui.setupSearchEvents = function () {
         );
         for (var key in allPlaylists) {
           if (allPlaylists.hasOwnProperty(key)) {
-            $("#stealpicker").append('<option value="' + key + '">' + allPlaylists[key].name + '</option>');
+            $("#stealpicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
           }
         }
         if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
@@ -145,7 +145,9 @@ firetable.ui.setupSearchEvents = function () {
           $srli.find('.previewicon').attr('id', "pv" + pkey).on('click', function () {
             firetable.actions.pview($(this).closest('.pvbar').attr('data-key'), true, MEDIA_YOUTUBE);
           });
-          $srli.find('.listwords').html(vidTitle);
+          // strip() decodes entities and drops tags (YouTube returns titles
+          // HTML-escaped); .text() keeps the result from being parsed as HTML.
+          $srli.find('.listwords').text(firetable.ui.strip(vidTitle));
           $srli.find('.pvbarWrap').append('<a class="tracklink-btn" target="_blank" href="https://www.youtube.com/watch?v=' + thecid + '" title="Open on YouTube">' + YT_LOGO_SVG + '</a>');
           bindSearchResultButtons($srli, thecid, MEDIA_YOUTUBE);
           $("#searchResults").append($srli);
@@ -190,7 +192,9 @@ firetable.ui.setupSearchEvents = function () {
           $srli.find('.previewicon').attr('id', "pv" + pkey).on('click', function () {
             firetable.actions.pview($(this).closest('.pvbar').attr('data-key'), true, MEDIA_SOUNDCLOUD);
           });
-          $srli.find('.listwords').html(vidTitle);
+          // strip() decodes entities and drops tags (YouTube returns titles
+          // HTML-escaped); .text() keeps the result from being parsed as HTML.
+          $srli.find('.listwords').text(firetable.ui.strip(vidTitle));
           $srli.find('.pvbarWrap').append('<a class="tracklink-btn" target="_blank" href="' + (item.permalink_url || '') + '" title="Open on SoundCloud">' + SC_LOGO_SVG + '</a>');
           bindSearchResultButtons($srli, item.id, MEDIA_SOUNDCLOUD);
           $("#searchResults").append($srli);
@@ -242,6 +246,24 @@ firetable.ui.setupSearchEvents = function () {
     $(this).addClass('on');
   });
 
+  // ── Import result row builder ──
+  // Builds the row with text nodes and a real click handler (no inline
+  // onclick), so playlist titles from YouTube/SoundCloud can't inject HTML/JS.
+  // `importName` is passed to importList() unchanged, exactly as before.
+  var appendImportResult = function (label, href, listID, importName, type) {
+    var $row = $('<div class="importResult"></div>');
+    $('<div class="imtxt"></div>').text(firetable.ui.strip(label)).appendTo($row);
+    var $link = $('<a target="_blank" class="importLinkCheck"><i class="material-symbols-filled">&#xE250;</i></a>');
+    if (/^https:\/\//i.test(href || '')) $link.attr('href', href);
+    $row.append($link).append(' ');
+    $('<i role="button" class="material-symbols-filled" title="Import">&#xE02E;</i>')
+      .on('click', function () {
+        firetable.actions.importList(String(listID), importName, type);
+      })
+      .appendTo($row);
+    $("#importResults").append($row);
+  };
+
   // ── Playlist/Import Search (#plMachine) ──
   $("#plMachine").bind("keyup", function (e) {
     if (e.which !== 13) return;
@@ -266,10 +288,10 @@ firetable.ui.setupSearchEvents = function () {
         ytAPI('playlists', { id: listID, part: 'snippet' }, function (response) {
           if (response.items && response.items.length === 1) {
             var item = response.items[0];
-            $("#importResults").append(
-              '<div class="importResult"><div class="imtxt">' + item.snippet.title + ' by ' + item.snippet.channelTitle + '</div>' +
-              '<a target="_blank" href="https://www.youtube.com/playlist?list=' + listID + '" class="importLinkCheck"><i class="material-symbols-filled">&#xE250;</i></a> ' +
-              '<i role="button" onclick="firetable.actions.importList(\'' + listID + '\', \'' + firetable.utilities.htmlEscape(item.snippet.title) + '\', 1)" class="material-symbols-filled" title="Import">&#xE02E;</i></div>'
+            appendImportResult(
+              item.snippet.title + ' by ' + item.snippet.channelTitle,
+              'https://www.youtube.com/playlist?list=' + encodeURIComponent(listID),
+              listID, item.snippet.title, MEDIA_YOUTUBE
             );
           }
         });
@@ -277,10 +299,10 @@ firetable.ui.setupSearchEvents = function () {
         ytAPI('search', { q: val, type: 'playlist', part: 'snippet', maxResults: SEARCH_MAX_RESULTS }, function (response) {
           firetable.debug && console.log('import search results:', response);
           $.each(response.items || [], function (index, item) {
-            $("#importResults").append(
-              '<div class="importResult"><div class="imtxt">' + item.snippet.title + ' by ' + item.snippet.channelTitle + '</div>' +
-              '<a target="_blank" href="https://www.youtube.com/playlist?list=' + item.id.playlistId + '" class="importLinkCheck"><i class="material-symbols-filled">&#xE250;</i></a> ' +
-              '<i role="button" onclick="firetable.actions.importList(\'' + item.id.playlistId + '\', \'' + firetable.utilities.htmlEscape(item.snippet.title) + '\', 1)" class="material-symbols-filled" title="Import">&#xE02E;</i></div>'
+            appendImportResult(
+              item.snippet.title + ' by ' + item.snippet.channelTitle,
+              'https://www.youtube.com/playlist?list=' + encodeURIComponent(item.id.playlistId),
+              item.id.playlistId, item.snippet.title, MEDIA_YOUTUBE
             );
           });
         });
@@ -292,10 +314,9 @@ firetable.ui.setupSearchEvents = function () {
         // Direct set URL
         firetable.actions.resolveSCLink(val, function (item) {
           if (item && item.sharing === "public" && item.kind === "playlist") {
-            $("#importResults").append(
-              '<div class="importResult"><div class="imtxt">' + item.title + ' by ' + item.user.username + ' (' + firetable.utilities.pluralize(item.track_count, "song") + ')</div>' +
-              '<a target="_blank" href="' + item.permalink_url + '" class="importLinkCheck"><i class="material-symbols-filled">&#xE250;</i></a> ' +
-              '<i role="button" onclick="firetable.actions.importList(\'' + item.id + '\', \'' + firetable.utilities.htmlEscape(item.title) + '\', 2)" class="material-symbols-filled" title="Import">&#xE02E;</i></div>'
+            appendImportResult(
+              item.title + ' by ' + item.user.username + ' (' + firetable.utilities.pluralize(item.track_count, "song") + ')',
+              item.permalink_url, item.id, item.title, MEDIA_SOUNDCLOUD
             );
           }
         });
@@ -305,10 +326,9 @@ firetable.ui.setupSearchEvents = function () {
           for (var i = 0; i < lists.length; i++) {
             var item = lists[i];
             if (item.sharing === "public") {
-              $("#importResults").append(
-                '<div class="importResult"><div class="imtxt">' + item.title + ' by ' + item.user.username + ' (' + firetable.utilities.pluralize(item.track_count, "song") + ')</div>' +
-                '<a target="_blank" href="' + item.permalink_url + '" class="importLinkCheck"><i class="material-symbols-filled">&#xE250;</i></a> ' +
-                '<i role="button" onclick="firetable.actions.importList(\'' + item.id + '\', \'' + firetable.utilities.htmlEscape(item.title) + '\', 2)" class="material-symbols-filled" title="Import">&#xE02E;</i></div>'
+              appendImportResult(
+                item.title + ' by ' + item.user.username + ' (' + firetable.utilities.pluralize(item.track_count, "song") + ')',
+                item.permalink_url, item.id, item.title, MEDIA_SOUNDCLOUD
               );
             }
           }

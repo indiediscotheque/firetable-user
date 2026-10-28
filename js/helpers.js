@@ -50,6 +50,27 @@ firetable.utilities = {
     return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + set;
   },
 
+  // ─── Playlist <option> Builder ───────────────────────────────────────────
+
+  /**
+   * Build an <option> element for a playlist picker.
+   * The name is set as text so it is never parsed as live HTML. It is first
+   * decoded through an inert <template> (no scripts run, no images load) so
+   * entities like "&amp;" saved by YouTube imports, and whitespace, look
+   * exactly as they did when names were inserted as HTML.
+   * @param {string} value - Option value (playlist key)
+   * @param {*} name - Playlist name
+   * @param {string} [id] - Optional element id
+   * @returns {jQuery}
+   */
+  playlistOption: function (value, name, id) {
+    var tpl = document.createElement('template');
+    tpl.innerHTML = String(name);
+    var $opt = $('<option></option>').val(value).text(tpl.content.textContent);
+    if (id) $opt.attr('id', id);
+    return $opt;
+  },
+
   // ─── Song Title Parsing ──────────────────────────────────────────────────
 
   /**
@@ -60,13 +81,27 @@ firetable.utilities = {
    * @returns {{artist: string, title: string}}
    */
   parseArtistTitle: function (raw, fallbackArtist) {
-    var parts = raw.split(" - ");
-    var artist = parts[0];
-    var title = parts[1];
+    // Split on the FIRST " - " only, so "Band - Song - Live" keeps the full title.
+    var sep = raw.indexOf(" - ");
+    var artist = sep === -1 ? raw : raw.slice(0, sep);
+    var title = sep === -1 ? undefined : raw.slice(sep + 3);
+    // ...but drop a trailing " - Official Video" style suffix (only when it
+    // follows another " - ", so a song actually called "Video" is untouched).
+    if (title) {
+      title = title.replace(/\s+-\s+(?:official\s+)?(?:hd\s+|4k\s+)?(?:music\s+video|lyric\s+video|video|audio|visuali[sz]er|lyrics)\s*$/i, "");
+    }
     if (!title) {
       title = artist;
       artist = fallbackArtist || "";
     }
+    // Drop bracketed upload junk like "(Official Music Video)", "[Official
+    // Audio]" or "[HD]". Only brackets that contain nothing but junk words are
+    // removed, so "(Video Mix)", "(Live Audio Session)", "(Remix)" etc. stay.
+    var cleaned = title
+      .replace(/\s*[\(\[]\s*(?:(?:official\s+)?(?:hd\s+|4k\s+)?(?:music\s+video|lyric\s+video|video|audio|visuali[sz]er|lyrics)|hd|hq|4k)\s*[\)\]]/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    if (cleaned) title = cleaned;
     return { artist: artist, title: title };
   },
 
@@ -142,7 +177,10 @@ firetable.utilities = {
    * @param {string} namebo - Display name of the sender
    */
   desktopNotify: function (chatData, namebo) {
-    if (Notification) {
+    // iPhone/iPad Safari has no Notification API, and Android Chrome throws on
+    // `new Notification()`. Never let either break rendering the chat message.
+    if (typeof Notification === "undefined") return;
+    try {
       if (Notification.permission !== "granted") {
         Notification.requestPermission();
       } else {
@@ -151,6 +189,8 @@ firetable.utilities = {
           body: chatData.txt
         });
       }
+    } catch (e) {
+      firetable.debug && console.log("desktop notification failed:", e);
     }
   },
 
@@ -321,7 +361,7 @@ firetable.utilities = {
     $('#atPicker').html('');
     if (firetable.atUsersFiltered.length) {
       for (var i = 0; i < firetable.atUsersFiltered.length; i++) {
-        var $btn = $('<div class="atPickerThing"><button class="butt graybutt" role="option" aria-selected="false">@' + firetable.atUsersFiltered[i] + '</button></div>');
+        var $btn = $('<div class="atPickerThing"><button class="butt graybutt" role="option" aria-selected="false">@' + firetable.utilities.htmlEscape(firetable.atUsersFiltered[i]) + '</button></div>');
         if (i === 0) $btn.find('.butt').attr('aria-selected', 'true');
         $btn.appendTo('#atPicker');
       }

@@ -109,7 +109,8 @@ function renderHistoryItem(data, $template, containerSel) {
     var btnCid = $(this).closest('.pvbar').attr('data-cid');
     var btnType = parseInt($(this).closest('.pvbar').attr('data-type'), 10);
     var btnImg = $(this).closest('.pvbar').attr('data-img') || '';
-    var $histlink = $(this).closest('.pvbar').find('.histlink');
+    // Recent rows use .histlink; Fresh rows use .fresh-title (with artist/title spans)
+    var $histlink = $(this).closest('.pvbar').find('.histlink, .fresh-title').first();
     var $trackTitle = $histlink.find('.fresh-track-title');
     var $trackArtist = $histlink.find('.fresh-track-artist');
     var btnTitle = ($trackTitle.length && $trackArtist.length)
@@ -133,7 +134,7 @@ function renderHistoryItem(data, $template, containerSel) {
       for (var key in allPlaylists) {
         if (allPlaylists.hasOwnProperty(key)) {
           $("#stealpicker").append(
-            '<option value="' + key + '">' + allPlaylists[key].name + '</option>'
+            firetable.utilities.playlistOption(key, allPlaylists[key].name)
           );
         }
       }
@@ -199,6 +200,18 @@ function renderHistoryItem(data, $template, containerSel) {
   } else {
     $histItem.prependTo(containerSel);
   }
+}
+
+/**
+ * Make a song title / artist / DJ name safe to place inside HTML.
+ * strip() matches how #track and #artist display these values (entities
+ * decoded, tags dropped); htmlEscape() stops the result being parsed as HTML.
+ * @param {*} value
+ * @returns {string}
+ */
+function nowPlayingText(value) {
+  if (value === undefined || value === null) return '';
+  return firetable.utilities.htmlEscape(firetable.ui.strip(String(value)));
 }
 
 // ─── Room Event Binding ──────────────────────────────────────────────────────
@@ -297,7 +310,7 @@ firetable.ui.setupRoomEvents = function () {
 
         deckHtml = '<div id="spt0" class="spot' + (isGhost ? ' ghost' : '') + '">' +
           '<div class="avtr animate" id="avtr0" style="background-image: url(' +
-          firetable.utilities.avatarURL(djId, djName) + ');"></div>' +
+          firetable.utilities.htmlEscape(firetable.utilities.avatarURL(djId, djName)) + ');"></div>' +
           '<div id="djthing0" class="djplaque djActive">' +
           '<div class="djname">' + firetable.utilities.htmlEscape(djName) + '</div>' +
           departureIndicator + actionBtn +
@@ -331,7 +344,7 @@ firetable.ui.setupRoomEvents = function () {
         ondeckHtml += '<button class="ondeck-slot" data-djid="' + odj.id + '" data-plays="' + (odj.plays || 0) + '" aria-label="' +
           firetable.utilities.htmlEscape(odj.name) + '">' +
           '<div class="ft-avatar" style="background-image: url(' +
-          firetable.utilities.avatarURL(odj.id, odj.name, '40x40') + ')"></div>' +
+          firetable.utilities.htmlEscape(firetable.utilities.avatarURL(odj.id, odj.name, '40x40')) + ')"></div>' +
           '</button>';
       } else {
         ondeckHtml += '<button class="ondeck-slot empty" aria-label="Add to DJ list"' + (isSelfOnDeck ? ' disabled' : '') + '></button>';
@@ -582,12 +595,12 @@ firetable.ui.setupRoomEvents = function () {
       var count = data.adamData.playcount;
       $("#playCount").text(firetable.utilities.pluralize(count, "play"));
       $(".npmsg" + data.cid).last().find(".npmsg").html(
-        'DJ <strong>' + nicename + '</strong> started playing <strong>' + data.adamData.track_name + '</strong> by <strong>' + data.adamData.artist + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(count, "time") + '.'
+        'DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.adamData.track_name) + '</strong> by <strong>' + nowPlayingText(data.adamData.artist) + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(count, "time") + '.'
       );
     } else {
       $("#playCount").text("");
       $(".npmsg" + data.cid).last().find(".npmsg").html(
-        'DJ <strong>' + nicename + '</strong> started playing <strong>' + data.adamData.track_name + '</strong> by <strong>' + data.adamData.artist + '</strong>'
+        'DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.adamData.track_name) + '</strong> by <strong>' + nowPlayingText(data.adamData.artist) + '</strong>'
       );
     }
     if (doTheScrollThing) firetable.utilities.scrollToBottom();
@@ -613,7 +626,10 @@ firetable.ui.setupRoomEvents = function () {
       firetable.moveBar = null;
     }
     setTimeout(function () {
-      $prg.css("background", "color-mix(in srgb, " + ftconfigs.accentColor + " 50%, black)");
+      // ftconfigs.accentColor isn't in config.js.example; fall back to the
+      // room's current colour (same one the progress gradient uses).
+      var emptyColor = ftconfigs.accentColor || firetable.color;
+      $prg.css("background", "color-mix(in srgb, " + emptyColor + " 50%, black)");
       $prg.css("opacity", "1");
     }, 450);
 
@@ -739,9 +755,9 @@ firetable.ui.setupRoomEvents = function () {
         var npmsgTime = firetable.utilities.format_time(Date.now());
         var npmsgHTML;
         if (showPlaycount) {
-          npmsgHTML = '<div class="newChat nowplayn npmsg' + data.cid + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nicename + '</strong> started playing <strong>' + data.title + '</strong> by <strong>' + data.artist + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(firetable.tagUpdate.adamData.playcount, "time") + '.</div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
+          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(firetable.tagUpdate.adamData.playcount, "time") + '.</div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
         } else {
-          npmsgHTML = '<div class="newChat nowplayn npmsg' + data.cid + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nicename + '</strong> started playing <strong>' + data.title + '</strong> by <strong>' + data.artist + '</strong></div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
+          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong></div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
         }
         $("#chats").append(npmsgHTML);
         if (doTheScrollThing) firetable.utilities.scrollToBottom();
@@ -879,7 +895,7 @@ firetable.ui.setupRoomEvents = function () {
             departureBtn +
             '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
             '<div class="ft-avatar" style="background-image:url(' +
-            firetable.utilities.avatarURL(userId, data[key].name) +
+            firetable.utilities.htmlEscape(firetable.utilities.avatarURL(userId, data[key].name)) +
             ');"></div>' +
             '</div>';
 
@@ -1017,7 +1033,7 @@ firetable.ui.setupRoomEvents = function () {
       if (data[key]) {
         ftapi.lookup.userByName(key, function (person) {
           $("#activeSuspentions").append(
-            '<div class="importResult"><div class="imtxt">' + person.username + '</div>' +
+            '<div class="importResult"><div class="imtxt">' + firetable.utilities.htmlEscape(person.username) + '</div>' +
             '<i role="button" onclick="firetable.actions.unban(\'' + person.userid + '\')" class="material-symbols-filled" title="Unsuspend">&#xE5C9;</i></div>'
           );
         });

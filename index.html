@@ -5,12 +5,27 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>firetable</title>
 	<meta name="description" content="Collaborative radio." />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<script>
+		// iPhone/iPad: keep maximum-scale=1 so tapping a small text field doesn't
+		// auto-zoom the page (iOS still allows pinch-zoom). Other devices get
+		// normal pinch-zoom.
+		if (/iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+			document.querySelector('meta[name="viewport"]').setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0");
+		}
+	</script>
 	<meta name="theme-color" content="#181818" />
 	<link rel="shortcut icon" href="favicon.png" />
-	<link rel="stylesheet" href="css/reset.css" type="text/css" />
-	<link rel="stylesheet" href="css/fonts-local.css" type="text/css" />
-	<link rel="stylesheet" href="css/looks.css?v=01.10.28" type="text/css" />
+	<!-- Installable web app (Add to Home Screen / Install app) -->
+	<link rel="manifest" href="manifest.webmanifest" />
+	<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+	<meta name="mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-title" content="Indie Disco" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+	<link rel="stylesheet" href="css/reset.css?v=01.10.29" type="text/css" />
+	<link rel="stylesheet" href="css/fonts-local.css?v=01.10.29" type="text/css" />
+	<link rel="stylesheet" href="css/looks.css?v=01.10.29" type="text/css" />
 </head>
 
 <body>
@@ -237,7 +252,7 @@
 				<span id="tip-pickEmoji" role="tooltip" class="ft-tip" style="position-anchor: --tip-pickEmoji">Emoji</span>
 				<form id="newchatForm" autocomplete="off" onsubmit="return false;">
 					<textarea maxlength="240" autocomplete="off" name="newchat" placeholder="Chat a thing"
-						id="newchat" tabindex="0" rows="1"></textarea>
+						id="newchat" tabindex="0" rows="1" enterkeyhint="send"></textarea>
 				</form>
 				<div id="emojiPicker">
 					<div id="pickerNav"></div>
@@ -309,7 +324,7 @@
 							<option value="0">Default Playlist</option>
 						</select>
 						<div id="plmanager">
-							<input type="text" placeholder="Name your playlist, hit Enter" id="plmaker" />
+							<input type="text" placeholder="Name your playlist, hit Enter" id="plmaker" enterkeyhint="done" />
 						</div>
 					</div>
 					<div id="qControlButtons">
@@ -373,7 +388,7 @@
 					</form>
 				</div>
 				<div id="searchMachine">
-					<input type="text" placeholder="Find a track to add to this playlist" id="qsearch" />
+					<input type="text" placeholder="Find a track to add to this playlist" id="qsearch" enterkeyhint="search" />
 					<div id="searchSelects" class="tabs" role="tablist" aria-label="Search source">
 						<button type="button" class="tab on" id="ytsearchSelect" role="tab" aria-selected="true" aria-controls="searchResults">YouTube</button><button type="button" id="scsearchSelect" class="tab" role="tab" aria-selected="false" aria-controls="searchResults">SoundCloud</button>
 					</div>
@@ -483,25 +498,25 @@
 				<div class="miniLoginNavOnly"><br/><br/><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
 			</div>
 			<div id="logscreen" style="display: none">
-				<form id="loginFormShell" novalidate>
+				<form id="loginFormShell" novalidate onsubmit="return false;">
 				<h4>Log In</h4>
 				<div class="inputline">
 					<label>Email:</label>
-					<input type="text" id="loginemail" />
+					<input type="email" id="loginemail" autocomplete="username" autocapitalize="off" spellcheck="false" />
 				</div>
-				<div class="inputline">Password: <input type="password" id="loginpass" /></div>
+				<div class="inputline">Password: <input type="password" id="loginpass" autocomplete="current-password" enterkeyhint="go" /></div>
 				<div class="inputline">
 					<button role="button" type="button" class="butt" id="loginBttn">Log In</button>
 				</div>
 				</form>
 			</div>
 			<div id="createscreen">
-				<form id="createAccountFormShell" novalidate>
+				<form id="createAccountFormShell" novalidate onsubmit="return false;">
 					<h4>Create an Account</h4>
-					<div class="inputline">Email: <input type="text" id="newemail" /></div>
-					<div class="inputline">Username: <input type="text" id="newusername" /></div>
-					<div class="inputline">Password: <input type="password" id="newpass" /></div>
-					<div class="inputline">Repeat Password: <input type="password" id="newpass2" /></div>
+					<div class="inputline">Email: <input type="email" id="newemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
+					<div class="inputline">Username: <input type="text" id="newusername" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
+					<div class="inputline">Password: <input type="password" id="newpass" autocomplete="new-password" /></div>
+					<div class="inputline">Repeat Password: <input type="password" id="newpass2" autocomplete="new-password" enterkeyhint="go" /></div>
 					<div class="inputline">
 						<span id="termsAgreement"><input type="checkbox" id="agreetoterms" /> I have read, understand, and
 							agree to the
@@ -514,10 +529,10 @@
 				</form>
 			</div>
 			<div id="resetscreen" style="display: none">
-				<form id="resetPasswordFormShell" novalidate>
+				<form id="resetPasswordFormShell" novalidate onsubmit="return false;">
 				<h4>Reset your password!</h4>
 
-				<div class="inputline">Email: <input type="text" id="theAddress" /></div>
+				<div class="inputline">Email: <input type="email" id="theAddress" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" /></div>
 				<div class="inputline">
 					<button role="button" type="button" class="butt" id="resetPassBttn">Reset password</button>
 				</div>
@@ -589,7 +604,7 @@
 				<div id="profile-tab" class="tabPanel">
 					<div id="accountSettingsMain"></div>
 					Change your username to some other thing...<br /><br />
-					<input type="text" placeholder="Change Username" id="changeUsername" />
+					<input type="text" placeholder="Change Username" id="changeUsername" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
 					<div class="responseBox" id="usernameResponse"></div>
 					<div id="avatarPickerSection">
 					<br />
@@ -676,7 +691,7 @@
 						class="tab" id="scimportchoice">Soundcloud</button>
 				</div>
 				<div id="importContent">
-					<input type="text" placeholder="Search Playlists" id="plMachine"></input>
+					<input type="text" placeholder="Search Playlists" id="plMachine" enterkeyhint="search"></input>
 					<div id="importResults"></div>
 				</div>
 			</div>
@@ -716,7 +731,7 @@
 	<div id="tagEditorPopover" popover="auto" class="ft-popover">
 		<div id="tagEditorArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box tagPromptBox">
-			<input type="text" placeholder="Artist - Song Title" class="tagMachine" />
+			<input type="text" placeholder="Artist - Song Title" class="tagMachine" enterkeyhint="done" />
 			<small><i>Edit the song tag + hit enter to save</i></small><br />
 			<br />
 			<b>Rohn Standard Notation</b><br />
@@ -806,29 +821,29 @@
 	<script src="https://www.youtube.com/iframe_api"></script>
 	<script src="https://cdn.jsdelivr.net/npm/pixi.js@4.8.9/dist/pixi.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js"></script>
-	<script type="text/javascript" src="config.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/firetable.js?v=01.10.28"></script>
+	<script type="text/javascript" src="config.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/firetable.js?v=01.10.29"></script>
 	<script src="js/linkify.min.js"></script>
 	<script src="js/linkify-string.min.js"></script>
 
 	<!-- Application modules (order matters — each builds on the previous) -->
-	<script type="text/javascript" src="js/constants.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/state.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/fire.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/md5.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/helpers.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/emoji.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/lastfm.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/player.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/cards.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/chat.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/search.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/playlist.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/users.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/room.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/ui.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/glitch.js?v=01.10.28"></script>
-	<script type="text/javascript" src="js/init.js?v=01.10.28"></script>
+	<script type="text/javascript" src="js/constants.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/state.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/fire.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/md5.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/helpers.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/emoji.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/lastfm.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/player.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/cards.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/chat.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/search.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/playlist.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/users.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/room.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/ui.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/glitch.js?v=01.10.29"></script>
+	<script type="text/javascript" src="js/init.js?v=01.10.29"></script>
 
 </body>
 

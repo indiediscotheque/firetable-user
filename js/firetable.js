@@ -78,7 +78,9 @@ ftapi.init = function(firebaseConfig) {
         okdata[key].blocked = true;
       }
     }
-    ftapi.users = okdata;
+    // No one online => Firebase returns null; keep users an object (as it
+    // starts out) so lookups like ftapi.users[id] don't throw.
+    ftapi.users = okdata || {};
     if (ftapi.users[ftapi.uid]) {
       if (ftapi.users[ftapi.uid].username) {
         ftapi.uname = ftapi.users[ftapi.uid].username;
@@ -503,10 +505,15 @@ ftapi.actions = {
     });
   },
   moveTrackToBottom: function(trackID, callback) {
-    var theTrack = ftapi.queue[trackID];
+    if (!ftapi.queue || !ftapi.queue[trackID]) return;
+    // Copy every stored field (album art, broken/off-theme flag, ...), not
+    // just type/name/cid, so nothing is lost when the track is re-added.
+    var theTrack = JSON.parse(JSON.stringify(ftapi.queue[trackID]));
+    delete theTrack.key; // older code tagged queue entries with .key locally
+    var ref = ftapi.queueRef;
     ftapi.actions.deleteTrack(trackID, function() {
-      var newID = ftapi.actions.addToList(theTrack.type, theTrack.name, theTrack.cid, false, function() {
-        if (callback) return callback(newID);
+      var newTrack = ref.push(theTrack, function() {
+        if (callback) return callback(newTrack.key);
       });
     });
   },
@@ -552,6 +559,7 @@ ftapi.actions = {
         });
         sourceref.once("value")
           .then(function(snapshot3) {
+            var writes = [];
             snapshot3.forEach(function(childSnapshot3) {
               var key = childSnapshot3.key;
               var childData = childSnapshot3.val();
@@ -563,13 +571,19 @@ ftapi.actions = {
                   }
                   if (!dupe) {
                     // NOT A DUPLICATE! GO GO GO
-                    destref.push(childData);
+                    writes.push(destref.push(childData));
                   }
                 }
               }
 
             });
-            return callback();
+            // Report completion only once every copy has been saved
+            Promise.all(writes).then(function() {
+              callback();
+            }, function(err) {
+              console.error("[firetable] merge failed:", err);
+              callback(err || true);
+            });
           });
       });
   },
@@ -598,22 +612,30 @@ ftapi.actions = {
     if (changePv) pvChangeCallback(changePv);
     ftapi.queueRef.set(newobj);
   },
-  removeDuplicatesFromList: function() {
-    var okdata = ftapi.queue;
-    var arr = [];
-    for (var key in okdata) {
-      if (okdata.hasOwnProperty(key)) {
-        var entry = ftapi.queue[key];
-        entry.key = key;
-        arr.push(entry);
-      }
-    }
-    var dupes = arr.filter((obj, pos, arr2) => {
-      return arr2.map(mapObj => mapObj.cid).indexOf(obj.cid) !== pos;
+  removeDuplicatesFromList: function(listID, callback) {
+    // Read the chosen list itself (not whichever list is on screen), then
+    // delete every later copy of a track id, keeping the first one.
+    var ref = (listID == 0)
+      ? firebase.app("firetable").database().ref("queues/" + ftapi.uid)
+      : firebase.app("firetable").database().ref("playlists/" + ftapi.uid + "/" + listID + "/list");
+    ref.once("value").then(function(snap) {
+      var seen = {};
+      var dupes = [];
+      snap.forEach(function(child) {
+        var track = child.val();
+        if (!track) return;
+        if (seen.hasOwnProperty(track.cid)) dupes.push(child.key);
+        else seen[track.cid] = true;
+      });
+      return Promise.all(dupes.map(function(key) {
+        return ref.child(key).remove();
+      }));
+    }).then(function() {
+      if (callback) callback();
+    }, function(err) {
+      console.error("[firetable] duplicate cleanup failed:", err);
+      if (callback) callback(err || true);
     });
-    for (var i = 0; i < dupes.length; i++) {
-      ftapi.actions.deleteTrack(dupes[i].key);
-    }
   },
   reorderList: function(arr, preview, pvChangeCallback) {
     if (!arr.length) return;
@@ -762,9 +784,11 @@ ftapi.actions = {
   },
   editTag: function(type, cid, tag, histID){
     console.log(type+" "+cid+" "+tag+ " "+histID);
-    var yargo = tag.split(" - ");
-    var theartist = yargo[0];
-    var thetitle = yargo[1];
+    // Split on the FIRST " - " only, so titles that contain " - "
+    // (e.g. "Song - Live Version") keep everything after it.
+    var sep = tag.indexOf(" - ");
+    var theartist = sep === -1 ? tag : tag.slice(0, sep);
+    var thetitle = sep === -1 ? "" : tag.slice(sep + 3);
     //UPDATE HISTORY
     var histRef = firebase.app("firetable").database().ref("songHistory/" + histID);
     histRef.child("artist").set(theartist);

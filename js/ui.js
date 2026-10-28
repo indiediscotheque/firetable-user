@@ -1139,7 +1139,7 @@ firetable.ui.setupMiscEvents = function () {
         for (var key in allPlaylists) {
           if (allPlaylists.hasOwnProperty(key)) {
             $("#stealpicker").append(
-              '<option value="' + key + '">' + allPlaylists[key].name + '</option>'
+              firetable.utilities.playlistOption(key, allPlaylists[key].name)
             );
           }
         }
@@ -1421,7 +1421,7 @@ firetable.ui.setupMiscEvents = function () {
     firetable.debug && console.log("dtnm " + (this.checked ? "on" : "off"));
     localStorage[STORAGE.notifyMentions] = this.checked;
     firetable.desktopNotifyMentions = this.checked;
-    if (this.checked && Notification && Notification.permission !== "granted") {
+    if (this.checked && typeof Notification !== "undefined" && Notification.permission !== "granted") {
       Notification.requestPermission();
     }
   });
@@ -1519,7 +1519,8 @@ firetable.ui.checkLastfmToken = function () {
     var request_url = LASTFM_API_URL + '?' + serialize(params) + "&format=json";
     var xhr = new XMLHttpRequest();
     xhr.open('POST', request_url, true);
-    xhr.onload = function () { firetable.lastfm.newSession(xhr); };
+    // newSession() returns the onload handler — assign it, don't just call it
+    xhr.onload = firetable.lastfm.newSession(xhr);
     xhr.onerror = firetable.lastfm._onAjaxError;
     xhr.send();
   }

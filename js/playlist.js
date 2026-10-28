@@ -87,6 +87,16 @@ firetable.actions.updateQueue = function () {
   var arr = $('#mainqueue > div').map(function () {
     return this.id.slice(5);
   }).get();
+  // Large playlists render in chunks; if the drag happened before every row
+  // was on screen, keep the not-yet-rendered tracks after the dragged ones
+  // in their existing order (otherwise reorderList ignores the change).
+  if (firetable.queue) {
+    var inDom = {};
+    for (var i = 0; i < arr.length; i++) inDom[arr[i]] = true;
+    Object.keys(firetable.queue).forEach(function (key) {
+      if (!inDom[key]) arr.push(key);
+    });
+  }
   ftapi.actions.reorderList(arr, firetable.preview, function (changePV) {
     if (changePV) firetable.preview = changePV;
   });
@@ -100,10 +110,19 @@ firetable.actions.shuffleQueue = function () {
 };
 
 /** Remove duplicate tracks from the current playlist. */
-firetable.actions.removeDupesFromQueue = function () {
-  ftapi.actions.removeDuplicatesFromList();
-  $("#mergeCompleted").show();
+firetable.actions.removeDupesFromQueue = function (listID) {
+  ftapi.actions.removeDuplicatesFromList(listID, firetable.actions.mergeFinished);
+};
+
+/** Show the merge result once the database has confirmed the writes. */
+firetable.actions.mergeFinished = function (err) {
   $("#mergeHappening").hide();
+  if (err) {
+    alert("Sorry, the merge could not be saved. Please try again.");
+    $("#mergeSetup").show();
+    return;
+  }
+  $("#mergeCompleted").show();
 };
 
 /**
@@ -270,6 +289,13 @@ firetable.actions.formatTrackDuration = function (seconds) {
  * Filter visible queue items by a search string.
  * @param {string} val - Filter text (empty string shows all)
  */
+/** True when the text filter or either filter checkbox is in use. */
+firetable.actions.queueFilterActive = function () {
+  return !!(String($("#queueFilter").val() || "").trim() ||
+    $("#queueFilterRemixOnly").is(":checked") ||
+    $("#queueFilterBrokenOnly").is(":checked"));
+};
+
 firetable.actions.filterQueue = function (val) {
   var textFilter = String(typeof val === "string" ? val : $("#queueFilter").val() || "").toLowerCase().trim();
   var remixOnly = $("#queueFilterRemixOnly").is(":checked");
@@ -305,19 +331,16 @@ firetable.actions.filterQueue = function (val) {
  */
 firetable.actions.mergeLists = function (source, dest, sourceName) {
   if (source === dest) {
-    firetable.actions.removeDupesFromQueue();
+    firetable.actions.removeDupesFromQueue(source);
     return;
   }
   if (dest == -1) {
     var newname = firetable.utilities.format_date(Date.now()) + " Copy of " + sourceName;
     dest = ftapi.actions.createList(newname);
-    $("#listpicker").append('<option id="pdopt' + dest + '" value="' + dest + '">' + newname + '</option>');
-    $("#djlistpicker").append('<option value="' + dest + '">' + newname + '</option>');
+    $("#listpicker").append(firetable.utilities.playlistOption(dest, newname, 'pdopt' + dest));
+    $("#djlistpicker").append(firetable.utilities.playlistOption(dest, newname));
   }
-  ftapi.actions.mergeLists(source, dest, function () {
-    $("#mergeCompleted").show();
-    $("#mergeHappening").hide();
-  });
+  ftapi.actions.mergeLists(source, dest, firetable.actions.mergeFinished);
 };
 
 // ─── Queue From Link (Drag & Drop URLs) ─────────────────────────────────────
@@ -544,8 +567,8 @@ firetable.actions.importList = function (id, name, type) {
           // All pages fetched — create the list
           firetable.debug && console.log(finalList);
           var listid = ftapi.actions.createList(name);
-          $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + name + '</option>');
-          $("#djlistpicker").append('<option value="' + listid + '">' + name + '</option>');
+          $("#listpicker").append(firetable.utilities.playlistOption(listid, name, 'pdopt' + listid));
+          $("#djlistpicker").append(firetable.utilities.playlistOption(listid, name));
           for (var i = 0; i < finalList.length; i++) {
             var goodTitle = finalList[i].snippet.title;
             if (goodTitle !== "Private video" && goodTitle !== "Deleted video") {
@@ -561,8 +584,8 @@ firetable.actions.importList = function (id, name, type) {
     firetable.actions.scGet('playlists', id, function (listinfo) {
       firetable.debug && console.log('sc tracks:', listinfo.tracks);
       var listid = ftapi.actions.createList(name);
-      $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + name + '</option>');
-      $("#djlistpicker").append('<option value="' + listid + '">' + name + '</option>');
+      $("#listpicker").append(firetable.utilities.playlistOption(listid, name, 'pdopt' + listid));
+      $("#djlistpicker").append(firetable.utilities.playlistOption(listid, name));
       for (var i = 0; i < listinfo.tracks.length; i++) {
         var goodTitle;
         if (listinfo.tracks[i].title) {
@@ -589,8 +612,8 @@ firetable.actions.dubtrackImport = function () {
   $("#dubimportButton").hide();
   var listid = ftapi.actions.createList(firetable.dtImportName);
   var name = firetable.dtImportName;
-  $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + name + '</option>');
-  $("#djlistpicker").append('<option value="' + listid + '">' + name + '</option>');
+  $("#listpicker").append(firetable.utilities.playlistOption(listid, name, 'pdopt' + listid));
+  $("#djlistpicker").append(firetable.utilities.playlistOption(listid, name));
 
   var trackarray = firetable.dtImportList;
   for (var e = 0; e < trackarray.length; e++) {
@@ -807,7 +830,7 @@ firetable.ui.setupPlaylistEvents = function () {
         $('#stealpicker').html('<option value="-1">Where to?</option><option value="0">Default Queue</option>');
         for (var k in allPlaylists) {
           if (allPlaylists.hasOwnProperty(k)) {
-            $('#stealpicker').append('<option value="' + k + '">' + allPlaylists[k].name + '</option>');
+            $('#stealpicker').append(firetable.utilities.playlistOption(k, allPlaylists[k].name));
           }
         }
         if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
@@ -823,11 +846,21 @@ firetable.ui.setupPlaylistEvents = function () {
     });
 
   // ── Playlist changed: re-render the queue ──
-  ftapi.events.on("playlistChanged", function (okdata) {
+  ftapi.events.on("playlistChanged", function (okdata, listID) {
     firetable.queue = okdata;
+    // Each render gets a number; chunks from an older render stop when a
+    // newer one starts, so stale rows never get appended to the new list.
+    var renderGen = firetable._queueRenderGen = (firetable._queueRenderGen || 0) + 1;
 
     var container = document.getElementById('mainqueue');
     var keys = okdata ? Object.keys(okdata) : [];
+
+    // Is this an update to the playlist already on screen (send to top/bottom,
+    // delete, reorder, add) rather than a playlist being opened?
+    var listKey = String(listID);
+    var isUpdate = firetable._queueShownList === listKey &&
+      container.querySelector('.pvbar') !== null;
+    firetable._queueShownList = listKey;
 
     if (!keys.length) {
       container.innerHTML = '';
@@ -835,7 +868,11 @@ firetable.ui.setupPlaylistEvents = function () {
       return;
     }
 
-    var FIRST = Math.min(30, keys.length);
+    // Updates: redraw every row in one pass and keep the scroll position, so
+    // the list doesn't collapse to 30 rows and visibly re-grow.
+    var FIRST = isUpdate ? keys.length : Math.min(30, keys.length);
+    var scroller = document.getElementById('queuelist');
+    var keepScroll = isUpdate && scroller ? scroller.scrollTop : null;
     var html = '';
     for (var i = 0; i < FIRST; i++) {
       var k = keys[i];
@@ -844,6 +881,8 @@ firetable.ui.setupPlaylistEvents = function () {
     container.innerHTML = html;
 
     firetable.actions.filterQueue($('#queueFilter').val() || '');
+
+    if (keepScroll !== null) scroller.scrollTop = keepScroll;
 
     if (keys.length <= FIRST) return;
 
@@ -855,6 +894,7 @@ firetable.ui.setupPlaylistEvents = function () {
       : function (fn) { setTimeout(fn, 0); };
 
     function renderNextChunk() {
+      if (renderGen !== firetable._queueRenderGen) return; // superseded
       var end = Math.min(idx + CHUNK, keys.length);
       var frag = document.createDocumentFragment();
       var tmp = document.createElement('div');
@@ -867,6 +907,10 @@ firetable.ui.setupPlaylistEvents = function () {
       while (tmp.firstChild) frag.appendChild(tmp.firstChild);
       container.appendChild(frag);
       idx = end;
+      // Apply the active filter to the newly added rows
+      if (firetable.actions.queueFilterActive()) {
+        firetable.actions.filterQueue($('#queueFilter').val() || '');
+      }
       if (idx < keys.length) schedule(renderNextChunk);
     }
 
@@ -922,8 +966,8 @@ firetable.ui.setupPlaylistEvents = function () {
     var val = $(this).val();
     if (val) {
       var listid = ftapi.actions.createList(val);
-      $("#listpicker").append('<option id="pdopt' + listid + '" value="' + listid + '">' + val + '</option>');
-      $("#djlistpicker").append('<option value="' + listid + '">' + val + '</option>');
+      $("#listpicker").append(firetable.utilities.playlistOption(listid, val, 'pdopt' + listid));
+      $("#djlistpicker").append(firetable.utilities.playlistOption(listid, val));
       $("#listpicker").val(listid).change();
       $("#djlistpicker").val(listid);
       ftapi.actions.switchDjList(listid);
@@ -1087,8 +1131,8 @@ firetable.ui.setupPlaylistEvents = function () {
         $("#mergepicker2").html('<option value="-1">Create New Copy</option><option value="0">Default Queue</option>');
         for (var key in allPlaylists) {
           if (allPlaylists.hasOwnProperty(key)) {
-            $("#mergepicker").append('<option value="' + key + '">' + allPlaylists[key].name + '</option>');
-            $("#mergepicker2").append('<option value="' + key + '">' + allPlaylists[key].name + '</option>');
+            $("#mergepicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
+            $("#mergepicker2").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
           }
         }
         if (ftapi.users[ftapi.uid] && ftapi.users[ftapi.uid].selectedList) {

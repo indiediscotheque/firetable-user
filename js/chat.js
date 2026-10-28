@@ -138,7 +138,7 @@ firetable.actions.localChatResponse = function (txt) {
       var skels = document.querySelectorAll('#chats .ft-skeleton');
       for (var i = 0; i < skels.length; i++) skels[i].remove();
     }
-    $("#chats").append('<div class="newChat"><div class="lcrsp">' + txt + '</div></div>');
+    $("#chats").append($('<div class="newChat"><div class="lcrsp"></div></div>').find('.lcrsp').text(txt).end());
     firetable.utilities.scrollToBottom();
   }
 };
@@ -202,12 +202,15 @@ firetable.ui.strip = function (html) {
  * @returns {string} Formatted HTML string safe for insertion
  */
 firetable.ui.formatChatText = function (rawTxt) {
-  var txt = firetable.ui.strip(rawTxt);
+  // \x01 is reserved as the code-span placeholder marker below
+  var txt = firetable.ui.strip(rawTxt).replace(/\x01/g, '');
 
-  // Extract inline code spans first so their content is immune to markdown
+  // Extract inline code spans first so their content is immune to markdown.
+  // strip() decodes entities (e.g. "&lt;" -> "<"), so the content must be
+  // escaped here or it would be inserted into the page as live HTML.
   var codeSpans = [];
   txt = txt.replace(/`([^`\n]+)`/g, function (_, inner) {
-    codeSpans.push('<code>' + inner + '</code>');
+    codeSpans.push('<code>' + firetable.utilities.htmlEscape(inner) + '</code>');
     return '\x01' + (codeSpans.length - 1) + '\x01';
   });
 
@@ -546,7 +549,7 @@ firetable.ui.setupChatEvents = function () {
         $('#atPicker').addClass('show');
         for (var i = 0; i < firetable.atUsersFiltered.length; i++) {
           var $item = $('<div class="atPickerThing"><button class="butt graybutt" role="option" aria-selected="false">@' +
-            firetable.atUsersFiltered[i] + '</button></div>');
+            firetable.utilities.htmlEscape(firetable.atUsersFiltered[i]) + '</button></div>');
           if (i === 0) $item.find('.butt').attr('aria-selected', 'true');
           $item.appendTo('#atPicker');
         }
