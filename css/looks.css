@@ -533,6 +533,12 @@ code {
     }
 }
 
+@media (hover: hover) {
+    .tab:not(.on):hover {
+        color: var(--color-text-light);
+    }
+}
+
 .butt.logoutButt {
     margin-inline: var(--pad2);
     white-space: nowrap;
