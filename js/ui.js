@@ -1236,11 +1236,6 @@ firetable.ui.setupMiscEvents = function () {
     .on('click.skipNowAction', '#skipPopover .skipNowAction', function () {
       ftapi.actions.sendBotCommand('!skip');
       if (skipPopoverEl && skipPopoverEl.matches(':popover-open')) skipPopoverEl.hidePopover();
-    })
-    .off('click.skipVoteAction')
-    .on('click.skipVoteAction', '#skipPopover .skipVoteAction', function () {
-      ftapi.actions.sendBotCommand('!skipvote');
-      if (skipPopoverEl && skipPopoverEl.matches(':popover-open')) skipPopoverEl.hidePopover();
     });
 
   /** Stealpicker — add song to selected playlist (from #grab or histeal) */

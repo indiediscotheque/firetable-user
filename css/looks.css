@@ -32,6 +32,40 @@
     75% { transform: rotate(3deg) translateY(0.1rem); }
 }
 
+@keyframes avatarDance {
+    0%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+    25% { transform: translate(-0.02rem, 0.3rem) rotate(-2deg); }
+    75% { transform: translate(0.02rem, 0.3rem) rotate(2deg); }
+}
+
+@keyframes avatarDance2 {
+    0%, 50%, 100% { transform: translate(-0.02rem, 0.3rem) rotate(-2deg); }
+    25%, 75% { transform: translate(0.02rem, 0) rotate(2deg); }
+}
+
+@keyframes avatarDance3 {
+    0%, 50%, 100% { transform: translate(0, 0.3rem) rotate(0deg); }
+    25% { transform: translate(-0.02rem, 0) rotate(-2deg); }
+    75% { transform: translate(0.02rem, 0) rotate(2deg); }
+}
+
+@keyframes avatarDanceBg {
+    0%, 50%, 100% { background-position: var(--avatar-bg-x) calc(var(--avatar-bg-y) + 12%); }
+    25% { background-position: calc(var(--avatar-bg-x) + 16%) calc(var(--avatar-bg-y) - 8%); }
+    75% { background-position: calc(var(--avatar-bg-x) - 16%) calc(var(--avatar-bg-y) - 8%); }
+}
+
+@keyframes avatarDanceBg2 {
+    0%, 50%, 100% { background-position: calc(var(--avatar-bg-x) + 16%) calc(var(--avatar-bg-y) - 8%); }
+    25%, 75% { background-position: calc(var(--avatar-bg-x) - 16%) calc(var(--avatar-bg-y) + 12%); }
+}
+
+@keyframes avatarDanceBg3 {
+    0%, 50%, 100% { background-position: var(--avatar-bg-x) calc(var(--avatar-bg-y) - 8%); }
+    25% { background-position: calc(var(--avatar-bg-x) + 16%) calc(var(--avatar-bg-y) + 12%); }
+    75% { background-position: calc(var(--avatar-bg-x) - 16%) calc(var(--avatar-bg-y) + 12%); }
+}
+
 @keyframes pulse {
     from { opacity: 1; }
     to { opacity: 0.5; }
@@ -499,8 +533,15 @@ code {
     }
 }
 
-.logoutButt {
-    margin-left: var(--pad2);
+@media (hover: hover) {
+    .tab:not(.on):hover {
+        color: var(--color-text-light);
+    }
+}
+
+.butt.logoutButt {
+    margin-inline: var(--pad2);
+    white-space: nowrap;
 }
 
 .removemeIcon {
@@ -1431,19 +1472,22 @@ button.waitlist-pos {
 
 /* ── Reusable avatar component ── */
 .ft-avatar {
+    --avatar-bg-x: 50%;
+    --avatar-bg-y: 66%;
     display: block;
     width: 100%;
     height: 100%;
     border-radius: var(--radius-pill);
     background-color: #000;
     background-size: auto 125%;
-    background-position: center 66%;
+    background-position: var(--avatar-bg-x) var(--avatar-bg-y);
     background-repeat: no-repeat;
     flex-shrink: 0;
     overflow: hidden;
 }
 
 #allUsers .ft-avatar {
+    --avatar-bg-y: 72%;
     display: flex;
     align-items: center;
     position: relative;
@@ -1957,6 +2001,38 @@ html .ui-button.ui-state-disabled:active {
 #deck.dance .avtr:not(.animate) {
     transform-origin: bottom;
     animation: MoveSideSide 2s linear infinite;
+}
+
+body.dance-mode .ft-avatar:not(.skel) {
+    will-change: background-position;
+    animation: avatarDanceBg 1.15s ease-in-out infinite;
+    animation-delay: var(--dance-delay, 0s);
+}
+
+body.dance-mode .ft-avatar:not(.skel).dance-move-2 {
+    animation-name: avatarDanceBg2;
+}
+
+body.dance-mode .ft-avatar:not(.skel).dance-move-3 {
+    animation-name: avatarDanceBg3;
+}
+
+body.dance-mode .avtr {
+    transform-origin: 50% 200%;
+    animation: avatarDance 1.15s ease-in-out infinite;
+    animation-delay: var(--dance-delay, 0s);
+}
+
+body.dance-mode .avtr.dance-move-2 {
+    animation-name: avatarDance2;
+}
+
+body.dance-mode .avtr.dance-move-3 {
+    animation-name: avatarDance3;
+}
+
+body.dance-mode .dance-start-right {
+    animation-direction: reverse;
 }
 
 @container (width < 520px) {
@@ -3099,7 +3175,7 @@ a.importLinkCheck {
 }
 
 .skipPromptBox {
-    width: min(14rem, 90vw);
+    width: min(6rem, 90vw);
 }
 
 .skipPromptActions {
@@ -3524,6 +3600,54 @@ a.importLinkCheck {
     opacity: 1;
 }
 
+.chat-dance-wrap {
+    margin-top: var(--pad2);
+    text-align: center;
+}
+
+
+.chat-dance-btn {
+    display: inline-flex;
+    height: auto;
+    padding: 0.4em 0.6em;
+    font-size: 1.5rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-accent) 10%, white);
+    background: linear-gradient(to bottom, 
+        color-mix(in srgb, var(--color-accent) 10%, white 10%), 
+        color-mix(in srgb, var(--color-accent) 10%, white 25%) 44%, 
+        color-mix(in srgb, var(--color-accent) 10%, black) 45%, 
+        color-mix(in srgb, var(--color-accent) 10%, black 50%)
+    );
+    border: 1px solid black;
+    border-radius: 0.8rem;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5),
+                inset 0 -1px 1px black,
+                0 -4px 12px -4px rgba(123, 123, 123, 0.51),
+                0 4px 12px -4px black;
+    transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.12s ease;
+}
+
+.chat-dance-btn:hover:not(:disabled) {
+    filter: brightness(1.05) saturate(1.05);
+}
+
+.chat-dance-btn:active:not(:disabled),
+.chat-dance-btn.is-pressed {
+    transform: translateY(2px);
+    box-shadow:
+        inset 0 2px 4px rgba(0, 0, 0, 0.33),
+        inset 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.chat-dance-btn.is-pressed,
+.chat-dance-btn:disabled {
+    cursor: default;
+}
+
 .chatText a {
     position: relative;
     display: inline-block;
@@ -3853,6 +3977,7 @@ img.emoji,
     position: relative;
     display: flex;
     flex-direction: column;
+    padding-top: var(--pad2);
     padding-left: calc(var(--hist-time-w) + var(--hist-connector-w));
 
     /* Vertical backbone line */
@@ -4369,7 +4494,7 @@ dialog::backdrop {
 }
 
 #accountSettingsBox .modalBox {
-    width: 26rem;
+    width: 28rem;
     max-width: 100vw;
     min-height: 20rem;
     max-height: 100dvh;
