@@ -793,8 +793,11 @@ firetable.ui.setupRoomEvents = function () {
     firetable.debug && console.log('dance check:', data);
     if (data) {
       var danceTempoSec = 1.15;
+      var danceMoves = ['dance-move-1', 'dance-move-2', 'dance-move-3'];
       document.querySelectorAll('.ft-avatar:not(.skel), .avtr').forEach(function (el) {
         el.classList.toggle('dance-start-right', Math.random() >= 0.5);
+        el.classList.remove('dance-move-1', 'dance-move-2', 'dance-move-3');
+        el.classList.add(danceMoves[Math.floor(Math.random() * danceMoves.length)]);
         el.style.setProperty('--dance-delay', (-Math.random() * danceTempoSec).toFixed(3) + 's');
       });
       $("#deck").addClass("dance");
@@ -804,6 +807,7 @@ firetable.ui.setupRoomEvents = function () {
       $("body").removeClass("dance-mode");
       document.querySelectorAll('.ft-avatar, .avtr').forEach(function (el) {
         el.style.removeProperty('--dance-delay');
+        el.classList.remove('dance-move-1', 'dance-move-2', 'dance-move-3');
       });
       document.querySelectorAll('.dance-start-right').forEach(function (el) {
         el.classList.remove('dance-start-right');

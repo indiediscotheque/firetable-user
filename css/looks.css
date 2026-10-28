@@ -38,10 +38,32 @@
     75% { transform: translate(0.02rem, 0.3rem) rotate(2deg); }
 }
 
+@keyframes avatarDance2 {
+    0%, 50%, 100% { transform: translate(-0.02rem, 0.3rem) rotate(-2deg); }
+    25%, 75% { transform: translate(0.02rem, 0) rotate(2deg); }
+}
+
+@keyframes avatarDance3 {
+    0%, 50%, 100% { transform: translate(0, 0.3rem) rotate(0deg); }
+    25% { transform: translate(-0.02rem, 0) rotate(-2deg); }
+    75% { transform: translate(0.02rem, 0) rotate(2deg); }
+}
+
 @keyframes avatarDanceBg {
     0%, 50%, 100% { background-position: var(--avatar-bg-x) calc(var(--avatar-bg-y) + 12%); }
     25% { background-position: calc(var(--avatar-bg-x) + 16%) calc(var(--avatar-bg-y) - 8%); }
     75% { background-position: calc(var(--avatar-bg-x) - 16%) calc(var(--avatar-bg-y) - 8%); }
+}
+
+@keyframes avatarDanceBg2 {
+    0%, 50%, 100% { background-position: calc(var(--avatar-bg-x) + 16%) calc(var(--avatar-bg-y) - 8%); }
+    25%, 75% { background-position: calc(var(--avatar-bg-x) - 16%) calc(var(--avatar-bg-y) + 12%); }
+}
+
+@keyframes avatarDanceBg3 {
+    0%, 50%, 100% { background-position: var(--avatar-bg-x) calc(var(--avatar-bg-y) - 8%); }
+    25% { background-position: calc(var(--avatar-bg-x) + 16%) calc(var(--avatar-bg-y) + 12%); }
+    75% { background-position: calc(var(--avatar-bg-x) - 16%) calc(var(--avatar-bg-y) + 12%); }
 }
 
 @keyframes pulse {
@@ -1798,10 +1820,26 @@ body.dance-mode .ft-avatar:not(.skel) {
     animation-delay: var(--dance-delay, 0s);
 }
 
+body.dance-mode .ft-avatar:not(.skel).dance-move-2 {
+    animation-name: avatarDanceBg2;
+}
+
+body.dance-mode .ft-avatar:not(.skel).dance-move-3 {
+    animation-name: avatarDanceBg3;
+}
+
 body.dance-mode .avtr {
     transform-origin: 50% 200%;
     animation: avatarDance 1.15s ease-in-out infinite;
     animation-delay: var(--dance-delay, 0s);
+}
+
+body.dance-mode .avtr.dance-move-2 {
+    animation-name: avatarDance2;
+}
+
+body.dance-mode .avtr.dance-move-3 {
+    animation-name: avatarDance3;
 }
 
 body.dance-mode .dance-start-right {
