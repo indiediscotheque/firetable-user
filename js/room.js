@@ -809,6 +809,9 @@ firetable.ui.setupRoomEvents = function () {
         el.classList.remove('dance-start-right');
       });
     }
+    if (firetable.actions && typeof firetable.actions.syncDanceCtaButtons === 'function') {
+      firetable.actions.syncDanceCtaButtons();
+    }
   });
 
   // ── Festive Lights ──

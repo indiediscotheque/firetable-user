@@ -3187,6 +3187,54 @@ a.importLinkCheck {
     display: block;
 }
 
+.chat-dance-wrap {
+    margin-top: var(--pad2);
+    text-align: center;
+}
+
+
+.chat-dance-btn {
+    display: inline-flex;
+    height: auto;
+    padding: 0.4em 0.6em;
+    font-size: 1.5rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-accent) 10%, white);
+    background: linear-gradient(to bottom, 
+        color-mix(in srgb, var(--color-accent) 10%, white 10%), 
+        color-mix(in srgb, var(--color-accent) 10%, white 25%) 44%, 
+        color-mix(in srgb, var(--color-accent) 10%, black) 45%, 
+        color-mix(in srgb, var(--color-accent) 10%, black 50%)
+    );
+    border: 1px solid black;
+    border-radius: 0.8rem;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5),
+                inset 0 -1px 1px black,
+                0 -4px 12px -4px rgba(123, 123, 123, 0.51),
+                0 4px 12px -4px black;
+    transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.12s ease;
+}
+
+.chat-dance-btn:hover:not(:disabled) {
+    filter: brightness(1.05) saturate(1.05);
+}
+
+.chat-dance-btn:active:not(:disabled),
+.chat-dance-btn.is-pressed {
+    transform: translateY(2px);
+    box-shadow:
+        inset 0 2px 4px rgba(0, 0, 0, 0.33),
+        inset 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.chat-dance-btn.is-pressed,
+.chat-dance-btn:disabled {
+    cursor: default;
+}
+
 .chatText a {
     position: relative;
     display: inline-block;
