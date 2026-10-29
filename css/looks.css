@@ -6092,3 +6092,14 @@ body.has-beat.dance-mode .avtr,
 body.has-beat.dance-mode .ft-avatar:not(.skel) {
   animation-duration: calc(var(--beat) * 2);
 }
+
+/* ─── Track count next to the playlist name (#210) ─── */
+#listpickerWrap { display: flex; align-items: center; gap: var(--pad2); }
+#listpickerWrap #listpicker { flex: 1; min-width: 0; }
+#listCount {
+  flex: none; font-size: .75rem; font-weight: 600; font-variant-numeric: tabular-nums;
+  padding: .1rem .5rem; border-radius: 99px; opacity: .8;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  &[hidden] { display: none; }
+  &.has-flagged::after { content: " ⚠"; color: var(--color-accent); }
+}

@@ -765,6 +765,20 @@ function buildQueueItemHTML(key, track, isPreview) {
  * Set up the playlistChanged event handler and queue-related UI bindings.
  * Called once from firetable.ui.init().
  */
+/** Track count (and flagged count) next to the playlist name (#210). */
+firetable.ui.renderListCount = function (tracks) {
+  var n = 0, flagged = 0;
+  Object.keys(tracks || {}).forEach(function (k) {
+    if (!tracks[k]) return;
+    n++;
+    if (tracks[k].flagged) flagged++;
+  });
+  var label = n.toLocaleString() + (n === 1 ? " track" : " tracks") + (flagged ? ", " + flagged + " flagged" : "");
+  $("#listCount").prop("hidden", false).attr({ title: label, "aria-label": label })
+    .text(n.toLocaleString())
+    .toggleClass("has-flagged", flagged > 0);
+};
+
 firetable.ui.setupPlaylistEvents = function () {
 
   // ── Sortable drag-and-drop queue ──
@@ -908,6 +922,7 @@ firetable.ui.setupPlaylistEvents = function () {
   // ── Playlist changed: re-render the queue ──
   ftapi.events.on("playlistChanged", function (okdata, listID) {
     firetable.queue = okdata;
+    firetable.ui.renderListCount(okdata);
     // Each render gets a number; chunks from an older render stop when a
     // newer one starts, so stale rows never get appended to the new list.
     var renderGen = firetable._queueRenderGen = (firetable._queueRenderGen || 0) + 1;
@@ -1023,7 +1038,7 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   function enterCreateMode() {
-    $("#listpicker").hide();
+    $("#listpicker, #listCount").hide();
     $("#plmanager").css("display", "flex");
     $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").hide().next(".ft-tip").hide();
     $("#plAddLauncher").next(".ft-tip").text("Cancel Create Playlist");
@@ -1034,7 +1049,7 @@ firetable.ui.setupPlaylistEvents = function () {
 
   function exitCreateMode() {
     $("#plmanager").css("display", "none");
-    $("#listpicker").show();
+    $("#listpicker, #listCount").show();
     $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").show().next(".ft-tip").show();
     $("#plAddLauncher").next(".ft-tip").text("New / Import playlist");
     $("#plAddLauncher i").text("add");
