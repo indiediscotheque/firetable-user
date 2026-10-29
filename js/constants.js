@@ -39,6 +39,7 @@ var STORAGE = {
   notifyMentions:     "firetableDTNM",
   screenControl:      "firetableScreenControl",
   avatarStyle:        "firetableAvatarStyle",
+  density:            "firetableDensity",
   lastfmSession:      "ftLastfmSession",
   navView:            "firetableNavView",
   navSide:            "firetableNavSide",

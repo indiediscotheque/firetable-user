@@ -2807,19 +2807,19 @@ input.ft-filter {
    off-screen, so redrawing a 2,000+ track list stays fast. "auto" remembers
    each row's real height once it has been shown. The drag placeholder and the
    row being dragged are excluded so drag-to-reorder positions are unchanged.
-   The size is the row's content box (34px row minus its 1px borders): any
+   The size is the row's content box (the art: 34px row minus its 1px borders): any
    other value makes rows that haven't been shown yet the wrong height, so the
    list jumps when it is redrawn (send to top / bottom). */
 #mainqueue > .pvbar:not(.ui-sortable-placeholder):not(.ui-sortable-helper) {
     content-visibility: auto;
-    contain-intrinsic-size: auto 32px;
+    contain-intrinsic-size: auto var(--q-art, 2rem); /* the art sets the row height */
 }
 
 #queuelist .q-art,
 #searchResults .q-art {
     flex-shrink: 0;
-    width: 2rem;
-    height: 2rem;
+    width: var(--q-art, 2rem);
+    height: var(--q-art, 2rem);
     background-size: cover;
     background-position: center;
     background-color: var(--color-bg-t2);
@@ -3442,8 +3442,8 @@ a.importLinkCheck {
     position: relative;
     display: flex;
     gap: var(--pad2);
-    margin: var(--pad1) var(--pad2);
-    padding: var(--pad1) var(--pad3);
+    margin: var(--chat-gap, var(--pad1)) var(--pad2);
+    padding: var(--chat-pad, var(--pad1)) var(--pad3);
     color: var(--color-text);
     word-break: break-word;
     border-radius: var(--radius-md);
@@ -3579,7 +3579,7 @@ a.importLinkCheck {
 .chatText {
     position: relative;
     width: 100%;
-    font-size: 0.875rem;
+    font-size: var(--chat-font, 0.875rem);
     font-weight: 300;
     line-height: 1.4;
     color: rgba(255, 255, 255, 0.8);
@@ -4115,8 +4115,8 @@ img.emoji,
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    height: 2.5rem;
-    width: 2.5rem;
+    height: var(--hist-art, 2.5rem);
+    width: var(--hist-art, 2.5rem);
     background-size: cover;
     background-position: center;
 }
@@ -5733,3 +5733,26 @@ body.is-mod #thehistory .flagplay { display: inline-flex; }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+
+/* ─── View density: Compact / Cozy (default) / Comfortable (#142) ────────── */
+body.density-compact {
+    --q-art: 1.75rem; /* not smaller: the 28px row buttons would set the height */
+    --hist-art: 1.75rem;
+    --chat-gap: 0;
+    --chat-pad: 0.1rem;
+    --chat-font: 0.8125rem;
+}
+body.density-comfortable {
+    --q-art: 2.75rem;
+    --hist-art: 3.25rem;
+    --chat-gap: var(--pad2);
+    --chat-pad: var(--pad2);
+    --chat-font: 0.9375rem;
+}
+body.density-compact #queuelist .listwords,
+body.density-compact #thehistory .histlink { font-size: 0.8125rem; }
+body.density-comfortable #queuelist .listwords,
+body.density-comfortable #thehistory .histlink { font-size: 1rem; }
+
+.densityPicker { display: flex; gap: var(--pad2); align-items: center; flex-wrap: wrap; }

@@ -493,6 +493,9 @@ firetable.ui.initSettings = function () {
   }
   firetable.ui.updateScreenBtn(firetable.screenControl);
 
+  // ── View density (#142) ──
+  firetable.ui.applyDensity(localStorage[STORAGE.density]);
+
   // ── Avatar Style ──
   var savedAvatarStyle = localStorage[STORAGE.avatarStyle];
   if (savedAvatarStyle) {
@@ -501,6 +504,18 @@ firetable.ui.initSettings = function () {
   }
 
   firetable.ui.applySongAnnouncementVisibility();
+};
+
+/**
+ * Compact / Cozy / Comfortable spacing for playlists, Recent and chat.
+ * @param {string} density - "compact" | "cozy" | "comfortable"
+ */
+firetable.ui.applyDensity = function (density) {
+  if (["compact", "cozy", "comfortable"].indexOf(density) === -1) density = "cozy";
+  document.body.classList.remove("density-compact", "density-cozy", "density-comfortable");
+  document.body.classList.add("density-" + density);
+  $("#densityPicker").val(density);
+  return density;
 };
 
 /**
@@ -1573,6 +1588,13 @@ firetable.ui.setupMiscEvents = function () {
     firetable.media.forcedScreen = false;
     firetable.ui.updateScreenBtn(val);
     firetable.ui.applyScreenSetting();
+  });
+
+  // ── View density ──
+  $('#densityPicker').on('change', function () {
+    var wasAtBottom = firetable.utilities.isChatPrettyMuchAtBottom();
+    localStorage[STORAGE.density] = firetable.ui.applyDensity($(this).val());
+    if (wasAtBottom) firetable.utilities.scrollToBottom();
   });
 
   // ── Avatar style picker ──
