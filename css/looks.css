@@ -7,7 +7,7 @@
     font-style: normal;
     font-weight: 100 700;
     font-display: block;
-    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.04') format('woff2'); /* keep ?v= in step with index.html */
+    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.05') format('woff2'); /* keep ?v= in step with index.html */
 }
 
 /* ============================================
@@ -141,6 +141,7 @@
     --radius-sm: 0.25rem;
     --radius-md: 0.5rem;
     --radius-pill: 999px;
+    --theme-pill-h: 2.25rem;
 
     /* Typography */
     --font-family: "Inter", "Open Sans", helvetica, arial, sans-serif;
@@ -3347,8 +3348,8 @@ a.importLinkCheck {
 
 /* ============================================
    Room Theme (#87)
-   A pill in the top bar; at 1024px+ room.js moves it to the top of chat,
-   where it reads as a pinned strip. Tapping it opens #themePopover.
+   A pill in the top bar; at 1024px+ it gets its own row under the logo.
+   Tapping it opens #themePopover.
    ============================================ */
 #themeSlot {
     display: flex;
@@ -3435,17 +3436,6 @@ a.importLinkCheck {
         padding: 0;
         font-size: 0; /* still read out as "Theme" */
     }
-}
-
-/* 1024px+: pinned strip across the top of chat */
-#actualChat > #themeSlot {
-    flex-shrink: 0;
-    padding: var(--pad3) var(--pad3) var(--pad2);
-    border-bottom: 1px solid var(--color-border);
-}
-#actualChat > #themeSlot #themePill {
-    flex: 1;
-    min-height: 2.25rem;
 }
 
 .themePopBox {
@@ -5630,13 +5620,21 @@ html#about body {
         align-self: start;
         position: relative;
         z-index: 2;
+        flex-wrap: wrap;
+        row-gap: var(--pad2);
         padding: var(--pad3) var(--pad4);
     }
 
-    #usersbox {
-        /* clear the overlapping topbar */
-        padding-top: calc(3rem + var(--pad3) * 2);
+    /* The column is narrow, so the theme takes a full row under the logo */
+    #themeSlot {
+        order: 1;
+        flex: 1 0 100%;
     }
+    #themePill {
+        flex: 1;
+        height: var(--theme-pill-h);
+    }
+
 
     /* At 1024px: chat/people panels always visible regardless of nav class.
        The active view panel is still governed by view-class (inherited from 640px rules). */
@@ -5726,7 +5724,8 @@ html#about body {
     .newChat { margin-right: 0; }
 
     #usersbox {
-        padding-top: 5rem;
+        /* clear the overlapping topbar: logo row + theme row */
+        padding-top: calc(3rem + var(--pad2) + var(--theme-pill-h) + var(--pad3) * 2);
     }
 }
 
