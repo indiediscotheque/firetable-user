@@ -15,6 +15,15 @@
 
 firetable.actions = firetable.actions || {};
 
+firetable.actions.syncDanceCtaButtons = function () {
+  var deckEl = document.getElementById('deck');
+  var danceOn = document.body.classList.contains('dance-mode') || !!(deckEl && deckEl.classList.contains('dance'));
+  $('.chat-dance-btn')
+    .toggleClass('is-pressed', danceOn)
+    .attr('aria-pressed', danceOn ? 'true' : 'false')
+    .prop('disabled', danceOn);
+};
+
 firetable.actions.syncFireReactionButtons = function () {
   var userHasFire = !!(ftapi.uid && firetable.fireReactors && firetable.fireReactors[ftapi.uid]);
   $("#fire").toggleClass("on", userHasFire);
@@ -288,6 +297,29 @@ firetable.ui.formatChatText = function (rawTxt) {
 firetable.ui.setupChatEvents = function () {
   var $chatTemplate = $('#chatKEY').remove();
 
+  function isJarvisGiftDanceMessage(chatData) {
+    var fromHostbot = !!(ftapi.users[chatData.id] && ftapi.users[chatData.id].hostbot);
+    var senderName = (chatData.name || '').toLowerCase();
+    var fromJarvisName = senderName === 'jarvis';
+    if (!fromHostbot && !fromJarvisName) return false;
+
+    var rawTxt = firetable.ui.strip(chatData.txt || '');
+    var mentionsGift = /\bgift(?:ed|ing)?\b/i.test(rawTxt);
+    var mentionsDance = /!dance\b/i.test(rawTxt) || /\bdance\b/i.test(rawTxt);
+    return mentionsGift && mentionsDance;
+  }
+
+  function appendDanceCta($chatText) {
+    if (!$chatText || !$chatText.length) return;
+    if ($chatText.find('.chat-dance-wrap').length) return;
+    $chatText.append(
+      '<div class="chat-dance-wrap">' +
+      '<button type="button" class="butt chat-dance-btn" aria-pressed="false">DANCE</button>' +
+      '</div>'
+    );
+    firetable.actions.syncDanceCtaButtons();
+  }
+
   // ── Chat Collapse: hide messages longer than 7 lines behind "show more" ──
   function maybeCollapseChat(el) {
     if (!el) return;
@@ -386,6 +418,9 @@ firetable.ui.setupChatEvents = function () {
       }
       twemoji.parse(document.getElementById("chattxt" + chatData.chatID));
       maybeCollapseChat(document.getElementById("chattxt" + chatData.chatID));
+      if (isJarvisGiftDanceMessage(chatData)) {
+        appendDanceCta($("#chattxt" + chatData.chatID));
+      }
 
     } else {
       // ── New message block (different user or @-mention break) ──
@@ -414,6 +449,9 @@ firetable.ui.setupChatEvents = function () {
         document.querySelectorAll('#chats .ft-skeleton').forEach(function(el) { el.remove(); });
       }
       maybeCollapseChat($chatthing.find('.chatText')[0]);
+      if (isJarvisGiftDanceMessage(chatData)) {
+        appendDanceCta($chatthing.find('.chatText'));
+      }
 
       if (canDelete()) {
         $chatthing.find(".chatText").addClass("deleteMe");
@@ -712,4 +750,15 @@ firetable.ui.setupChatEvents = function () {
     $("#cloud_with_rain").addClass("on");
     $("#fire").removeClass("on");
   });
+
+  $(document)
+    .off('click.chatDanceCta')
+    .on('click.chatDanceCta', '.chat-dance-btn', function () {
+      if ($(this).hasClass('is-pressed')) return;
+      ftapi.actions.sendBotCommand('!dance');
+      $(this)
+        .addClass('is-pressed')
+        .attr('aria-pressed', 'true')
+        .prop('disabled', true);
+    });
 };

@@ -957,9 +957,31 @@ firetable.ui.setupRoomEvents = function () {
   // ── Dance Mode ──
   ftapi.events.on("danceStateChanged", function (data) {
     firetable.debug && console.log('dance check:', data);
-    // On <body>: the on-deck avatars can sit in the stage or the People panel
-    $("#deck").toggleClass("dance", !!data);
-    $("body").toggleClass("dance", !!data);
+    if (data) {
+      var danceTempoSec = 1.15;
+      var danceMoves = ['dance-move-1', 'dance-move-2', 'dance-move-3'];
+      document.querySelectorAll('.ft-avatar:not(.skel), .avtr').forEach(function (el) {
+        el.classList.toggle('dance-start-right', Math.random() >= 0.5);
+        el.classList.remove('dance-move-1', 'dance-move-2', 'dance-move-3');
+        el.classList.add(danceMoves[Math.floor(Math.random() * danceMoves.length)]);
+        el.style.setProperty('--dance-delay', (-Math.random() * danceTempoSec).toFixed(3) + 's');
+      });
+      $("#deck").addClass("dance");
+      $("body").addClass("dance-mode");
+    } else {
+      $("#deck").removeClass("dance");
+      $("body").removeClass("dance-mode");
+      document.querySelectorAll('.ft-avatar, .avtr').forEach(function (el) {
+        el.style.removeProperty('--dance-delay');
+        el.classList.remove('dance-move-1', 'dance-move-2', 'dance-move-3');
+      });
+      document.querySelectorAll('.dance-start-right').forEach(function (el) {
+        el.classList.remove('dance-start-right');
+      });
+    }
+    if (firetable.actions && typeof firetable.actions.syncDanceCtaButtons === 'function') {
+      firetable.actions.syncDanceCtaButtons();
+    }
   });
 
   // ── Festive Lights ──
