@@ -680,6 +680,7 @@ firetable.actions.importList = function (id, name, type) {
 firetable.actions.editTagsPrompt = function (songid, tag, anchorEl) {
   var popoverEl = document.getElementById('tagEditorPopover');
   if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
+  firetable.tagEditNowPlaying = null;
   $('.pvbar.editing').removeClass('editing');
   var $pvbar = $('.pvbar[data-key="' + songid + '"]').first();
   $pvbar.addClass('editing');
@@ -722,14 +723,17 @@ function buildQueueItemHTML(key, track, isPreview) {
   var flagHtml = '';
   if (track.flagged) {
     var flagLabel = 'broken', flagIcon = 'warning';
-    if      (track.flagged.code === 7)  { flagLabel = 'age restricted'; }
+    if      (track.flagged.code === 2 || track.flagged.code === 5) { flagLabel = 'unavailable'; }
+    else if (track.flagged.code === 3)  { flagLabel = 'blocked in the US'; }
+    else if (track.flagged.code === 6)  { flagLabel = 'not embeddable'; }
+    else if (track.flagged.code === 7)  { flagLabel = 'age restricted'; }
     else if (track.flagged.code === 8)  { flagLabel = 'broken (manual)'; }
     else if (track.flagged.code === 9)  { flagLabel = 'low audio quality'; flagIcon = 'disc_full'; }
     else if (track.flagged.code === 10) { flagLabel = 'offtheme'; flagIcon = 'flag'; }
     var flagTitle = firetable.utilities.htmlEscape(
       'Flagged as ' + flagLabel + ' on ' + firetable.utilities.format_date(track.flagged.date) + '. Click to remove flag.'
     );
-    flagHtml = ' title="' + flagTitle + '"><span class="material-symbols-filled"> ' + flagIcon + ' </span>';
+    flagHtml = '<button type="button" class="track-warning" title="' + flagTitle + '" aria-label="' + flagTitle + '"><span class="material-symbols-filled" aria-hidden="true"> ' + flagIcon + ' </span></button>';
   }
 
   return (
@@ -741,7 +745,7 @@ function buildQueueItemHTML(key, track, isPreview) {
     '<div class="pvbarWrap">' +
     '<div class="' + artClass + '"' + artStyle + '></div>' +
     '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
-    '<span class="track-warning"' + (track.flagged ? flagHtml : '>') + '</span>' +
+    (track.flagged ? flagHtml : '<span class="track-warning"></span>') +
     '<div class="listwords">' + safeTrackName + durationHtml + '</div>' +
     // Order matches Recent / Fresh: move actions, link, add, destructive last
     '<button type="button" class="material-symbols-outlined row-icon bumpsongs" title="Send to top" aria-label="Send to top">vertical_align_top</button>' +
@@ -761,6 +765,20 @@ function buildQueueItemHTML(key, track, isPreview) {
  * Set up the playlistChanged event handler and queue-related UI bindings.
  * Called once from firetable.ui.init().
  */
+/** Track count (and flagged count) next to the playlist name (#210). */
+firetable.ui.renderListCount = function (tracks) {
+  var n = 0, flagged = 0;
+  Object.keys(tracks || {}).forEach(function (k) {
+    if (!tracks[k]) return;
+    n++;
+    if (tracks[k].flagged) flagged++;
+  });
+  var label = n.toLocaleString() + (n === 1 ? " track" : " tracks") + (flagged ? ", " + flagged + " flagged" : "");
+  $("#listCount").prop("hidden", false).attr({ title: label, "aria-label": label })
+    .text(n.toLocaleString())
+    .toggleClass("has-flagged", flagged > 0);
+};
+
 firetable.ui.setupPlaylistEvents = function () {
 
   // ── Sortable drag-and-drop queue ──
@@ -797,7 +815,8 @@ firetable.ui.setupPlaylistEvents = function () {
     .on('click', '.track-warning', function () {
       var $p = $(this).closest('.pvbar');
       ftapi.actions.unflagTrack($p.attr('data-key'));
-      $(this).html('').removeAttr('title');
+      $p.attr('data-broken', '0');
+      $(this).replaceWith('<span class="track-warning"></span>');
     })
     .on('click', '.deletesong', function () {
       var popoverEl = document.getElementById('deleteSongPopover');
@@ -855,6 +874,7 @@ firetable.ui.setupPlaylistEvents = function () {
     var $menu = $(trackMenuEl);
     $menu.find('[data-act="open"]').attr('href', $link.attr('href') || '#');
     $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
+    $menu.find('.ft-menu-open-logo').html($link.find('svg').prop('outerHTML') || '');
     $(btn).addClass('on').attr('aria-expanded', 'true');
     trackMenuEl.style.visibility = 'hidden';
     trackMenuEl.showPopover();
@@ -902,6 +922,7 @@ firetable.ui.setupPlaylistEvents = function () {
   // ── Playlist changed: re-render the queue ──
   ftapi.events.on("playlistChanged", function (okdata, listID) {
     firetable.queue = okdata;
+    firetable.ui.renderListCount(okdata);
     // Each render gets a number; chunks from an older render stop when a
     // newer one starts, so stale rows never get appended to the new list.
     var renderGen = firetable._queueRenderGen = (firetable._queueRenderGen || 0) + 1;
@@ -1017,9 +1038,9 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   function enterCreateMode() {
-    $("#listpicker").hide();
+    $("#listpicker, #listCount").hide();
     $("#plmanager").css("display", "flex");
-    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").hide().next(".ft-tip").hide();
+    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").hide().next(".ft-tip").hide();
     $("#plAddLauncher").next(".ft-tip").text("Cancel Create Playlist");
     $("#plAddLauncher i").text("close");
     $("#mainqueuestuff, #filterMachine").css("display", "none");
@@ -1028,8 +1049,8 @@ firetable.ui.setupPlaylistEvents = function () {
 
   function exitCreateMode() {
     $("#plmanager").css("display", "none");
-    $("#listpicker").show();
-    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").show().next(".ft-tip").show();
+    $("#listpicker, #listCount").show();
+    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").show().next(".ft-tip").show();
     $("#plAddLauncher").next(".ft-tip").text("New / Import playlist");
     $("#plAddLauncher i").text("add");
     $("#mainqueuestuff, #filterMachine").css("display", "block");
@@ -1040,14 +1061,7 @@ firetable.ui.setupPlaylistEvents = function () {
     var val = $("#listpicker").val();
     if (!val || val === "0") return;
     firetable.debug && console.log('playlist delete:', val);
-    if (ftapi.selectedListThing === val) {
-      ftapi.actions.switchDjList("0");
-      $("#djlistpicker").val("0");
-    }
-    ftapi.actions.deleteList(val);
-    $("#pdopt" + val).remove();
-    $("#djlistpicker option[value='" + val + "']").remove();
-    $("#listpicker").val("0").change();
+    firetable.actions.deleteLists([val]);
     document.getElementById("deletePromptBox").close();
     $("#deleteConfirmInput").val('');
     $("#pldeleteButton").prop('disabled', true);
@@ -1167,14 +1181,8 @@ firetable.ui.setupPlaylistEvents = function () {
     var isHidden = $("#mergeContain").is(":hidden");
     if (isHidden) {
       ftapi.lookup.allLists(function (allPlaylists) {
-        $("#mergepicker").html('<option value="0">Default Playlist</option>');
-        $("#mergepicker2").html('<option value="-1">Create New Copy</option><option value="0">Default Playlist</option>');
-        for (var key in allPlaylists) {
-          if (allPlaylists.hasOwnProperty(key)) {
-            $("#mergepicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
-            $("#mergepicker2").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
-          }
-        }
+        firetable.ui.fillPlaylistSelect($("#mergepicker"), allPlaylists);
+        firetable.ui.fillPlaylistSelect($("#mergepicker2"), allPlaylists, [{ value: "-1", text: "Create New Copy" }]);
         if (ftapi.users[ftapi.uid] && ftapi.users[ftapi.uid].selectedList) {
           $("#mergepicker").val(ftapi.users[ftapi.uid].selectedList).change();
           $("#mergepicker2").val(-1).change();
@@ -1223,6 +1231,22 @@ firetable.ui.setupPlaylistEvents = function () {
   // ── Tag editing (Enter in .tagMachine) ──
   $(document).on("keyup", ".tagMachine", function (e) {
     if (e.which !== 13) return;
+    var np = firetable.tagEditNowPlaying;
+    if (np) {
+      var tag = String($(this).val() || "").trim();
+      if (tag.indexOf(" - ") < 1 || tag.indexOf(" - ") > tag.length - 4) {
+        firetable.ui.toast("Check yr tags: use Artist - Song Title.", "error");
+        return;
+      }
+      if (firetable.song && String(firetable.song.cid) === String(np.cid)) {
+        ftapi.actions.sendBotCommand("!fixtags " + tag);
+        firetable.ui.toast("Tags sent: " + tag, "success");
+      } else {
+        firetable.ui.toast("That song has ended. Fix it from Recent instead.", "error");
+      }
+      document.getElementById('tagEditorPopover').hidePopover();
+      return;
+    }
     var $pvbar = firetable.editingPvbar;
     if (!$pvbar || !$pvbar.length) return;
     var val = $(this).val();
@@ -1248,6 +1272,7 @@ firetable.ui.setupPlaylistEvents = function () {
 
   // ── Tag editor popover cleanup on auto-dismiss ──
   document.getElementById('tagEditorPopover').addEventListener('toggle', function (e) {
+    if (e.newState === 'closed') firetable.tagEditNowPlaying = null;
     if (e.newState === 'closed' && firetable.editingPvbar) {
       firetable.editingPvbar.removeClass('editing');
       firetable.editingPvbar = null;
@@ -1327,4 +1352,290 @@ firetable.ui.setupPlaylistEvents = function () {
       $('#shuffleQueue').removeClass('on');
     }
   });
+};
+
+// ─── Broken-track check (#92) ────────────────────────────────────────────────
+// Looks up every track in a playlist and flags the ones that can't play here:
+// YouTube videos that are gone, private, not embeddable, age-restricted or
+// blocked in the US, and SoundCloud tracks that are gone or blocked. Tracks
+// that were flagged automatically but play fine again get their flag cleared.
+// Manual flags (broken / low quality / off-theme) are never touched.
+//
+// Cost: one YouTube API call (1 quota unit) per 50 tracks, one SoundCloud
+// proxy call per 50 tracks. Each list is also re-checked quietly in the
+// background when you open it, at most once a week.
+
+/** Flag codes the checker may set or clear. */
+var AUTO_FLAG_CODES = [1, 2, 3, 4, 5, 6, 7];
+var BROKEN_RECHECK_MS = 7 * 24 * 3600 * 1000;
+
+firetable.brokenCheck = { running: false };
+/** The playlist on screen (may differ from the one the DJ plays from). */
+firetable.viewListID = "0";
+
+/** Is there a usable YouTube API key? */
+firetable.utilities.hasYouTubeKey = function () {
+  var k = typeof ftconfigs !== "undefined" && ftconfigs.youtubeKey;
+  return !!k && !/^(x+|no-yt-key)$/i.test(k);
+};
+
+/** Why a YouTube video can't play here (a flag code), or 0 when it's fine. */
+firetable.utilities.youTubeProblem = function (item) {
+  if (!item) return 2;
+  var st = item.status || {}, cd = item.contentDetails || {};
+  if (st.privacyStatus === "private" || /^(deleted|failed|rejected)$/.test(st.uploadStatus || "")) return 2;
+  if (st.embeddable === false) return 6;
+  var rr = cd.regionRestriction;
+  if (rr && ((rr.allowed && rr.allowed.indexOf("US") === -1) || (rr.blocked && rr.blocked.indexOf("US") !== -1))) return 3;
+  if (cd.contentRating && cd.contentRating.ytRating === "ytAgeRestricted") return 7;
+  return 0;
+};
+
+/** YouTube videos.list for up to 50 ids. Resolves {id: item}; rejects on API errors. */
+firetable.actions.ytVideoStatus = function (ids) {
+  return $.ajax({
+    url: "https://www.googleapis.com/youtube/v3/videos",
+    data: {
+      part: "status,contentDetails",
+      id: ids.join(","),
+      maxResults: 50,
+      fields: "items(id,status(embeddable,privacyStatus,uploadStatus),contentDetails(regionRestriction,contentRating/ytRating))",
+      key: ftconfigs.youtubeKey
+    },
+    dataType: "json",
+    timeout: 20000
+  }).then(function (res) {
+    var out = {};
+    (res && res.items || []).forEach(function (it) { out[it.id] = it; });
+    return out;
+  });
+};
+
+/**
+ * SoundCloud status for up to 50 track ids. Resolves {id: track|null}; null
+ * means SoundCloud says it's gone. Ids it couldn't check are left out.
+ */
+firetable.actions.scTrackStatus = function (ids) {
+  return firetable.actions.scProxy({ action: "tracks", ids: ids.join(",") }).then(function (res) {
+    var found = {}, out = {};
+    (res && res.collection || []).forEach(function (t) { if (t && t.id) found[t.id] = t; });
+    ids.forEach(function (id) { out[id] = found[id] || null; });
+    return out;
+  }, function (err) {
+    if (!err || !err.unavailable) return $.Deferred().reject(err).promise();
+    // No site proxy: ask the legacy one, one track at a time
+    var out = {};
+    return ids.reduce(function (p, id) {
+      return p.then(function () {
+        return firetable.actions.scLegacy(SC_PROXY_URL + "?type=tracks&q=" + encodeURIComponent(id)).then(
+          function (t) { out[id] = t; },
+          function (e) { if (e && e.status === 404) out[id] = null; } // network trouble: unknown, skip
+        ).then(function () { return firetable.utilities.wait(250); });
+      });
+    }, $.Deferred().resolve().promise()).then(function () { return out; });
+  });
+};
+
+/** Why a SoundCloud track can't play here, or 0. */
+firetable.utilities.soundCloudProblem = function (t) {
+  if (!t) return 5;
+  if (t.access === "blocked" || t.streamable === false || t.sharing === "private") return 5;
+  return 0;
+};
+
+/** Promise that resolves after ms. */
+firetable.utilities.wait = function (ms) {
+  return $.Deferred(function (d) { setTimeout(d.resolve, ms); }).promise();
+};
+
+/**
+ * Check a playlist and update its flags.
+ * @param {string} listID - "0" for the default list
+ * @param {{quiet?:boolean, onProgress?:function(number, number)}} [opts]
+ * @returns {Promise<{checked:number, total:number, broken:number, newlyBroken:number, fixed:number, skipped:number, error?:string}>}
+ */
+firetable.actions.checkBrokenTracks = function (listID, opts) {
+  opts = opts || {};
+  var bc = firetable.brokenCheck;
+  if (bc.running) return $.Deferred().reject({ message: "A check is already running." }).promise();
+  bc.running = true;
+  var ref = ftapi.lookup.listRef(listID);
+  var result = { checked: 0, total: 0, broken: 0, newlyBroken: 0, fixed: 0, skipped: 0 };
+  var progress = function () { if (opts.onProgress) opts.onProgress(result.checked + result.skipped, result.total); };
+
+  return $.when(ref.once("value")).then(function (snap) {
+    var tracks = snap.val() || {};
+    var yt = {}, sc = {}; // cid -> [keys]
+    Object.keys(tracks).forEach(function (key) {
+      var t = tracks[key];
+      if (!t || !t.cid) return;
+      var bucket = String(t.type) === "2" ? sc : yt;
+      (bucket[t.cid] = bucket[t.cid] || []).push(key);
+      result.total++;
+    });
+    progress();
+    var updates = {};
+    var now = ftapi.now();
+    var apply = function (bucket, statuses, problemFor) {
+      Object.keys(statuses).forEach(function (cid) {
+        var code = problemFor(statuses[cid]);
+        (bucket[cid] || []).forEach(function (key) {
+          var flag = tracks[key].flagged;
+          var auto = !flag || AUTO_FLAG_CODES.indexOf(flag.code) !== -1;
+          result.checked++;
+          if (code) {
+            result.broken++;
+            if (!flag) { updates[key + "/flagged"] = { date: now, code: code }; result.newlyBroken++; }
+            else if (auto && flag.code !== code) updates[key + "/flagged"] = { date: now, code: code };
+          } else if (flag && auto) {
+            updates[key + "/flagged"] = null;
+            result.fixed++;
+          }
+        });
+      });
+    };
+    var chunks = function (obj) {
+      var ids = Object.keys(obj), out = [];
+      for (var i = 0; i < ids.length; i += 50) out.push(ids.slice(i, i + 50));
+      return out;
+    };
+    var skip = function (bucket, ids) {
+      ids.forEach(function (cid) { result.skipped += (bucket[cid] || []).length; });
+      progress();
+    };
+    var step = $.Deferred().resolve().promise();
+    var ytChunks = chunks(yt);
+    if (!firetable.utilities.hasYouTubeKey()) {
+      ytChunks.forEach(function (ids) { skip(yt, ids); });
+      if (ytChunks.length) result.error = "YouTube checks need an API key.";
+    } else {
+      ytChunks.forEach(function (ids, n) {
+        step = step.then(function () {
+          if (n) return firetable.utilities.wait(150);
+        }).then(function () {
+          if (result.ytDown) return skip(yt, ids);
+          return firetable.actions.ytVideoStatus(ids).then(function (items) {
+            var statuses = {};
+            ids.forEach(function (id) { statuses[id] = items[id] || null; });
+            apply(yt, statuses, firetable.utilities.youTubeProblem);
+            progress();
+          }, function (xhr) {
+            // Quota, bad key, offline: don't guess, stop asking YouTube
+            result.ytDown = true;
+            result.error = "YouTube didn't answer (" + ((xhr && xhr.status) || "offline") + "), so some tracks weren't checked.";
+            skip(yt, ids);
+          });
+        });
+      });
+    }
+    chunks(sc).forEach(function (ids) {
+      step = step.then(function () {
+        if (result.scDown) return skip(sc, ids);
+        return firetable.actions.scTrackStatus(ids).then(function (statuses) {
+          apply(sc, statuses, firetable.utilities.soundCloudProblem);
+          skip(sc, ids.filter(function (id) { return !(id in statuses); }));
+          progress();
+        }, function () {
+          result.scDown = true;
+          result.error = "SoundCloud didn't answer, so some tracks weren't checked.";
+          skip(sc, ids);
+        });
+      });
+    });
+    return step.then(function () {
+      // Only touch tracks that are still in the list
+      return ref.once("value").then(function (s2) {
+        var live = s2.val() || {};
+        Object.keys(updates).forEach(function (path) { if (!live[path.split("/")[0]]) delete updates[path]; });
+        return Object.keys(updates).length ? ref.update(updates) : null;
+      });
+    });
+  }).then(function () {
+    try { localStorage[firetable.utilities.brokenCheckKey(listID)] = String(Date.now()); } catch (e) { /* private mode */ }
+    bc.running = false;
+    return result;
+  }, function (err) {
+    bc.running = false;
+    return $.Deferred().reject(err).promise();
+  });
+};
+
+firetable.utilities.brokenCheckKey = function (listID) {
+  return STORAGE.brokenCheck + ":" + ftapi.uid + ":" + (listID || "0");
+};
+
+/** One line summing up a check. */
+firetable.utilities.brokenSummary = function (r) {
+  var parts = [];
+  if (!r.checked && r.skipped) return r.error || "Couldn't check this playlist right now.";
+  parts.push(r.broken ? (r.broken + (r.broken === 1 ? " track can't play" : " tracks can't play") + " and " + (r.broken === 1 ? "is" : "are") + " flagged ⚠") : "Every track checked out fine.");
+  if (r.fixed) parts.push(r.fixed + " old " + (r.fixed === 1 ? "flag" : "flags") + " cleared.");
+  if (r.skipped) parts.push(r.skipped + (r.skipped === 1 ? " track" : " tracks") + " couldn't be checked.");
+  return parts.join(" ");
+};
+
+/** Run a check from the toolbar button, with progress in the popover. */
+firetable.actions.checkBrokenPrompt = function (btn) {
+  var pop = document.getElementById("checkBrokenPopover");
+  var listID = firetable.viewListID || "0";
+  var $status = $("#checkBrokenStatus"), $bar = $("#checkBrokenBar"), $show = $("#checkBrokenShow");
+  if (!pop.matches(":popover-open")) {
+    pop.style.visibility = "hidden";
+    pop.showPopover();
+    firetable.ui.positionPopover(btn, pop, document.getElementById("checkBrokenArrow"), "bottom");
+  }
+  if (firetable.brokenCheck.running) return;
+  $(btn).addClass("on");
+  $show.prop("hidden", true);
+  $bar.prop("hidden", false).val(0).attr("max", 1);
+  $status.text("Checking tracks…");
+  firetable.actions.checkBrokenTracks(listID, {
+    onProgress: function (done, total) {
+      $bar.attr("max", Math.max(total, 1)).val(done);
+      $status.text("Checking tracks… " + done + " of " + total);
+    }
+  }).then(function (r) {
+    $bar.prop("hidden", true);
+    $status.text(firetable.utilities.brokenSummary(r));
+    $show.prop("hidden", !r.broken);
+  }, function (err) {
+    $bar.prop("hidden", true);
+    $status.text((err && err.message) || "The check didn't finish. Try again in a bit.");
+  });
+};
+
+/** Quietly re-check a list you open if it hasn't been checked for a week. */
+firetable.actions.autoCheckBroken = function (listID) {
+  if (!ftapi.uid || firetable.brokenCheck.running || !firetable.utilities.hasYouTubeKey()) return;
+  var last = 0;
+  try { last = Number(localStorage[firetable.utilities.brokenCheckKey(listID)]) || 0; } catch (e) { return; }
+  if (Date.now() - last < BROKEN_RECHECK_MS) return;
+  firetable.actions.checkBrokenTracks(listID, { quiet: true }).then(function (r) {
+    if (r.newlyBroken) {
+      firetable.ui.toast(r.newlyBroken + (r.newlyBroken === 1 ? " track" : " tracks") + " in this playlist can't play anymore and " + (r.newlyBroken === 1 ? "was" : "were") + " flagged ⚠", "error");
+    }
+  }, function () { /* try again next time */ });
+};
+
+firetable.ui.setupBrokenCheck = function () {
+  var pop = document.getElementById("checkBrokenPopover");
+  $("#checkBroken").on("click", function () { firetable.actions.checkBrokenPrompt(this); });
+  pop.addEventListener("toggle", function (e) {
+    if (e.newState === "closed" && !firetable.brokenCheck.running) $("#checkBroken").removeClass("on");
+  });
+  $("#checkBrokenShow").on("click", function () {
+    $("#queueFilterBrokenOnly").prop("checked", true).trigger("change");
+    pop.hidePopover();
+    $("#checkBroken").removeClass("on");
+  });
+  // Background re-check when a list is opened (not on every edit)
+  var lastList = null;
+  ftapi.events.on("playlistChanged", function (data, listID) {
+    var id = String(listID == null ? "0" : listID);
+    firetable.viewListID = id;
+    if (id === lastList) return;
+    lastList = id;
+    setTimeout(function () { if (firetable.viewListID === id) firetable.actions.autoCheckBroken(id); }, 4000);
+  });
+  ftapi.events.on("loggedOut", function () { lastList = null; firetable.viewListID = "0"; });
 };

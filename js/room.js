@@ -20,6 +20,37 @@
  *   This caused SoundCloud tracks in history/discover to always get "yt" prefix.
  */
 
+// ─── Beat (#143) ──────────────────────────────────────────────────────────────
+
+/**
+ * Match the stage animations to the playing song's tempo (from songBpm). Sets
+ * --beat (one beat), --bop (one DJ bob: a beat, or two for fast songs) and
+ * --beat-phase (so the bobbing lines up with the song's start, not page load)
+ * on <html>, and shows "128 BPM" under the artist.
+ */
+firetable.ui.applyBeat = function () {
+  var b = firetable.songBpm, s = firetable.song, root = document.documentElement;
+  var bpm = b && s && b.started === s.started && Number(b.bpm);
+  var $label = $("#npBpm");
+  if (!(bpm >= 40 && bpm <= 250)) {
+    document.body.classList.remove("has-beat");
+    root.style.removeProperty("--beat");
+    root.style.removeProperty("--bop");
+    root.style.removeProperty("--beat-phase");
+    $label.prop("hidden", true).text("");
+    return;
+  }
+  var beat = 60 / bpm;
+  var bop = bpm > 150 ? beat * 2 : beat;
+  var elapsed = Math.max(0, (ftapi.now() - s.started) / 1000);
+  root.style.setProperty("--beat", beat.toFixed(4) + "s");
+  root.style.setProperty("--bop", bop.toFixed(4) + "s");
+  root.style.setProperty("--beat-phase", (-(elapsed % (beat * 2))).toFixed(3) + "s");
+  document.body.classList.add("has-beat");
+  $label.prop("hidden", false).text(Math.round(bpm) + " BPM")
+    .attr("title", b.src === "manual" ? "Tempo set by the DJ or a mod" : "Tempo from Deezer. The DJ or a mod can fix it with !bpm 128");
+};
+
 // ─── History Item Renderer ────────────────────────────────────────────────────
 
 /**
@@ -96,6 +127,11 @@ function renderHistoryItem(data, $template, containerSel, older) {
   });
   if (!ftapi.isMod) $histItem.find('.edittags').hide();
 
+  // Flag (mods, #167): flags this track in the DJ's playlists via the bot
+  $histItem.find('.flagplay').on('click', function () {
+    firetable.ui.openFlagMenu(this, { histID: data.histID, label: (data.artist || '') + ' - ' + (data.title || '') });
+  });
+
   // Metadata
   $histItem.find('.histdj').text(data.dj);
   $histItem.find('.pv-dj-avatar')
@@ -119,7 +155,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
       ? $trackArtist.text().trim() + ' - ' + $trackTitle.text().trim()
       : $histlink.text();
 
-    firetable.actions.openStealPicker($btn, { cid: btnCid, type: btnType, title: btnTitle, img: btnImg, url: data.url || '' });
+    firetable.actions.openStealPicker($btn, { cid: btnCid, type: btnType, title: btnTitle, img: btnImg, url: data.url || '', djid: data.djid || '' });
   });
 
   // Album art
@@ -615,6 +651,66 @@ firetable.ui.setupRoomEvents = function () {
   // ── Mod Check (show edit buttons for mods) ──
   ftapi.events.on('modCheck', function (data) {
     if (data) $(".edittags").show();
+    $("body").toggleClass("is-mod", !!data);
+  });
+  ftapi.events.on('loggedOut', function () { $("body").removeClass("is-mod"); });
+
+  // ── Flag a track (mods): now playing (#125) or a play in Recent (#167) ──
+  var flagMenuEl = document.getElementById('flagMenuPopover');
+  firetable.ui.openFlagMenu = function (btn, target) {
+    var same = firetable.flagTarget && firetable.flagBtn === btn;
+    if (flagMenuEl.matches(':popover-open')) flagMenuEl.hidePopover();
+    if (same) return;
+    firetable.flagTarget = target;
+    firetable.flagBtn = btn;
+    $('#flagMenuTitle').text('Flag "' + firetable.ui.strip(target.label || '') + '" as');
+    flagMenuEl.style.visibility = 'hidden';
+    flagMenuEl.showPopover();
+    firetable.ui.positionPopover(btn, flagMenuEl, document.getElementById('flagMenuArrow'), 'bottom').then(function () {
+      var first = flagMenuEl.querySelector('[role="menuitem"]');
+      if (first) first.focus();
+    });
+  };
+  flagMenuEl.addEventListener('toggle', function (e) {
+    if (e.newState === 'closed') { firetable.flagTarget = null; firetable.flagBtn = null; }
+  });
+  $(flagMenuEl).on('click', '[data-flag]', function () {
+    var t = firetable.flagTarget, reason = $(this).attr('data-flag');
+    flagMenuEl.hidePopover();
+    if (!t) return;
+    if (t.histID) {
+      ftapi.actions.sendBotCommand('!flagplay ' + t.histID + ' ' + reason);
+    } else if (firetable.song && firetable.song.started === t.started) {
+      ftapi.actions.sendBotCommand('!flag ' + reason);
+    } else {
+      firetable.ui.toast("That song has ended. Flag it from Recent instead.", "error");
+    }
+  }).on('keydown', function (e) {
+    var $items = $(flagMenuEl).find('[role="menuitem"]');
+    var idx = $items.index($items.filter(':focus'));
+    if (e.key === 'ArrowDown') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
+  });
+  $('#npFlag').on('click', function () {
+    if (!firetable.song || firetable.song.cid == 0) return;
+    firetable.ui.openFlagMenu(this, { started: firetable.song.started, label: firetable.song.artist + ' - ' + firetable.song.title });
+  });
+
+  // ── Fix the tags of the song playing now (mods, #136) ──
+  // Same editor as Recent rows; saving sends the bot's !fixtags, which
+  // corrects the global tags and what everyone sees right away.
+  $("#npFixTags").on("click", function () {
+    var popoverEl = document.getElementById('tagEditorPopover');
+    if (popoverEl.matches(':popover-open') && firetable.tagEditNowPlaying) { popoverEl.hidePopover(); return; }
+    if (!firetable.song || firetable.song.cid == 0) return;
+    if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
+    firetable.tagEditNowPlaying = { cid: firetable.song.cid, type: firetable.song.type };
+    $(popoverEl).find('.tagMachine').val(firetable.ui.strip(firetable.song.artist + " - " + firetable.song.title));
+    popoverEl.style.visibility = 'hidden';
+    popoverEl.showPopover();
+    firetable.ui.positionPopover(this, popoverEl, document.getElementById('tagEditorArrow'), 'bottom').then(function () {
+      $(popoverEl).find('.tagMachine')[0].focus();
+    });
   });
 
   // ── Theme ──
@@ -622,6 +718,9 @@ firetable.ui.setupRoomEvents = function () {
     var el = document.getElementById("currentTheme");
     if (!el) return;
     var container = el.parentElement;
+    // undo an earlier ticker before measuring
+    var copy = el.querySelector('.ticker-copy');
+    if (copy) el.innerHTML = copy.innerHTML;
     el.classList.remove('is-ticker');
     if (el.scrollWidth > container.offsetWidth) {
       var originalHTML = el.innerHTML;
@@ -630,9 +729,11 @@ firetable.ui.setupRoomEvents = function () {
     }
   }
 
+  $(window).on("resize.themeTicker", firetable.utilities.debounce(checkThemeTicker, 250));
   ftapi.events.on("newTheme", function (data) {
+    $("#themeLine").toggleClass("no-theme", !data);
     if (!data) {
-      $("#currentTheme").text("!suggest a theme");
+      $("#currentTheme").text("none yet · !suggest one");
     } else {
       var txtOut = firetable.ui.strip(data);
       txtOut = firetable.ui.textToLinks(txtOut, true);
@@ -686,6 +787,12 @@ firetable.ui.setupRoomEvents = function () {
       );
     }
     if (doTheScrollThing) firetable.utilities.scrollToBottom();
+  });
+
+  // ── Song tempo: the DJ bops (and dance mode dances) on the beat (#143) ──
+  ftapi.events.on('songBpm', function (data) {
+    firetable.songBpm = data;
+    firetable.ui.applyBeat();
   });
 
   // ── New Song ──
@@ -765,6 +872,7 @@ firetable.ui.setupRoomEvents = function () {
     var timeLeft = data.duration - secSince;
     firetable.song = data;
     firetable.media.songChanged();
+    firetable.ui.applyBeat();
     firetable.debug && console.log("NEW TRACK", data);
 
     // ── Last.fm scrobble timer ──
@@ -1060,6 +1168,7 @@ firetable.ui.setupRoomEvents = function () {
     });
 
     if (firetable.ui && firetable.ui.syncGhostUsers) firetable.ui.syncGhostUsers();
+    if (firetable.ui && firetable.ui.renderRoomPulse) firetable.ui.renderRoomPulse();
     // Re-render the waitlist UI so the Play button reflects updated deck membership
     if (firetable.waitlistData !== undefined) {
       ftapi.events.emit('waitlistChanged', firetable.waitlistData);

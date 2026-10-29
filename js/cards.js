@@ -251,17 +251,78 @@ firetable.actions.chatCard = function (cardid) {
  * @param {string} cardid - Card key
  */
 firetable.actions.viewLargerCard = function (cardid) {
-  var $src = $('#cardMaker' + cardid);
-  if (!$src.length) return;
-  // Clone the canvas and draw the source into it at native resolution
-  var srcCanvas = $src[0];
-  var $dest = $('#cardViewLargerCanvas');
-  var dest = $dest[0];
-  dest.width  = srcCanvas.width;
-  dest.height = srcCanvas.height;
-  dest.getContext('2d').drawImage(srcCanvas, 0, 0);
-  document.getElementById('cardViewLargerModal').showModal();
+  var src = document.getElementById('cardMaker' + cardid);
+  if (!src) return;
+  var modal = document.getElementById('cardViewLargerModal');
+  // A fresh canvas each time: images still loading for the card shown before
+  // then draw on the old, detached one instead of over this card
+  var old = document.getElementById('cardMakerViewLarger');
+  var dest = old.cloneNode(false);
+  old.parentNode.replaceChild(dest, old);
+  var data = src.cardData;
+  // Collection cards can be browsed with ← / → (in the order shown)
+  var $spots = $('#cardsMain .caseCardSpot:visible');
+  var idx = $spots.index($('#caseCardSpot' + cardid));
+  firetable.cardViewing = { id: cardid, list: idx === -1 ? [] : $spots.map(function () { return $(this).data('cardkey'); }).get() };
+  $('#cardPrev, #cardNext').prop('hidden', firetable.cardViewing.list.length < 2);
+
+  if (data) {
+    // Redraw the card at 4× (sharp on any screen) instead of stretching the small one
+    var scale = 4;
+    dest.width = 225 * scale;
+    dest.height = 300 * scale;
+    firetable.actions.displayCard(JSON.parse(JSON.stringify(data)), 'ViewLarger', { scale: scale });
+    var strip = firetable.ui.strip;
+    $('#cardViewLargerTitle').text(strip(String(data.djname || 'Unknown DJ')) + "'s card");
+    $('#cardViewLarger .cardInfoTrack, #cardViewLargerModal .cardInfoTrack').text(strip(String(data.artist || '')) + (data.title ? ' - ' + strip(String(data.title)) : ''));
+    $('#cardViewLargerModal .cardInfoMeta').text(
+      'Card No. ' + data.cardnum + ' · #' + data.num + ' · Max operating temp ' + data.temp + '° · Printed ' + firetable.utilities.format_date(data.date)
+    );
+    dest.setAttribute('aria-label', 'DJ card: ' + strip(String(data.djname || '')) + ', ' + strip(String(data.artist || '')) + ' - ' + strip(String(data.title || '')));
+  } else {
+    // Not rendered from data (shouldn't happen): copy the small canvas
+    dest.width = src.width;
+    dest.height = src.height;
+    dest.getContext('2d').drawImage(src, 0, 0);
+  }
+  if (!modal.open) modal.showModal();
 };
+
+/** Show the previous / next card of the collection in the larger view. */
+firetable.actions.stepLargerCard = function (dir) {
+  var v = firetable.cardViewing;
+  if (!v || v.list.length < 2) return;
+  var i = v.list.indexOf(v.id);
+  var next = v.list[(i + dir + v.list.length) % v.list.length];
+  firetable.actions.viewLargerCard(next);
+};
+
+// Larger card view: ← / → and buttons step through the collection; the card
+// tilts toward the pointer with a soft glare (not on touch or reduced motion)
+$(document)
+  .off('click.cardNav').on('click.cardNav', '#cardPrev, #cardNext', function () {
+    firetable.actions.stepLargerCard(this.id === 'cardNext' ? 1 : -1);
+  })
+  .off('keydown.cardNav').on('keydown.cardNav', '#cardViewLargerModal', function (e) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); firetable.actions.stepLargerCard(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); firetable.actions.stepLargerCard(-1); }
+  })
+  .off('pointermove.cardTilt').on('pointermove.cardTilt', '#cardViewLargerModal .cardTilt', function (e) {
+    if (e.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var r = this.getBoundingClientRect();
+    var x = (e.clientX - r.left) / r.width - 0.5;
+    var y = (e.clientY - r.top) / r.height - 0.5;
+    this.style.setProperty('--tilt-x', (-y * 10).toFixed(2) + 'deg');
+    this.style.setProperty('--tilt-y', (x * 12).toFixed(2) + 'deg');
+    this.style.setProperty('--glare-x', ((x + 0.5) * 100).toFixed(1) + '%');
+    this.style.setProperty('--glare-y', ((y + 0.5) * 100).toFixed(1) + '%');
+    this.classList.add('is-tilting');
+  })
+  .off('pointerleave.cardTilt').on('pointerleave.cardTilt', '#cardViewLargerModal .cardTilt', function () {
+    this.classList.remove('is-tilting');
+    this.style.removeProperty('--tilt-x');
+    this.style.removeProperty('--tilt-y');
+  });
 
 /**
  * Show the gift-card confirmation popover.
@@ -334,9 +395,12 @@ firetable.actions.showCard = function (cardid, chatid) {
  * @param {string} [data.set] - Robohash set override
  * @param {string|boolean} [data.special] - Card style key: false/empty (classic), "id8", "id9", or "v2"
  * @param {string} chatid - Suffix for the canvas element ID ("cardMaker" + chatid)
+ * @param {{scale: number}} [opts] - Draw at this many times the 225×300 size
  */
-firetable.actions.displayCard = function (data, chatid) {
+firetable.actions.displayCard = function (data, chatid, opts) {
   firetable.debug && console.log("display card");
+  var scale = (opts && opts.scale) || 1;
+  var original = scale === 1 ? JSON.parse(JSON.stringify(data)) : null; // before colours are adjusted below
 
   function finishCardRender() {
     firetable.actions.markCardRendered(chatid);
@@ -360,9 +424,30 @@ firetable.actions.displayCard = function (data, chatid) {
   var set = data.set || "set1";
   var canvas = document.getElementById('cardMaker' + chatid);
   if (!canvas || !canvas.getContext) return;
+  // Keep what it was drawn from, so "View larger" can redraw it sharply
+  if (original) canvas.cardData = original;
+  // Bigger avatars when drawing larger (2× is plenty, and the avatar server
+  // rate-limits big images)
+  var avatarPx = function (px) { var n = Math.round(px * Math.min(scale, 2)); return n + "x" + n; };
+  /**
+   * Load the DJ's avatar; if the big one fails (rate limit, offline), use the
+   * normal size, and if that fails too, carry on without it (image = null).
+   */
+  var loadAvatar = function (px, onDone) {
+    var img = new Image();
+    var tries = [firetable.utilities.avatarURL(data.djid, data.djname, avatarPx(px), "robohash:" + set)];
+    if (scale !== 1) tries.push(firetable.utilities.avatarURL(data.djid, data.djname, px + "x" + px, "robohash:" + set));
+    img.onload = function () { onDone(img); };
+    img.onerror = function () {
+      if (tries.length) img.src = tries.shift();
+      else onDone(null);
+    };
+    img.src = tries.shift();
+  };
 
   var ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(scale, 0, 0, scale, 0, 0); // all drawing below is in 225×300 units
+  ctx.clearRect(0, 0, 225, 300);
   var accentColor = (data.colors && data.colors.color) || firetable.orange;
   var accentText = (data.colors && data.colors.txt) || "#fff";
   var accentRgb = firetable.utilities.hexToRGB(accentColor) || { r: 244, g: 129, b: 11 };
@@ -434,10 +519,9 @@ firetable.actions.displayCard = function (data, chatid) {
 
     // Standard legacy image loader: avatar then album art
     var legacyDoImages = function () {
-      var legAvatar = new Image();
-      legAvatar.onload = function () {
+      loadAvatar(175, function (legAvatar) {
         if (!ctx) return;
-        ctx.drawImage(this, 20, 30, 175, 175);
+        if (legAvatar) ctx.drawImage(legAvatar, 20, 30, 175, 175);
         if (data.image) {
           var legAlbum = new Image();
           legAlbum.onload = function () {
@@ -456,8 +540,7 @@ firetable.actions.displayCard = function (data, chatid) {
           ctx = null;
           finishCardRender();
         }
-      };
-      legAvatar.src = firetable.utilities.avatarURL(data.djid, data.djname, "175x175", "robohash:" + set);
+      });
     };
 
     // Legacy special edition overlays
@@ -530,7 +613,7 @@ firetable.actions.displayCard = function (data, chatid) {
           };
           legId9.src = 'img/id9.png';
         };
-          legRobot.src = firetable.utilities.avatarURL(data.djid, data.djname, "110x110", "robohash:" + set);
+          legRobot.src = firetable.utilities.avatarURL(data.djid, data.djname, avatarPx(110), "robohash:" + set);
       };
       legArnold.src = 'img/arnold.png';
 
@@ -708,6 +791,7 @@ firetable.actions.displayCard = function (data, chatid) {
       ctx.fillStyle = shade;
       ctx.fillRect(heroX, heroY, heroW, heroH);
 
+      if (!image) return; // avatar didn't load
       var imageRatio = image.naturalWidth / image.naturalHeight;
       var heroRatio = heroW / heroH;
       var drawW;
@@ -868,7 +952,7 @@ firetable.actions.displayCard = function (data, chatid) {
    * Default image loader: draws avatar + album art thumbnail.
    */
   var doImages = function () {
-    var avatarImg = new Image();
+    var avatarImg = null;
     var albumImg = null;
     var heroDrawn = false;
     var albumBadgeDrawn = false;
@@ -905,11 +989,11 @@ firetable.actions.displayCard = function (data, chatid) {
       albumBadgeDrawn = true;
       finishIfDone();
     }
-    avatarImg.onload = function () {
+    loadAvatar(175, function (img) {
+      avatarImg = img; // null: draw the card without it
       avatarReady = true;
       tryDrawHero();
-    };
-    avatarImg.src = firetable.utilities.avatarURL(data.djid, data.djname, "175x175", "robohash:" + set);
+    });
 
     drawAlbumImage(function (loadedAlbumImg) {
       if (loadedAlbumImg) albumImg = loadedAlbumImg;

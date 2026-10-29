@@ -137,15 +137,8 @@ firetable.ui.formMessage = function (formSel, msg, type) {
 /** Fill the "Where to?" picker with the user's playlists. */
 firetable.ui.fillStealPicker = function (allPlaylists) {
   var $picker = $("#stealpicker");
-  $picker.html(
-    '<option value="-1">Where to?</option>' +
-    '<option value="0">Default Playlist</option>'
-  );
-  for (var key in allPlaylists) {
-    if (allPlaylists.hasOwnProperty(key)) {
-      $picker.append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
-    }
-  }
+  firetable.ui.fillPlaylistSelect($picker, allPlaylists, [{ value: "-1", text: "Where to?" }]);
+  $picker.val("-1");
 };
 
 /**
@@ -175,6 +168,76 @@ firetable.actions.openStealPicker = function ($btn, target, placement) {
     $("#stealContain").show();
     firetable.ui.positionPopover($btn[0], stealContainEl, document.getElementById('stealArrow'), placement || 'left');
   });
+};
+
+// ─── Grab stats (#47) ────────────────────────────────────────────────────────
+// When someone adds a track to their playlist from the stage or from Recent /
+// Fresh, the DJ who played it gets credit. It's private: only that DJ can read
+// grabs/<their uid>, nobody sees who grabbed what, and nothing is announced in
+// the room. Each listener counts once per track (grabs/<dj>/<track>/<uid>).
+
+/** Database-safe key for a track. */
+firetable.utilities.grabKey = function (type, cid) {
+  return String(type) + '_' + String(cid).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 64);
+};
+
+/**
+ * Credit a DJ for a grab. Ignores your own tracks and repeat grabs.
+ * @param {string} djid - Who played the track
+ * @param {number|string} type - 1 YouTube, 2 SoundCloud
+ * @param {string} cid - Track id
+ */
+firetable.actions.recordGrab = function (djid, type, cid) {
+  if (!djid || !cid || !ftapi.uid || djid === ftapi.uid) return;
+  var ref = ftapi.db().ref('grabs/' + djid + '/' + firetable.utilities.grabKey(type, cid) + '/' + ftapi.uid);
+  ref.set(firebase.database.ServerValue.TIMESTAMP).catch(function () { /* already counted, or rules not deployed */ });
+};
+
+firetable.grabs = { ref: null, tracks: {}, since: 0 };
+
+/** Listen to your own grab stats (count in Profile, a quiet toast for new grabs). */
+firetable.actions.watchGrabs = function () {
+  firetable.actions.unwatchGrabs();
+  if (!ftapi.uid) return;
+  var g = firetable.grabs;
+  g.since = ftapi.now();
+  g.ref = ftapi.db().ref('grabs/' + ftapi.uid);
+  var onTrack = function (snap) {
+    var who = snap.val() || {};
+    var before = g.tracks[snap.key] || {};
+    g.tracks[snap.key] = who;
+    var fresh = Object.keys(who).some(function (uid) { return !before[uid] && who[uid] > g.since; });
+    firetable.ui.renderGrabStats();
+    if (fresh) {
+      var song = firetable.song || {};
+      var playing = song.djid === ftapi.uid && firetable.utilities.grabKey(song.type, song.cid) === snap.key;
+      firetable.ui.toast(playing ? 'Someone added the track you\'re playing to their playlist 🎶' : 'Someone added one of your tracks to their playlist 🎶', 'success');
+    }
+  };
+  var onGone = function (snap) { delete g.tracks[snap.key]; firetable.ui.renderGrabStats(); };
+  g.ref.on('child_added', onTrack, function () { /* rules not deployed yet */ });
+  g.ref.on('child_changed', onTrack);
+  g.ref.on('child_removed', onGone);
+};
+
+firetable.actions.unwatchGrabs = function () {
+  var g = firetable.grabs;
+  if (g.ref) g.ref.off();
+  g.ref = null;
+  g.tracks = {};
+  firetable.ui.renderGrabStats();
+};
+
+/** Profile tab: "Your tracks were added to playlists N times (M tracks)". */
+firetable.ui.renderGrabStats = function () {
+  var tracks = firetable.grabs.tracks, keys = Object.keys(tracks);
+  var total = keys.reduce(function (n, k) { return n + Object.keys(tracks[k] || {}).length; }, 0);
+  var $el = $('#grabStats');
+  if (!total) { $el.text('When listeners add a track you played to their playlists, you\'ll see the count here. Only you can see it.'); return; }
+  $el.empty()
+    .append($('<strong></strong>').text(total.toLocaleString()))
+    .append(document.createTextNode(total === 1 ? ' grab' : ' grabs'))
+    .append(document.createTextNode(' across ' + keys.length.toLocaleString() + (keys.length === 1 ? ' track' : ' tracks') + '. Only you can see this.'));
 };
 
 // ─── LinkGrabber (Drag-and-Drop Track Detection) ─────────────────────────────
@@ -460,6 +523,10 @@ firetable.ui.initSettings = function () {
   firetable.showSongAnnouncements = readSetting(STORAGE.showSongAnnouncements, true);
   $("#showSongAnnouncementsToggle").prop("checked", firetable.showSongAnnouncements);
 
+  // ── Share "is typing" (#33) ──
+  firetable.shareTyping = readSetting(STORAGE.shareTyping, true);
+  $("#shareTypingToggle").prop("checked", firetable.shareTyping);
+
   // ── Chat Sound (Badoop) ──
   firetable.playBadoop = readSetting(STORAGE.badoop, true);
   $("#badoopToggle").prop("checked", firetable.playBadoop);
@@ -493,6 +560,9 @@ firetable.ui.initSettings = function () {
   }
   firetable.ui.updateScreenBtn(firetable.screenControl);
 
+  // ── View density (#142) ──
+  firetable.ui.applyDensity(localStorage[STORAGE.density]);
+
   // ── Avatar Style ──
   var savedAvatarStyle = localStorage[STORAGE.avatarStyle];
   if (savedAvatarStyle) {
@@ -501,6 +571,18 @@ firetable.ui.initSettings = function () {
   }
 
   firetable.ui.applySongAnnouncementVisibility();
+};
+
+/**
+ * Compact / Cozy / Comfortable spacing for playlists, Recent and chat.
+ * @param {string} density - "compact" | "cozy" | "comfortable"
+ */
+firetable.ui.applyDensity = function (density) {
+  if (["compact", "cozy", "comfortable"].indexOf(density) === -1) density = "cozy";
+  document.body.classList.remove("density-compact", "density-cozy", "density-comfortable");
+  document.body.classList.add("density-" + density);
+  $("#densityPicker").val(density);
+  return density;
 };
 
 /**
@@ -799,6 +881,23 @@ firetable.ui.tooltip = (function () {
   function bind() {
     tipEl = document.getElementById('ft-tooltip');
 
+    // ── Chat: what was playing when a message was posted (#139) ──
+    var playingText = function (el) {
+      var song = firetable.utilities.songPlayingAt(el.getAttribute('data-time'));
+      if (!song) return '';
+      return '♪ ' + firetable.ui.strip(song.artist + ' - ' + song.title) + (song.dj ? ' · DJ ' + song.dj : '');
+    };
+    $('#chats').on('mouseenter.ft-tooltip', '.chatTime[data-time]', function () {
+      var text = playingText(this);
+      if (text) show(this, text);
+    }).on('mouseleave.ft-tooltip', '.chatTime', hide)
+      .on('click.ft-tooltip', '.chatTime[data-time]', function () {
+        // touch screens have no hover: tap the time instead
+        if (!noHover.matches) return;
+        var text = playingText(this);
+        if (text) firetable.ui.toast(text);
+      });
+
     // ── Deck: DJ name on plaque hover ──
     $(document).on('mouseenter.ft-tooltip', '#deck .djname', function () {
       var playcount = $(this).siblings('.playcount').text().trim();
@@ -1067,6 +1166,20 @@ firetable.ui.tooltip = (function () {
           }
         }
       }
+      // Mods can put someone of lower rank on the bus (#121); the bot checks rank too
+      var rank = function (u) { return !u ? 0 : u.supermod ? 2 : u.mod ? 1 : 0; };
+      var djEntry = null;
+      [firetable.tableData, firetable.waitlistData].forEach(function (list) {
+        for (var bk in list || {}) {
+          if (list.hasOwnProperty(bk) && list[bk] && list[bk].id === userid) djEntry = list[bk];
+        }
+      });
+      var canBusOther = !!(isMod && !isSelf && djEntry && rank(userData) < rank(ownUser));
+      $userTip.toggleClass('can-bus-other', canBusOther);
+      if (canBusOther) departureScheduled = !!djEntry.removeAfter;
+      $userTip.find('.utt-bus-btn').attr('title', isSelf
+        ? (departureScheduled ? "Don't step down after your next play" : 'Take the bus (step down after next play)')
+        : (departureScheduled ? "Don't send " + (userData.username || 'them') + ' home after their next play' : 'Send ' + (userData.username || 'them') + ' home after their next play'));
       $userTip.toggleClass('departure-on', departureScheduled);
       $deckBtn
         .toggleClass('is-disabled', isOnDeck)
@@ -1118,7 +1231,9 @@ firetable.ui.tooltip = (function () {
       })
       .on('click', '[data-action="toggle-bus"]', function () {
         var isDepartureOn = $userTip.hasClass('departure-on');
-        ftapi.actions.sendBotCommand(isDepartureOn ? '!dontremoveme' : '!removeafter');
+        var uid = $userTip.attr('data-for');
+        var other = uid && uid !== ftapi.uid && ftapi.users[uid] && ftapi.users[uid].username;
+        ftapi.actions.sendBotCommand((isDepartureOn ? '!dontremoveme' : '!removeafter') + (other ? ' ' + other : ''));
         $userTip.toggleClass('departure-on', !isDepartureOn);
         userTipEl.hidePopover();
       })
@@ -1161,7 +1276,46 @@ firetable.ui.tooltip = (function () {
   return { bind: bind, show: show, hide: hide };
 })();
 
+/**
+ * Phones: when the on-screen keyboard opens it can cover the field being
+ * typed in (#163). Android Chrome resizes the page for it (see the viewport
+ * meta tag); iOS doesn't, so whenever the visible area shrinks or scrolls
+ * while a field has focus, smoothly scroll the field back into view.
+ */
+firetable.ui.keepFocusedFieldVisible = function () {
+  var vv = window.visualViewport;
+  var isField = function (el) {
+    return el && (el.tagName === "TEXTAREA" || el.tagName === "SELECT" ||
+      (el.tagName === "INPUT" && !/^(checkbox|radio|button|submit|range|color|file)$/i.test(el.type)) ||
+      el.isContentEditable);
+  };
+  var timer = null;
+  var reveal = function () {
+    var el = document.activeElement;
+    if (!isField(el)) return;
+    var r = el.getBoundingClientRect();
+    var top = vv ? vv.offsetTop : 0;
+    var bottom = top + (vv ? vv.height : window.innerHeight);
+    if (r.top >= top + 8 && r.bottom <= bottom - 8) return; // already visible
+    var smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "center", inline: "nearest", behavior: smooth ? "smooth" : "auto" });
+  };
+  var soon = function () {
+    clearTimeout(timer);
+    timer = setTimeout(reveal, 120); // let the keyboard finish opening
+  };
+  if (vv) {
+    vv.addEventListener("resize", soon);
+    vv.addEventListener("scroll", soon);
+  }
+  window.addEventListener("resize", soon);
+  document.addEventListener("focusin", function (e) {
+    if (isField(e.target)) setTimeout(reveal, 350); // after the keyboard animation
+  });
+};
+
 firetable.ui.setupMiscEvents = function () {
+  firetable.ui.keepFocusedFieldVisible();
 
   // ── Floating UI tooltips ──
   firetable.ui.tooltip.bind();
@@ -1193,6 +1347,57 @@ firetable.ui.setupMiscEvents = function () {
   window.matchMedia('(min-width: 1024px)').addEventListener('change', function () {
     firetable.nav.apply();
   });
+
+  // ── Full-screen video, with the room's info floating over it (#155) ──
+  (function () {
+    var stage = document.getElementById('stage');
+    var $btn = $('#fullscreenBtn');
+    var request = stage.requestFullscreen || stage.webkitRequestFullscreen;
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    var current = function () { return document.fullscreenElement || document.webkitFullscreenElement || null; };
+    if (!request || !(document.fullscreenEnabled || document.webkitFullscreenEnabled)) return; // e.g. iPhone
+    $btn.prop('hidden', false);
+    var idleTimer = null, screenWasDown = false;
+    var wake = function () {
+      stage.classList.remove('fs-idle');
+      clearTimeout(idleTimer);
+      if (current() === stage) idleTimer = setTimeout(function () { stage.classList.add('fs-idle'); }, 3000);
+    };
+    $btn.on('click', function () {
+      if (current() === stage) exit.call(document);
+      else request.call(stage);
+    });
+    $(document).on('fullscreenchange webkitfullscreenchange', function () {
+      var on = current() === stage;
+      $('#stage').toggleClass('is-fullscreen', on);
+      $btn.attr('aria-label', on ? 'Exit full screen' : 'Full screen').find('i').text(on ? 'fullscreen_exit' : 'fullscreen');
+      $('#tip-fullscreenBtn').text(on ? 'Exit full screen' : 'Full screen');
+      if (on) {
+        // the point of full screen is the video: lower the screen while in it
+        screenWasDown = document.body.classList.contains('screen');
+        firetable.utilities.screenDown();
+        wake();
+      } else {
+        clearTimeout(idleTimer);
+        stage.classList.remove('fs-idle');
+        if (!screenWasDown) firetable.ui.applyScreenSetting();
+      }
+      $(window).trigger('resize');
+    });
+    $(stage).on('mousemove touchstart keydown', wake);
+  })();
+
+  // ── Open the DJ playlist in the Playlists view (#162) ──
+  $("#djlistOpen").on("click", function () {
+    var listID = $("#djlistpicker").val() || "0";
+    if (firetable.nav.view !== "playlists" || firetable.nav.mobileSection !== "view") firetable.nav.setView("playlists");
+    if ($("#listpicker").val() !== listID) $("#listpicker").val(listID).trigger("change");
+    else firetable.ui.showQueuePanel();
+  });
+
+  // ── Grab stats (private to each DJ) ──
+  ftapi.events.on('loggedIn', firetable.actions.watchGrabs);
+  ftapi.events.on('loggedOut', firetable.actions.unwatchGrabs);
 
   // ── Grab (steal to another playlist) ──
   $("#grab").on("click", function () {
@@ -1261,6 +1466,8 @@ firetable.ui.setupMiscEvents = function () {
         String(src.cid) === String(firetable.song.cid) &&
         String(src.type) === String(firetable.song.type));
       firetable.stealTarget = null;
+      // Credit the DJ who played it (privately; see recordGrab)
+      firetable.actions.recordGrab(src.djid || (isNowPlaying && firetable.song.djid), src.type, src.cid);
       // Now-playing track goes to the bottom; any other source (history,
       // discover, search) goes to the top, added and moved in one step.
       if (isNowPlaying) {
@@ -1337,7 +1544,7 @@ firetable.ui.setupMiscEvents = function () {
     $("#plMachine").val("");
   });
   $("dialog").on("click", function (e) {
-    if (e.target === this) {
+    if (e.target === this && !this.hasAttribute("data-required")) {
       this.close();
       $("#plMachine").val("");
     }
@@ -1415,6 +1622,11 @@ firetable.ui.setupMiscEvents = function () {
     firetable.debug && console.log("badoop " + (this.checked ? "on" : "off"));
     localStorage[STORAGE.badoop] = this.checked;
     firetable.playBadoop = this.checked;
+  });
+  $('#shareTypingToggle').change(function () {
+    localStorage[STORAGE.shareTyping] = this.checked;
+    firetable.shareTyping = this.checked;
+    if (!this.checked) firetable.actions.setTyping(false);
   });
   $('#showImagesToggle').change(function () {
     firetable.debug && console.log("show images " + (this.checked ? "on" : "off"));
@@ -1495,6 +1707,13 @@ firetable.ui.setupMiscEvents = function () {
     firetable.ui.applyScreenSetting();
   });
 
+  // ── View density ──
+  $('#densityPicker').on('change', function () {
+    var wasAtBottom = firetable.utilities.isChatPrettyMuchAtBottom();
+    localStorage[STORAGE.density] = firetable.ui.applyDensity($(this).val());
+    if (wasAtBottom) firetable.utilities.scrollToBottom();
+  });
+
   // ── Avatar style picker ──
   $('#avatarStylePicker').on('change', function () {
     var val = $(this).val();
@@ -1556,6 +1775,10 @@ firetable.ui.init = function () {
   firetable.ui.setupChatEvents();
   firetable.ui.setupSearchEvents();
   firetable.ui.setupPlaylistEvents();
+  firetable.ui.setupBrokenCheck();
+  firetable.ui.setupPlaylistIndex();
+  firetable.ui.setupPickName();
+  firetable.ui.setupProviderSignIn();
   firetable.ui.setupUserEvents();
   firetable.ui.setupRoomEvents();
   firetable.ui.setupMiscEvents();

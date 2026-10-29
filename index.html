@@ -5,7 +5,7 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>firetable</title>
 	<meta name="description" content="Collaborative radio." />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
 	<script src="js/viewport.js?v=01.11.13"></script>
 	<meta name="theme-color" content="#181818" />
 	<link rel="shortcut icon" href="favicon.png" />
@@ -26,7 +26,8 @@
 <body>
 	<div id="mainGrid" class="pre-auth">
 		<header id="topbar">
-			<div id="roomlogo" title="Indie Discotheque" aria-label="Indie Discotheque"></div>
+			<h1 class="sr-only">Indie Discotheque</h1>
+			<div id="roomlogo" role="img" title="Indie Discotheque" aria-label="Indie Discotheque"></div>
 			<div class="flexpacer"></div>
 			<div id="topbarUtils">
 				<button id="socialTrigger" type="button" role="button" class="header_icon" aria-label="Community" popovertarget="socialPopover" style="anchor-name: --tip-socialTrigger" aria-describedby="tip-socialTrigger">
@@ -35,15 +36,19 @@
 				<span id="tip-socialTrigger" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-socialTrigger">Community</span>
 				<a id="roomInfo" class="header_icon" aria-label="About" target="_blank" href="about" style="anchor-name: --tip-roomInfo" aria-describedby="tip-roomInfo"><i class="material-symbols-outlined">&#xE887;</i></a>
 				<span id="tip-roomInfo" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-roomInfo">About</span>
-				<div id="loggedInUser" class="openModal header_icon" data-modal="accountSettingsBox" data-tab="profile-tab" aria-label="Profile &amp; Settings" style="anchor-name: --tip-loggedInUser" aria-describedby="tip-loggedInUser">
-						<div class="ft-avatar skel"></div>
-				</div>
+				<button id="inboxTrigger" type="button" class="header_icon" aria-label="Mentions" aria-haspopup="dialog" style="anchor-name: --tip-inboxTrigger" aria-describedby="tip-inboxTrigger">
+					<i class="material-symbols-outlined">alternate_email</i><span id="inboxBadge" hidden></span>
+				</button>
+				<span id="tip-inboxTrigger" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-inboxTrigger">Mentions</span>
+				<button type="button" id="loggedInUser" class="openModal header_icon" data-modal="accountSettingsBox" data-tab="profile-tab" aria-label="Profile &amp; Settings" aria-haspopup="dialog" style="anchor-name: --tip-loggedInUser" aria-describedby="tip-loggedInUser">
+						<span class="ft-avatar skel"></span>
+				</button>
 				<span id="tip-loggedInUser" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-loggedInUser">Profile &amp; Settings</span>
 				<div id="reconnecting" role="status">Reconnecting…</div>
 			</div>
 		</header>
 
-		<section id="stage">
+		<section id="stage" role="main" aria-label="Room">
 		<div id="djStage">
 			<div id="stageBackdrop"></div>
 			<div id="screenBox">
@@ -116,6 +121,10 @@
 					<i class="material-symbols-outlined"> refresh </i>
 				</button>
 				<span id="tip-reloadtrack" role="tooltip" class="ft-tip" style="position-anchor: --tip-reloadtrack">Reload audio</span>
+				<button role="button" class="butt graybutt iconbutt" id="fullscreenBtn" aria-label="Full screen" tabindex="0" hidden style="anchor-name: --tip-fullscreenBtn" aria-describedby="tip-fullscreenBtn">
+					<i class="material-symbols-outlined">fullscreen</i>
+				</button>
+				<span id="tip-fullscreenBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-fullscreenBtn">Full screen</span>
 			</div>
 			<div id="stageActions">
 				<button role="button" class="butt graybutt iconbutt" id="fire" aria-label="Fire!" tabindex="0" style="anchor-name: --tip-fire" aria-describedby="tip-fire">
@@ -145,10 +154,19 @@
 			<div id="npText">
 				<div id="track" class="skel">Loading firetable…</div>
 				<div id="artist" class="skel">&nbsp;</div>
+				<div id="npBpm" hidden></div>
 				<div id="plays">
 					<div id="playCount"></div>
 					<div id="firstPlay"></div>
 					<div id="lastPlay"></div>
+				</div>
+				<div class="npModActions">
+					<button type="button" id="npFixTags" class="npFixTags" title="Fix tags" aria-label="Fix this song's tags"><i class="material-symbols-outlined">edit</i> Fix tags</button>
+					<button type="button" id="npFlag" class="npFixTags" title="Flag track" aria-label="Flag this track" aria-haspopup="menu"><i class="material-symbols-outlined">flag</i> Flag</button>
+				</div>
+				<div id="themeLine">
+					<span class="themeLabel">Theme</span>
+					<div id="currentThemeWrap"><div id="currentTheme"></div></div>
 				</div>
 			</div>
 		</div>
@@ -158,12 +176,12 @@
 		<div id="themebox">
 			<div id="timrUp" class="themeTimr"></div>
 			<div class="themeCenter">
-				<div id="currentTheme" hidden></div>
 				<div id="djlistpickerWrap">
 					<span id="djlistpickerLabel">DJ Playlist:</span>
-					<select id="djlistpicker">
+					<select id="djlistpicker" aria-labelledby="djlistpickerLabel">
 						<option value="0">Default Playlist</option>
 					</select>
+					<button type="button" id="djlistOpen" class="butt graybutt iconbutt" title="Open in Playlists" aria-label="Open the DJ playlist in Playlists"><i class="material-symbols-outlined">playlist_play</i></button>
 					<div id="deckQueue"></div>
 				</div>
 			</div>
@@ -172,23 +190,23 @@
 
 		</section>
 
-		<div id="appShell">
+		<div id="appShell" role="region" aria-label="Room panels">
 
-		<nav id="minimodeoptions" class="tabs" role="tablist" aria-label="Sections">
+		<div id="minimodeoptions" class="tabs" role="tablist" aria-label="Sections">
 			<button type="button" role="tab" class="tab on" id="mm-playlists" aria-selected="true">Playlists</button>
 			<button type="button" role="tab" class="tab" id="mm-history" aria-selected="false">Recent</button>
 			<button type="button" role="tab" class="tab" id="mm-discover" aria-selected="false">Fresh</button>
 			<button type="button" role="tab" class="tab" id="mm-cards" aria-selected="false">Cards</button>
 			<button type="button" role="tab" class="tab" id="mmchat" aria-selected="false">Chat</button>
 			<button type="button" role="tab" class="tab" id="mmusrs" aria-selected="false">People</button>
-		</nav>
+		</div>
 
-		<nav id="sidepanel-tabs" class="tabs" role="tablist" aria-label="Side panel">
+		<div id="sidepanel-tabs" class="tabs" role="tablist" aria-label="Side panel">
 			<button type="button" role="tab" class="tab on" id="sp-chat" aria-selected="true">Chat</button>
 			<button type="button" role="tab" class="tab" id="sp-people" aria-selected="false">People</button>
-		</nav>
+		</div>
 
-		<div id="actualChat">
+		<div id="actualChat" role="region" aria-label="Chat">
 			<div id="chatsWrap" class="scroll-view">
 				<div id="chats" role="log" aria-label="Chat messages">
 					<div id="chatKEY" class="newChat">
@@ -243,6 +261,7 @@
 					</div>
 				</div>
 			</div>
+			<div id="typingIndicator" aria-live="polite"></div>
 			<div id="chatbottom">
 				<button role="button" class="butt graybutt iconbutt" id="pickEmoji" aria-label="Emoji" style="anchor-name: --tip-pickEmoji" aria-describedby="tip-pickEmoji">
 					<i class="material-symbols-outlined"> insert_emoticon </i>
@@ -269,7 +288,7 @@
 			</div>
 		</div>
 
-		<div id="usersbox">
+		<div id="usersbox" role="region" aria-label="DJs and people">
 			<div id="usersStats">
 				<h2><span id="numListeners"></span> People</h2>
 				<div class="listenerType">
@@ -318,14 +337,19 @@
 			<div class="queuetop">
 				<div id="queueControls">
 					<div id="listpickerWrap">
-						<select id="listpicker">
+						<select id="listpicker" aria-label="Playlist">
 							<option value="0">Default Playlist</option>
 						</select>
+						<span id="listCount" aria-live="polite" hidden></span>
 						<div id="plmanager">
 							<input type="text" placeholder="Name your playlist, hit Enter" id="plmaker" enterkeyhint="done" />
 						</div>
 					</div>
 					<div id="qControlButtons">
+						<button role="button" class="butt graybutt iconbutt" id="plIndexBtn" aria-label="All playlists" aria-haspopup="dialog" style="anchor-name: --tip-plIndexBtn" aria-describedby="tip-plIndexBtn">
+							<i class="material-symbols-outlined">library_music</i>
+						</button>
+						<span id="tip-plIndexBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-plIndexBtn">All playlists</span>
 						<button role="button" class="butt graybutt iconbutt" id="addToQueueBttn" aria-label="Find tracks" style="anchor-name: --tip-addToQueueBttn" aria-describedby="tip-addToQueueBttn">
 							<i class="material-symbols-outlined"> search </i>
 						</button>
@@ -338,6 +362,10 @@
 							<i class="material-symbols-outlined"> merge_type </i>
 						</button>
 						<span id="tip-mergeLists" role="tooltip" class="ft-tip" style="position-anchor: --tip-mergeLists">Merge playlists</span>
+						<button role="button" class="butt graybutt iconbutt" id="checkBroken" aria-label="Check for broken tracks" aria-haspopup="dialog" style="anchor-name: --tip-checkBroken" aria-describedby="tip-checkBroken">
+							<i class="material-symbols-outlined">troubleshoot</i>
+						</button>
+						<span id="tip-checkBroken" role="tooltip" class="ft-tip" style="position-anchor: --tip-checkBroken">Check for broken tracks</span>
 						<button role="button" class="butt graybutt iconbutt" id="plAddLauncher" aria-label="New or Import playlist" aria-haspopup="menu" aria-expanded="false" style="anchor-name: --tip-plAddLauncher" aria-describedby="tip-plAddLauncher">
 							<i class="material-symbols-outlined">add</i>
 						</button>
@@ -426,11 +454,12 @@
 					<div class="pv-art histart">
 						<button type="button" class="material-symbols-filled previewicon" title="Preview" aria-label="Preview">&#xE037;</button>
 					</div>
-					<span class="ft-avatar pv-dj-avatar dj-avatar-tip"></span>
+					<span class="ft-avatar pv-dj-avatar dj-avatar-tip" role="img"></span>
 					<div class="listwords"><div class="histlink"></div></div>
 					<a class="row-icon tracklink-btn" target="_blank" rel="noopener" href="" title="Open track" aria-label="Open track"></a>
 					<button type="button" class="histeal material-symbols-outlined row-icon" title="Add to playlist" aria-label="Add to playlist">&#xE03B;</button>
 					<button type="button" class="material-symbols-outlined row-icon edittags" title="Edit tags" aria-label="Edit tags">edit</button>
+					<button type="button" class="material-symbols-outlined row-icon flagplay" title="Flag track" aria-label="Flag this track in the DJ's playlists" aria-haspopup="menu">flag</button>
 				</div>
 				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:15rem"></div></div>
 				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:11rem"></div></div>
@@ -444,7 +473,13 @@
 
 		</div><!-- /#appShell -->
 
-		<div id="discover" class="scroll-view">
+		<div id="discover" class="scroll-view" role="region" aria-label="Fresh in the room">
+			<!-- Shown only while logged out, when Fresh sits next to the sign-up form -->
+			<div id="freshIntro">
+				<h2>Fresh in the room</h2>
+				<p>New music people played here lately.</p>
+				<button type="button" id="minijoin" class="butt small">Sign up / Log in</button>
+			</div>
 			<div id="thediscovers">
 				<div class="pvbar">
 					<div class="pv-art discart">
@@ -457,7 +492,7 @@
 							<button type="button" class="histeal material-symbols-outlined row-icon" title="Add to playlist" aria-label="Add to playlist">&#xE03B;</button>
 						</div>
 						<div class="fresh-meta">
-							<span class="pv-dj-avatar ft-avatar dj-avatar-tip"></span>
+							<span class="pv-dj-avatar ft-avatar dj-avatar-tip" role="img"></span>
 							<span class="histdj"></span>
 							<span class="histdate"></span>
 							<span class="histtime"></span>
@@ -470,18 +505,26 @@
 			</div>
 		</div>
 
-		<div id="login" class="scroll-view">
+		<div id="login" class="scroll-view" role="region" aria-label="Log in or sign up">
 			<div id="welcomeInfo">
 				<h2>Welcome To <span id="welcomeName">Firetable</span>!</h2>
 				<p>
 					Want to jump on the DJ table and pick some h0t tunes to play? Just want to join the
 					conversation?
 				</p>
+				<div id="roomPulse" aria-live="polite"></div>
 				<div class="miniLoginNavOnly"><br/><br/><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
+			</div>
+			<div id="oauthBox" hidden>
+				<button type="button" class="butt oauthBttn" data-provider="google" hidden><svg class="oauthLogo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continue with Google</button>
+				<button type="button" class="butt oauthBttn" data-provider="apple" hidden><svg class="oauthLogo" viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>Continue with Apple</button>
+				<div class="formMessage" role="alert"></div>
+				<p class="oauthTerms">By continuing you agree to the <a href="terms" target="_blank">Terms of Service</a> and <a href="privacy" target="_blank">Privacy Policy</a>.</p>
+				<div class="oauthOr" aria-hidden="true"><span>or use your email</span></div>
 			</div>
 			<div id="logscreen" style="display: none">
 				<form id="loginFormShell" novalidate>
-				<h4>Log In</h4>
+				<h3>Log In</h3>
 				<div class="inputline"><label for="loginemail">Email</label><input type="email" id="loginemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
 				<div class="inputline"><label for="loginpass">Password</label><input type="password" id="loginpass" autocomplete="current-password" enterkeyhint="go" /></div>
 				<div class="formMessage" role="alert"></div>
@@ -492,7 +535,7 @@
 			</div>
 			<div id="createscreen">
 				<form id="createAccountFormShell" novalidate>
-					<h4>Create an Account</h4>
+					<h3>Create an Account</h3>
 					<div class="inputline"><label for="newemail">Email</label><input type="email" id="newemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
 					<div class="inputline"><label for="newusername">Username</label><input type="text" id="newusername" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
 					<div class="inputline"><label for="newpass">Password</label><input type="password" id="newpass" autocomplete="new-password" /></div>
@@ -510,7 +553,7 @@
 			</div>
 			<div id="resetscreen" style="display: none">
 				<form id="resetPasswordFormShell" novalidate>
-				<h4>Reset your password!</h4>
+				<h3>Reset your password!</h3>
 
 				<div class="inputline"><label for="theAddress">Email</label><input type="email" id="theAddress" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" /></div>
 				<div class="formMessage" role="alert"></div>
@@ -534,6 +577,44 @@
 		</button>
 	</div>
 
+	<dialog id="pickNameBox" aria-labelledby="pickNameTitle" data-required>
+		<div class="modalBox">
+			<div class="modalHeader">
+				<h2 id="pickNameTitle">Pick a username</h2>
+			</div>
+			<div class="modalContent">
+				<form id="pickNameForm" novalidate>
+					<p>This is the name people see in the room. Letters, numbers and underscores, up to 22. You can change it later in Profile.</p>
+					<div class="inputline"><label for="pickName">Username</label><input type="text" id="pickName" maxlength="22" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" required /></div>
+					<div class="formMessage" role="alert"></div>
+					<div class="modal-actions">
+						<button type="button" class="butt graybutt" id="pickNameLogout">Log out</button>
+						<button type="submit" class="butt" id="pickNameSave">Let's go</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</dialog>
+
+	<dialog id="plIndexBox" aria-labelledby="plIndexTitle">
+		<div class="modalBox">
+			<div class="modalHeader">
+				<h2 id="plIndexTitle">Your Playlists</h2>
+				<button role="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			</div>
+			<div class="modalContent">
+				<p class="plx-help"><i class="material-symbols-outlined" aria-hidden="true">star</i> Your default opens first and is listed first. <i class="material-symbols-outlined" aria-hidden="true">headphones</i> is the list you DJ from. Drag <i class="material-symbols-outlined" aria-hidden="true">drag_indicator</i> to reorder; click a name to rename it.</p>
+				<ul id="plIndexList" role="list"></ul>
+				<input type="text" id="plIndexNew" placeholder="New playlist name, then Enter" maxlength="80" enterkeyhint="done" autocomplete="off" aria-label="New playlist name" />
+				<div id="plIndexBulk" class="plx-bulk" hidden>
+					<span id="plIndexCount" role="status" aria-live="polite"></span>
+					<button type="button" class="butt graybutt small" id="plIndexClearSel">Clear</button>
+					<button type="button" class="butt redbutt small" id="plIndexDelete">Delete</button>
+				</div>
+			</div>
+		</div>
+	</dialog>
+
 	<dialog id="deletePromptBox">
 		<div class="modalBox">
 			<div class="modalHeader">
@@ -552,10 +633,22 @@
 		</div>
 	</dialog>
 
-	<dialog id="cardViewLargerModal">
+	<dialog id="cardViewLargerModal" aria-labelledby="cardViewLargerTitle">
 		<div class="modalBox">
 			<button role="button" class="butt graybutt iconbutt closeModal" id="cardViewLargerClose" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
-			<canvas id="cardViewLargerCanvas" width="225" height="300"></canvas>
+			<div class="cardStage">
+				<button type="button" class="butt graybutt iconbutt cardNav" id="cardPrev" aria-label="Previous card"><i class="material-symbols-outlined">chevron_left</i></button>
+				<div class="cardTilt">
+					<canvas id="cardMakerViewLarger" width="900" height="1200" role="img"></canvas>
+					<div class="cardGlare" aria-hidden="true"></div>
+				</div>
+				<button type="button" class="butt graybutt iconbutt cardNav" id="cardNext" aria-label="Next card"><i class="material-symbols-outlined">chevron_right</i></button>
+			</div>
+			<div class="cardInfo">
+				<h3 id="cardViewLargerTitle"></h3>
+				<p class="cardInfoTrack"></p>
+				<p class="cardInfoMeta"></p>
+			</div>
 		</div>
 	</dialog>
 
@@ -571,6 +664,7 @@
 			<div class="modalContent">
 				<div id="profile-tab" class="tabPanel">
 					<div id="accountSettingsMain"></div>
+					<div class="grabStatsBox"><i class="material-symbols-outlined" aria-hidden="true">playlist_add</i><p id="grabStats" aria-live="polite"></p></div>
 					Change your username to some other thing...<br /><br />
 					<input type="text" placeholder="Change Username" id="changeUsername" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
 					<div class="responseBox" id="usernameResponse"></div>
@@ -614,6 +708,10 @@
 						<label for="desktopNotifyMentionsToggle">Desktop notifications for @mentions</label>
 					</div>
 					<div class="settingline">
+						<input type="checkbox" id="shareTypingToggle" name="shareTypingToggle">
+						<label for="shareTypingToggle">Show others when I'm typing</label>
+					</div>
+					<div class="settingline">
 
 						<input type="checkbox" id="showImagesToggle" name="showImagesToggle">
 						<label for="showImagesToggle">Show images in chat</label><br />
@@ -625,6 +723,14 @@
 					<div class="settingline">
 						<input type="checkbox" id="showSongAnnouncementsToggle" name="showSongAnnouncementsToggle">
 						<label for="showSongAnnouncementsToggle">Show song announcements in chat</label>
+					</div>
+					<div class="settingline densityPicker">
+						<label for="densityPicker">View density</label>
+						<select id="densityPicker">
+							<option value="compact">Compact</option>
+							<option value="cozy">Cozy</option>
+							<option value="comfortable">Comfortable</option>
+						</select>
 					</div>
 					<div class="settingline">
 						<input type="checkbox" id="mediaDisableToggle" name="mediaDisableToggle">
@@ -720,6 +826,14 @@
 		</div>
 	</div>
 
+	<div id="checkBrokenPopover" popover="auto" class="ft-popover" role="dialog" aria-label="Broken track check">
+		<div id="checkBrokenArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box checkBrokenBox">
+			<p id="checkBrokenStatus" role="status" aria-live="polite"></p>
+			<progress id="checkBrokenBar" max="1" value="0" hidden></progress>
+			<button type="button" class="butt small" id="checkBrokenShow" hidden>Show broken tracks</button>
+		</div>
+	</div>
 	<div id="shuffleQueuePopover" popover="auto" class="ft-popover">
 		<div id="shuffleQueueArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box deleteSongPromptBox shuffleQueuePromptBox">
@@ -746,9 +860,35 @@
 		<div class="ft-popover-box ft-menu" role="menu" aria-label="Track options">
 			<button type="button" role="menuitem" class="butt graybutt" data-act="bottom"><i class="material-symbols-outlined">vertical_align_bottom</i> Send to bottom</button>
 			<button type="button" role="menuitem" class="butt graybutt" data-act="add"><i class="material-symbols-outlined">playlist_add</i> Add to playlist</button>
-			<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><i class="material-symbols-outlined">open_in_new</i> <span class="ft-menu-open-label">Open track</span></a>
+			<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><span class="ft-menu-open-logo" aria-hidden="true"></span> <span class="ft-menu-open-label">Open track</span></a>
 			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete</button>
 		</div>
+	</div>
+
+	<!-- Mods: flag a track (now playing, or a play in Recent) -->
+	<div id="flagMenuPopover" popover="auto" class="ft-popover">
+		<div id="flagMenuArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu" role="menu" aria-label="Flag track as">
+			<div class="ft-menu-title" id="flagMenuTitle">Flag track as</div>
+			<button type="button" role="menuitem" class="butt graybutt" data-flag="broken"><i class="material-symbols-outlined">warning</i> Broken</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-flag="quality"><i class="material-symbols-outlined">disc_full</i> Low audio quality</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-flag="offtheme"><i class="material-symbols-outlined">flag</i> Off theme</button>
+		</div>
+	</div>
+
+	<!-- @mentions inbox (#96) -->
+	<div id="inboxPopover" popover="auto" class="ft-popover">
+		<div id="inboxArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box inboxBox" role="dialog" aria-label="Mentions">
+			<div class="inboxHead"><b>Mentions</b><button type="button" id="inboxClear" class="butt graybutt small">Clear all</button></div>
+			<div id="inboxList"></div>
+		</div>
+	</div>
+
+	<!-- Chat: add a reaction to a message -->
+	<div id="reactPickerPopover" popover="auto" class="ft-popover">
+		<div id="reactPickerArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box reactPicker" role="menu" aria-label="Add a reaction"></div>
 	</div>
 
 	<div id="ft-toast" popover="manual" role="status" aria-live="polite"></div>
@@ -815,6 +955,7 @@
 	<script type="text/javascript" src="js/chat.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/search.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/playlist.js?v=01.11.13"></script>
+	<script type="text/javascript" src="js/playlists.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/users.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/room.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/ui.js?v=01.11.13"></script>

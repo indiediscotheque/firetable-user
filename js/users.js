@@ -53,6 +53,16 @@ firetable.ui.authErrorMessage = function (error) {
       return "This account has been disabled.";
     case 'auth/too-many-requests':
       return "Too many attempts. Wait a few minutes and try again.";
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+    case 'auth/user-cancelled':
+      return "";
+    case 'auth/account-exists-with-different-credential':
+      return "That email already has an account here. Log in with your email and password instead.";
+    case 'auth/operation-not-allowed':
+      return "That sign-in option isn't turned on for this site yet.";
+    case 'auth/unauthorized-domain':
+      return "Signing in with that service isn't set up for this web address yet.";
     case 'auth/network-request-failed':
       return "Couldn't reach the server. Check your connection and try again.";
   }
@@ -65,6 +75,94 @@ firetable.actions.logIn = function (email, password) {
   ftapi.actions.logIn(email, password, function (error) {
     firetable.ui.formMessage('#loginFormShell', firetable.ui.authErrorMessage(error));
     firetable.debug && console.log("log in error:", error);
+  });
+};
+
+// ─── Sign in with Google / Apple (#128) ─────────────────────────────────────
+
+/** Providers this site has turned on (ftconfigs.signInProviders). */
+firetable.utilities.signInProviders = function () {
+  var list = (typeof ftconfigs !== "undefined" && ftconfigs.signInProviders) || [];
+  return (Array.isArray(list) ? list : []).filter(function (p) { return p === "google" || p === "apple"; });
+};
+
+/** Show a button for each provider that's turned on. */
+firetable.ui.setupProviderSignIn = function () {
+  var providers = firetable.utilities.signInProviders();
+  var $box = $("#oauthBox");
+  $box.find(".oauthBttn").each(function () { $(this).prop("hidden", providers.indexOf($(this).attr("data-provider")) === -1); });
+  $box.prop("hidden", !providers.length);
+  $(document).off("click.oauth").on("click.oauth", "#oauthBox .oauthBttn", function () {
+    var name = $(this).attr("data-provider");
+    var $msg = $("#oauthBox .formMessage");
+    $msg.text("");
+    ftapi.actions.logInWithProvider(name, function (error) {
+      $msg.text(firetable.ui.authErrorMessage(error));
+      firetable.debug && console.log("provider sign-in error:", error);
+    });
+  });
+  if (providers.length) {
+    ftapi.actions.redirectSignInError().then(function (error) {
+      if (error) $("#oauthBox .formMessage").text(firetable.ui.authErrorMessage(error));
+    });
+  }
+};
+
+/**
+ * A suggested username from a provider's display name or email: letters,
+ * numbers and underscores, up to 22 characters.
+ * @param {firebase.User} user
+ * @returns {string}
+ */
+firetable.utilities.suggestUsername = function (user) {
+  var base = String((user && (user.displayName || (user.email || "").split("@")[0])) || "")
+    .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "_").replace(/[^0-9a-zA-Z_]/g, "").slice(0, 22);
+  return base || "dj_" + Math.random().toString(36).slice(2, 8);
+};
+
+/** First visit with a new Google/Apple account: choose the name people see. */
+firetable.actions.promptForUsername = function () {
+  var dlg = document.getElementById("pickNameBox");
+  if (!dlg || dlg.open) return;
+  var user = firebase.app("firetable").auth().currentUser;
+  var suggestion = firetable.utilities.suggestUsername(user);
+  $("#pickName").val(suggestion);
+  firetable.ui.formMessage("#pickNameForm", "");
+  dlg.showModal();
+  $("#pickName").trigger("focus").trigger("select");
+  // offer a free variant of the suggestion
+  ftapi.lookup.usernameTaken(suggestion, function (taken) {
+    if (taken && $("#pickName").val() === suggestion) $("#pickName").val(suggestion.slice(0, 18) + "_" + Math.floor(100 + Math.random() * 900));
+  });
+};
+
+firetable.ui.setupPickName = function () {
+  var dlg = document.getElementById("pickNameBox");
+  dlg.addEventListener("cancel", function (e) { e.preventDefault(); }); // a name is required
+  $("#pickNameForm").on("submit", function (e) {
+    e.preventDefault();
+    var name = $("#pickName").val().trim();
+    var $save = $("#pickNameSave").prop("disabled", true);
+    ftapi.lookup.usernameTaken(name, function (taken) {
+      if (taken) {
+        $save.prop("disabled", false);
+        return firetable.ui.formMessage("#pickNameForm", "That name is taken. Try another.");
+      }
+      ftapi.actions.changeName(name, function (err) {
+        $save.prop("disabled", false);
+        if (err) return firetable.ui.formMessage("#pickNameForm", err);
+        ftapi.uname = name;
+        $("#loggedInName").text(name);
+        $("#loggedInUser .ft-avatar").css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, name) + ")");
+        dlg.close();
+        firetable.ui.toast("Welcome, " + name + "!", "success");
+      });
+    });
+  });
+  $("#pickNameLogout").on("click", function () {
+    dlg.close();
+    firetable.actions.logOut();
   });
 };
 
@@ -109,9 +207,10 @@ firetable.actions.showLoginScreen = function () {
   $("#skipTrigger").css("display", "none");
 
   if (firetable.loginForm && !$("#login").html()) {
-    $("#mainGrid").append('<div id="login" class="scroll-view">' + firetable.loginForm + '</div>');
+    $("#mainGrid").append('<div id="login" class="scroll-view" role="region" aria-label="Log in or sign up">' + firetable.loginForm + '</div>');
     firetable.ui.loginEventsInit();
   }
+  firetable.ui.renderRoomPulse();
 };
 
 /**
@@ -143,17 +242,13 @@ firetable.actions.loggedIn = function (user) {
   $("#avatarStylePicker").val(firetable.avatarStyle || "robohash:" + firetable.avatarset);
 
   // Load all playlists into the picker
-  ftapi.lookup.allLists(function (allPlaylists) {
+  firetable.actions.loadPlaylistPrefs().then(function () { ftapi.lookup.allLists(function (allPlaylists) {
     var viewListStorageKey = "firetable.viewList." + ftapi.uid;
     $("#listpicker").off("change");
-    $("#listpicker").html('<option value="0">Default Playlist</option>');
     $("#djlistpicker").off("change");
-    $("#djlistpicker").html('<option value="0">Default Playlist</option>');
-    for (var key in allPlaylists) {
-      if (allPlaylists.hasOwnProperty(key)) {
-        firetable.utilities.addPlaylistToPickers(key, allPlaylists[key].name);
-      }
-    }
+    firetable.ui.fillPlaylistPickers(allPlaylists);
+    var defaultList = firetable.plPrefs.defaultList;
+    if (!$("#listpicker option[value='" + defaultList + "']").length) defaultList = "0";
 
     ftapi.lookup.selectedList(function (selectedList) {
       var safeSelected = (selectedList && selectedList !== "1") ? selectedList : "0";
@@ -162,11 +257,11 @@ firetable.actions.loggedIn = function (user) {
         var storedViewSelected = localStorage.getItem(viewListStorageKey);
         if (storedViewSelected && storedViewSelected !== "1" && $("#listpicker option[value='" + storedViewSelected + "']").length) {
           viewSelected = storedViewSelected;
-        } else if ($("#listpicker option[value='" + safeSelected + "']").length) {
-          viewSelected = safeSelected;
+        } else {
+          viewSelected = defaultList; // your default list opens first
         }
       } catch (e) {
-        if ($("#listpicker option[value='" + safeSelected + "']").length) viewSelected = safeSelected;
+        viewSelected = defaultList;
       }
 
       $("#listpicker").change(function () {
@@ -190,7 +285,16 @@ firetable.actions.loggedIn = function (user) {
       $("#djlistpicker").val(safeSelected);
       $("#listpicker").val(viewSelected).trigger("change");
     });
-  });
+  }); });
+
+  // A brand-new Google/Apple account has no username yet
+  // (userByID stands the uid in for a missing name, so read the field itself)
+  if (!ftapi.pendingSignUpName) {
+    var askedFor = ftapi.uid;
+    ftapi.db().ref("users/" + askedFor + "/username").once("value").then(function (snap) {
+      if (!snap.val() && !ftapi.pendingSignUpName && ftapi.uid === askedFor) firetable.actions.promptForUsername();
+    });
+  }
 
   $("#loggedInName").show();
   $("#logOutButton").show().on('click', firetable.actions.logOut);
@@ -243,6 +347,39 @@ firetable.actions.grab = function () {
  */
 firetable.actions.unban = function (userid) {
   ftapi.actions.unbanUser(userid);
+};
+
+// ─── Logged-out room preview ─────────────────────────────────────────────────
+
+/**
+ * "N people here now" with their avatars and who's DJing, above the sign-up
+ * form, so visitors see the room is alive before joining (#9).
+ */
+firetable.ui.renderRoomPulse = function () {
+  var el = document.getElementById("roomPulse");
+  if (!el) return;
+  var people = [];
+  for (var uid in ftapi.users || {}) {
+    if (ftapi.users.hasOwnProperty(uid) && !ftapi.users[uid].hostbot) {
+      people.push({ id: uid, name: ftapi.users[uid].username || uid });
+    }
+  }
+  var djs = [];
+  for (var k in firetable.tableData || {}) {
+    if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k]) djs.push(firetable.tableData[k].name);
+  }
+  var $el = $(el).empty();
+  if (!people.length) return;
+  var $faces = $('<div class="pulse-faces" aria-hidden="true"></div>');
+  people.slice(0, 8).forEach(function (u) {
+    $('<span class="ft-avatar"></span>')
+      .css("background-image", "url(" + firetable.utilities.avatarURL(u.id, u.name, "40x40") + ")")
+      .attr("title", u.name)
+      .appendTo($faces);
+  });
+  var text = firetable.utilities.pluralize(people.length, "person", "people") + " here now";
+  if (djs.length) text += " · DJing: " + djs.join(", ");
+  $el.append($faces).append($('<span class="pulse-text"></span>').text(text));
 };
 
 // ─── Login Form Events ──────────────────────────────────────────────────────
@@ -517,6 +654,7 @@ firetable.ui.setupUserEvents = function () {
     firetable.debug && console.log('users:', okdata);
     // Re-insert any ghost deck users that were cleared by the full rebuild
     firetable.ui.syncGhostUsers();
+    firetable.ui.renderRoomPulse();
   }));
 
   
