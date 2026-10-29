@@ -165,6 +165,11 @@ ftapi.init = function(firebaseConfig) {
     ftapi.events.emit("newSong", songData);
   });
 
+  // song tempo emitter (the bot looks it up after a song starts)
+  ftapi.db().ref("songBpm").on('value', function(dataSnapshot) {
+    ftapi.events.emit("songBpm", dataSnapshot.val());
+  });
+
   // song tag update emitter
   var tagUpdate = ftapi.db().ref("tagUpdate");
   tagUpdate.on('value', function(dataSnapshot) {

@@ -20,6 +20,37 @@
  *   This caused SoundCloud tracks in history/discover to always get "yt" prefix.
  */
 
+// ─── Beat (#143) ──────────────────────────────────────────────────────────────
+
+/**
+ * Match the stage animations to the playing song's tempo (from songBpm). Sets
+ * --beat (one beat), --bop (one DJ bob: a beat, or two for fast songs) and
+ * --beat-phase (so the bobbing lines up with the song's start, not page load)
+ * on <html>, and shows "128 BPM" under the artist.
+ */
+firetable.ui.applyBeat = function () {
+  var b = firetable.songBpm, s = firetable.song, root = document.documentElement;
+  var bpm = b && s && b.started === s.started && Number(b.bpm);
+  var $label = $("#npBpm");
+  if (!(bpm >= 40 && bpm <= 250)) {
+    document.body.classList.remove("has-beat");
+    root.style.removeProperty("--beat");
+    root.style.removeProperty("--bop");
+    root.style.removeProperty("--beat-phase");
+    $label.prop("hidden", true).text("");
+    return;
+  }
+  var beat = 60 / bpm;
+  var bop = bpm > 150 ? beat * 2 : beat;
+  var elapsed = Math.max(0, (ftapi.now() - s.started) / 1000);
+  root.style.setProperty("--beat", beat.toFixed(4) + "s");
+  root.style.setProperty("--bop", bop.toFixed(4) + "s");
+  root.style.setProperty("--beat-phase", (-(elapsed % (beat * 2))).toFixed(3) + "s");
+  document.body.classList.add("has-beat");
+  $label.prop("hidden", false).text(Math.round(bpm) + " BPM")
+    .attr("title", b.src === "manual" ? "Tempo set by the DJ or a mod" : "Tempo from Deezer. The DJ or a mod can fix it with !bpm 128");
+};
+
 // ─── History Item Renderer ────────────────────────────────────────────────────
 
 /**
@@ -758,6 +789,12 @@ firetable.ui.setupRoomEvents = function () {
     if (doTheScrollThing) firetable.utilities.scrollToBottom();
   });
 
+  // ── Song tempo: the DJ bops (and dance mode dances) on the beat (#143) ──
+  ftapi.events.on('songBpm', function (data) {
+    firetable.songBpm = data;
+    firetable.ui.applyBeat();
+  });
+
   // ── New Song ──
   ftapi.events.on('newSong', function (data) {
     firetable.fireCount = 0;
@@ -835,6 +872,7 @@ firetable.ui.setupRoomEvents = function () {
     var timeLeft = data.duration - secSince;
     firetable.song = data;
     firetable.media.songChanged();
+    firetable.ui.applyBeat();
     firetable.debug && console.log("NEW TRACK", data);
 
     // ── Last.fm scrobble timer ──

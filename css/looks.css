@@ -6076,3 +6076,19 @@ button.track-warning:focus-visible { outline: 2px solid var(--color-accent); out
 }
 #pickNameBox .modalBox { width: 26rem; max-width: 100vw; }
 #pickNameForm { display: grid; gap: .75rem; width: 100%; & p { margin: 0; } }
+
+/* ─── On the beat (#143) ─── */
+#npBpm {
+  font-size: .7rem; font-weight: 600; letter-spacing: .04em; opacity: .7; margin-top: .15rem;
+  &[hidden] { display: none; }
+}
+body.has-beat .avtr.animate {
+  animation-duration: var(--bop);
+  animation-delay: var(--beat-phase);
+  animation-timing-function: cubic-bezier(.45, 0, .55, 1);
+}
+/* dance moves take two beats */
+body.has-beat.dance-mode .avtr,
+body.has-beat.dance-mode .ft-avatar:not(.skel) {
+  animation-duration: calc(var(--beat) * 2);
+}
