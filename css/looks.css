@@ -4834,8 +4834,9 @@ dialog::backdrop {
     background: transparent;
     align-items: stretch;
     justify-content: flex-start;
-    width: min(92vw, calc(92vh * (225 / 300)));
-    max-height: 92vh;
+    width: min(96vw, calc(78vh * (225 / 300)) + 6rem);
+    max-height: 96vh;
+    margin: auto;
     padding: var(--pad3);
     box-sizing: border-box;
     gap: var(--pad2);
@@ -4847,12 +4848,57 @@ dialog::backdrop {
     margin: 0;
 }
 
-#cardViewLargerCanvas {
+/* Larger card (#157): sharp 4× redraw, tilt + glare toward the pointer */
+#cardViewLargerModal .cardStage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--pad2);
+    perspective: 1200px;
+}
+#cardViewLargerModal .cardNav { flex-shrink: 0; }
+#cardViewLargerModal .cardTilt {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    max-width: calc(78vh * (225 / 300));
+    border-radius: 0.6rem;
+    overflow: hidden;
+    box-shadow: 0 1.5rem 3rem -1rem rgba(0, 0, 0, 0.9);
+    transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transition: transform 450ms ease;
+    animation: card-pop 280ms ease-out;
+}
+#cardViewLargerModal .cardTilt.is-tilting { transition: transform 80ms linear; }
+#cardMakerViewLarger {
     display: block;
     width: 100%;
     height: auto;
-    max-height: calc(92vh - 4.5rem);
     aspect-ratio: 225 / 300;
+}
+#cardViewLargerModal .cardGlare {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms ease;
+    background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 30%), rgba(255, 255, 255, 0.28), transparent 55%);
+    mix-blend-mode: soft-light;
+}
+#cardViewLargerModal .cardTilt.is-tilting .cardGlare { opacity: 1; }
+#cardViewLargerModal .cardInfo {
+    padding: var(--pad3) var(--pad2) 0;
+    text-align: center;
+}
+#cardViewLargerModal .cardInfo h3 { font-size: 1.1rem; font-weight: 600; }
+#cardViewLargerModal .cardInfoTrack { margin-top: 0.2rem; color: var(--color-text-light); }
+#cardViewLargerModal .cardInfoMeta { margin-top: 0.2rem; font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); }
+@keyframes card-pop {
+    from { transform: scale(0.94); opacity: 0.4; }
+    to { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #cardViewLargerModal .cardTilt { animation: none; transform: none; }
 }
 
 input.tagMachine,

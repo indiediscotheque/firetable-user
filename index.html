@@ -572,10 +572,22 @@
 		</div>
 	</dialog>
 
-	<dialog id="cardViewLargerModal">
+	<dialog id="cardViewLargerModal" aria-labelledby="cardViewLargerTitle">
 		<div class="modalBox">
 			<button role="button" class="butt graybutt iconbutt closeModal" id="cardViewLargerClose" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
-			<canvas id="cardViewLargerCanvas" width="225" height="300"></canvas>
+			<div class="cardStage">
+				<button type="button" class="butt graybutt iconbutt cardNav" id="cardPrev" aria-label="Previous card"><i class="material-symbols-outlined">chevron_left</i></button>
+				<div class="cardTilt">
+					<canvas id="cardMakerViewLarger" width="900" height="1200" role="img"></canvas>
+					<div class="cardGlare" aria-hidden="true"></div>
+				</div>
+				<button type="button" class="butt graybutt iconbutt cardNav" id="cardNext" aria-label="Next card"><i class="material-symbols-outlined">chevron_right</i></button>
+			</div>
+			<div class="cardInfo">
+				<h3 id="cardViewLargerTitle"></h3>
+				<p class="cardInfoTrack"></p>
+				<p class="cardInfoMeta"></p>
+			</div>
 		</div>
 	</dialog>
 
