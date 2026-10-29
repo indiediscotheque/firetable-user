@@ -163,6 +163,31 @@ firetable.utilities = {
     $("#djlistpicker").append(firetable.utilities.playlistOption(listID, name));
   },
 
+  // ─── What was playing ────────────────────────────────────────────────────
+
+  /**
+   * The song that was playing at a server time (ms), from the current song
+   * and the Recent plays loaded so far, or null.
+   * @param {number} time
+   * @returns {{artist: string, title: string, dj: string}|null}
+   */
+  songPlayingAt: function (time) {
+    time = Number(time);
+    if (!time) return null;
+    var best = null;
+    var consider = function (started, duration, artist, title, dj) {
+      started = Number(started);
+      if (!started || started > time || (best && best.started >= started)) return;
+      // a gap (nothing playing) after the song ended doesn't count
+      if (duration && time > started + (Number(duration) + 30) * 1000) return;
+      best = { started: started, artist: artist, title: title, dj: dj };
+    };
+    var s = firetable.song;
+    if (s && s.cid != 0) consider(s.started, s.duration, s.artist, s.title, s.djname);
+    (firetable._historyCache || []).forEach(function (h) { consider(h.when, h.duration, h.artist, h.title, h.dj); });
+    return best;
+  },
+
   // ─── Track links ─────────────────────────────────────────────────────────
 
   /**

@@ -406,7 +406,7 @@ firetable.ui.setupChatEvents = function () {
       $("#chat" + firetable.lastChatId + " .chatContent").append(
         '<div id="chattxt' + chatData.chatID + '" class="chatText"></div>'
       );
-      $("#chatTime" + firetable.lastChatId).text(firetable.utilities.format_time(chatData.time));
+      $("#chatTime" + firetable.lastChatId).text(firetable.utilities.format_time(chatData.time)).attr('data-time', chatData.time);
       $("#chattxt" + chatData.chatID).html(txtOut);
 
       if (canDelete()) {
@@ -433,6 +433,7 @@ firetable.ui.setupChatEvents = function () {
       $chatthing.find('.utitle').html(utitle);
       $chatthing.find('.chatTime')
         .attr('id', "chatTime" + chatData.chatID)
+        .attr('data-time', chatData.time)
         .html(firetable.utilities.format_time(chatData.time));
       if (hasMention) $chatthing.addClass('badoop');
 

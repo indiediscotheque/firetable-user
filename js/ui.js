@@ -799,6 +799,23 @@ firetable.ui.tooltip = (function () {
   function bind() {
     tipEl = document.getElementById('ft-tooltip');
 
+    // ── Chat: what was playing when a message was posted (#139) ──
+    var playingText = function (el) {
+      var song = firetable.utilities.songPlayingAt(el.getAttribute('data-time'));
+      if (!song) return '';
+      return '♪ ' + firetable.ui.strip(song.artist + ' - ' + song.title) + (song.dj ? ' · DJ ' + song.dj : '');
+    };
+    $('#chats').on('mouseenter.ft-tooltip', '.chatTime[data-time]', function () {
+      var text = playingText(this);
+      if (text) show(this, text);
+    }).on('mouseleave.ft-tooltip', '.chatTime', hide)
+      .on('click.ft-tooltip', '.chatTime[data-time]', function () {
+        // touch screens have no hover: tap the time instead
+        if (!noHover.matches) return;
+        var text = playingText(this);
+        if (text) firetable.ui.toast(text);
+      });
+
     // ── Deck: DJ name on plaque hover ──
     $(document).on('mouseenter.ft-tooltip', '#deck .djname', function () {
       var playcount = $(this).siblings('.playcount').text().trim();
