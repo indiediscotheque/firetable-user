@@ -733,7 +733,7 @@ function buildQueueItemHTML(key, track, isPreview) {
     var flagTitle = firetable.utilities.htmlEscape(
       'Flagged as ' + flagLabel + ' on ' + firetable.utilities.format_date(track.flagged.date) + '. Click to remove flag.'
     );
-    flagHtml = ' title="' + flagTitle + '"><span class="material-symbols-filled"> ' + flagIcon + ' </span>';
+    flagHtml = '<button type="button" class="track-warning" title="' + flagTitle + '" aria-label="' + flagTitle + '"><span class="material-symbols-filled" aria-hidden="true"> ' + flagIcon + ' </span></button>';
   }
 
   return (
@@ -745,7 +745,7 @@ function buildQueueItemHTML(key, track, isPreview) {
     '<div class="pvbarWrap">' +
     '<div class="' + artClass + '"' + artStyle + '></div>' +
     '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
-    '<span class="track-warning"' + (track.flagged ? flagHtml : '>') + '</span>' +
+    (track.flagged ? flagHtml : '<span class="track-warning"></span>') +
     '<div class="listwords">' + safeTrackName + durationHtml + '</div>' +
     // Order matches Recent / Fresh: move actions, link, add, destructive last
     '<button type="button" class="material-symbols-outlined row-icon bumpsongs" title="Send to top" aria-label="Send to top">vertical_align_top</button>' +
@@ -801,7 +801,8 @@ firetable.ui.setupPlaylistEvents = function () {
     .on('click', '.track-warning', function () {
       var $p = $(this).closest('.pvbar');
       ftapi.actions.unflagTrack($p.attr('data-key'));
-      $(this).html('').removeAttr('title');
+      $p.attr('data-broken', '0');
+      $(this).replaceWith('<span class="track-warning"></span>');
     })
     .on('click', '.deletesong', function () {
       var popoverEl = document.getElementById('deleteSongPopover');

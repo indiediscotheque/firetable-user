@@ -619,7 +619,7 @@ firetable.ui.setupChatEvents = function () {
 
       $chatthing.find(".chatText").html(txtOut).attr('id', "chattxt" + chatData.chatID);
       $('<div class="chatReactions"></div>').attr('id', 'reactions' + chatData.chatID).insertAfter($chatthing.find(".chatText"));
-      $chatthing.find(".chatName").text(namebo);
+      $chatthing.find(".chatName").text(namebo).attr({ role: "button", tabindex: "0", "aria-label": "Mention " + namebo });
 
       // Click-to-@ on avatar and name
       firetable.utilities.chatAt($chatthing.find('.ft-avatar'));
@@ -976,6 +976,13 @@ firetable.ui.setupChatEvents = function () {
       if ($bar.hasClass('has-reactions')) firetable.reactionListeners[id].ref.once('value', function (s) { firetable.ui.renderReactions(id, s.val()); });
     });
   }));
+
+  // ── Empty room: drop the loading placeholders ──
+  ftapi.events.on('chatHistoryLoaded', function () {
+    if (firetable._chatBooted) return;
+    firetable._chatBooted = true;
+    document.querySelectorAll('#chats .ft-skeleton').forEach(function (el) { el.remove(); });
+  });
 
   // ── Mentions inbox ──
   var inboxPop = document.getElementById('inboxPopover');

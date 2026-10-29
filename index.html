@@ -26,7 +26,8 @@
 <body>
 	<div id="mainGrid" class="pre-auth">
 		<header id="topbar">
-			<div id="roomlogo" title="Indie Discotheque" aria-label="Indie Discotheque"></div>
+			<h1 class="sr-only">Indie Discotheque</h1>
+			<div id="roomlogo" role="img" title="Indie Discotheque" aria-label="Indie Discotheque"></div>
 			<div class="flexpacer"></div>
 			<div id="topbarUtils">
 				<button id="socialTrigger" type="button" role="button" class="header_icon" aria-label="Community" popovertarget="socialPopover" style="anchor-name: --tip-socialTrigger" aria-describedby="tip-socialTrigger">
@@ -39,15 +40,15 @@
 					<i class="material-symbols-outlined">alternate_email</i><span id="inboxBadge" hidden></span>
 				</button>
 				<span id="tip-inboxTrigger" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-inboxTrigger">Mentions</span>
-				<div id="loggedInUser" class="openModal header_icon" data-modal="accountSettingsBox" data-tab="profile-tab" aria-label="Profile &amp; Settings" style="anchor-name: --tip-loggedInUser" aria-describedby="tip-loggedInUser">
-						<div class="ft-avatar skel"></div>
-				</div>
+				<button type="button" id="loggedInUser" class="openModal header_icon" data-modal="accountSettingsBox" data-tab="profile-tab" aria-label="Profile &amp; Settings" aria-haspopup="dialog" style="anchor-name: --tip-loggedInUser" aria-describedby="tip-loggedInUser">
+						<span class="ft-avatar skel"></span>
+				</button>
 				<span id="tip-loggedInUser" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-loggedInUser">Profile &amp; Settings</span>
 				<div id="reconnecting" role="status">Reconnecting…</div>
 			</div>
 		</header>
 
-		<section id="stage">
+		<section id="stage" role="main" aria-label="Room">
 		<div id="djStage">
 			<div id="stageBackdrop"></div>
 			<div id="screenBox">
@@ -176,7 +177,7 @@
 			<div class="themeCenter">
 				<div id="djlistpickerWrap">
 					<span id="djlistpickerLabel">DJ Playlist:</span>
-					<select id="djlistpicker">
+					<select id="djlistpicker" aria-labelledby="djlistpickerLabel">
 						<option value="0">Default Playlist</option>
 					</select>
 					<button type="button" id="djlistOpen" class="butt graybutt iconbutt" title="Open in Playlists" aria-label="Open the DJ playlist in Playlists"><i class="material-symbols-outlined">playlist_play</i></button>
@@ -188,23 +189,23 @@
 
 		</section>
 
-		<div id="appShell">
+		<div id="appShell" role="region" aria-label="Room panels">
 
-		<nav id="minimodeoptions" class="tabs" role="tablist" aria-label="Sections">
+		<div id="minimodeoptions" class="tabs" role="tablist" aria-label="Sections">
 			<button type="button" role="tab" class="tab on" id="mm-playlists" aria-selected="true">Playlists</button>
 			<button type="button" role="tab" class="tab" id="mm-history" aria-selected="false">Recent</button>
 			<button type="button" role="tab" class="tab" id="mm-discover" aria-selected="false">Fresh</button>
 			<button type="button" role="tab" class="tab" id="mm-cards" aria-selected="false">Cards</button>
 			<button type="button" role="tab" class="tab" id="mmchat" aria-selected="false">Chat</button>
 			<button type="button" role="tab" class="tab" id="mmusrs" aria-selected="false">People</button>
-		</nav>
+		</div>
 
-		<nav id="sidepanel-tabs" class="tabs" role="tablist" aria-label="Side panel">
+		<div id="sidepanel-tabs" class="tabs" role="tablist" aria-label="Side panel">
 			<button type="button" role="tab" class="tab on" id="sp-chat" aria-selected="true">Chat</button>
 			<button type="button" role="tab" class="tab" id="sp-people" aria-selected="false">People</button>
-		</nav>
+		</div>
 
-		<div id="actualChat">
+		<div id="actualChat" role="region" aria-label="Chat">
 			<div id="chatsWrap" class="scroll-view">
 				<div id="chats" role="log" aria-label="Chat messages">
 					<div id="chatKEY" class="newChat">
@@ -286,7 +287,7 @@
 			</div>
 		</div>
 
-		<div id="usersbox">
+		<div id="usersbox" role="region" aria-label="DJs and people">
 			<div id="usersStats">
 				<h2><span id="numListeners"></span> People</h2>
 				<div class="listenerType">
@@ -451,7 +452,7 @@
 					<div class="pv-art histart">
 						<button type="button" class="material-symbols-filled previewicon" title="Preview" aria-label="Preview">&#xE037;</button>
 					</div>
-					<span class="ft-avatar pv-dj-avatar dj-avatar-tip"></span>
+					<span class="ft-avatar pv-dj-avatar dj-avatar-tip" role="img"></span>
 					<div class="listwords"><div class="histlink"></div></div>
 					<a class="row-icon tracklink-btn" target="_blank" rel="noopener" href="" title="Open track" aria-label="Open track"></a>
 					<button type="button" class="histeal material-symbols-outlined row-icon" title="Add to playlist" aria-label="Add to playlist">&#xE03B;</button>
@@ -470,10 +471,10 @@
 
 		</div><!-- /#appShell -->
 
-		<div id="discover" class="scroll-view">
+		<div id="discover" class="scroll-view" role="region" aria-label="Fresh in the room">
 			<!-- Shown only while logged out, when Fresh sits next to the sign-up form -->
 			<div id="freshIntro">
-				<h3>Fresh in the room</h3>
+				<h2>Fresh in the room</h2>
 				<p>New music people played here lately.</p>
 				<button type="button" id="minijoin" class="butt small">Sign up / Log in</button>
 			</div>
@@ -489,7 +490,7 @@
 							<button type="button" class="histeal material-symbols-outlined row-icon" title="Add to playlist" aria-label="Add to playlist">&#xE03B;</button>
 						</div>
 						<div class="fresh-meta">
-							<span class="pv-dj-avatar ft-avatar dj-avatar-tip"></span>
+							<span class="pv-dj-avatar ft-avatar dj-avatar-tip" role="img"></span>
 							<span class="histdj"></span>
 							<span class="histdate"></span>
 							<span class="histtime"></span>
@@ -502,7 +503,7 @@
 			</div>
 		</div>
 
-		<div id="login" class="scroll-view">
+		<div id="login" class="scroll-view" role="region" aria-label="Log in or sign up">
 			<div id="welcomeInfo">
 				<h2>Welcome To <span id="welcomeName">Firetable</span>!</h2>
 				<p>
@@ -514,7 +515,7 @@
 			</div>
 			<div id="logscreen" style="display: none">
 				<form id="loginFormShell" novalidate>
-				<h4>Log In</h4>
+				<h3>Log In</h3>
 				<div class="inputline"><label for="loginemail">Email</label><input type="email" id="loginemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
 				<div class="inputline"><label for="loginpass">Password</label><input type="password" id="loginpass" autocomplete="current-password" enterkeyhint="go" /></div>
 				<div class="formMessage" role="alert"></div>
@@ -525,7 +526,7 @@
 			</div>
 			<div id="createscreen">
 				<form id="createAccountFormShell" novalidate>
-					<h4>Create an Account</h4>
+					<h3>Create an Account</h3>
 					<div class="inputline"><label for="newemail">Email</label><input type="email" id="newemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
 					<div class="inputline"><label for="newusername">Username</label><input type="text" id="newusername" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
 					<div class="inputline"><label for="newpass">Password</label><input type="password" id="newpass" autocomplete="new-password" /></div>
@@ -543,7 +544,7 @@
 			</div>
 			<div id="resetscreen" style="display: none">
 				<form id="resetPasswordFormShell" novalidate>
-				<h4>Reset your password!</h4>
+				<h3>Reset your password!</h3>
 
 				<div class="inputline"><label for="theAddress">Email</label><input type="email" id="theAddress" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" /></div>
 				<div class="formMessage" role="alert"></div>

@@ -344,6 +344,10 @@ ftapi.init = function(firebaseConfig) {
               console.error("[firetable] showing a chat message failed:", err);
             });
           });
+          // Once the history is in, say so (an empty room has no messages to replace the placeholders)
+          chatRef.once('value').then(function() { return chatChain; }).then(function() {
+            ftapi.events.emit("chatHistoryLoaded");
+          });
           ftapi.chatChangedEvent = chatRef.on('child_changed', function(childSnapshot, prevChildKey) {
             var feedData = childSnapshot.val();
             feedData.feedID = childSnapshot.key;
