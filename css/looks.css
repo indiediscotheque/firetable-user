@@ -7,7 +7,7 @@
     font-style: normal;
     font-weight: 100 700;
     font-display: block;
-    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.03') format('woff2'); /* keep ?v= in step with index.html */
+    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.04') format('woff2'); /* keep ?v= in step with index.html */
 }
 
 /* ============================================
@@ -909,9 +909,12 @@ button.track-warning {
     display: flex;
     align-items: center;
     gap: var(--pad1);
+    min-width: 0; /* a long theme shrinks instead of widening the grid */
     padding: var(--pad1) var(--pad3);
     color: #fff;
 }
+#roomlogo,
+#topbarUtils { flex-shrink: 0; }
 
 .ftlogo {
     margin-right: 0.5rem;
@@ -3282,57 +3285,6 @@ a.importLinkCheck {
     overflow: visible;
 }
 
-@keyframes theme-ticker {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
-}
-
-/* Room theme, on the stage under the song (#87) */
-#themeLine {
-    display: flex;
-    align-items: center;
-    gap: var(--pad2);
-    min-width: 0;
-    margin-top: var(--pad1);
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.9);
-    text-shadow: 0 1px 0.3rem rgba(0, 0, 0, 0.6);
-}
-#themeLine .themeLabel {
-    flex-shrink: 0;
-    padding: 0.05rem 0.4rem;
-    font-size: 0.625rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    border-radius: var(--radius-pill);
-    background: rgba(0, 0, 0, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-}
-#themeLine.no-theme { color: rgba(255, 255, 255, 0.55); }
-#currentThemeWrap {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-}
-#currentTheme a { color: inherit; text-decoration: underline; }
-
-#currentTheme {
-    white-space: nowrap;
-    overflow: hidden;
-}
-
-#currentTheme.is-ticker .ticker-run {
-    display: inline-block;
-    white-space: nowrap;
-    animation: theme-ticker 14s linear infinite;
-}
-
-.ticker-sep {
-    padding: 0 0.5em;
-    opacity: 0.4;
-}
-
 #djlistpickerWrap {
     display: flex;
     align-items: center;
@@ -3392,6 +3344,140 @@ a.importLinkCheck {
         outline-offset: 2px;
     }
 }
+
+/* ============================================
+   Room Theme (#87)
+   A pill in the top bar; at 1024px+ room.js moves it to the top of chat,
+   where it reads as a pinned strip. Tapping it opens #themePopover.
+   ============================================ */
+#themeSlot {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+#themePill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pad2);
+    min-width: 0;
+    max-width: 100%;
+    min-height: 2rem;
+    padding: 0.25rem 0.75rem 0.25rem 0.3rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font: inherit;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+    text-align: start;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+#themePill:hover,
+#themePill[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+#themePill:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+#themePill .themeLabel {
+    flex-shrink: 0;
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius-pill);
+    background: var(--color-accent);
+    color: #000;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+#themePillText {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+#themePill.no-theme #themePillText { color: var(--color-text-muted); }
+#themePill.no-theme .themeLabel {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* A new theme glows for a moment */
+#themePill.is-new { animation: theme-glow 2.4s ease-out; }
+@keyframes theme-glow {
+    0%, 35% {
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 1px var(--color-accent), 0 0 1rem var(--color-accent);
+    }
+    100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #themePill.is-new { animation: none; }
+}
+
+/* Narrow phones: the label becomes a dot so the theme itself gets the room */
+@media only screen and (max-width: 479px) {
+    #roomlogo { margin-right: var(--pad2); }
+    #themePill {
+        gap: 0.4rem;
+        padding-left: 0.6rem;
+    }
+    #themePill .themeLabel {
+        width: 0.5rem;
+        height: 0.5rem;
+        padding: 0;
+        font-size: 0; /* still read out as "Theme" */
+    }
+}
+
+/* 1024px+: pinned strip across the top of chat */
+#actualChat > #themeSlot {
+    flex-shrink: 0;
+    padding: var(--pad3) var(--pad3) var(--pad2);
+    border-bottom: 1px solid var(--color-border);
+}
+#actualChat > #themeSlot #themePill {
+    flex: 1;
+    min-height: 2.25rem;
+}
+
+.themePopBox {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pad2);
+    max-width: min(22rem, calc(100vw - 2rem));
+}
+.themePopTitle {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+.themePopText {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+.themePopText a { color: inherit; text-decoration: underline; }
+.themePopText.no-theme {
+    font-weight: 400;
+    color: var(--color-text-muted);
+}
+.themePopHint {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
+#themeSuggest { align-self: flex-start; }
 
 /* ============================================
    Chat
