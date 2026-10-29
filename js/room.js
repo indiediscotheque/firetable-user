@@ -691,15 +691,36 @@ firetable.ui.setupRoomEvents = function () {
     if (e.key === 'ArrowDown') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
   });
+  // ── Mod tools menu on the stage ──
+  var npModMenu = document.getElementById('npModMenu');
+  var npModBtn = document.getElementById('npModBtn');
+  npModMenu.addEventListener('toggle', function (e) {
+    npModBtn.classList.toggle('on', e.newState === 'open');
+    if (e.newState !== 'open') return;
+    npModMenu.style.visibility = 'hidden';
+    firetable.ui.positionPopover(npModBtn, npModMenu, document.getElementById('npModArrow')).then(function () {
+      var first = npModMenu.querySelector('[role="menuitem"]');
+      if (first) first.focus();
+    });
+  });
+  $(npModMenu).on('keydown', function (e) {
+    var $items = $(npModMenu).find('[role="menuitem"]');
+    var idx = $items.index($items.filter(':focus'));
+    if (e.key === 'ArrowDown') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
+  });
+
   $('#npFlag').on('click', function () {
+    npModMenu.hidePopover();
     if (!firetable.song || firetable.song.cid == 0) return;
-    firetable.ui.openFlagMenu(this, { started: firetable.song.started, label: firetable.song.artist + ' - ' + firetable.song.title });
+    firetable.ui.openFlagMenu(npModBtn, { started: firetable.song.started, label: firetable.song.artist + ' - ' + firetable.song.title });
   });
 
   // ── Fix the tags of the song playing now (mods, #136) ──
   // Same editor as Recent rows; saving sends the bot's !fixtags, which
   // corrects the global tags and what everyone sees right away.
   $("#npFixTags").on("click", function () {
+    npModMenu.hidePopover();
     var popoverEl = document.getElementById('tagEditorPopover');
     if (popoverEl.matches(':popover-open') && firetable.tagEditNowPlaying) { popoverEl.hidePopover(); return; }
     if (!firetable.song || firetable.song.cid == 0) return;
@@ -708,7 +729,7 @@ firetable.ui.setupRoomEvents = function () {
     $(popoverEl).find('.tagMachine').val(firetable.ui.strip(firetable.song.artist + " - " + firetable.song.title));
     popoverEl.style.visibility = 'hidden';
     popoverEl.showPopover();
-    firetable.ui.positionPopover(this, popoverEl, document.getElementById('tagEditorArrow'), 'bottom').then(function () {
+    firetable.ui.positionPopover(npModBtn, popoverEl, document.getElementById('tagEditorArrow')).then(function () {
       $(popoverEl).find('.tagMachine')[0].focus();
     });
   });

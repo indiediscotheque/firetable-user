@@ -1040,7 +1040,7 @@ firetable.ui.setupPlaylistEvents = function () {
   function enterCreateMode() {
     $("#listpicker, #listCount").hide();
     $("#plmanager").css("display", "flex");
-    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").hide().next(".ft-tip").hide();
+    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").hide().next(".ft-tip").hide();
     $("#plAddLauncher").next(".ft-tip").text("Cancel Create Playlist");
     $("#plAddLauncher i").text("close");
     $("#mainqueuestuff, #filterMachine").css("display", "none");
@@ -1050,7 +1050,7 @@ firetable.ui.setupPlaylistEvents = function () {
   function exitCreateMode() {
     $("#plmanager").css("display", "none");
     $("#listpicker, #listCount").show();
-    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").show().next(".ft-tip").show();
+    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").show().next(".ft-tip").show();
     $("#plAddLauncher").next(".ft-tip").text("New / Import playlist");
     $("#plAddLauncher i").text("add");
     $("#mainqueuestuff, #filterMachine").css("display", "block");
@@ -1574,36 +1574,6 @@ firetable.utilities.brokenSummary = function (r) {
   return parts.join(" ");
 };
 
-/** Run a check from the toolbar button, with progress in the popover. */
-firetable.actions.checkBrokenPrompt = function (btn) {
-  var pop = document.getElementById("checkBrokenPopover");
-  var listID = firetable.viewListID || "0";
-  var $status = $("#checkBrokenStatus"), $bar = $("#checkBrokenBar"), $show = $("#checkBrokenShow");
-  if (!pop.matches(":popover-open")) {
-    pop.style.visibility = "hidden";
-    pop.showPopover();
-    firetable.ui.positionPopover(btn, pop, document.getElementById("checkBrokenArrow"), "bottom");
-  }
-  if (firetable.brokenCheck.running) return;
-  $(btn).addClass("on");
-  $show.prop("hidden", true);
-  $bar.prop("hidden", false).val(0).attr("max", 1);
-  $status.text("Checking tracks…");
-  firetable.actions.checkBrokenTracks(listID, {
-    onProgress: function (done, total) {
-      $bar.attr("max", Math.max(total, 1)).val(done);
-      $status.text("Checking tracks… " + done + " of " + total);
-    }
-  }).then(function (r) {
-    $bar.prop("hidden", true);
-    $status.text(firetable.utilities.brokenSummary(r));
-    $show.prop("hidden", !r.broken);
-  }, function (err) {
-    $bar.prop("hidden", true);
-    $status.text((err && err.message) || "The check didn't finish. Try again in a bit.");
-  });
-};
-
 /** Quietly re-check a list you open if it hasn't been checked for a week. */
 firetable.actions.autoCheckBroken = function (listID) {
   if (!ftapi.uid || firetable.brokenCheck.running || !firetable.utilities.hasYouTubeKey()) return;
@@ -1618,16 +1588,6 @@ firetable.actions.autoCheckBroken = function (listID) {
 };
 
 firetable.ui.setupBrokenCheck = function () {
-  var pop = document.getElementById("checkBrokenPopover");
-  $("#checkBroken").on("click", function () { firetable.actions.checkBrokenPrompt(this); });
-  pop.addEventListener("toggle", function (e) {
-    if (e.newState === "closed" && !firetable.brokenCheck.running) $("#checkBroken").removeClass("on");
-  });
-  $("#checkBrokenShow").on("click", function () {
-    $("#queueFilterBrokenOnly").prop("checked", true).trigger("change");
-    pop.hidePopover();
-    $("#checkBroken").removeClass("on");
-  });
   // Background re-check when a list is opened (not on every edit)
   var lastList = null;
   ftapi.events.on("playlistChanged", function (data, listID) {
