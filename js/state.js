@@ -175,7 +175,7 @@ var firetable = {
 };
 
 // ─── Version ─────────────────────────────────────────────────────────────────
-firetable.version = "01.12.06";
+firetable.version = "01.12.07";
 
 // ─── Chat Scroll Container ──────────────────────────────────────────────────
 /** Native scroll container wrapper preserving the legacy chatScroll API shape. */
@@ -193,7 +193,9 @@ var chatScroll = chatScrollElement ? {
  * Sticky-bottom tracking. While pinned, any growth of the chat (new messages,
  * late-loading images/emoji/cards, now-playing updates, font swaps, the panel
  * being shown or resized) keeps the newest message fully in view. Only the
- * user scrolling up unpins it; reaching the bottom again re-pins it.
+ * user scrolling away (wheel, touch, keys, scrollbar drag) unpins it; reaching
+ * the bottom again re-pins it. Scrolls the user didn't make (layout clamping,
+ * scroll anchoring, a panel being re-shown) never unpin it.
  */
 var chatPinned = true;
 
@@ -201,26 +203,41 @@ if (chatScroll) {
   (function () {
     var wrap = chatScroll.getScrollElement();
     var content = document.getElementById('chats') || wrap;
-    var lastTop = wrap.scrollTop;
+    var lastIntent = 0;
+    var pointerDown = false;
+    var NAV_KEYS = /^(ArrowUp|ArrowDown|PageUp|PageDown|Home|End| )$/;
 
-    wrap.addEventListener('scroll', function () {
-      var top = wrap.scrollTop;
-      // Ignore scroll events from a hidden/collapsed panel (scrollTop resets to 0)
-      if (wrap.clientHeight > 0) {
-        if (firetable.utilities.chatDistanceFromBottom() <= 25) {
-          chatPinned = true;
-          $('#morechats').removeClass('show');
-        } else if (top < lastTop) {
-          // Content growth never lowers scrollTop, so this is the user scrolling up
-          chatPinned = false;
-        }
-      }
-      lastTop = top;
+    var markIntent = function () { lastIntent = Date.now(); };
+    var userIsScrolling = function () { return pointerDown || Date.now() - lastIntent < 1000; };
+    var ready = function () { return firetable.utilities && firetable.utilities.scrollToBottom; };
+    var repin = function () {
+      if (chatPinned && ready()) firetable.utilities.scrollToBottom();
+    };
+
+    wrap.addEventListener('wheel', markIntent, { passive: true });
+    wrap.addEventListener('touchstart', markIntent, { passive: true });
+    wrap.addEventListener('touchmove', markIntent, { passive: true });
+    wrap.addEventListener('pointerdown', function () { pointerDown = true; markIntent(); }, { passive: true });
+    var release = function () { if (pointerDown) { pointerDown = false; markIntent(); } };
+    window.addEventListener('pointerup', release, { passive: true });
+    window.addEventListener('pointercancel', release, { passive: true });
+    document.addEventListener('keydown', function (e) {
+      if (NAV_KEYS.test(e.key) && wrap.contains(document.activeElement)) markIntent();
     }, { passive: true });
 
-    var repin = function () {
-      if (chatPinned) firetable.utilities.scrollToBottom();
-    };
+    wrap.addEventListener('scroll', function () {
+      // Hidden/collapsed panel: nothing to measure
+      if (wrap.clientHeight === 0 || !ready()) return;
+      if (firetable.utilities.chatDistanceFromBottom() <= 25) {
+        chatPinned = true;
+        $('#morechats').removeClass('show');
+      } else if (userIsScrolling()) {
+        chatPinned = false;
+      } else {
+        repin(); // moved by layout, not the user: stay on the newest message
+      }
+    }, { passive: true });
+
     if (typeof ResizeObserver !== 'undefined') {
       var ro = new ResizeObserver(repin);
       ro.observe(wrap);
@@ -234,6 +251,9 @@ if (chatScroll) {
     wrap.addEventListener('error', repin, true);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(repin);
     window.addEventListener('load', repin);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) repin();
+    });
   })();
 }
 
