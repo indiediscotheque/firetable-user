@@ -735,29 +735,12 @@ firetable.ui.setupRoomEvents = function () {
   });
 
   // ── Theme (#87) ──
-  // A pill in the top bar. At 1024px+ the bar shrinks into the People column,
-  // so the pill moves to the top of chat, which is always visible there.
-  // Keep references: chat (and the pill with it) leaves the page while logged out.
-  var themeSlot = document.getElementById('themeSlot');
+  // A pill in the top bar; tapping it opens #themePopover.
   var themePill = document.getElementById('themePill');
   var themePillText = document.getElementById('themePillText');
   var themePop = document.getElementById('themePopover');
   var themePopText = document.getElementById('themePopText');
-  var themeWide = window.matchMedia('(min-width: 1024px)');
   var lastTheme;
-
-  function placeTheme() {
-    var chat = document.getElementById('actualChat'); // null while logged out
-    var inChat = themeWide.matches && chat;
-    if (inChat ? themeSlot.parentElement === chat : themeSlot.previousElementSibling === document.getElementById('roomlogo')) return;
-    if (themePop.matches(':popover-open')) themePop.hidePopover();
-    if (inChat) chat.prepend(themeSlot);
-    else document.getElementById('roomlogo').after(themeSlot);
-  }
-  themeWide.addEventListener('change', placeTheme);
-  // follow chat as it's detached (logout) and put back (login)
-  new MutationObserver(placeTheme).observe(document.getElementById('mainGrid'), { childList: true });
-  placeTheme();
 
   themePill.setAttribute('aria-expanded', 'false');
   themePop.addEventListener('toggle', function (e) {
@@ -773,7 +756,7 @@ firetable.ui.setupRoomEvents = function () {
   // Start a !suggest in chat, keeping anything already typed there
   $('#themeSuggest').on('click', function () {
     themePop.hidePopover();
-    if (!themeWide.matches && !$('#actualChat').is(':visible')) firetable.nav.setMobileTab('mmchat');
+    if (!$('#actualChat').is(':visible')) firetable.nav.setMobileTab('mmchat');
     var $chat = $('#newchat');
     var draft = $chat.val().trim();
     if (!/^!suggest\b/i.test(draft)) $chat.val(('!suggest ' + draft).trim() + ' ').trigger('input');
