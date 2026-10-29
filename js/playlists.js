@@ -2,7 +2,7 @@
  * playlists.js — Playlist overview and playlist preferences (#118, #117).
  *
  * - firetable.plPrefs: your playlist preferences, kept in playlistPrefs/<uid>
- *     defaultList  which list is your default (★): it opens first and is listed first
+ *     defaultList  which list is your default (★): it opens first
  *     defaultName  a name for the built-in list (queues/<uid>), "Default Playlist" if unset
  *     order        {listID: n} your own order for the lists
  * - firetable.ui.fillPlaylistSelect(): every playlist <select> is filled through here
@@ -50,8 +50,9 @@ firetable.utilities.isDefaultList = function (listID) {
 };
 
 /**
- * Every list (the built-in one included) in your order: the default first,
- * then by your order, then oldest first.
+ * Every list (the built-in one included) in your order. Until you reorder
+ * them, the default comes first and the rest oldest first; lists you haven't
+ * placed yet (new ones) go at the end.
  * @param {Object} allPlaylists - playlists/<uid> value
  * @returns {Array<{id:string, name:string, list:Object}>}
  */
@@ -64,9 +65,12 @@ firetable.utilities.sortedLists = function (allPlaylists) {
   var order = firetable.plPrefs.order || {};
   var pos = function (l, i) { return typeof order[l.id] === "number" ? order[l.id] : 100000 + i; };
   lists.forEach(function (l, i) { l.pos = pos(l, i); });
+  var customOrder = Object.keys(order).length > 0;
   lists.sort(function (a, b) {
-    var da = firetable.utilities.isDefaultList(a.id), db = firetable.utilities.isDefaultList(b.id);
-    if (da !== db) return da ? -1 : 1;
+    if (!customOrder) {
+      var da = firetable.utilities.isDefaultList(a.id), db = firetable.utilities.isDefaultList(b.id);
+      if (da !== db) return da ? -1 : 1;
+    }
     return a.pos - b.pos;
   });
   return lists;
@@ -240,10 +244,57 @@ firetable.ui.setupPlaylistIndex = function () {
   var $list = $("#plIndexList");
   $("#plIndexBtn").on("click", firetable.actions.openPlaylistIndex);
 
-  $list.sortable({
-    handle: ".plx-handle",
-    axis: "y",
-    update: firetable.actions.savePlaylistOrder
+  // ── Drag the handle to reorder (mouse, touch and pen) ──
+  // Pointer events instead of jQuery UI sortable, which ignores drags that
+  // start on a button and doesn't know touch at all.
+  var drag = null;
+  var currentOrder = function () {
+    return $list.children(".plx-row").map(function () { return this.getAttribute("data-id"); }).get().join(",");
+  };
+  var scroller = $list.closest(".modalContent")[0];
+  var onDragMove = function (e) {
+    if (!drag || e.pointerId !== drag.pointer) return;
+    e.preventDefault();
+    var y = e.clientY, before = null;
+    $list.children(".plx-row").each(function () {
+      if (this === drag.row) return;
+      var r = this.getBoundingClientRect();
+      if (y < r.top + r.height / 2) { before = this; return false; }
+    });
+    if (before) { if (drag.row.nextElementSibling !== before) $list[0].insertBefore(drag.row, before); }
+    else if ($list[0].lastElementChild !== drag.row) $list[0].appendChild(drag.row);
+    // keep scrolling when dragging near the top or bottom of the dialog
+    if (scroller) {
+      var sr = scroller.getBoundingClientRect();
+      if (y < sr.top + 40) scroller.scrollTop -= 10;
+      else if (y > sr.bottom - 40) scroller.scrollTop += 10;
+    }
+  };
+  var onDragEnd = function (e) {
+    if (!drag || e.pointerId !== drag.pointer) return;
+    document.removeEventListener("pointermove", onDragMove);
+    document.removeEventListener("pointerup", onDragEnd);
+    document.removeEventListener("pointercancel", onDragEnd);
+    drag.row.classList.remove("is-dragging");
+    $list.removeClass("is-sorting");
+    var moved = currentOrder() !== drag.from;
+    var $handle = $(drag.row).find(".plx-handle");
+    drag = null;
+    if (moved) firetable.actions.savePlaylistOrder();
+    $handle.trigger("focus");
+  };
+  // Moving the row in the DOM drops pointer capture, so follow the pointer
+  // on the document for the length of the drag.
+  $list.on("pointerdown", ".plx-handle", function (e) {
+    if (e.button !== 0 || drag) return;
+    e.preventDefault();
+    var row = this.closest(".plx-row");
+    drag = { row: row, pointer: e.pointerId, from: currentOrder() };
+    row.classList.add("is-dragging");
+    $list.addClass("is-sorting");
+    document.addEventListener("pointermove", onDragMove, { passive: false });
+    document.addEventListener("pointerup", onDragEnd);
+    document.addEventListener("pointercancel", onDragEnd);
   });
 
   $list

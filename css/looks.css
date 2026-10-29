@@ -7,7 +7,7 @@
     font-style: normal;
     font-weight: 100 700;
     font-display: block;
-    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.02') format('woff2'); /* keep ?v= in step with index.html */
+    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.03') format('woff2'); /* keep ?v= in step with index.html */
 }
 
 /* ============================================
@@ -5983,10 +5983,12 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
   display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: .5rem;
   padding: .4rem .5rem; border-radius: 8px; background: var(--color-bg-t1);
   &.is-viewing { outline: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
-  &.ui-sortable-helper { box-shadow: 0 6px 20px rgb(0 0 0 / .35); }
+  &.is-dragging { position: relative; z-index: 1; box-shadow: 0 6px 20px rgb(0 0 0 / .35); outline: 1px solid color-mix(in srgb, currentColor 35%, transparent); }
 }
+#plIndexList.is-sorting { user-select: none; cursor: grabbing; }
 .plx-handle {
   border: 0; background: none; color: inherit; cursor: grab; padding: .2rem; opacity: .6; font-size: 1.25rem;
+  touch-action: none; /* the handle drags; the rest of the list still scrolls */
   &:hover, &:focus-visible { opacity: 1; }
 }
 .plx-main { min-width: 0; display: grid; gap: .1rem; }
