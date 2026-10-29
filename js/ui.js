@@ -177,6 +177,76 @@ firetable.actions.openStealPicker = function ($btn, target, placement) {
   });
 };
 
+// ─── Grab stats (#47) ────────────────────────────────────────────────────────
+// When someone adds a track to their playlist from the stage or from Recent /
+// Fresh, the DJ who played it gets credit. It's private: only that DJ can read
+// grabs/<their uid>, nobody sees who grabbed what, and nothing is announced in
+// the room. Each listener counts once per track (grabs/<dj>/<track>/<uid>).
+
+/** Database-safe key for a track. */
+firetable.utilities.grabKey = function (type, cid) {
+  return String(type) + '_' + String(cid).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 64);
+};
+
+/**
+ * Credit a DJ for a grab. Ignores your own tracks and repeat grabs.
+ * @param {string} djid - Who played the track
+ * @param {number|string} type - 1 YouTube, 2 SoundCloud
+ * @param {string} cid - Track id
+ */
+firetable.actions.recordGrab = function (djid, type, cid) {
+  if (!djid || !cid || !ftapi.uid || djid === ftapi.uid) return;
+  var ref = ftapi.db().ref('grabs/' + djid + '/' + firetable.utilities.grabKey(type, cid) + '/' + ftapi.uid);
+  ref.set(firebase.database.ServerValue.TIMESTAMP).catch(function () { /* already counted, or rules not deployed */ });
+};
+
+firetable.grabs = { ref: null, tracks: {}, since: 0 };
+
+/** Listen to your own grab stats (count in Profile, a quiet toast for new grabs). */
+firetable.actions.watchGrabs = function () {
+  firetable.actions.unwatchGrabs();
+  if (!ftapi.uid) return;
+  var g = firetable.grabs;
+  g.since = ftapi.now();
+  g.ref = ftapi.db().ref('grabs/' + ftapi.uid);
+  var onTrack = function (snap) {
+    var who = snap.val() || {};
+    var before = g.tracks[snap.key] || {};
+    g.tracks[snap.key] = who;
+    var fresh = Object.keys(who).some(function (uid) { return !before[uid] && who[uid] > g.since; });
+    firetable.ui.renderGrabStats();
+    if (fresh) {
+      var song = firetable.song || {};
+      var playing = song.djid === ftapi.uid && firetable.utilities.grabKey(song.type, song.cid) === snap.key;
+      firetable.ui.toast(playing ? 'Someone added the track you\'re playing to their playlist 🎶' : 'Someone added one of your tracks to their playlist 🎶', 'success');
+    }
+  };
+  var onGone = function (snap) { delete g.tracks[snap.key]; firetable.ui.renderGrabStats(); };
+  g.ref.on('child_added', onTrack, function () { /* rules not deployed yet */ });
+  g.ref.on('child_changed', onTrack);
+  g.ref.on('child_removed', onGone);
+};
+
+firetable.actions.unwatchGrabs = function () {
+  var g = firetable.grabs;
+  if (g.ref) g.ref.off();
+  g.ref = null;
+  g.tracks = {};
+  firetable.ui.renderGrabStats();
+};
+
+/** Profile tab: "Your tracks were added to playlists N times (M tracks)". */
+firetable.ui.renderGrabStats = function () {
+  var tracks = firetable.grabs.tracks, keys = Object.keys(tracks);
+  var total = keys.reduce(function (n, k) { return n + Object.keys(tracks[k] || {}).length; }, 0);
+  var $el = $('#grabStats');
+  if (!total) { $el.text('When listeners add a track you played to their playlists, you\'ll see the count here. Only you can see it.'); return; }
+  $el.empty()
+    .append($('<strong></strong>').text(total.toLocaleString()))
+    .append(document.createTextNode(total === 1 ? ' grab' : ' grabs'))
+    .append(document.createTextNode(' across ' + keys.length.toLocaleString() + (keys.length === 1 ? ' track' : ' tracks') + '. Only you can see this.'));
+};
+
 // ─── LinkGrabber (Drag-and-Drop Track Detection) ─────────────────────────────
 
 /**
@@ -1332,6 +1402,10 @@ firetable.ui.setupMiscEvents = function () {
     else firetable.ui.showQueuePanel();
   });
 
+  // ── Grab stats (private to each DJ) ──
+  ftapi.events.on('loggedIn', firetable.actions.watchGrabs);
+  ftapi.events.on('loggedOut', firetable.actions.unwatchGrabs);
+
   // ── Grab (steal to another playlist) ──
   $("#grab").on("click", function () {
     var isHidden = $("#stealContain").is(":hidden");
@@ -1399,6 +1473,8 @@ firetable.ui.setupMiscEvents = function () {
         String(src.cid) === String(firetable.song.cid) &&
         String(src.type) === String(firetable.song.type));
       firetable.stealTarget = null;
+      // Credit the DJ who played it (privately; see recordGrab)
+      firetable.actions.recordGrab(src.djid || (isNowPlaying && firetable.song.djid), src.type, src.cid);
       // Now-playing track goes to the bottom; any other source (history,
       // discover, search) goes to the top, added and moved in one step.
       if (isNowPlaying) {

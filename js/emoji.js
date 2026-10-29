@@ -109,6 +109,13 @@ firetable.utilities.getEmojiMap = function () {
         }
       }
 
+      // The app shell is detached on the login screen, so look there too
+      var findEl = function (id) {
+        return document.getElementById(id) || (firetable.$appShell && firetable.$appShell.find('#' + id)[0]) || null;
+      };
+      var $nav = $(findEl("pickerNav"));
+      var $contents = $(findEl("pickerContents"));
+
       // Walk the grouped emoji data and build picker DOM + emojiMap
       for (var category in data[0]) {
         if (!data[0].hasOwnProperty(category)) continue;
@@ -116,13 +123,11 @@ firetable.utilities.getEmojiMap = function () {
         var catid = category.replace(/[\s&]+/g, '_').toLowerCase();
 
         // Category nav button (uses first emoji as icon)
-        $('#pickerNav').append(
+        $nav.append(
           '<span id="bpicker' + catid + '" title="' + category + '">' + emojisArr[0].emoji + '</span>'
         );
         // Category content section
-        $('#pickerContents').append(
-          '<div id="picker' + catid + '"><h3>' + category + '</h3></div>'
-        );
+        var $section = $('<div id="picker' + catid + '"><h3>' + category + '</h3></div>').appendTo($contents);
 
         for (var i = 0; i < emojisArr.length; i++) {
           firetable.emojiMap[emojisArr[i].slug] = emojisArr[i].emoji;
@@ -135,7 +140,7 @@ firetable.utilities.getEmojiMap = function () {
           if (oldmojis[emojisArr[i].emoji] !== undefined) {
             words += ',' + oldmojis[emojisArr[i].emoji];
           }
-          $("#picker" + catid).append(
+          $section.append(
             '<span role="button" class="pickerResult" title="' + emojisArr[i].slug +
             '" data-alternative-name="' + words + '">' + emojisArr[i].emoji + '</span>'
           );
@@ -148,7 +153,7 @@ firetable.utilities.getEmojiMap = function () {
           }
         }
       }
-      twemoji.parse(document.getElementById("pickerNav"));
+      if ($nav[0]) twemoji.parse($nav[0]);
     } catch (err) {
       console.error("Failed to load emoji data:", err);
     }

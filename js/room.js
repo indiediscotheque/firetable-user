@@ -124,7 +124,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
       ? $trackArtist.text().trim() + ' - ' + $trackTitle.text().trim()
       : $histlink.text();
 
-    firetable.actions.openStealPicker($btn, { cid: btnCid, type: btnType, title: btnTitle, img: btnImg, url: data.url || '' });
+    firetable.actions.openStealPicker($btn, { cid: btnCid, type: btnType, title: btnTitle, img: btnImg, url: data.url || '', djid: data.djid || '' });
   });
 
   // Album art

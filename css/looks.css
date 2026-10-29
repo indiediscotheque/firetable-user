@@ -5968,3 +5968,13 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
 .inboxText { font-size: 0.85rem; overflow-wrap: anywhere; }
 .inboxText img.emoji { width: 1em; height: 1em; }
 .inboxActions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+
+/* ─── Grab stats in Profile (#47) ─── */
+.grabStatsBox {
+  display: flex; gap: .6rem; align-items: center;
+  margin: 0 0 1rem; padding: .6rem .8rem;
+  border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent);
+  & i { font-size: 1.4rem; opacity: .75; }
+  & p { margin: 0; font-size: .9rem; line-height: 1.35; }
+  & strong { font-size: 1.1rem; }
+}
