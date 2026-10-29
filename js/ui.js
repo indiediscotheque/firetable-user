@@ -137,15 +137,8 @@ firetable.ui.formMessage = function (formSel, msg, type) {
 /** Fill the "Where to?" picker with the user's playlists. */
 firetable.ui.fillStealPicker = function (allPlaylists) {
   var $picker = $("#stealpicker");
-  $picker.html(
-    '<option value="-1">Where to?</option>' +
-    '<option value="0">Default Playlist</option>'
-  );
-  for (var key in allPlaylists) {
-    if (allPlaylists.hasOwnProperty(key)) {
-      $picker.append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
-    }
-  }
+  firetable.ui.fillPlaylistSelect($picker, allPlaylists, [{ value: "-1", text: "Where to?" }]);
+  $picker.val("-1");
 };
 
 /**
@@ -1783,6 +1776,7 @@ firetable.ui.init = function () {
   firetable.ui.setupSearchEvents();
   firetable.ui.setupPlaylistEvents();
   firetable.ui.setupBrokenCheck();
+  firetable.ui.setupPlaylistIndex();
   firetable.ui.setupUserEvents();
   firetable.ui.setupRoomEvents();
   firetable.ui.setupMiscEvents();

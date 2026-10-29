@@ -144,17 +144,13 @@ firetable.actions.loggedIn = function (user) {
   $("#avatarStylePicker").val(firetable.avatarStyle || "robohash:" + firetable.avatarset);
 
   // Load all playlists into the picker
-  ftapi.lookup.allLists(function (allPlaylists) {
+  firetable.actions.loadPlaylistPrefs().then(function () { ftapi.lookup.allLists(function (allPlaylists) {
     var viewListStorageKey = "firetable.viewList." + ftapi.uid;
     $("#listpicker").off("change");
-    $("#listpicker").html('<option value="0">Default Playlist</option>');
     $("#djlistpicker").off("change");
-    $("#djlistpicker").html('<option value="0">Default Playlist</option>');
-    for (var key in allPlaylists) {
-      if (allPlaylists.hasOwnProperty(key)) {
-        firetable.utilities.addPlaylistToPickers(key, allPlaylists[key].name);
-      }
-    }
+    firetable.ui.fillPlaylistPickers(allPlaylists);
+    var defaultList = firetable.plPrefs.defaultList;
+    if (!$("#listpicker option[value='" + defaultList + "']").length) defaultList = "0";
 
     ftapi.lookup.selectedList(function (selectedList) {
       var safeSelected = (selectedList && selectedList !== "1") ? selectedList : "0";
@@ -163,11 +159,11 @@ firetable.actions.loggedIn = function (user) {
         var storedViewSelected = localStorage.getItem(viewListStorageKey);
         if (storedViewSelected && storedViewSelected !== "1" && $("#listpicker option[value='" + storedViewSelected + "']").length) {
           viewSelected = storedViewSelected;
-        } else if ($("#listpicker option[value='" + safeSelected + "']").length) {
-          viewSelected = safeSelected;
+        } else {
+          viewSelected = defaultList; // your default list opens first
         }
       } catch (e) {
-        if ($("#listpicker option[value='" + safeSelected + "']").length) viewSelected = safeSelected;
+        viewSelected = defaultList;
       }
 
       $("#listpicker").change(function () {
@@ -191,7 +187,7 @@ firetable.actions.loggedIn = function (user) {
       $("#djlistpicker").val(safeSelected);
       $("#listpicker").val(viewSelected).trigger("change");
     });
-  });
+  }); });
 
   $("#loggedInName").show();
   $("#logOutButton").show().on('click', firetable.actions.logOut);

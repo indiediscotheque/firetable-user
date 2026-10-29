@@ -159,6 +159,9 @@ firetable.utilities = {
    * @param {*} name
    */
   addPlaylistToPickers: function (listID, name) {
+    // keep the known lists current so a later refill of the pickers keeps it
+    firetable.allPlaylists = firetable.allPlaylists || {};
+    if (!firetable.allPlaylists[listID]) firetable.allPlaylists[listID] = { name: name, list: {} };
     $("#listpicker").append(firetable.utilities.playlistOption(listID, name, 'pdopt' + listID));
     $("#djlistpicker").append(firetable.utilities.playlistOption(listID, name));
   },

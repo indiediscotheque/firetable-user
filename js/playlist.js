@@ -1024,7 +1024,7 @@ firetable.ui.setupPlaylistEvents = function () {
   function enterCreateMode() {
     $("#listpicker").hide();
     $("#plmanager").css("display", "flex");
-    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").hide().next(".ft-tip").hide();
+    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").hide().next(".ft-tip").hide();
     $("#plAddLauncher").next(".ft-tip").text("Cancel Create Playlist");
     $("#plAddLauncher i").text("close");
     $("#mainqueuestuff, #filterMachine").css("display", "none");
@@ -1034,7 +1034,7 @@ firetable.ui.setupPlaylistEvents = function () {
   function exitCreateMode() {
     $("#plmanager").css("display", "none");
     $("#listpicker").show();
-    $("#addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").show().next(".ft-tip").show();
+    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #checkBroken, #plDeleteLauncher").show().next(".ft-tip").show();
     $("#plAddLauncher").next(".ft-tip").text("New / Import playlist");
     $("#plAddLauncher i").text("add");
     $("#mainqueuestuff, #filterMachine").css("display", "block");
@@ -1045,14 +1045,7 @@ firetable.ui.setupPlaylistEvents = function () {
     var val = $("#listpicker").val();
     if (!val || val === "0") return;
     firetable.debug && console.log('playlist delete:', val);
-    if (ftapi.selectedListThing === val) {
-      ftapi.actions.switchDjList("0");
-      $("#djlistpicker").val("0");
-    }
-    ftapi.actions.deleteList(val);
-    $("#pdopt" + val).remove();
-    $("#djlistpicker option[value='" + val + "']").remove();
-    $("#listpicker").val("0").change();
+    firetable.actions.deleteLists([val]);
     document.getElementById("deletePromptBox").close();
     $("#deleteConfirmInput").val('');
     $("#pldeleteButton").prop('disabled', true);
@@ -1172,14 +1165,8 @@ firetable.ui.setupPlaylistEvents = function () {
     var isHidden = $("#mergeContain").is(":hidden");
     if (isHidden) {
       ftapi.lookup.allLists(function (allPlaylists) {
-        $("#mergepicker").html('<option value="0">Default Playlist</option>');
-        $("#mergepicker2").html('<option value="-1">Create New Copy</option><option value="0">Default Playlist</option>');
-        for (var key in allPlaylists) {
-          if (allPlaylists.hasOwnProperty(key)) {
-            $("#mergepicker").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
-            $("#mergepicker2").append(firetable.utilities.playlistOption(key, allPlaylists[key].name));
-          }
-        }
+        firetable.ui.fillPlaylistSelect($("#mergepicker"), allPlaylists);
+        firetable.ui.fillPlaylistSelect($("#mergepicker2"), allPlaylists, [{ value: "-1", text: "Create New Copy" }]);
         if (ftapi.users[ftapi.uid] && ftapi.users[ftapi.uid].selectedList) {
           $("#mergepicker").val(ftapi.users[ftapi.uid].selectedList).change();
           $("#mergepicker2").val(-1).change();

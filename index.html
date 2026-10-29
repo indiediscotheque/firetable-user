@@ -343,6 +343,10 @@
 						</div>
 					</div>
 					<div id="qControlButtons">
+						<button role="button" class="butt graybutt iconbutt" id="plIndexBtn" aria-label="All playlists" aria-haspopup="dialog" style="anchor-name: --tip-plIndexBtn" aria-describedby="tip-plIndexBtn">
+							<i class="material-symbols-outlined">library_music</i>
+						</button>
+						<span id="tip-plIndexBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-plIndexBtn">All playlists</span>
 						<button role="button" class="butt graybutt iconbutt" id="addToQueueBttn" aria-label="Find tracks" style="anchor-name: --tip-addToQueueBttn" aria-describedby="tip-addToQueueBttn">
 							<i class="material-symbols-outlined"> search </i>
 						</button>
@@ -562,6 +566,25 @@
 			<i class="material-symbols-outlined">download</i> Import Playlist
 		</button>
 	</div>
+
+	<dialog id="plIndexBox" aria-labelledby="plIndexTitle">
+		<div class="modalBox">
+			<div class="modalHeader">
+				<h2 id="plIndexTitle">Your Playlists</h2>
+				<button role="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			</div>
+			<div class="modalContent">
+				<p class="plx-help"><i class="material-symbols-outlined" aria-hidden="true">star</i> Your default opens first and is listed first. <i class="material-symbols-outlined" aria-hidden="true">headphones</i> is the list you DJ from. Drag <i class="material-symbols-outlined" aria-hidden="true">drag_indicator</i> to reorder; click a name to rename it.</p>
+				<ul id="plIndexList" role="list"></ul>
+				<input type="text" id="plIndexNew" placeholder="New playlist name, then Enter" maxlength="80" enterkeyhint="done" autocomplete="off" aria-label="New playlist name" />
+				<div id="plIndexBulk" class="plx-bulk" hidden>
+					<span id="plIndexCount" role="status" aria-live="polite"></span>
+					<button type="button" class="butt graybutt small" id="plIndexClearSel">Clear</button>
+					<button type="button" class="butt redbutt small" id="plIndexDelete">Delete</button>
+				</div>
+			</div>
+		</div>
+	</dialog>
 
 	<dialog id="deletePromptBox">
 		<div class="modalBox">
@@ -903,6 +926,7 @@
 	<script type="text/javascript" src="js/chat.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/search.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/playlist.js?v=01.11.13"></script>
+	<script type="text/javascript" src="js/playlists.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/users.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/room.js?v=01.11.13"></script>
 	<script type="text/javascript" src="js/ui.js?v=01.11.13"></script>

@@ -5986,3 +5986,52 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
   & progress { width: 100%; accent-color: var(--accent, currentColor); }
   & .butt { justify-self: start; }
 }
+
+/* ─── Playlist overview (#118, #117) ─── */
+#plIndexBox .modalBox { width: 36rem; max-width: 100vw; max-height: 100dvh; }
+#plIndexBox .modalContent { flex-direction: column; gap: var(--pad3); }
+.plx-help {
+  margin: 0; font-size: .85rem; line-height: 1.5; opacity: .8;
+  & i { font-size: 1rem; vertical-align: -.2em; }
+}
+#plIndexList {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem;
+}
+.plx-row {
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: .5rem;
+  padding: .4rem .5rem; border-radius: 8px; background: var(--color-bg-t1);
+  &.is-viewing { outline: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+  &.ui-sortable-helper { box-shadow: 0 6px 20px rgb(0 0 0 / .35); }
+}
+.plx-handle {
+  border: 0; background: none; color: inherit; cursor: grab; padding: .2rem; opacity: .6; font-size: 1.25rem;
+  &:hover, &:focus-visible { opacity: 1; }
+}
+.plx-main { min-width: 0; display: grid; gap: .1rem; }
+.plx-name {
+  width: 100%; min-width: 0; font: inherit; font-weight: 600; color: inherit;
+  background: transparent; border: 1px solid transparent; border-radius: 6px; padding: .15rem .35rem;
+  &:hover { border-color: color-mix(in srgb, currentColor 20%, transparent); }
+  &:focus { border-color: currentColor; background: var(--color-bg-s2); outline: none; }
+}
+.plx-meta { font-size: .8rem; opacity: .75; padding-left: .4rem; display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.plx-tag {
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
+  padding: 0 .4rem; border-radius: 99px; background: color-mix(in srgb, currentColor 15%, transparent);
+}
+.plx-actions {
+  display: flex; gap: .2rem;
+  & .butt { width: 2rem; height: 2rem; }
+  & .plx-star[aria-pressed="true"] i, & .plx-dj[aria-pressed="true"] i { font-variation-settings: "FILL" 1; color: var(--color-accent, #f5c518); }
+}
+#plIndexNew { width: 100%; }
+.plx-bulk {
+  position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+  padding: .5rem; border-radius: 8px; background: var(--color-bg-t1);
+  & #plIndexCount { margin-right: auto; font-size: .85rem; }
+  &[hidden] { display: none; }
+}
+@media (max-width: 480px) {
+  .plx-row { grid-template-columns: auto auto minmax(0, 1fr); }
+  .plx-actions { grid-column: 1 / -1; justify-content: flex-end; }
+}
