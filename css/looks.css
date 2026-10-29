@@ -5333,7 +5333,8 @@ html#about body {
 .utt-bus-btn {
     display: none;
 }
-#ft-user-tip.can-step-down .utt-bus-btn {
+#ft-user-tip.can-step-down .utt-bus-btn,
+#ft-user-tip.can-bus-other .utt-bus-btn {
     display: flex;
 }
 #ft-user-tip.departure-on .utt-bus-btn {

@@ -1067,6 +1067,20 @@ firetable.ui.tooltip = (function () {
           }
         }
       }
+      // Mods can put someone of lower rank on the bus (#121); the bot checks rank too
+      var rank = function (u) { return !u ? 0 : u.supermod ? 2 : u.mod ? 1 : 0; };
+      var djEntry = null;
+      [firetable.tableData, firetable.waitlistData].forEach(function (list) {
+        for (var bk in list || {}) {
+          if (list.hasOwnProperty(bk) && list[bk] && list[bk].id === userid) djEntry = list[bk];
+        }
+      });
+      var canBusOther = !!(isMod && !isSelf && djEntry && rank(userData) < rank(ownUser));
+      $userTip.toggleClass('can-bus-other', canBusOther);
+      if (canBusOther) departureScheduled = !!djEntry.removeAfter;
+      $userTip.find('.utt-bus-btn').attr('title', isSelf
+        ? (departureScheduled ? "Don't step down after your next play" : 'Take the bus (step down after next play)')
+        : (departureScheduled ? "Don't send " + (userData.username || 'them') + ' home after their next play' : 'Send ' + (userData.username || 'them') + ' home after their next play'));
       $userTip.toggleClass('departure-on', departureScheduled);
       $deckBtn
         .toggleClass('is-disabled', isOnDeck)
@@ -1118,7 +1132,9 @@ firetable.ui.tooltip = (function () {
       })
       .on('click', '[data-action="toggle-bus"]', function () {
         var isDepartureOn = $userTip.hasClass('departure-on');
-        ftapi.actions.sendBotCommand(isDepartureOn ? '!dontremoveme' : '!removeafter');
+        var uid = $userTip.attr('data-for');
+        var other = uid && uid !== ftapi.uid && ftapi.users[uid] && ftapi.users[uid].username;
+        ftapi.actions.sendBotCommand((isDepartureOn ? '!dontremoveme' : '!removeafter') + (other ? ' ' + other : ''));
         $userTip.toggleClass('departure-on', !isDepartureOn);
         userTipEl.hidePopover();
       })
