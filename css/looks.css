@@ -941,6 +941,7 @@ a.sociallogo[href] {
 }
 
 #roomlogo {
+    margin: 0;
     background-image: url(../img/idlogo2.png);
     background-size: contain;
     width: 3rem;
@@ -2885,7 +2886,7 @@ input.ft-filter {
 }
 
 /* Narrow panel: the playlist name gets its own row, tools sit underneath */
-@container queuetop (width < 24rem) {
+@container queuetop (width < 34rem) {
     #queueControls {
         flex-wrap: wrap;
         row-gap: var(--pad2);
@@ -5745,33 +5746,9 @@ body.media-off .q-art.no-art {
 #mainGrid.login #djlistOpen,
 #mainGrid.pre-auth #djlistOpen { display: none; }
 
-/* Mods: fix the tags of the song playing now (#136) */
-.npModActions {
-    display: none;
-    gap: var(--pad1);
-}
-body.is-mod .npModActions { display: flex; }
-.npFixTags {
-    display: inline-flex;
-    align-self: flex-start;
-    align-items: center;
-    gap: 0.2rem;
-    margin-top: var(--pad1);
-    padding: 0.1rem 0.45rem 0.1rem 0.3rem;
-    font: inherit;
-    font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.85);
-    background: rgba(0, 0, 0, 0.3);
-    border: none;
-    border-radius: var(--radius-pill);
-    cursor: pointer;
-}
-.npFixTags [class*="material-symbols-"] { font-size: 0.85rem; }
-@media (hover: hover) {
-    body.is-mod .npModActions { opacity: 0; transition: opacity 150ms ease; }
-    body.is-mod #nowplaying:hover .npModActions,
-    body.is-mod .npModActions:focus-within { opacity: 1; }
-}
+/* Mods: one tools button on the stage (fix tags, flag; #136 #125) */
+#npModBtn { display: none; }
+body.is-mod #npModBtn { display: inline-flex; }
 
 /* Recent rows: Flag button for mods (#167) */
 #thehistory .flagplay { display: none; }
@@ -5986,13 +5963,6 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
   & strong { font-size: 1.1rem; }
 }
 
-/* ─── Broken-track check (#92) ─── */
-.checkBrokenBox {
-  display: grid; gap: .6rem; width: min(18rem, 86vw);
-  & p { margin: 0; line-height: 1.4; }
-  & progress { width: 100%; accent-color: var(--accent, currentColor); }
-  & .butt { justify-self: start; }
-}
 
 /* ─── Playlist overview (#118, #117) ─── */
 #plIndexBox .modalBox { width: 36rem; max-width: 100vw; max-height: 100dvh; }
@@ -6078,8 +6048,12 @@ button.track-warning:focus-visible { outline: 2px solid var(--color-accent); out
 #pickNameForm { display: grid; gap: .75rem; width: 100%; & p { margin: 0; } }
 
 /* ─── On the beat (#143) ─── */
+.npArtistRow { display: flex; align-items: baseline; gap: .45em; min-width: 0; }
+.npArtistRow #artist { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #npBpm {
-  font-size: .7rem; font-weight: 600; letter-spacing: .04em; opacity: .7; margin-top: .15rem;
+  flex: none; font-size: .7rem; font-weight: 600; letter-spacing: .03em; opacity: .65;
+  text-shadow: 0 1px 0.3rem rgba(0, 0, 0, 0.6);
+  &::before { content: "· "; }
   &[hidden] { display: none; }
 }
 body.has-beat .avtr.animate {
