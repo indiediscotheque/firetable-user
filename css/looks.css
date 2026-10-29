@@ -5929,3 +5929,42 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
     cursor: pointer;
 }
 .reactPick:hover, .reactPick:focus-visible { background: rgba(255, 255, 255, 0.1); }
+
+/* ─── @mentions inbox (#96) ───────────────────────────────────────────────── */
+#mainGrid.login #inboxTrigger,
+#mainGrid.pre-auth #inboxTrigger,
+#mainGrid.login #tip-inboxTrigger { display: none; }
+#inboxTrigger { position: relative; }
+#inboxTrigger [class*="material-symbols-"] { font-size: 1.25rem; }
+#inboxBadge {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.2rem;
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1rem;
+    text-align: center;
+    color: var(--color-on-accent, #000);
+    background: var(--color-accent);
+    border-radius: var(--radius-pill);
+}
+.inboxBox { width: min(22rem, 92vw); max-height: 70vh; overflow: auto; }
+.inboxHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--pad2); }
+.inboxEmpty { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); }
+.inboxItem {
+    display: flex;
+    gap: var(--pad2);
+    padding: var(--pad2);
+    border-radius: var(--radius-sm);
+}
+.inboxItem.unread { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+.inboxItem .ft-avatar { width: 2rem; height: 2rem; flex-shrink: 0; background-size: cover; }
+.inboxBody { flex: 1; min-width: 0; }
+.inboxMeta { font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); }
+.inboxMeta b { color: var(--color-text-light); }
+.inboxText { font-size: 0.85rem; overflow-wrap: anywhere; }
+.inboxText img.emoji { width: 1em; height: 1em; }
+.inboxActions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }

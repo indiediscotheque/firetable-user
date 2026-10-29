@@ -285,6 +285,62 @@ firetable.actions.unwatchReactions = function (chatID) {
   delete firetable.reactionListeners[chatID];
 };
 
+// ─── @mentions inbox (#96) ───────────────────────────────────────────────────
+// The bot files every @you under mentions/<your uid> (kept 30 days), so you
+// see them even if you were away. Unread ones light up the @ in the top bar.
+
+firetable.inbox = { ref: null, fn: null, items: [] };
+
+firetable.actions.watchInbox = function () {
+  firetable.actions.unwatchInbox();
+  if (!ftapi.uid) return;
+  var ref = ftapi.db().ref("mentions/" + ftapi.uid).orderByChild("time").limitToLast(50);
+  firetable.inbox.ref = ref;
+  firetable.inbox.fn = ref.on("value", function (snap) {
+    var items = [];
+    snap.forEach(function (c) { var v = c.val(); if (v) { v.id = c.key; items.push(v); } });
+    firetable.inbox.items = items.reverse(); // newest first
+    firetable.ui.renderInbox();
+  }, function () { /* rules not deployed yet */ });
+};
+
+firetable.actions.unwatchInbox = function () {
+  var i = firetable.inbox;
+  if (i.ref && i.fn) i.ref.off("value", i.fn);
+  i.ref = i.fn = null;
+  i.items = [];
+  firetable.ui.renderInbox();
+};
+
+firetable.ui.renderInbox = function () {
+  var items = firetable.inbox.items || [];
+  var unread = items.filter(function (m) { return !m.read; }).length;
+  $("#inboxBadge").prop("hidden", !unread).text(unread > 9 ? "9+" : unread);
+  $("#inboxTrigger").attr("aria-label", unread ? "Mentions, " + unread + " unread" : "Mentions");
+  var $list = $("#inboxList").empty();
+  $("#inboxClear").prop("hidden", !items.length);
+  if (!items.length) {
+    $list.append('<p class="inboxEmpty">When someone @mentions you, it shows up here.</p>');
+    return;
+  }
+  items.forEach(function (m) {
+    var $row = $('<div class="inboxItem"></div>').toggleClass("unread", !m.read).attr("data-id", m.id);
+    $('<span class="ft-avatar"></span>').css("background-image", "url(" + firetable.utilities.avatarURL(m.fromId, m.from, "40x40") + ")").appendTo($row);
+    var $body = $('<div class="inboxBody"></div>').appendTo($row);
+    $('<div class="inboxMeta"></div>')
+      .append($('<b></b>').text(m.from))
+      .append($('<span></span>').text(" · " + firetable.utilities.format_date(m.time) + " " + firetable.utilities.format_time(m.time)))
+      .appendTo($body);
+    $('<div class="inboxText"></div>').html(firetable.ui.formatChatText(String(m.txt || ""))).appendTo($body);
+    $('<div class="inboxActions"></div>')
+      .append('<button type="button" class="butt graybutt small inboxReply">Reply</button>')
+      .append('<button type="button" class="row-icon material-symbols-outlined inboxDelete" title="Delete" aria-label="Delete">close</button>')
+      .appendTo($row);
+    $list.append($row);
+  });
+  if (typeof twemoji !== "undefined") twemoji.parse($list[0]);
+};
+
 // ─── Text Processing Helpers ─────────────────────────────────────────────────
 
 firetable.ui = firetable.ui || {};
@@ -920,6 +976,34 @@ firetable.ui.setupChatEvents = function () {
       if ($bar.hasClass('has-reactions')) firetable.reactionListeners[id].ref.once('value', function (s) { firetable.ui.renderReactions(id, s.val()); });
     });
   }));
+
+  // ── Mentions inbox ──
+  var inboxPop = document.getElementById('inboxPopover');
+  ftapi.events.on('loggedIn', firetable.actions.watchInbox);
+  ftapi.events.on('loggedOut', firetable.actions.unwatchInbox);
+  $('#inboxTrigger').on('click', function () {
+    if (inboxPop.matches(':popover-open')) { inboxPop.hidePopover(); return; }
+    inboxPop.style.visibility = 'hidden';
+    inboxPop.showPopover();
+    firetable.ui.positionPopover(this, inboxPop, document.getElementById('inboxArrow'), 'bottom');
+    // opening the inbox reads everything in it
+    var updates = {};
+    firetable.inbox.items.forEach(function (m) { if (!m.read) updates[m.id + '/read'] = true; });
+    if (Object.keys(updates).length) ftapi.db().ref('mentions/' + ftapi.uid).update(updates).catch(function () {});
+  });
+  $(inboxPop).on('click', '.inboxReply', function () {
+    var id = $(this).closest('.inboxItem').attr('data-id');
+    var m = firetable.inbox.items.filter(function (x) { return x.id === id; })[0];
+    inboxPop.hidePopover();
+    if (!m) return;
+    if (!window.matchMedia('(min-width: 640px)').matches) firetable.nav.setMobileTab('mmchat');
+    $('#newchat').val(function (i, v) { return (v ? v.replace(/\s*$/, ' ') : '') + '@' + m.from + ' '; }).trigger('input').focus();
+  }).on('click', '.inboxDelete', function () {
+    ftapi.db().ref('mentions/' + ftapi.uid + '/' + $(this).closest('.inboxItem').attr('data-id')).remove().catch(function () {});
+  });
+  $('#inboxClear').on('click', function () {
+    ftapi.db().ref('mentions/' + ftapi.uid).remove().catch(function () {});
+  });
 
     // ── Shared cards: tap to view larger ──
   $("#chats").on("click", ".chatCard", function () {
