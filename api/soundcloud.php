@@ -13,6 +13,8 @@
  *       → { "item": { ...track, playlist or user... } }
  *   ?action=playlist&id=123
  *       → { "item": { ...playlist..., "tracks": [ ...playable tracks... ] } }
+ *   ?action=tracks&ids=1,2,3                          (up to 50; broken-track check)
+ *       → { "collection": [ ...the tracks that still exist... ] }
  *
  * Errors come back as { "error": "message" } with a matching HTTP status;
  * 501 means the proxy has no credentials yet, 403 a request from another
@@ -34,7 +36,7 @@ const SC_MAX_QUERY_LEN = 200;
 const SC_PAGE_SIZE     = 200;   // playlist track page size
 const SC_MAX_TRACKS    = 2000;  // cap on tracks returned for one playlist import
 const SC_RATE_LIMIT    = [120, 600]; // default: 120 requests per 10 minutes per IP
-const SC_ACTION_COST   = ['search' => 1, 'resolve' => 1, 'playlist' => 5];
+const SC_ACTION_COST   = ['search' => 1, 'resolve' => 1, 'playlist' => 5, 'tracks' => 2];
 
 require __DIR__ . '/common.php';
 proxy_setup('soundcloud', 'SoundCloud', 'sc');
@@ -311,6 +313,15 @@ proxy_run(function (): void {
             }
             $meta['tracks'] = array_slice($tracks, 0, SC_MAX_TRACKS);
             respond(200, ['item' => $meta], 60);
+        }
+
+        case 'tracks': {
+            // Status of up to 50 tracks by id (the broken-track check). Gone
+            // or private tracks are simply missing from the answer.
+            $ids = (string)($_GET['ids'] ?? '');
+            if (!preg_match('/^\d{1,20}(,\d{1,20}){0,49}$/', $ids)) throw new ProxyError('Invalid track ids.', 400);
+            $json = api_get($creds, '/tracks', ['ids' => $ids, 'limit' => 50, 'linked_partitioning' => 'true']);
+            respond(200, ['collection' => array_map('slim_track', collection_of($json))], 300);
         }
 
         default:

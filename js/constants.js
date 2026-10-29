@@ -41,6 +41,7 @@ var STORAGE = {
   avatarStyle:        "firetableAvatarStyle",
   density:            "firetableDensity",
   shareTyping:        "firetableShareTyping",
+  brokenCheck:        "firetableBrokenCheck",
   lastfmSession:      "ftLastfmSession",
   navView:            "firetableNavView",
   navSide:            "firetableNavSide",

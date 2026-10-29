@@ -355,6 +355,10 @@
 							<i class="material-symbols-outlined"> merge_type </i>
 						</button>
 						<span id="tip-mergeLists" role="tooltip" class="ft-tip" style="position-anchor: --tip-mergeLists">Merge playlists</span>
+						<button role="button" class="butt graybutt iconbutt" id="checkBroken" aria-label="Check for broken tracks" aria-haspopup="dialog" style="anchor-name: --tip-checkBroken" aria-describedby="tip-checkBroken">
+							<i class="material-symbols-outlined">troubleshoot</i>
+						</button>
+						<span id="tip-checkBroken" role="tooltip" class="ft-tip" style="position-anchor: --tip-checkBroken">Check for broken tracks</span>
 						<button role="button" class="butt graybutt iconbutt" id="plAddLauncher" aria-label="New or Import playlist" aria-haspopup="menu" aria-expanded="false" style="anchor-name: --tip-plAddLauncher" aria-describedby="tip-plAddLauncher">
 							<i class="material-symbols-outlined">add</i>
 						</button>
@@ -770,6 +774,14 @@
 		</div>
 	</div>
 
+	<div id="checkBrokenPopover" popover="auto" class="ft-popover" role="dialog" aria-label="Broken track check">
+		<div id="checkBrokenArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box checkBrokenBox">
+			<p id="checkBrokenStatus" role="status" aria-live="polite"></p>
+			<progress id="checkBrokenBar" max="1" value="0" hidden></progress>
+			<button type="button" class="butt small" id="checkBrokenShow" hidden>Show broken tracks</button>
+		</div>
+	</div>
 	<div id="shuffleQueuePopover" popover="auto" class="ft-popover">
 		<div id="shuffleQueueArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box deleteSongPromptBox shuffleQueuePromptBox">

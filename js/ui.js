@@ -1782,6 +1782,7 @@ firetable.ui.init = function () {
   firetable.ui.setupChatEvents();
   firetable.ui.setupSearchEvents();
   firetable.ui.setupPlaylistEvents();
+  firetable.ui.setupBrokenCheck();
   firetable.ui.setupUserEvents();
   firetable.ui.setupRoomEvents();
   firetable.ui.setupMiscEvents();

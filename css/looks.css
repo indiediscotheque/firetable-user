@@ -5978,3 +5978,11 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
   & p { margin: 0; font-size: .9rem; line-height: 1.35; }
   & strong { font-size: 1.1rem; }
 }
+
+/* ─── Broken-track check (#92) ─── */
+.checkBrokenBox {
+  display: grid; gap: .6rem; width: min(18rem, 86vw);
+  & p { margin: 0; line-height: 1.4; }
+  & progress { width: 100%; accent-color: var(--accent, currentColor); }
+  & .butt { justify-self: start; }
+}
