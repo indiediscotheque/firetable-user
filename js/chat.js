@@ -162,6 +162,59 @@ firetable.actions.localChatResponse = function (txt) {
   }
 };
 
+// ─── Typing indicator (#33) ──────────────────────────────────────────────────
+// typing/<uid> = {name, at}: written while you type (at most every 3 s),
+// removed when you send, clear the box, leave it, go quiet for 5 s or
+// disconnect. Entries older than 8 s are ignored, so a crashed tab can't
+// leave someone "typing" forever.
+
+firetable.typing = { others: {}, active: false, last: 0, idle: null };
+
+/** Tell the room you're typing (or that you stopped). */
+firetable.actions.setTyping = function (on) {
+  var t = firetable.typing;
+  if (!ftapi.uid) return;
+  var ref = ftapi.db().ref('typing/' + ftapi.uid);
+  clearTimeout(t.idle);
+  if (!on || !firetable.shareTyping) {
+    if (t.active) {
+      t.active = false;
+      ref.remove().catch(function () { /* rules not deployed yet */ });
+    }
+    return;
+  }
+  var now = Date.now();
+  if (!t.active || now - t.last > 3000) {
+    t.active = true;
+    t.last = now;
+    ref.onDisconnect().remove();
+    ref.set({ name: ftapi.uname, at: firebase.database.ServerValue.TIMESTAMP })
+      .catch(function () { t.active = false; });
+  }
+  t.idle = setTimeout(function () { firetable.actions.setTyping(false); }, 5000);
+};
+
+/** "alice is typing…" under the chat, from typing/ (fresh entries only). */
+firetable.ui.renderTyping = function () {
+  var names = [];
+  var others = firetable.typing.others || {};
+  for (var uid in others) {
+    if (!others.hasOwnProperty(uid) || uid === ftapi.uid) continue;
+    if (ftapi.blockedUsers && ftapi.blockedUsers[uid]) continue;
+    var e = others[uid];
+    if (!e || !e.name || ftapi.now() - Number(e.at || 0) > 8000) continue;
+    names.push(String(e.name));
+  }
+  var $el = $('#typingIndicator');
+  if (!names.length) { $el.removeClass('show').empty(); return; }
+  var text = names.length === 1 ? names[0] + ' is typing'
+    : names.length === 2 ? names[0] + ' and ' + names[1] + ' are typing'
+    : names.length + ' people are typing';
+  $el.empty().addClass('show')
+    .append($('<span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>'))
+    .append($('<span class="typing-text"></span>').text(text));
+};
+
 // ─── Text Processing Helpers ─────────────────────────────────────────────────
 
 firetable.ui = firetable.ui || {};
@@ -510,6 +563,21 @@ firetable.ui.setupChatEvents = function () {
     $(this).closest('.chatText').toggleClass('hideImg');
   });
 
+  // ── Typing indicator ──
+  ftapi.db().ref('typing').on('value', function (snap) {
+    firetable.typing.others = snap.val() || {};
+    firetable.ui.renderTyping();
+  }, function () { /* rules not deployed yet: no indicator */ });
+  setInterval(firetable.ui.renderTyping, 2000); // drop stale entries
+  $("#newchat").on('input.typing', function () {
+    var v = $(this).val();
+    // bot commands and slash commands aren't chat
+    firetable.actions.setTyping(!!v.trim() && !/^[!\/]/.test(v));
+  }).on('blur.typing', function () {
+    firetable.actions.setTyping(false);
+  });
+  ftapi.events.on('loggedOut', function () { firetable.typing.active = false; });
+
   // ── Chat Input: Auto-grow textarea fallback (for browsers without field-sizing: content) ──
   function growChatInput() {
     var el = document.getElementById('newchat');
@@ -594,6 +662,7 @@ firetable.ui.setupChatEvents = function () {
       }
 
       $("#newchat").val("").trigger('input');
+      firetable.actions.setTyping(false);
       $("#emojiPicker").slideUp();
       $("#pickEmoji").removeClass("on");
       firetable.utilities.exitAtLand();

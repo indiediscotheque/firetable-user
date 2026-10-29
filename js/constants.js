@@ -40,6 +40,7 @@ var STORAGE = {
   screenControl:      "firetableScreenControl",
   avatarStyle:        "firetableAvatarStyle",
   density:            "firetableDensity",
+  shareTyping:        "firetableShareTyping",
   lastfmSession:      "ftLastfmSession",
   navView:            "firetableNavView",
   navSide:            "firetableNavSide",

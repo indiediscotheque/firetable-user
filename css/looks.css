@@ -5846,3 +5846,32 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
 }
 #stage.is-fullscreen #track { font-size: 1.75rem; }
 #stage.is-fullscreen #artist { font-size: 1.125rem; }
+
+/* "alice is typing…" (#33) */
+#typingIndicator {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 0;
+    padding: 0 var(--pad3);
+    overflow: hidden;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    transition: height 150ms ease;
+}
+#typingIndicator.show { height: 1.4rem; }
+.typing-dots { display: inline-flex; gap: 3px; }
+.typing-dots i {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: typing-dot 1.2s infinite ease-in-out;
+}
+.typing-dots i:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing-dot {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-3px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .typing-dots i { animation: none; } }

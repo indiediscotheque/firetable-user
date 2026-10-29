@@ -460,6 +460,10 @@ firetable.ui.initSettings = function () {
   firetable.showSongAnnouncements = readSetting(STORAGE.showSongAnnouncements, true);
   $("#showSongAnnouncementsToggle").prop("checked", firetable.showSongAnnouncements);
 
+  // ── Share "is typing" (#33) ──
+  firetable.shareTyping = readSetting(STORAGE.shareTyping, true);
+  $("#shareTypingToggle").prop("checked", firetable.shareTyping);
+
   // ── Chat Sound (Badoop) ──
   firetable.playBadoop = readSetting(STORAGE.badoop, true);
   $("#badoopToggle").prop("checked", firetable.playBadoop);
@@ -1549,6 +1553,11 @@ firetable.ui.setupMiscEvents = function () {
     firetable.debug && console.log("badoop " + (this.checked ? "on" : "off"));
     localStorage[STORAGE.badoop] = this.checked;
     firetable.playBadoop = this.checked;
+  });
+  $('#shareTypingToggle').change(function () {
+    localStorage[STORAGE.shareTyping] = this.checked;
+    firetable.shareTyping = this.checked;
+    if (!this.checked) firetable.actions.setTyping(false);
   });
   $('#showImagesToggle').change(function () {
     firetable.debug && console.log("show images " + (this.checked ? "on" : "off"));
