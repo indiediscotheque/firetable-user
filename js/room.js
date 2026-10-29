@@ -734,39 +734,93 @@ firetable.ui.setupRoomEvents = function () {
     });
   });
 
-  // ── Theme ──
-  function checkThemeTicker() {
-    var el = document.getElementById("currentTheme");
-    if (!el) return;
-    var container = el.parentElement;
-    // undo an earlier ticker before measuring
-    var copy = el.querySelector('.ticker-copy');
-    if (copy) el.innerHTML = copy.innerHTML;
-    el.classList.remove('is-ticker');
-    if (el.scrollWidth > container.offsetWidth) {
-      var originalHTML = el.innerHTML;
-      el.innerHTML = '<span class="ticker-run"><span class="ticker-copy">' + originalHTML + '</span><span class="ticker-sep"> · </span><span class="ticker-copy">' + originalHTML + '</span><span class="ticker-sep"> · </span></span>';
-      el.classList.add('is-ticker');
-    }
-  }
+  // ── Theme (#87) ──
+  // A pill in the top bar. At 1024px+ the bar shrinks into the People column,
+  // so the pill moves to the top of chat, which is always visible there.
+  // Keep references: chat (and the pill with it) leaves the page while logged out.
+  var themeSlot = document.getElementById('themeSlot');
+  var themePill = document.getElementById('themePill');
+  var themePillText = document.getElementById('themePillText');
+  var themePop = document.getElementById('themePopover');
+  var themePopText = document.getElementById('themePopText');
+  var themeWide = window.matchMedia('(min-width: 1024px)');
+  var lastTheme;
 
-  $(window).on("resize.themeTicker", firetable.utilities.debounce(checkThemeTicker, 250));
-  ftapi.events.on("newTheme", function (data) {
-    $("#themeLine").toggleClass("no-theme", !data);
-    if (!data) {
-      $("#currentTheme").text("none yet · !suggest one");
-    } else {
-      var txtOut = firetable.ui.strip(data);
-      txtOut = firetable.ui.textToLinks(txtOut, true);
-      txtOut = firetable.utilities.emojiShortnamestoUnicode(txtOut);
-      txtOut = txtOut.replace(/\`(.*?)\`/g, function (x) {
-        return "<code>" + x.replace(/\`/g, "") + "</code>";
-      });
-      $("#currentTheme").html(txtOut);
-      twemoji.parse(document.getElementById("currentTheme"));
-    }
-    setTimeout(checkThemeTicker, 50);
+  function placeTheme() {
+    var chat = document.getElementById('actualChat'); // null while logged out
+    var inChat = themeWide.matches && chat;
+    if (inChat ? themeSlot.parentElement === chat : themeSlot.previousElementSibling === document.getElementById('roomlogo')) return;
+    if (themePop.matches(':popover-open')) themePop.hidePopover();
+    if (inChat) chat.prepend(themeSlot);
+    else document.getElementById('roomlogo').after(themeSlot);
+  }
+  themeWide.addEventListener('change', placeTheme);
+  // follow chat as it's detached (logout) and put back (login)
+  new MutationObserver(placeTheme).observe(document.getElementById('mainGrid'), { childList: true });
+  placeTheme();
+
+  themePill.setAttribute('aria-expanded', 'false');
+  themePop.addEventListener('toggle', function (e) {
+    var open = e.newState === 'open';
+    themePill.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open) return;
+    // suggesting needs an account
+    document.getElementById('themeSuggest').hidden = !ftapi.uid;
+    themePop.style.visibility = 'hidden';
+    firetable.ui.positionPopover(themePill, themePop, document.getElementById('themeArrow'), 'bottom');
   });
+
+  // Start a !suggest in chat, keeping anything already typed there
+  $('#themeSuggest').on('click', function () {
+    themePop.hidePopover();
+    if (!themeWide.matches && !$('#actualChat').is(':visible')) firetable.nav.setMobileTab('mmchat');
+    var $chat = $('#newchat');
+    var draft = $chat.val().trim();
+    if (!/^!suggest\b/i.test(draft)) $chat.val(('!suggest ' + draft).trim() + ' ').trigger('input');
+    // chat may still be fading in on smaller screens
+    setTimeout(function () {
+      var el = $chat[0];
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }, firetable.nav._fadeMs * 2 + 50);
+  });
+
+  ftapi.events.on("newTheme", function (data) {
+    data = data || null;
+    var changed = lastTheme !== undefined && data !== lastTheme;
+    lastTheme = data;
+
+    var pillText = themePillText, popText = themePopText;
+    themePill.classList.toggle("no-theme", !data);
+    popText.classList.toggle("no-theme", !data);
+
+    if (!data) {
+      pillText.textContent = "none yet";
+      popText.textContent = "No theme right now.";
+      $("#themePopHint").text("Suggest one and the room votes on it in chat.");
+    } else {
+      var plain = firetable.ui.strip(data);
+      var dress = function (html) { // emoji + `code`, on already-escaped text
+        html = firetable.utilities.emojiShortnamestoUnicode(html);
+        return html.replace(/`(.*?)`/g, function (x, code) { return "<code>" + code + "</code>"; });
+      };
+      // the pill is a button, so no links inside it; the popover gets them
+      pillText.innerHTML = dress(firetable.utilities.htmlEscape(plain));
+      popText.innerHTML = dress(firetable.ui.textToLinks(plain, true));
+      // links in the popover should be reachable by keyboard
+      $(popText).find("a").removeAttr("tabindex");
+      $("#themePopHint").text("Want something else? Suggest a new theme and the room votes on it in chat.");
+      twemoji.parse(pillText);
+      twemoji.parse(popText);
+    }
+
+    if (changed) {
+      themePill.classList.remove("is-new");
+      void themePill.offsetWidth; // restart the glow
+      themePill.classList.add("is-new");
+    }
+  });
+  themePill.addEventListener("animationend", function () { themePill.classList.remove("is-new"); });
 
   // ── Tag Update (metadata correction while song is playing) ──
   ftapi.events.on("tagUpdate", function (data) {
