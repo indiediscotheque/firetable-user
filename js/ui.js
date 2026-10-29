@@ -1544,7 +1544,7 @@ firetable.ui.setupMiscEvents = function () {
     $("#plMachine").val("");
   });
   $("dialog").on("click", function (e) {
-    if (e.target === this) {
+    if (e.target === this && !this.hasAttribute("data-required")) {
       this.close();
       $("#plMachine").val("");
     }
@@ -1777,6 +1777,8 @@ firetable.ui.init = function () {
   firetable.ui.setupPlaylistEvents();
   firetable.ui.setupBrokenCheck();
   firetable.ui.setupPlaylistIndex();
+  firetable.ui.setupPickName();
+  firetable.ui.setupProviderSignIn();
   firetable.ui.setupUserEvents();
   firetable.ui.setupRoomEvents();
   firetable.ui.setupMiscEvents();

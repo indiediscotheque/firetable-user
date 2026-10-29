@@ -13,6 +13,7 @@ var ftapi = {
   blockEvent: null,
   blockRef: null,
   nameChangeAfterSignUp: null,
+  pendingSignUpName: null, // set while a new email account's username is being saved
   chatEvent: null,
   chatChangedEvent: null,
   connectedRef: null,
@@ -401,7 +402,8 @@ ftapi.init = function(firebaseConfig) {
         if (ftapi.nameChangeAfterSignUp) {
           var name = ftapi.nameChangeAfterSignUp.username;
           ftapi.nameChangeAfterSignUp = null;
-          ftapi.actions.changeName(name);
+          ftapi.pendingSignUpName = name;
+          ftapi.actions.changeName(name, function() { ftapi.pendingSignUpName = null; });
         }
 
         // set join date if needed
@@ -774,6 +776,37 @@ ftapi.actions = {
     firebase.app("firetable").auth().signInWithEmailAndPassword(email, password).catch(function(error) {
       return errorCallback(error);
     });
+  },
+  /**
+   * Sign in (or sign up) with Google or Apple. Uses a popup, or a full-page
+   * redirect where popups can't open (blocked, or an installed web app).
+   * @param {"google"|"apple"} name
+   * @param {Function} errorCallback - (error)
+   */
+  logInWithProvider: function(name, errorCallback) {
+    ftapi.nameChangeAfterSignUp = null;
+    var provider;
+    if (name === "apple") {
+      provider = new firebase.auth.OAuthProvider("apple.com");
+      provider.addScope("email");
+      provider.addScope("name");
+    } else {
+      provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+    }
+    var auth = firebase.app("firetable").auth();
+    var standalone = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
+    if (standalone) return auth.signInWithRedirect(provider).catch(errorCallback);
+    auth.signInWithPopup(provider).catch(function(error) {
+      if (error && (error.code === "auth/popup-blocked" || error.code === "auth/operation-not-supported-in-environment")) {
+        return auth.signInWithRedirect(provider).catch(errorCallback);
+      }
+      return errorCallback(error);
+    });
+  },
+  /** Errors from a redirect sign-in that came back to this page (resolves null if none). */
+  redirectSignInError: function() {
+    return firebase.app("firetable").auth().getRedirectResult().then(function() { return null; }, function(error) { return error; });
   },
   resetPassword: function(email, errorCallback) {
     firebase.app("firetable").auth().sendPasswordResetEmail(email).catch(function(error) {

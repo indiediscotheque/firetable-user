@@ -28,6 +28,10 @@ var ftconfigs = {
     authDomain: "xxxxxxxxxxxxxxxxx.firebaseapp.com",
     databaseURL: "https://xxxxxxxxxxxxx.firebaseio.com"
   },
+  // signInProviders: ["google", "apple"], // optional: show "Continue with Google / Apple" on the login screen.
+  //   Turn each one on first in the Firebase console (Authentication > Sign-in method), and make sure
+  //   this site's domain is listed under Authentication > Settings > Authorized domains.
+  //   Apple also needs a Services ID and key from your Apple Developer account.
   youtubeKey: "xxxxxxxxxxxxxxxxxxxxxx", // Your youtube api client key. Be sure to whitelist your domain for this key in the google api console.
   // SoundCloud search runs through api/soundcloud.php, which keeps the
   // client secret on the server. See api/soundcloud-config.php.example.

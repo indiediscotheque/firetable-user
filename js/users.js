@@ -53,6 +53,16 @@ firetable.ui.authErrorMessage = function (error) {
       return "This account has been disabled.";
     case 'auth/too-many-requests':
       return "Too many attempts. Wait a few minutes and try again.";
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+    case 'auth/user-cancelled':
+      return "";
+    case 'auth/account-exists-with-different-credential':
+      return "That email already has an account here. Log in with your email and password instead.";
+    case 'auth/operation-not-allowed':
+      return "That sign-in option isn't turned on for this site yet.";
+    case 'auth/unauthorized-domain':
+      return "Signing in with that service isn't set up for this web address yet.";
     case 'auth/network-request-failed':
       return "Couldn't reach the server. Check your connection and try again.";
   }
@@ -65,6 +75,94 @@ firetable.actions.logIn = function (email, password) {
   ftapi.actions.logIn(email, password, function (error) {
     firetable.ui.formMessage('#loginFormShell', firetable.ui.authErrorMessage(error));
     firetable.debug && console.log("log in error:", error);
+  });
+};
+
+// ─── Sign in with Google / Apple (#128) ─────────────────────────────────────
+
+/** Providers this site has turned on (ftconfigs.signInProviders). */
+firetable.utilities.signInProviders = function () {
+  var list = (typeof ftconfigs !== "undefined" && ftconfigs.signInProviders) || [];
+  return (Array.isArray(list) ? list : []).filter(function (p) { return p === "google" || p === "apple"; });
+};
+
+/** Show a button for each provider that's turned on. */
+firetable.ui.setupProviderSignIn = function () {
+  var providers = firetable.utilities.signInProviders();
+  var $box = $("#oauthBox");
+  $box.find(".oauthBttn").each(function () { $(this).prop("hidden", providers.indexOf($(this).attr("data-provider")) === -1); });
+  $box.prop("hidden", !providers.length);
+  $(document).off("click.oauth").on("click.oauth", "#oauthBox .oauthBttn", function () {
+    var name = $(this).attr("data-provider");
+    var $msg = $("#oauthBox .formMessage");
+    $msg.text("");
+    ftapi.actions.logInWithProvider(name, function (error) {
+      $msg.text(firetable.ui.authErrorMessage(error));
+      firetable.debug && console.log("provider sign-in error:", error);
+    });
+  });
+  if (providers.length) {
+    ftapi.actions.redirectSignInError().then(function (error) {
+      if (error) $("#oauthBox .formMessage").text(firetable.ui.authErrorMessage(error));
+    });
+  }
+};
+
+/**
+ * A suggested username from a provider's display name or email: letters,
+ * numbers and underscores, up to 22 characters.
+ * @param {firebase.User} user
+ * @returns {string}
+ */
+firetable.utilities.suggestUsername = function (user) {
+  var base = String((user && (user.displayName || (user.email || "").split("@")[0])) || "")
+    .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "_").replace(/[^0-9a-zA-Z_]/g, "").slice(0, 22);
+  return base || "dj_" + Math.random().toString(36).slice(2, 8);
+};
+
+/** First visit with a new Google/Apple account: choose the name people see. */
+firetable.actions.promptForUsername = function () {
+  var dlg = document.getElementById("pickNameBox");
+  if (!dlg || dlg.open) return;
+  var user = firebase.app("firetable").auth().currentUser;
+  var suggestion = firetable.utilities.suggestUsername(user);
+  $("#pickName").val(suggestion);
+  firetable.ui.formMessage("#pickNameForm", "");
+  dlg.showModal();
+  $("#pickName").trigger("focus").trigger("select");
+  // offer a free variant of the suggestion
+  ftapi.lookup.usernameTaken(suggestion, function (taken) {
+    if (taken && $("#pickName").val() === suggestion) $("#pickName").val(suggestion.slice(0, 18) + "_" + Math.floor(100 + Math.random() * 900));
+  });
+};
+
+firetable.ui.setupPickName = function () {
+  var dlg = document.getElementById("pickNameBox");
+  dlg.addEventListener("cancel", function (e) { e.preventDefault(); }); // a name is required
+  $("#pickNameForm").on("submit", function (e) {
+    e.preventDefault();
+    var name = $("#pickName").val().trim();
+    var $save = $("#pickNameSave").prop("disabled", true);
+    ftapi.lookup.usernameTaken(name, function (taken) {
+      if (taken) {
+        $save.prop("disabled", false);
+        return firetable.ui.formMessage("#pickNameForm", "That name is taken. Try another.");
+      }
+      ftapi.actions.changeName(name, function (err) {
+        $save.prop("disabled", false);
+        if (err) return firetable.ui.formMessage("#pickNameForm", err);
+        ftapi.uname = name;
+        $("#loggedInName").text(name);
+        $("#loggedInUser .ft-avatar").css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, name) + ")");
+        dlg.close();
+        firetable.ui.toast("Welcome, " + name + "!", "success");
+      });
+    });
+  });
+  $("#pickNameLogout").on("click", function () {
+    dlg.close();
+    firetable.actions.logOut();
   });
 };
 
@@ -109,7 +207,7 @@ firetable.actions.showLoginScreen = function () {
   $("#skipTrigger").css("display", "none");
 
   if (firetable.loginForm && !$("#login").html()) {
-    $("#mainGrid").append('<div id="login" class="scroll-view">' + firetable.loginForm + '</div>');
+    $("#mainGrid").append('<div id="login" class="scroll-view" role="region" aria-label="Log in or sign up">' + firetable.loginForm + '</div>');
     firetable.ui.loginEventsInit();
   }
   firetable.ui.renderRoomPulse();
@@ -188,6 +286,15 @@ firetable.actions.loggedIn = function (user) {
       $("#listpicker").val(viewSelected).trigger("change");
     });
   }); });
+
+  // A brand-new Google/Apple account has no username yet
+  // (userByID stands the uid in for a missing name, so read the field itself)
+  if (!ftapi.pendingSignUpName) {
+    var askedFor = ftapi.uid;
+    ftapi.db().ref("users/" + askedFor + "/username").once("value").then(function (snap) {
+      if (!snap.val() && !ftapi.pendingSignUpName && ftapi.uid === askedFor) firetable.actions.promptForUsername();
+    });
+  }
 
   $("#loggedInName").show();
   $("#logOutButton").show().on('click', firetable.actions.logOut);
