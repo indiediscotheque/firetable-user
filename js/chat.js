@@ -215,6 +215,76 @@ firetable.ui.renderTyping = function () {
     .append($('<span class="typing-text"></span>').text(text));
 };
 
+// ─── Emoji reactions on chat messages (#51) ─────────────────────────────────
+// chatData/<id>/reactions/<emoji>/<uid> = true. Each message on screen
+// listens to its own reactions; the listener goes when the message does.
+
+var CHAT_REACTIONS = [
+  ["thumbsup", "👍"], ["heart", "❤️"], ["joy", "😂"], ["fire", "🔥"],
+  ["open_mouth", "😮"], ["cry", "😢"], ["clap", "👏"], ["raised_hands", "🙌"]
+];
+firetable.reactionListeners = {};
+
+/** The emoji for a reaction key (our set, then the emoji map, else :key:). */
+firetable.utilities.reactionEmoji = function (key) {
+  for (var i = 0; i < CHAT_REACTIONS.length; i++) if (CHAT_REACTIONS[i][0] === key) return CHAT_REACTIONS[i][1];
+  var map = firetable.emojiMap;
+  return (map && Object.prototype.hasOwnProperty.call(map, key)) ? map[key] : ":" + key + ":";
+};
+
+/** Add or remove your reaction. */
+firetable.actions.toggleReaction = function (chatID, key) {
+  if (!ftapi.uid || !chatID || !/^[a-z0-9_+-]{1,40}$/.test(key)) return;
+  var ref = ftapi.db().ref("chatData/" + chatID + "/reactions/" + key + "/" + ftapi.uid);
+  var mine = $("#reactions" + chatID + ' .reactChip[data-key="' + key + '"]').hasClass("mine");
+  (mine ? ref.remove() : ref.set(true)).catch(function () {
+    firetable.ui.toast("Reactions aren't available yet.", "error");
+  });
+};
+
+/** Draw the reaction chips under a message. */
+firetable.ui.renderReactions = function (chatID, reactions) {
+  var $bar = $("#reactions" + chatID);
+  if (!$bar.length) return;
+  $bar.empty();
+  var keys = Object.keys(reactions || {}).filter(function (k) {
+    return reactions[k] && Object.keys(reactions[k]).length;
+  });
+  keys.forEach(function (key) {
+    var uids = Object.keys(reactions[key]);
+    var names = uids.map(function (u) {
+      return (ftapi.users[u] && ftapi.users[u].username) || (u === ftapi.uid ? ftapi.uname : null);
+    }).filter(Boolean);
+    var label = (names.length ? names.join(", ") : firetable.utilities.pluralize(uids.length, "person", "people")) + " reacted";
+    var $chip = $('<button type="button" class="reactChip"></button>')
+      .attr({ "data-key": key, title: label, "aria-label": label + " with " + key.replace(/_/g, " ") })
+      .toggleClass("mine", uids.indexOf(ftapi.uid) !== -1)
+      .append($('<span class="reactEmoji"></span>').text(firetable.utilities.reactionEmoji(key)))
+      .append($('<span class="reactCount"></span>').text(uids.length));
+    $bar.append($chip);
+  });
+  $bar.toggleClass("has-reactions", keys.length > 0);
+  if (keys.length && typeof twemoji !== "undefined") twemoji.parse($bar[0]);
+};
+
+/** Start listening to a message's reactions (once). */
+firetable.actions.watchReactions = function (chatID) {
+  if (!chatID || firetable.reactionListeners[chatID]) return;
+  var ref = ftapi.db().ref("chatData/" + chatID + "/reactions");
+  var fn = ref.on("value", function (snap) {
+    firetable.ui.renderReactions(chatID, snap.val());
+  }, function () { /* not readable (blocked) or rules not deployed */ });
+  firetable.reactionListeners[chatID] = { ref: ref, fn: fn };
+};
+
+/** Stop listening for messages that left the chat. */
+firetable.actions.unwatchReactions = function (chatID) {
+  var l = firetable.reactionListeners[chatID];
+  if (!l) return;
+  l.ref.off("value", l.fn);
+  delete firetable.reactionListeners[chatID];
+};
+
 // ─── Text Processing Helpers ─────────────────────────────────────────────────
 
 firetable.ui = firetable.ui || {};
@@ -461,6 +531,7 @@ firetable.ui.setupChatEvents = function () {
       );
       $("#chatTime" + firetable.lastChatId).text(firetable.utilities.format_time(chatData.time)).attr('data-time', chatData.time);
       $("#chattxt" + chatData.chatID).html(txtOut);
+      $('<div class="chatReactions"></div>').attr('id', 'reactions' + chatData.chatID).insertAfter("#chattxt" + chatData.chatID);
 
       if (canDelete()) {
         $("#chattxt" + chatData.chatID).addClass("deleteMe");
@@ -491,6 +562,7 @@ firetable.ui.setupChatEvents = function () {
       if (hasMention) $chatthing.addClass('badoop');
 
       $chatthing.find(".chatText").html(txtOut).attr('id', "chattxt" + chatData.chatID);
+      $('<div class="chatReactions"></div>').attr('id', 'reactions' + chatData.chatID).insertAfter($chatthing.find(".chatText"));
       $chatthing.find(".chatName").text(namebo);
 
       // Click-to-@ on avatar and name
@@ -528,6 +600,13 @@ firetable.ui.setupChatEvents = function () {
       firetable.actions.showCard(chatData.card, chatData.chatID);
     }
 
+    // Reactions (not on removed messages)
+    var $txt = $("#chattxt" + chatData.chatID);
+    if (!chatData.hidden && ftapi.uid) {
+      $txt.attr('data-chat', chatData.chatID).append('<button type="button" class="reactAdd material-symbols-outlined" title="Add reaction" aria-label="Add reaction" aria-haspopup="menu">add_reaction</button>');
+      firetable.actions.watchReactions(chatData.chatID);
+    }
+
     // Auto-scroll if user was at bottom or is the sender
     if (atBottom || ftapi.uid === chatData.id) {
       firetable.utilities.scrollToBottom();
@@ -539,7 +618,9 @@ firetable.ui.setupChatEvents = function () {
     var MAX_CHAT_MESSAGES = 200;
     var $allChats = $('#chats').children();
     if ($allChats.length > MAX_CHAT_MESSAGES) {
-      $allChats.slice(0, $allChats.length - MAX_CHAT_MESSAGES).remove();
+      var $gone = $allChats.slice(0, $allChats.length - MAX_CHAT_MESSAGES);
+      $gone.find('.chatText[data-chat]').each(function () { firetable.actions.unwatchReactions(this.getAttribute('data-chat')); });
+      $gone.remove();
       // Invalidate grouping state so the next message always starts a fresh block
       firetable.lastChatPerson = false;
       firetable.lastChatId = false;
@@ -549,6 +630,8 @@ firetable.ui.setupChatEvents = function () {
   // ── Chat Removal (mod delete) ──
   ftapi.events.on("chatRemoved", function (data) {
     $("#chattxt" + data.chatID).text("[message removed]");
+    firetable.actions.unwatchReactions(data.chatID);
+    $("#reactions" + data.chatID).remove();
     try {
       if (ftapi.users[ftapi.uid].mod || ftapi.users[ftapi.uid].supermod) {
         $("#chattxt" + data.chatID).removeClass("deleteMe");
@@ -794,6 +877,49 @@ firetable.ui.setupChatEvents = function () {
       firetable.utilities.exitAtLand();
     }
   });
+
+  // ── Reactions: picker + chips ──
+  var reactPop = document.getElementById('reactPickerPopover');
+  var $picker = $(reactPop).find('.reactPicker');
+  CHAT_REACTIONS.forEach(function (r) {
+    $('<button type="button" role="menuitem" class="reactPick"></button>')
+      .attr({ 'data-key': r[0], title: r[0].replace(/_/g, ' '), 'aria-label': r[0].replace(/_/g, ' ') })
+      .text(r[1]).appendTo($picker);
+  });
+  if (typeof twemoji !== 'undefined') twemoji.parse($picker[0]);
+  $('#chats').on('click', '.reactAdd', function (e) {
+    e.stopPropagation();
+    var chatID = $(this).closest('.chatText').attr('data-chat');
+    if (reactPop.matches(':popover-open')) { reactPop.hidePopover(); if (firetable.reactingTo === chatID) return; }
+    firetable.reactingTo = chatID;
+    reactPop.style.visibility = 'hidden';
+    reactPop.showPopover();
+    firetable.ui.positionPopover(this, reactPop, document.getElementById('reactPickerArrow'), 'top').then(function () {
+      var first = reactPop.querySelector('.reactPick');
+      if (first) first.focus();
+    });
+  }).on('click', '.reactChip', function () {
+    firetable.actions.toggleReaction($(this).closest('.chatReactions').attr('id').replace('reactions', ''), $(this).attr('data-key'));
+  });
+  $(reactPop).on('click', '.reactPick', function () {
+    var chatID = firetable.reactingTo;
+    reactPop.hidePopover();
+    var key = $(this).attr('data-key');
+    // picking one you already gave just keeps it
+    if (!$("#reactions" + chatID + ' .reactChip.mine[data-key="' + key + '"]').length) firetable.actions.toggleReaction(chatID, key);
+  }).on('keydown', function (e) {
+    var $items = $(reactPop).find('.reactPick');
+    var idx = $items.index($items.filter(':focus'));
+    if (e.key === 'ArrowRight') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
+  });
+  // names in chip tooltips fill in as the people list arrives
+  ftapi.events.on('usersChanged', firetable.utilities.oncePerFrame(function () {
+    Object.keys(firetable.reactionListeners).forEach(function (id) {
+      var $bar = $('#reactions' + id);
+      if ($bar.hasClass('has-reactions')) firetable.reactionListeners[id].ref.once('value', function (s) { firetable.ui.renderReactions(id, s.val()); });
+    });
+  }));
 
     // ── Shared cards: tap to view larger ──
   $("#chats").on("click", ".chatCard", function () {

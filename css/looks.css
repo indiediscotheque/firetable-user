@@ -5875,3 +5875,57 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
     30% { transform: translateY(-3px); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .typing-dots i { animation: none; } }
+
+/* ─── Chat reactions (#51) ─────────────────────────────────────────────────── */
+.chatText { position: relative; }
+.reactAdd {
+    position: absolute;
+    top: -0.2rem;
+    right: 0;
+    padding: 0.15rem;
+    font-size: 1rem;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.7);
+    background: var(--color-bg-t2);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+.chatText:hover > .reactAdd,
+.reactAdd:focus-visible { opacity: 1; }
+@media (hover: none) {
+    .reactAdd { opacity: 0.55; }
+}
+.chatReactions { display: none; flex-wrap: wrap; gap: 0.25rem; margin: 0.15rem 0 0.25rem; }
+.chatReactions.has-reactions { display: flex; }
+.reactChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.05rem 0.45rem;
+    font: inherit;
+    font-size: 0.75rem;
+    color: var(--color-text-light);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+}
+.reactChip.mine {
+    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+}
+.reactChip img.emoji, .reactPick img.emoji { width: 1em; height: 1em; }
+.reactPicker { display: flex; gap: 0.15rem; padding: 0.3rem; }
+.reactPick {
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 0.3rem;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+.reactPick:hover, .reactPick:focus-visible { background: rgba(255, 255, 255, 0.1); }
