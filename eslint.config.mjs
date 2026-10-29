@@ -5,7 +5,7 @@ import globals from "globals";
 // Globals one app file defines and others use
 const appGlobals = {
   ftconfigs: "readonly", firetable: "writable", ftapi: "writable", EventEmitter: "readonly",
-  player: "writable", chatScroll: "readonly", $playlistItemTemplate: "writable",
+  player: "writable", chatScroll: "readonly", chatPinned: "writable", $playlistItemTemplate: "writable",
   // constants.js
   MEDIA_YOUTUBE: "readonly", MEDIA_SOUNDCLOUD: "readonly", DEFAULT_VOLUME: "readonly",
   IDLE_TIMEOUT: "readonly", PREVIEW_DURATION: "readonly", ASPECT_RATIO: "readonly",

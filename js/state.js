@@ -175,7 +175,7 @@ var firetable = {
 };
 
 // ─── Version ─────────────────────────────────────────────────────────────────
-firetable.version = "01.12.05";
+firetable.version = "01.12.06";
 
 // ─── Chat Scroll Container ──────────────────────────────────────────────────
 /** Native scroll container wrapper preserving the legacy chatScroll API shape. */
@@ -189,12 +189,52 @@ var chatScroll = chatScrollElement ? {
   }
 } : null;
 
+/**
+ * Sticky-bottom tracking. While pinned, any growth of the chat (new messages,
+ * late-loading images/emoji/cards, now-playing updates, font swaps, the panel
+ * being shown or resized) keeps the newest message fully in view. Only the
+ * user scrolling up unpins it; reaching the bottom again re-pins it.
+ */
+var chatPinned = true;
+
 if (chatScroll) {
-  chatScroll.getScrollElement().addEventListener('scroll', function () {
-    if (firetable.utilities.isChatPrettyMuchAtBottom()) {
-      $('#morechats').removeClass('show');
+  (function () {
+    var wrap = chatScroll.getScrollElement();
+    var content = document.getElementById('chats') || wrap;
+    var lastTop = wrap.scrollTop;
+
+    wrap.addEventListener('scroll', function () {
+      var top = wrap.scrollTop;
+      // Ignore scroll events from a hidden/collapsed panel (scrollTop resets to 0)
+      if (wrap.clientHeight > 0) {
+        if (firetable.utilities.chatDistanceFromBottom() <= 25) {
+          chatPinned = true;
+          $('#morechats').removeClass('show');
+        } else if (top < lastTop) {
+          // Content growth never lowers scrollTop, so this is the user scrolling up
+          chatPinned = false;
+        }
+      }
+      lastTop = top;
+    }, { passive: true });
+
+    var repin = function () {
+      if (chatPinned) firetable.utilities.scrollToBottom();
+    };
+    if (typeof ResizeObserver !== 'undefined') {
+      var ro = new ResizeObserver(repin);
+      ro.observe(wrap);
+      ro.observe(content);
     }
-  }, { passive: true });
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(repin).observe(content, { childList: true, subtree: true, characterData: true });
+    }
+    // Inline images, avatars and emoji: load/error don't bubble, so capture them
+    wrap.addEventListener('load', repin, true);
+    wrap.addEventListener('error', repin, true);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(repin);
+    window.addEventListener('load', repin);
+  })();
 }
 
 // ─── Global Player Reference ────────────────────────────────────────────────

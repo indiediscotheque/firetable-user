@@ -382,19 +382,37 @@ firetable.utilities = {
     if (!chatScroll || !chatScroll.contentWrapperEl) {
       return true;
     }
-
-    var scrollable = chatScroll.contentEl.scrollHeight - chatScroll.el.clientHeight;
-    var scrolled = chatScroll.contentWrapperEl.scrollTop;
-    return (Math.abs(scrollable - scrolled) <= 25);
+    // Pinned means "follow new content", even if content just grew below the fold
+    return chatPinned || firetable.utilities.chatDistanceFromBottom() <= 25;
   },
 
-  /** Scroll the chat container to the very bottom. */
+  /** Pixels between the current scroll position and the bottom of the chat. */
+  chatDistanceFromBottom: function () {
+    if (!chatScroll || !chatScroll.contentWrapperEl) {
+      return 0;
+    }
+    var el = chatScroll.contentWrapperEl;
+    return Math.max(0, el.scrollHeight - el.clientHeight - el.scrollTop);
+  },
+
+  /** Scroll the chat container to the very bottom and keep following new content. */
   scrollToBottom: function () {
     if (!chatScroll || !chatScroll.contentWrapperEl) {
       return;
     }
+    chatPinned = true;
+    $('#morechats').removeClass('show');
+    var el = chatScroll.contentWrapperEl;
+    el.scrollTop = el.scrollHeight;
+  },
 
-    chatScroll.contentWrapperEl.scrollTop = chatScroll.contentEl.scrollHeight;
+  /** Called when something new lands in chat: follow it, or flag it if the user scrolled away. */
+  chatAdded: function (follow) {
+    if (follow || chatPinned) {
+      firetable.utilities.scrollToBottom();
+    } else {
+      $('#morechats').addClass('show');
+    }
   },
 
   // ─── HTML / Text Processing ──────────────────────────────────────────────
