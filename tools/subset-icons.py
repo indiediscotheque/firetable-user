@@ -13,6 +13,9 @@ Run it after using an icon the app hasn't used before:
     pip install "fonttools[woff]"
     python3 tools/subset-icons.py
 
+Then bump the version (index.html ?v=, the font URL in css/looks.css and
+firetable.version in js/state.js) so browsers fetch the new font.
+
 Source font: tools/fonts/material-symbols-outlined.full.woff2 (not deployed).
 """
 import glob

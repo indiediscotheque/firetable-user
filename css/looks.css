@@ -7,7 +7,7 @@
     font-style: normal;
     font-weight: 100 700;
     font-display: block;
-    src: url('../fonts/material-symbols-outlined.woff2') format('woff2');
+    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.01') format('woff2'); /* keep ?v= in step with index.html */
 }
 
 /* ============================================
@@ -729,6 +729,9 @@ button.track-warning {
 
 .iconbutt [class*="material-symbols-"] {
     font-size: 1.43rem;
+    /* one glyph wide: if the font lacks an icon, its name can't spill out */
+    width: 1em;
+    overflow: hidden;
 }
 
 .material-symbols-outlined,
