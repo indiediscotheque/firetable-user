@@ -7,7 +7,7 @@
     font-style: normal;
     font-weight: 100 700;
     font-display: block;
-    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.01') format('woff2'); /* keep ?v= in step with index.html */
+    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.02') format('woff2'); /* keep ?v= in step with index.html */
 }
 
 /* ============================================
@@ -5882,8 +5882,10 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
 }
 .chatText:hover > .reactAdd,
 .reactAdd:focus-visible { opacity: 1; }
+/* Touch: hidden until you tap the message */
 @media (hover: none) {
-    .reactAdd { opacity: 0.55; }
+    .reactAdd { pointer-events: none; }
+    .chatText.show-react > .reactAdd { opacity: 1; pointer-events: auto; }
 }
 .chatReactions { display: none; flex-wrap: wrap; gap: 0.25rem; margin: 0.15rem 0 0.25rem; }
 .chatReactions.has-reactions { display: flex; }
