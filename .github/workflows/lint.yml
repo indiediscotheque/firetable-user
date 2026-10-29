@@ -1,6 +1,7 @@
 # Checks every push and pull request: ESLint on the site's scripts and a PHP
-# syntax check on the API proxies. Run the same locally with:
-#   npm ci && npm run lint && php -l api/*.php
+# syntax check on the API proxies, and that the CSP in .htaccess covers every
+# published path. Run the same locally with:
+#   npm ci && npm run lint && php -l api/*.php && python3 .github/scripts/check-htaccess-scope.py
 
 name: Lint
 
@@ -33,3 +34,6 @@ jobs:
       - name: PHP syntax
         run: |
           for f in api/*.php api/*.php.example; do php -l "$f"; done
+
+      - name: CSP scope in .htaccess
+        run: python3 .github/scripts/check-htaccess-scope.py
