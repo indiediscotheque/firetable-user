@@ -1017,7 +1017,7 @@ firetable.ui.setupRoomEvents = function () {
           npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong></div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
         }
         $("#chats").append(npmsgHTML);
-        if (doTheScrollThing) firetable.utilities.scrollToBottom();
+        firetable.utilities.chatAdded(doTheScrollThing);
         firetable.lastChatPerson = false;
         firetable.lastChatId = false;
       }

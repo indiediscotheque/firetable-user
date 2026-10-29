@@ -387,15 +387,9 @@ firetable.ui.showImages = function (chatTxt) {
   });
 };
 
-// Inline chat images: keep the chat pinned to the bottom when one loads while
-// the user is already there, and hide ones that fail. load/error don't
-// bubble, so these listen in the capture phase.
-document.addEventListener('load', function (e) {
-  if (e.target && e.target.classList && e.target.classList.contains('inlineImage') &&
-      firetable.utilities.isChatPrettyMuchAtBottom()) {
-    firetable.utilities.scrollToBottom();
-  }
-}, true);
+// Inline chat images: hide ones that fail (staying pinned to the bottom as
+// they load is handled by the chat's sticky-bottom tracker in state.js).
+// error doesn't bubble, so this listens in the capture phase.
 document.addEventListener('error', function (e) {
   var link = e.target && e.target.classList && e.target.classList.contains('inlineImage') &&
     e.target.closest('.inlineImgLink');
@@ -664,9 +658,7 @@ firetable.ui.setupChatEvents = function () {
     }
 
     // Auto-scroll if user was at bottom or is the sender
-    if (atBottom || ftapi.uid === chatData.id) {
-      firetable.utilities.scrollToBottom();
-    }
+    firetable.utilities.chatAdded(atBottom || ftapi.uid === chatData.id);
 
     // ── Chat pruning: remove oldest messages to prevent unbounded DOM growth ──
     // Canvases (card shares), avatar background-images, and twemoji nodes all
