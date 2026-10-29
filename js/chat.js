@@ -954,12 +954,22 @@ firetable.ui.setupChatEvents = function () {
       var first = reactPop.querySelector('.reactPick');
       if (first) first.focus();
     });
+  }).on('click', '.chatText', function (e) {
+    // Touch screens: tapping a message shows its reaction button (one at a time)
+    if (!window.matchMedia('(hover: none)').matches) return;
+    if ($(e.target).closest('a, button, .chatTime, .reactChip').length) return;
+    var $t = $(this), on = !$t.hasClass('show-react');
+    $('#chats .chatText.show-react').removeClass('show-react');
+    $t.toggleClass('show-react', on);
+  }).on('click', function (e) {
+    if (!$(e.target).closest('.chatText').length) $('#chats .chatText.show-react').removeClass('show-react');
   }).on('click', '.reactChip', function () {
     firetable.actions.toggleReaction($(this).closest('.chatReactions').attr('id').replace('reactions', ''), $(this).attr('data-key'));
   });
   $(reactPop).on('click', '.reactPick', function () {
     var chatID = firetable.reactingTo;
     reactPop.hidePopover();
+    $('#chats .chatText.show-react').removeClass('show-react');
     var key = $(this).attr('data-key');
     // picking one you already gave just keeps it
     if (!$("#reactions" + chatID + ' .reactChip.mine[data-key="' + key + '"]').length) firetable.actions.toggleReaction(chatID, key);
