@@ -23,10 +23,19 @@ Options -Indexes
   #   images   — any https source (chat images, album art, avatars, emoji)
   #   styles   — inline style attributes are still used, so 'unsafe-inline'
   # If config.js sets soundcloudProxyURL or lastfmProxyURL to another host, add it to connect-src.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://www.gstatic.com https://w.soundcloud.com https://www.youtube.com https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; media-src 'self' blob: https:; connect-src 'self' https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://www.youtube.com https://unpkg.com https://thompsn.com https://*.sndcdn.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://w.soundcloud.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+  #
+  # Only firetable's own paths get this policy. Apache applies this file to
+  # every folder below it, and other sites live there (e.g. /basement, an
+  # older firetable that loads jQuery, SimpleBar and fonts from hosts this
+  # policy doesn't allow). Add a new top-level file or folder to the list;
+  # the lint workflow checks it (.github/scripts/check-htaccess-scope.py).
+  <If "%{REQUEST_URI} =~ m#^/(?:index\.html|about|privacy|terms|api|js|css|fonts|icons|img|favicon\.png|manifest\.webmanifest|config\.js|sound\.mp3|serve\.json|LICENSE\.txt)?(?:/|$)#">
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://www.gstatic.com https://w.soundcloud.com https://www.youtube.com https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; media-src 'self' blob: https:; connect-src 'self' https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://www.youtube.com https://unpkg.com https://thompsn.com https://*.sndcdn.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://w.soundcloud.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+  </If>
 
-  # The page can't be framed by other sites (clickjacking), MIME types are
-  # trusted as sent, and other sites only see our origin in the Referer.
+  # Site-wide: the page can't be framed by other sites (clickjacking), MIME
+  # types are trusted as sent, and other sites only see our origin in the
+  # Referer.
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
