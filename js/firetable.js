@@ -662,10 +662,12 @@ ftapi.actions = {
     });
   },
   deleteTrack: function(trackID, callback) {
-    var removeThis = ftapi.queueRef.child(trackID);
-    removeThis.remove()
+    ftapi.queueRef.child(trackID).remove()
       .then(function() {
         if (callback) return callback();
+      }, function(err) {
+        console.error("[firetable] deleting a track failed:", err);
+        if (callback) return callback(err);
       });
   },
   unflagTrack: function(trackID) {
@@ -692,7 +694,7 @@ ftapi.actions = {
             if (childData.cid) destObj[childData.cid] = childData.type;
           }
         });
-        sourceref.once("value")
+        return sourceref.once("value")
           .then(function(snapshot3) {
             var writes = [];
             snapshot3.forEach(function(childSnapshot3) {
@@ -712,13 +714,13 @@ ftapi.actions = {
 
             });
             // Report completion only once every copy has been saved
-            Promise.all(writes).then(function() {
-              callback();
-            }, function(err) {
-              console.error("[firetable] merge failed:", err);
-              callback(err || true);
-            });
+            return Promise.all(writes);
           });
+      }).then(function() {
+        callback();
+      }, function(err) {
+        console.error("[firetable] merge failed:", err);
+        callback(err || true);
       });
   },
   shuffleList: function(preview, pvChangeCallback) {
@@ -728,7 +730,8 @@ ftapi.actions = {
   },
   removeDuplicatesFromList: function(listID, callback) {
     // Read the chosen list itself (not whichever list is on screen), then
-    // delete every later copy of a track id, keeping the first one.
+    // delete every later copy of a track (same type and id, as merge counts
+    // them), keeping the first one.
     var ref = ftapi.lookup.listRef(listID);
     ref.once("value").then(function(snap) {
       var seen = {};
@@ -736,8 +739,9 @@ ftapi.actions = {
       snap.forEach(function(child) {
         var track = child.val();
         if (!track) return;
-        if (seen.hasOwnProperty(track.cid)) dupes.push(child.key);
-        else seen[track.cid] = true;
+        var id = track.type + ":" + track.cid;
+        if (seen.hasOwnProperty(id)) dupes.push(child.key);
+        else seen[id] = true;
       });
       return Promise.all(dupes.map(function(key) {
         return ref.child(key).remove();
@@ -1018,20 +1022,10 @@ ftapi.lookup = {
       });
   },
   card: function(cardid, callback) {
-    var thecard = ftapi.db().ref("cards/" + cardid);
-    thecard.once('value')
-      .then(function(snap) {
-        var data = snap.val();
-        return callback(data);
-      });
+    ftapi.utilities.read(ftapi.db().ref("cards/" + cardid), null, "a card").then(callback);
   },
   cardCollection: function(callback) {
-    var niceref = ftapi.db().ref("cards");
-    niceref.orderByChild('owner').equalTo(ftapi.uid).once("value")
-      .then(function(snapshot) {
-        var cards = snapshot.val();
-        return callback(cards);
-      });
+    ftapi.utilities.read(ftapi.db().ref("cards").orderByChild('owner').equalTo(ftapi.uid), null, "your cards").then(callback);
   },
   /**
    * Is this username in use by someone else, in any case ("Boss" counts as
@@ -1092,33 +1086,27 @@ ftapi.lookup = {
               ftapi.lookup.userByID(name, callback);
             });
           });
+      }, function(err) {
+        console.error("[firetable] looking up " + name + " failed:", err);
+        callback(null);
       });
   },
   userByID: function(userid, callback) {
     // ids and names can't hold . # $ [ ] (not valid in a database path)
     if (!userid || /[.#$[\]]/.test(String(userid))) return callback(null);
-    var searchByID = ftapi.db().ref("users/" + userid);
-    var person = null;
-    searchByID.once("value")
-      .then(function(snapshot2) {
-        var childData2 = snapshot2.val();
-        if (childData2) {
-          var key2 = snapshot2.key;
-          childData2.userid = key2;
-          if (!childData2.username) childData2.username = key2;
-          person = childData2;
-        }
-        return callback(person);
-      });
+    ftapi.utilities.read(ftapi.db().ref("users/" + userid), null, "a profile").then(function(person) {
+      if (person) {
+        person.userid = userid;
+        if (!person.username) person.username = userid;
+      }
+      return callback(person || null);
+    });
   },
   selectedList: function(callback) {
-    var getSelect = ftapi.db().ref("users/" + ftapi.uid + "/selectedList");
-    getSelect.once('value')
-      .then(function(snappy) {
-        var data = snappy.val();
-        if (!data) data = "0";
-        return callback(data);
-      });
+    // can't be read: the Default playlist
+    ftapi.utilities.read(ftapi.db().ref("users/" + ftapi.uid + "/selectedList"), "0", "your selected playlist").then(function(data) {
+      return callback(data || "0");
+    });
   },
   /**
    * Your playlists' names without their tracks, as {listID: {name}}: the
@@ -1161,12 +1149,7 @@ ftapi.lookup = {
   },
   /** Every playlist with all its tracks (the playlist overview counts them). */
   allLists: function(callback) {
-    var allQueues = ftapi.db().ref("playlists/" + ftapi.uid);
-    allQueues.once('value')
-      .then(function(allQueuesSnap) {
-        var allPlaylists = allQueuesSnap.val();
-        return callback(allPlaylists);
-      });
+    ftapi.utilities.read(ftapi.db().ref("playlists/" + ftapi.uid), null, "your playlists").then(callback);
   }
 };
 
@@ -1174,6 +1157,22 @@ ftapi.lookup = {
 UTILITY FUNCTIONS
 */
 ftapi.utilities = {
+  /**
+   * Read a ref or query once. Resolves its value, or `fallback` when it can't
+   * be read (network, or the rules refuse it), so callers always get an answer.
+   * @param {Object} ref - Database ref or query
+   * @param {*} fallback
+   * @param {string} what - For the console message
+   * @returns {Promise}
+   */
+  read: function(ref, fallback, what) {
+    return ref.once("value").then(function(snap) {
+      return snap.val();
+    }, function(err) {
+      console.error("[firetable] couldn't read " + what + ":", err);
+      return fallback;
+    });
+  },
   /**
    * Firebase's child-key order: keys that are 32-bit integers first
    * (numerically), then everything else as plain strings.
@@ -1325,8 +1324,14 @@ EventEmitter.prototype.emit = function(event) {
     listeners = this.events[event].slice();
     length = listeners.length;
 
+    // A listener that throws is logged; the others still run (one broken
+    // panel mustn't stop the song, chat or deck from updating)
     for (i = 0; i < length; i++) {
-      listeners[i].apply(this, args);
+      try {
+        listeners[i].apply(this, args);
+      } catch (err) {
+        console.error('[firetable] a "' + event + '" listener failed:', err);
+      }
     }
   }
 };

@@ -405,15 +405,30 @@ class Stage
 }
 
 
-if (document.getElementById('fyre') && typeof PIXI !== 'undefined' && typeof TweenMax !== 'undefined') {
-	fyreStage = new Stage(document.getElementById('fyre'), pixelate, fireBackground);
-	window.firetableIgniteFyre = function (count) {
-		fyreStage.ignite(count);
-	};
-	window.firetableSetFyreIntensity = function (count) {
-		fyreStage.setIntensity(count);
-	};
-	if (typeof firetable !== 'undefined') {
-		firetable.fyreStage = fyreStage;
+// The fire shows once someone sends a 🔥: PixiJS and GSAP load then (ftLazy),
+// not with the page. Until they have, a fire going out has nothing to do.
+var fyreStarting = null;
+function startFyre() {
+	if (fyreStage) return Promise.resolve(fyreStage);
+	var el = document.getElementById('fyre');
+	if (!el) return Promise.reject(new Error('no #fyre on this page'));
+	if (!fyreStarting) {
+		fyreStarting = ftLazy.load(['pixi', 'gsap']).then(function () {
+			fyreStage = new Stage(el, pixelate, fireBackground);
+			if (typeof firetable !== 'undefined') firetable.fyreStage = fyreStage;
+			return fyreStage;
+		});
+		fyreStarting.catch(function (err) {
+			fyreStarting = null; // try again with the next 🔥
+			console.warn('[firetable] the fire effect could not load:', err && err.message);
+		});
 	}
+	return fyreStarting;
 }
+window.firetableIgniteFyre = function (count) {
+	startFyre().then(function (stage) { stage.ignite(count); }, function () {});
+};
+window.firetableSetFyreIntensity = function (count) {
+	if (fyreStage) return fyreStage.setIntensity(count);
+	if (count > 0) startFyre().then(function (stage) { stage.setIntensity(count); }, function () {});
+};

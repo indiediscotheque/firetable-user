@@ -212,25 +212,22 @@ jobs:
             flags="--dry-run"
             echo "Dry run: nothing will be uploaded."
           fi
-          # The root .htaccess is merged by the next step; api/.htaccess is
-          # uploaded like any other file
-          flags="$flags --exclude '^\.htaccess\$'"
+          # Never uploaded. The root .htaccess is merged by a later step;
+          # api/.htaccess is uploaded like any other file.
+          skip="--exclude '^\.htaccess\$' \
+            --exclude-glob .git/ --exclude-glob .github/ --exclude-glob tools/ --exclude-glob tests/ \
+            --exclude-glob node_modules/ --exclude-glob package.json --exclude-glob package-lock.json \
+            --exclude-glob eslint.config.mjs --exclude-glob .gitignore --exclude-glob .DS_Store \
+            --exclude-glob config.js --exclude-glob soundcloud-config.php --exclude-glob lastfm-config.php \
+            --exclude-glob README.md"
+          # Pages last: a visitor loading the site mid-upload gets either the
+          # old pages or new pages whose scripts and styles are already there
+          echo "Scripts, styles and other files:"
           lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
-            mirror --reverse --verbose --no-perms --parallel=4 $flags \
-              --exclude-glob .git/ \
-              --exclude-glob .github/ \
-              --exclude-glob tools/ \
-              --exclude-glob node_modules/ \
-              --exclude-glob package.json \
-              --exclude-glob package-lock.json \
-              --exclude-glob eslint.config.mjs \
-              --exclude-glob .gitignore \
-              --exclude-glob .DS_Store \
-              --exclude-glob config.js \
-              --exclude-glob soundcloud-config.php \
-              --exclude-glob lastfm-config.php \
-              --exclude-glob README.md \
-              ./ \"$DEST/\""
+            mirror --reverse --verbose --no-perms --parallel=4 $flags $skip --exclude-glob *.html ./ \"$DEST/\""
+          echo "Pages:"
+          lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
+            mirror --reverse --verbose --no-perms --parallel=4 $flags --include-glob *.html $skip ./ \"$DEST/\""
 
       - name: Check the Last.fm proxy
         if: env.DRY_RUN != 'true'
@@ -324,7 +321,7 @@ jobs:
           count=0
           while IFS= read -r -d '' f; do
             case "$f" in
-              config.js|api/soundcloud-config.php|api/lastfm-config.php|.htaccess|.htaccess.firetable-previous|README.md|.gitignore|.github/*|tools/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
+              config.js|api/soundcloud-config.php|api/lastfm-config.php|.htaccess|.htaccess.firetable-previous|README.md|.gitignore|.github/*|tools/*|tests/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
             esac
             printf 'rm -f "%s/%s"\n' "$DEST" "$f" >> "$script"
             echo "Removing $f"

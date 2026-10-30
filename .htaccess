@@ -13,9 +13,11 @@ Options -Indexes
 <IfModule mod_headers.c>
   # Content Security Policy: only these sources may run scripts, load frames
   # or open connections. No inline scripts or event handlers, no eval.
-  #   scripts  — this site, the pinned CDN libraries (checked with SRI), the
-  #              YouTube and SoundCloud player APIs, and Firebase's fallback
-  #              transport
+  #   scripts  — this site, the exact pinned CDN files (checked with SRI; a
+  #              whole CDN would let injected markup load any package on it),
+  #              the YouTube and SoundCloud player APIs, and Firebase's
+  #              fallback transport. Upgrading a CDN library? Update its path
+  #              here too (index.html or js/lazy.js has the URL).
   #   connect  — Firebase (auth + realtime database), YouTube Data API and
   #              oEmbed, emoji data, the legacy SoundCloud resolver (Last.fm and
   #              SoundCloud go through this site's api/ proxies)
@@ -30,7 +32,7 @@ Options -Indexes
   # policy doesn't allow). Add a new top-level file or folder to the list;
   # the lint workflow checks it (.github/scripts/check-htaccess-scope.py).
   <If "%{REQUEST_URI} =~ m#^/(?:index\.html|about|privacy|terms|api|js|css|fonts|icons|img|favicon\.png|manifest\.webmanifest|config\.js|sound\.mp3|serve\.json|LICENSE\.txt)?(?:/|$)#">
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://www.gstatic.com https://w.soundcloud.com https://www.youtube.com https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; media-src 'self' blob: https:; connect-src 'self' https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://www.youtube.com https://unpkg.com https://thompsn.com https://*.sndcdn.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://w.soundcloud.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://apis.google.com https://cdn.jsdelivr.net/npm/@floating-ui/core@1.8.0/dist/floating-ui.core.umd.min.js https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.8.0/dist/floating-ui.dom.umd.min.js https://cdn.jsdelivr.net/npm/pixi.js@4.8.9/dist/pixi.min.js https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js https://code.jquery.com/jquery-4.0.0.min.js https://code.jquery.com/ui/1.14.2/jquery-ui.min.js https://www.gstatic.com/firebasejs/13.0.0/ https://w.soundcloud.com/player/api.js https://www.youtube.com/iframe_api https://www.youtube.com/s/player/ https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; media-src 'self' blob: https:; connect-src 'self' https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://www.youtube.com https://unpkg.com https://thompsn.com https://*.sndcdn.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://w.soundcloud.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
   </If>
 
   # Site-wide: the page can't be framed by other sites (clickjacking), MIME

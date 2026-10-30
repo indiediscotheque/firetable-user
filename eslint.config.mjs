@@ -19,7 +19,7 @@ const appGlobals = {
   // seasons.js
   AVATAR_SEASONS: "readonly", LIGHTS_MONTHS: "readonly", SNOW_MONTHS: "readonly",
   // other app files
-  ytAPI: "readonly", setup: "readonly",
+  ytAPI: "readonly", setup: "readonly", ftLazy: "readonly",
   // third-party libraries
   firebase: "readonly", twemoji: "readonly", linkifyStr: "readonly", FloatingUIDOM: "readonly",
   IdleJs: "readonly", SC: "readonly", YT: "readonly",
