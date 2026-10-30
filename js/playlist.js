@@ -1356,8 +1356,10 @@ firetable.ui.setupPlaylistEvents = function () {
 
 // ─── Broken-track check (#92) ────────────────────────────────────────────────
 // Looks up every track in a playlist and flags the ones that can't play here:
-// YouTube videos that are gone, private, not embeddable, age-restricted or
-// blocked in the US, and SoundCloud tracks that are gone or blocked. Tracks
+// YouTube videos that are gone, private, not embeddable, age-restricted,
+// blocked in the US or premieres that haven't started, and SoundCloud tracks
+// that are gone, blocked or only a 30-second preview. The hostbot checks each
+// track with the same rules (and codes) before it plays (lib/checks.js). Tracks
 // that were flagged automatically but play fine again get their flag cleared.
 // Manual flags (broken / low quality / off-theme) are never touched.
 //
@@ -1382,12 +1384,13 @@ firetable.utilities.hasYouTubeKey = function () {
 /** Why a YouTube video can't play here (a flag code), or 0 when it's fine. */
 firetable.utilities.youTubeProblem = function (item) {
   if (!item) return 2;
-  var st = item.status || {}, cd = item.contentDetails || {};
+  var st = item.status || {}, cd = item.contentDetails || {}, sn = item.snippet || {};
   if (st.privacyStatus === "private" || /^(deleted|failed|rejected)$/.test(st.uploadStatus || "")) return 2;
   if (st.embeddable === false) return 6;
   var rr = cd.regionRestriction;
   if (rr && ((rr.allowed && rr.allowed.indexOf("US") === -1) || (rr.blocked && rr.blocked.indexOf("US") !== -1))) return 3;
   if (cd.contentRating && cd.contentRating.ytRating === "ytAgeRestricted") return 7;
+  if (sn.liveBroadcastContent === "upcoming") return 5; // a premiere that hasn't started
   return 0;
 };
 
@@ -1396,10 +1399,10 @@ firetable.actions.ytVideoStatus = function (ids) {
   return $.ajax({
     url: "https://www.googleapis.com/youtube/v3/videos",
     data: {
-      part: "status,contentDetails",
+      part: "status,contentDetails,snippet",
       id: ids.join(","),
       maxResults: 50,
-      fields: "items(id,status(embeddable,privacyStatus,uploadStatus),contentDetails(regionRestriction,contentRating/ytRating))",
+      fields: "items(id,status(embeddable,privacyStatus,uploadStatus),contentDetails(regionRestriction,contentRating/ytRating),snippet/liveBroadcastContent)",
       key: ftconfigs.youtubeKey
     },
     dataType: "json",
@@ -1436,10 +1439,12 @@ firetable.actions.scTrackStatus = function (ids) {
   });
 };
 
-/** Why a SoundCloud track can't play here, or 0. */
+/** Why a SoundCloud track can't play here, or 0. Promo snippets (30-second previews) never play. */
 firetable.utilities.soundCloudProblem = function (t) {
   if (!t) return 5;
-  if (t.access === "blocked" || t.streamable === false || t.sharing === "private") return 5;
+  if (t.access === "blocked" || t.policy === "BLOCK" || t.streamable === false || t.sharing === "private") return 5;
+  if (t.access === "preview" || t.policy === "SNIP") return 5;
+  if (Number(t.full_duration) > Number(t.duration) + 1000) return 5;
   return 0;
 };
 
