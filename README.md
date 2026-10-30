@@ -34,6 +34,9 @@ Both proxies share `api/common.php` (config loading, caller check, rate limit, H
 ## hostbot
 Works with the original bot ([mxew/firetable-hostbot](https://github.com/mxew/firetable-hostbot)): the site only uses bot commands and database paths it already has. A few extras need [indiediscotheque/firetable-hostbot](https://github.com/indiediscotheque/firetable-hostbot): `!lights` / `!lightson` / `!lightsoff` outside the lights months, seasonal trading-card avatars, and timing stamped with the database clock (with the original bot, song positions follow the bot server's clock).
 
+### seasons stay in sync with the bot
+Seasonal settings live only on this site: defaults in `js/seasons.js`, overrides in `config.js` (`avatarset`, `avatarSeasons`, `lightsMonths`, `snowMonths`). The indiediscotheque hostbot reads both files from the live site, at startup and every 10 minutes, so its trading-card avatars and `!lights` replies follow them. Change them here, deploy (or edit `config.js` on the server), and the bot picks it up with nothing to change on the bot. It needs `SITE_URL` (this site's address) in the bot's `.env`. Keep `js/seasons.js` plain data, since the bot runs it outside a browser.
+
 ## checks
 `npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every push and pull request. None of these tooling files are deployed.
 
