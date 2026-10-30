@@ -4,8 +4,9 @@
  * config.js can override each one (avatarset, avatarSeasons, lightsMonths,
  * snowMonths). firetable-hostbot reads this file and config.js from the live
  * site (its SITE_URL setting), so the bot's trading-card avatars and !lights
- * replies follow whatever is set here. Keep it plain data: no DOM, no other
- * globals, so it also runs outside a browser.
+ * replies follow whatever is set here. The bot parses these values without
+ * running the file, so keep them plain data (text, numbers, true/false, lists
+ * and objects): an expression or function call is skipped.
  */
 
 /**

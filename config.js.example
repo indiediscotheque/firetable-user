@@ -24,6 +24,7 @@ var ftconfigs = {
   // snowMonths: [1, 2], // optional: months (1-12) with subtle snowfall on the stage, or false to turn off
   // lightsMonths: [12], // optional: months (1-12) the stage string lights stay on by themselves, or false to turn off. Other months, supermods use !lights / !lightson / !lightsoff (indiediscotheque/firetable-hostbot only).
   // The hostbot reads avatarset, avatarSeasons and lightsMonths from this file on the live site (its SITE_URL setting), so its trading-card avatars and !lights follow these with no change on the bot.
+  // It parses them without running this file, so keep those three plain values (no expressions or function calls).
    firebase:{ // put the info from your Firebase app here. can be found in the Firebase console
     apiKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     authDomain: "xxxxxxxxxxxxxxxxx.firebaseapp.com",
