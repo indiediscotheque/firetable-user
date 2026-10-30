@@ -451,8 +451,6 @@ ftapi.actions = {
    * @param {Object} [extra] - More fields to save with it (e.g. forSong)
    */
   sendChat: function(txt, cardid, extra) {
-    var chatFeed = ftapi.db().ref("chatFeed");
-    var chatData = ftapi.db().ref("chatData");
     var data = {
       time: firebase.database.ServerValue.TIMESTAMP,
       id: ftapi.uid,
@@ -465,30 +463,44 @@ ftapi.actions = {
         if (extra.hasOwnProperty(k) && extra[k] !== undefined && extra[k] !== null) data[k] = extra[k];
       }
     }
-    var chatItem = chatData.push(data, function() {
-      var feedObj = {
-        chatID: chatItem.key
-      };
-      var feedItem = chatFeed.push(feedObj, function() {
-        chatItem.child("feedID").set(feedItem.key);
+    return ftapi.actions.postChat(data);
+  },
+  /**
+   * Save a chat message and its chat feed entry in one write, so a message
+   * never exists without its feed entry (or the other way round). Before the
+   * database rules allow that, it falls back to the older three steps.
+   * @param {Object} data - {time, id, txt, name, ...}
+   * @returns {Promise}
+   */
+  postChat: function(data) {
+    var db = ftapi.db();
+    var chatID = db.ref("chatData").push().key;
+    var feedID = db.ref("chatFeed").push().key;
+    var updates = {};
+    updates["chatData/" + chatID] = Object.assign({}, data, { feedID: feedID });
+    updates["chatFeed/" + feedID] = { chatID: chatID };
+    return db.ref().update(updates).catch(function(err) {
+      if (!err || !/permission/i.test(err.code || err.message)) throw err;
+      return new Promise(function(resolve, reject) {
+        var chatItem = db.ref("chatData").push(data, function(e1) {
+          if (e1) return reject(e1);
+          var feedItem = db.ref("chatFeed").push({ chatID: chatItem.key }, function(e2) {
+            if (e2) return reject(e2);
+            chatItem.child("feedID").set(feedItem.key).then(resolve, reject);
+          });
+        });
       });
+    }).catch(function(err) {
+      console.error("[firetable] sending a chat message failed:", err);
     });
   },
   sendBotCommand: function(txt) {
-    var chatFeed = ftapi.db().ref("chatFeed");
-    var chatData = ftapi.db().ref("chatData");
-    var data = {
+    return ftapi.actions.postChat({
       time: firebase.database.ServerValue.TIMESTAMP,
       id: ftapi.uid,
       txt: txt,
       name: ftapi.uname,
       botCmd: true
-    };
-    var chatItem = chatData.push(data, function() {
-      var feedObj = { chatID: chatItem.key };
-      var feedItem = chatFeed.push(feedObj, function() {
-        chatItem.child("feedID").set(feedItem.key);
-      });
     });
   },
   // Save which playlist the DJ bot should draw from, without changing the local queue view.
@@ -756,8 +768,9 @@ ftapi.actions = {
     callback = callback || function() {};
     var validateName = ftapi.utilities.validateUsername(newName);
     if (!validateName.valid) return callback(validateName.reason);
-    // claim before we can change
-    var claimRef = ftapi.db().ref("nameClaim/" + newName);
+    // claim before we can change. Claims are lowercase, so a name is unique
+    // whatever its case: "Boss" can't be taken while "boss" is in use.
+    var claimRef = ftapi.db().ref("nameClaim/" + newName.toLowerCase());
     claimRef.set(ftapi.uid, function(error) {
       if (error) return callback("This username is not available");
       // name claimed, now we can set it
@@ -974,37 +987,70 @@ ftapi.lookup = {
         return callback(cards);
       });
   },
+  /**
+   * Is this username in use by someone else, in any case ("Boss" counts as
+   * "boss")? Checks the lowercase name claim, then (for accounts from before
+   * claims were lowercase) the exact name.
+   * @param {string} name
+   * @param {Function} callback - (taken)
+   */
   usernameTaken: function(name, callback) {
-    var searchByName = ftapi.db().ref("users");
-    searchByName.orderByChild('username').equalTo(name).once("value")
-      .then(function(snapshot) {
-        var data = snapshot.val();
-        var taken = false;
-        if (data) {
-          taken = true;
-        }
-        return callback(taken);
+    var db = ftapi.db();
+    var lower = String(name).toLowerCase();
+    var claimHolder = /^[0-9a-z_]{1,22}$/.test(lower)
+      ? db.ref("nameClaim/" + lower).once("value").then(function(snap) { return snap.val(); }, function() { return null; })
+      : Promise.resolve(null);
+    claimHolder.then(function(holder) {
+      if (typeof holder !== "string" || holder === ftapi.uid) return false;
+      // a claim only counts while its holder still goes by that name
+      return db.ref("users/" + holder + "/username").once("value").then(function(snap) {
+        return typeof snap.val() === "string" && snap.val().toLowerCase() === lower;
       });
-  },
-  userByName: function(name, callback) {
-    var searchByName = ftapi.db().ref("users");
-    var ppl = [];
-    searchByName.orderByChild('username').equalTo(name).once("value")
-      .then(function(snapshot) {
-        snapshot.forEach(function(childSnapshot) {
-          var key = childSnapshot.key;
-          var childData = childSnapshot.val();
-          childData.userid = key;
-          ppl.push(childData);
+    }).then(function(taken) {
+      if (taken) return true;
+      return db.ref("users").orderByChild('username').equalTo(name).once("value").then(function(snapshot) {
+        var exact = false;
+        snapshot.forEach(function(child) {
+          if (child.key !== ftapi.uid) exact = true;
         });
-        if (ppl[0]) {
-          return callback(ppl[0]);
-        } else {
-          ftapi.lookup.userByID(name, callback);
-        }
+        return exact;
+      });
+    }).then(callback, function(err) {
+      console.error("[firetable] username check failed:", err);
+      callback(false); // the claim itself still refuses a taken name
+    });
+  },
+  /**
+   * A user by name, in any case ("@boss" finds "Boss"), or by user id.
+   * @param {string} name
+   * @param {Function} callback - (user with .userid, or null)
+   */
+  userByName: function(name, callback) {
+    var db = ftapi.db();
+    var lower = String(name).toLowerCase();
+    db.ref("users").orderByChild('username').equalTo(name).once("value")
+      .then(function(snapshot) {
+        var found = null;
+        snapshot.forEach(function(child) {
+          if (found) return;
+          found = child.val();
+          found.userid = child.key;
+        });
+        if (found) return callback(found);
+        if (!/^[0-9a-z_]{1,22}$/.test(lower)) return ftapi.lookup.userByID(name, callback);
+        return db.ref("nameClaim/" + lower).once("value").then(function(snap) { return snap.val(); }, function() { return null; })
+          .then(function(uid) {
+            if (typeof uid !== "string") return ftapi.lookup.userByID(name, callback);
+            ftapi.lookup.userByID(uid, function(person) {
+              if (person && String(person.username).toLowerCase() === lower) return callback(person);
+              ftapi.lookup.userByID(name, callback);
+            });
+          });
       });
   },
   userByID: function(userid, callback) {
+    // ids and names can't hold . # $ [ ] (not valid in a database path)
+    if (!userid || /[.#$[\]]/.test(String(userid))) return callback(null);
     var searchByID = ftapi.db().ref("users/" + userid);
     var person = null;
     searchByID.once("value")

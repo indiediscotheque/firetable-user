@@ -14,12 +14,22 @@
 # is saved as .htaccess.firetable-previous, and if the site starts answering
 # with a server error the old file is put back and the run fails.
 #
+# It runs the lint checks first (.github/workflows/lint.yml) and only
+# publishes if they pass. Each "?v=" link in the pages and stylesheets is set
+# to a hash of the file it points at (.github/scripts/cache-bust.py), so
+# browsers fetch exactly the files that changed; nothing is bumped by hand.
+#
 # Repository secrets (Settings → Secrets and variables → Actions):
 #   DREAMHOST_HOST      server hostname, e.g. iad1-shared-b8-12.dreamhost.com
 #   DREAMHOST_USER      the site's SFTP user
 #   DREAMHOST_PASSWORD  that user's password
 #   DREAMHOST_PATH      site folder, e.g. indiediscotheque.com (relative to
 #                       the user's home; "/indiediscotheque.com" also works)
+#   DREAMHOST_KNOWN_HOSTS  recommended: the server's SSH host key, so the
+#                       deploy only sends the password to that server. Get it
+#                       on your own computer with `ssh-keyscan <DREAMHOST_HOST>`
+#                       and paste the output. Without it, each run trusts the
+#                       key the server shows that time (and warns).
 #
 # Optional repository secrets for Last.fm scrobbling (api/lastfm.php):
 #   LASTFM_API_KEY      Last.fm API key
@@ -58,7 +68,11 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+
   deploy:
+    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -68,6 +82,7 @@ jobs:
       DEST_RAW: ${{ secrets.DREAMHOST_PATH }}
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
       SITE_URL: ${{ vars.SITE_URL }}
+      KNOWN_HOSTS: ${{ secrets.DREAMHOST_KNOWN_HOSTS }}
     steps:
       - name: Check out master
         uses: actions/checkout@v7
@@ -90,10 +105,16 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq lftp
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          ssh-keyscan -T 15 "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          if [ ! -s ~/.ssh/known_hosts ]; then
-            echo "::error::Could not reach $HOST over SFTP (port 22). Check DREAMHOST_HOST."
-            exit 1
+          if [ -n "$KNOWN_HOSTS" ]; then
+            # the saved host key: the password only ever goes to that server
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -T 15 "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+            if [ ! -s ~/.ssh/known_hosts ]; then
+              echo "::error::Could not reach $HOST over SFTP (port 22). Check DREAMHOST_HOST."
+              exit 1
+            fi
+            echo "::warning::No DREAMHOST_KNOWN_HOSTS secret, so this run trusted whatever host key $HOST showed. Run 'ssh-keyscan $HOST' on your own computer and save its output as the DREAMHOST_KNOWN_HOSTS repository secret."
           fi
           # Give each file its last-commit time, so only files changed in git
           # differ from the server copy on later runs.
@@ -101,6 +122,8 @@ jobs:
             t=$(git log -1 --format=%ct -- "$f")
             [ -n "$t" ] && touch -m -d "@$t" "$f"
           done
+          # Version links from file contents (only rewritten files get a new time)
+          python3 .github/scripts/cache-bust.py .
           # "/indiediscotheque.com" (FTP style) means the folder in the home directory
           DEST="$DEST_RAW"
           case "$DEST" in

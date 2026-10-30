@@ -8,6 +8,7 @@ name: Lint
 on:
   push:
   pull_request:
+  workflow_call: # the deploy runs these checks first
 
 permissions:
   contents: read
