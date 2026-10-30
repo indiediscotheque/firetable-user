@@ -1180,7 +1180,7 @@ firetable.ui.setupPlaylistEvents = function () {
     var $this = $(this);
     var isHidden = $("#mergeContain").is(":hidden");
     if (isHidden) {
-      ftapi.lookup.allLists(function (allPlaylists) {
+      ftapi.lookup.listNames(function (allPlaylists) {
         firetable.ui.fillPlaylistSelect($("#mergepicker"), allPlaylists);
         firetable.ui.fillPlaylistSelect($("#mergepicker2"), allPlaylists, [{ value: "-1", text: "Create New Copy" }]);
         if (ftapi.users[ftapi.uid] && ftapi.users[ftapi.uid].selectedList) {
