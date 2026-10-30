@@ -1,0 +1,42 @@
+# Loads the site in Chromium against a local database emulator, under the real
+# Content-Security-Policy from .htaccess, on every push and pull request.
+# Fails on page errors or anything the policy blocks, and checks the stage
+# effects load on first use. Run the same locally (Java 21 needed):
+#   cd tests && npm ci && npx playwright install chromium && npm run smoke
+# It loads the CDN libraries and YouTube's player API, so a CDN outage can
+# fail it; it doesn't gate the deploy.
+
+name: Smoke test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Install
+        run: |
+          cd tests
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Smoke test
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64" PATH="$JAVA_HOME_21_X64/bin:$PATH"
+          cd tests && npm run smoke

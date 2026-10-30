@@ -1,0 +1,12 @@
+{
+  "name": "firetable-user-tests",
+  "private": true,
+  "description": "Browser smoke test for the site: loads it in Chromium against a local database emulator, under the real Content-Security-Policy from .htaccess. Never deployed.",
+  "scripts": {
+    "smoke": "firebase emulators:exec --only database --project demo-smoke \"node smoke.mjs\""
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.34.2",
+    "playwright": "1.63.0"
+  }
+}

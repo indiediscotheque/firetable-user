@@ -16,7 +16,8 @@
  *   draw()         — called every frame by p5
  *   Glitch         — class instantiated in setup()
  *
- * Depends on: p5.js (loaded from CDN), firetable.scImg (set by room.js)
+ * Depends on: p5.js (loaded with the first SoundCloud song, js/lazy.js),
+ *   firetable.scImg (set by room.js)
  */
 
 /* jshint esversion: 6 */
@@ -337,7 +338,23 @@ function syncGlitchLoop() {
   }
 }
 
-ftapi.events.on('newSong', function () { setTimeout(syncGlitchLoop, 0); });
+// p5.js loads with the first SoundCloud song (ftLazy), not with the page. It
+// starts itself in global mode as soon as it has run: it calls setup() above,
+// which draws firetable.scImg, then the loop is paused or resumed to match.
+var glitchLoading = null;
+function loadGlitch() {
+  if (glitchLoading) return;
+  glitchLoading = ftLazy.load(['p5']).then(function () {
+    setTimeout(syncGlitchLoop, 0);
+  }, function (err) {
+    glitchLoading = null; // try again with the next SoundCloud song
+    console.warn('[firetable] the album-art effect could not load:', err && err.message);
+  });
+}
+
+ftapi.events.on('newSong', function (song) {
+  if (song && song.type == MEDIA_SOUNDCLOUD) loadGlitch();
+  setTimeout(syncGlitchLoop, 0);
+});
 document.addEventListener('visibilitychange', syncGlitchLoop);
-window.addEventListener('load', syncGlitchLoop); // after p5 has started
 new MutationObserver(syncGlitchLoop).observe(document.body, { attributes: true, attributeFilter: ['class'] });

@@ -15,7 +15,7 @@ import sys
 # Never published by the deploy (keep in step with deploy.yml's excludes)
 NOT_DEPLOYED = {
     ".htaccess", ".github", ".gitignore", "tools", "node_modules", "package.json",
-    "package-lock.json", "eslint.config.mjs", "README.md", "config.js.example",
+    "package-lock.json", "eslint.config.mjs", "README.md", "config.js.example", "tests",
 }
 # Server-only files the deploy never uploads but the site serves
 SERVER_ONLY = {"config.js"}

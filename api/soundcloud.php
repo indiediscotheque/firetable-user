@@ -190,6 +190,8 @@ function slim_track(array $t): array
         'permalink_url' => $t['permalink_url'] ?? null,
         'duration'      => $t['duration'] ?? null,
         'access'        => $t['access'] ?? null,
+        'policy'        => $t['policy'] ?? null,
+        'full_duration' => $t['full_duration'] ?? null,
         'streamable'    => $t['streamable'] ?? null,
         'sharing'       => $t['sharing'] ?? null,
     ];
