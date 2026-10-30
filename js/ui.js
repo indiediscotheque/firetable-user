@@ -156,7 +156,7 @@ firetable.actions.openStealPicker = function ($btn, target, placement) {
     $("#stealContain").hide();
     return;
   }
-  ftapi.lookup.allLists(function (allPlaylists) {
+  ftapi.lookup.listNames(function (allPlaylists) {
     firetable.ui.fillStealPicker(allPlaylists);
     if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
     $("#grab").removeClass('on');
@@ -812,6 +812,9 @@ firetable.nav = {
     // layout pass (breakpoint changes, tab clicks, logins all call apply)
     if (n.view === 'cards' && n._cardsShown !== true) firetable.actions.cardCase();
     n._cardsShown = n.view === 'cards';
+    // Recent and Fresh download the first time they're opened
+    if (n.view === 'history') ftapi.watchFeed('history');
+    if (n.view === 'discover') ftapi.watchFeed('fresh');
   }
 };
 
@@ -887,15 +890,28 @@ firetable.ui.tooltip = (function () {
       if (!song) return '';
       return '♪ ' + firetable.ui.strip(song.artist + ' - ' + song.title) + (song.dj ? ' · DJ ' + song.dj : '');
     };
+    // A message from before this song needs Recent, which loads on first use
+    var withPlays = function (el, done) {
+      var time = Number(el.getAttribute('data-time'));
+      var now = firetable.song;
+      if (ftapi.feedStarted('history') || (now && now.cid != 0 && time >= Number(now.started))) return done();
+      ftapi.watchFeed('history').then(done);
+    };
     $('#chats').on('mouseenter.ft-tooltip', '.chatTime[data-time]', function () {
-      var text = playingText(this);
-      if (text) show(this, text);
+      var el = this;
+      withPlays(el, function () {
+        var text = playingText(el);
+        if (text && el.matches(':hover')) show(el, text);
+      });
     }).on('mouseleave.ft-tooltip', '.chatTime', hide)
       .on('click.ft-tooltip', '.chatTime[data-time]', function () {
         // touch screens have no hover: tap the time instead
         if (!noHover.matches) return;
-        var text = playingText(this);
-        if (text) firetable.ui.toast(text);
+        var el = this;
+        withPlays(el, function () {
+          var text = playingText(el);
+          if (text) firetable.ui.toast(text);
+        });
       });
 
     // ── Deck: DJ name on plaque hover ──
@@ -1403,7 +1419,7 @@ firetable.ui.setupMiscEvents = function () {
   $("#grab").on("click", function () {
     var isHidden = $("#stealContain").is(":hidden");
     if (isHidden) {
-      ftapi.lookup.allLists(function (allPlaylists) {
+      ftapi.lookup.listNames(function (allPlaylists) {
         firetable.ui.fillStealPicker(allPlaylists);
         if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
         firetable.stealSourceBtn = null;

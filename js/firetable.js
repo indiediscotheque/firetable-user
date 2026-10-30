@@ -72,6 +72,74 @@ ftapi.detachSession = function() {
   ftapi.blockedUsers = {};
 };
 
+/*
+RECENT AND FRESH
+Each is about a hundred tracks, so they download the first time their tab
+opens (or something else needs them), not on every page load. After that
+they stay live.
+*/
+ftapi.historyLoaded = 0;
+ftapi.feeds = {
+  // the latest plays only; older ones load on request (ftapi.lookup.olderHistory)
+  history: {
+    query: function() { return ftapi.db().ref("songHistory").limitToLast(HISTORY_PAGE_SIZE); },
+    bind: function(query) {
+      query.on('child_added', function(dataSnapshot) {
+        var data = dataSnapshot.val();
+        data.histID = dataSnapshot.key;
+        if (!ftapi.oldestHistoryKey || dataSnapshot.key < ftapi.oldestHistoryKey) ftapi.oldestHistoryKey = dataSnapshot.key;
+        ftapi.historyLoaded++;
+        ftapi.events.emit("newHistory", data);
+      });
+      query.on('child_changed', function(dataSnapshot) {
+        var data = dataSnapshot.val();
+        data.histID = dataSnapshot.key;
+        ftapi.events.emit("editedHistory", data);
+      });
+    }
+  },
+  fresh: {
+    query: function() { return ftapi.db().ref("newMusic"); },
+    bind: function(query) {
+      query.on('child_added', function(dataSnapshot) {
+        var data = dataSnapshot.val();
+        data.histID = dataSnapshot.key;
+        ftapi.events.emit("newProduce", data);
+      });
+    }
+  }
+};
+
+/**
+ * Start Recent ("history") or Fresh ("fresh"), once.
+ * @param {string} name
+ * @returns {Promise} resolves when its tracks have arrived
+ */
+ftapi.watchFeed = function(name) {
+  var feed = ftapi.feeds[name];
+  if (!feed) return Promise.resolve();
+  if (feed.ready) return feed.ready;
+  if (!ftapi.started) {
+    // asked for before Firebase started: ftapi.init starts it
+    feed.wanted = true;
+    return new Promise(function(resolve) {
+      (feed.waiting = feed.waiting || []).push(resolve);
+    });
+  }
+  var query = feed.query();
+  feed.bind(query);
+  // the same query, so this is answered from what the listeners downloaded
+  feed.ready = query.once('value').then(function() {}, function() {});
+  (feed.waiting || []).forEach(function(resolve) { feed.ready.then(resolve); });
+  feed.waiting = null;
+  return feed.ready;
+};
+
+/** True once Recent or Fresh has been started. */
+ftapi.feedStarted = function(name) {
+  return !!(ftapi.feeds[name] && ftapi.feeds[name].ready);
+};
+
 ftapi.ready = function() {
   ftapi.events = new EventEmitter();
 };
@@ -178,31 +246,9 @@ ftapi.init = function(firebaseConfig) {
     ftapi.events.emit("tagUpdate", data);
   });
 
-  // history emitter: the latest plays only; older ones load on request
-  // (ftapi.lookup.olderHistory). Both listeners use the same limited query,
-  // so the full history is never downloaded.
-  var recentz = ftapi.db().ref("songHistory").limitToLast(HISTORY_PAGE_SIZE);
-  ftapi.historyLoaded = 0;
-  recentz.on('child_added', function(dataSnapshot, prev) {
-    var data = dataSnapshot.val();
-    data.histID = dataSnapshot.key;
-    if (!ftapi.oldestHistoryKey || dataSnapshot.key < ftapi.oldestHistoryKey) ftapi.oldestHistoryKey = dataSnapshot.key;
-    ftapi.historyLoaded++;
-    ftapi.events.emit("newHistory", data);
-  });
-
-  recentz.on('child_changed', function(dataSnapshot) {
-    var data = dataSnapshot.val();
-    data.histID = dataSnapshot.key;
-    ftapi.events.emit("editedHistory", data);
-  });
-
-  // new songs emitter
-  var freshproduce = ftapi.db().ref("newMusic");
-  freshproduce.on('child_added', function(dataSnapshot, prev) {
-    var data = dataSnapshot.val();
-    data.histID = dataSnapshot.key;
-    ftapi.events.emit("newProduce", data);
+  // Recent and Fresh load when first needed (ftapi.watchFeed), not here
+  Object.keys(ftapi.feeds).forEach(function(name) {
+    if (ftapi.feeds[name].wanted) ftapi.watchFeed(name);
   });
 
 
@@ -1074,6 +1120,46 @@ ftapi.lookup = {
         return callback(data);
       });
   },
+  /**
+   * Your playlists' names without their tracks, as {listID: {name}}: the
+   * database's REST "shallow" read lists the ids, then only each name is
+   * read. The pickers and menus need nothing more, and a big list would
+   * otherwise download in full every time one opens. Falls back to
+   * ftapi.lookup.allLists if the shallow read fails.
+   * @param {Function} callback
+   */
+  listNames: function(callback) {
+    var uid = ftapi.uid;
+    var app = firebase.app("firetable");
+    var user = app.auth().currentUser;
+    var base = app.options.databaseURL;
+    if (!uid || !user || !base || typeof fetch !== "function") return ftapi.lookup.allLists(callback);
+    user.getIdToken().then(function(token) {
+      var url = new URL(base);
+      url.pathname = url.pathname.replace(/\/?$/, "/") + "playlists/" + encodeURIComponent(uid) + ".json";
+      url.searchParams.set("shallow", "true");
+      url.searchParams.set("auth", token);
+      return fetch(url.toString(), { cache: "no-store" });
+    }).then(function(res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }).then(function(ids) {
+      var db = ftapi.db();
+      return Promise.all(Object.keys(ids && typeof ids === "object" ? ids : {}).map(function(id) {
+        return db.ref("playlists/" + uid + "/" + id + "/name").once("value").then(function(snap) {
+          return [id, snap.val()];
+        });
+      }));
+    }).then(function(pairs) {
+      var names = {};
+      pairs.forEach(function(p) { names[p[0]] = { name: p[1] }; });
+      callback(names);
+    }).catch(function(err) {
+      console.warn("[firetable] listing playlists by name failed (" + (err && err.message) + "); reading them in full");
+      ftapi.lookup.allLists(callback);
+    });
+  },
+  /** Every playlist with all its tracks (the playlist overview counts them). */
   allLists: function(callback) {
     var allQueues = ftapi.db().ref("playlists/" + ftapi.uid);
     allQueues.once('value')

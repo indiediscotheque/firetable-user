@@ -242,7 +242,7 @@ firetable.actions.loggedIn = function (user) {
   $("#avatarStylePicker").val(firetable.avatarStyle || "robohash:" + firetable.avatarset);
 
   // Load all playlists into the picker
-  firetable.actions.loadPlaylistPrefs().then(function () { ftapi.lookup.allLists(function (allPlaylists) {
+  firetable.actions.loadPlaylistPrefs().then(function () { ftapi.lookup.listNames(function (allPlaylists) {
     var viewListStorageKey = "firetable.viewList." + ftapi.uid;
     $("#listpicker").off("change");
     $("#djlistpicker").off("change");
