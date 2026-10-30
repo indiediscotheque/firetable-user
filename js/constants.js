@@ -62,7 +62,11 @@ var SC_API_PROXY_URL = new URL(
   (typeof ftconfigs !== "undefined" && ftconfigs.soundcloudProxyURL) || "api/soundcloud.php",
   document.baseURI
 ).href;
-/** Legacy SoundCloud link resolver (fallback; takes the URL path as ?q=) */
+/**
+ * Legacy SoundCloud link resolver (takes the URL path as ?q=). Keep it: without
+ * a registered SoundCloud app (README "soundcloud") it's how pasted links and
+ * playlist imports work.
+ */
 var SC_RESOLVE_URL = "https://thompsn.com/resolvesc/";
 /** Legacy SoundCloud lookup-by-id proxy (fallback; ?type=…&q=ID) */
 var SC_PROXY_URL = "https://thompsn.com/soundcloud/";

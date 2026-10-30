@@ -11,14 +11,25 @@ Steps for first time setup (running a firetable room locally) can be found [here
 - rename copy to config.js
 - edit contents of config.js with your own configs/api keys
 
-## soundcloud search
-SoundCloud's API only accepts OAuth requests, which need your app's client secret, so the browser can't search it directly. `api/soundcloud.php` (PHP 8.1+ with cURL) gets and caches the token and handles track search, playlist search, link lookups and playlist imports.
+## soundcloud
+**How it works today (no SoundCloud app, nothing paid), and it should stay this way:**
+- Playing SoundCloud tracks uses SoundCloud's embeddable player, which needs no key.
+- Pasted soundcloud.com links and playlist imports work through the legacy resolver (`SC_RESOLVE_URL` / `SC_PROXY_URL` in `js/constants.js`). Keyword search shows a message asking for a link.
+- The hostbot checks each SoundCloud track before it plays with SoundCloud's own web API and a client id (`SOUNDCLOUD_KEY` in the bot's `.env`; see "soundcloud" in the firetable-hostbot README).
+
+SoundCloud's official API only answers requests signed with a registered app's client ID *and* secret, which this room doesn't have, so `api/soundcloud.php` answers `501 not configured` and the site uses the paths above. Don't remove the legacy resolver or switch the bot over while that's the case: SoundCloud links, imports and tracks would stop working. Both workarounds rely on services SoundCloud (or the resolver's host) could change; if links stop resolving or the bot says it can't reach SoundCloud, nothing is lost (the bot flags nothing and keeps YouTube tracks playing) and the fix is a working client id, not a code change.
+
+### adding an official SoundCloud app later (optional)
+If the room gets a registered SoundCloud app (SoundCloud reviews app requests; depending on their current terms that may need a paid plan), the site and the bot are ready for it. SoundCloud's API only accepts OAuth requests, which need your app's client secret, so the browser can't search it directly. `api/soundcloud.php` (PHP 8.1+ with cURL) gets and caches the token and handles track search, playlist search, link lookups and playlist imports.
+- register the app at https://soundcloud.com/you/apps and note its client ID and secret
 - copy `api/soundcloud-config.php.example` to `api/soundcloud-config.php` on the server
 - add your SoundCloud app's client ID and secret (or set `SOUNDCLOUD_CLIENT_ID` / `SOUNDCLOUD_CLIENT_SECRET`)
 - the file is git-ignored and the deploy never uploads or overwrites it
 - the proxy only answers this site's pages (plus any `allowed_origins` you list) and rate-limits each visitor IP (default 120 requests per 10 minutes, set with `rate_limit`); see the example config
+- check `https://<your site>/api/soundcloud.php?action=tracks&ids=13158665` answers with JSON instead of `501`; keyword search then works
+- for the bot, add the same values to its `.env` as `SOUNDCLOUD_CLIENT_ID` / `SOUNDCLOUD_CLIENT_SECRET` and restart it (firetable-hostbot README, "soundcloud")
 
-Without it, pasted soundcloud.com links and playlist imports still work through the legacy resolver; keyword search shows a message asking for a link.
+Without it, pasted soundcloud.com links and playlist imports still work through the legacy resolver; keyword search shows a message asking for a link. Keep the legacy resolver either way: it's the fallback when the proxy can't help.
 
 ## last.fm scrobbling
 Last.fm signs every scrobble with your API account's shared secret, so the browser never gets it: `api/lastfm.php` (PHP 8.1+ with cURL) adds the API key, signs the call and relays Last.fm's answer. It only signs connecting an account, now playing, scrobbles and loves.
@@ -38,7 +49,10 @@ Works with the original bot ([mxew/firetable-hostbot](https://github.com/mxew/fi
 Seasonal settings live only on this site: defaults in `js/seasons.js`, overrides in `config.js` (`avatarset`, `avatarSeasons`, `lightsMonths`, `snowMonths`). The indiediscotheque hostbot reads both files from the live site, at startup and every 10 minutes, so its trading-card avatars and `!lights` replies follow them. Change them here, deploy (or edit `config.js` on the server), and the bot picks it up with nothing to change on the bot. It needs `SITE_URL` (this site's address) in the bot's `.env`. The bot reads these settings with a parser and never runs the files, so keep them plain values (text, numbers, `true`/`false`, lists and objects), not expressions or function calls; anything else is skipped.
 
 ## checks
-`npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every push and pull request. None of these tooling files are deployed.
+`npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every push and pull request, and before every deploy. None of these tooling files are deployed.
+
+## deploy
+Every push to `master` publishes the site to DreamHost (`.github/workflows/deploy.yml`, settings listed at the top of that file). It runs the checks below first and only publishes if they pass. The `?v=…` on each link to this site's own scripts, stylesheets and fonts is set at deploy time from a hash of that file, so visitors' browsers fetch exactly the files that changed; there's nothing to bump by hand (except `config.js?v=`, since `config.js` lives only on the server). Add the repository secret `DREAMHOST_KNOWN_HOSTS` (the output of `ssh-keyscan <your DreamHost server>`, run on your own computer) so the deploy only sends the SFTP password to that server; until then each run warns.
 
 ## security headers
 `.htaccess` sends a Content Security Policy plus the usual hardening headers (no framing by other sites, HSTS, nosniff, referrer and permissions policies). The policy allows no inline scripts or event handlers, so add new behavior in the `js/` files with `addEventListener` / jQuery `.on()`, not `onclick="…"`. If you load something from a new host, add it to the matching directive in `.htaccess`. The policy only covers firetable's own paths, so other sites in folders on the same server (such as `/basement`) keep working; when you add a top-level file or folder, add it to the list in the `<If>` above the policy (CI checks this).
