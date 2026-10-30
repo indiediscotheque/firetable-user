@@ -20,9 +20,10 @@ var ftconfigs = {
                  // Leave empty to use avatarSeasons (monsters in October, normal robots otherwise).
                  // Robohash: "set1" robots, "set2" monsters, "set3" robot heads, "set4" cats
                  // (or any "dicebear:<style>", e.g. "dicebear:bottts").
-  // avatarSeasons: [{ months: [10], style: "set2" }], // optional: replace the built-in seasonal themes (months 1-12), or false to turn them off
+  // avatarSeasons: [{ months: [10], style: "set2" }], // optional: replace the built-in seasonal themes (months 1-12), or false to turn them off. Defaults live in js/seasons.js.
   // snowMonths: [1, 2], // optional: months (1-12) with subtle snowfall on the stage, or false to turn off
-  // lightsMonths: [12], // optional: months (1-12) the stage string lights stay on by themselves, or false to turn off. Other months, supermods use !lights / !lightson / !lightsoff (indiediscotheque/firetable-hostbot only; set its LIGHTS_MONTHS to match).
+  // lightsMonths: [12], // optional: months (1-12) the stage string lights stay on by themselves, or false to turn off. Other months, supermods use !lights / !lightson / !lightsoff (indiediscotheque/firetable-hostbot only).
+  // The hostbot reads avatarset, avatarSeasons and lightsMonths from this file on the live site (its SITE_URL setting), so its trading-card avatars and !lights follow these with no change on the bot.
    firebase:{ // put the info from your Firebase app here. can be found in the Firebase console
     apiKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     authDomain: "xxxxxxxxxxxxxxxxx.firebaseapp.com",
