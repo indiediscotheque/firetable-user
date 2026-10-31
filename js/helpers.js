@@ -340,18 +340,30 @@ firetable.utilities = {
     // iPhone/iPad Safari has no Notification API, and Android Chrome throws on
     // `new Notification()`. Never let either break rendering the chat message.
     if (typeof Notification === "undefined") return;
-    try {
-      if (Notification.permission !== "granted") {
-        Notification.requestPermission();
-      } else {
-        new Notification(namebo, {
-          icon: firetable.utilities.avatarURL(chatData.id, namebo),
-          body: chatData.txt
-        });
-      }
-    } catch (e) {
-      firetable.debug && console.log("desktop notification failed:", e);
+    if (Notification.permission !== "granted") {
+      try { Notification.requestPermission(); } catch (e) { /* not from a tap */ }
+      return;
     }
+    // The same tag as the bot's push for this mention, so one replaces the other
+    var options = {
+      icon: firetable.utilities.avatarURL(chatData.id, namebo),
+      body: chatData.txt,
+      tag: chatData.chatID ? "m-" + chatData.chatID : undefined
+    };
+    var direct = function () {
+      try {
+        new Notification(namebo, options);
+      } catch (e) {
+        firetable.debug && console.log("desktop notification failed:", e);
+      }
+    };
+    // Android only shows notifications through the service worker
+    var reg = firetable.push && firetable.push._reg;
+    if (!reg) return direct();
+    reg.then(function (r) {
+      if (!r) return direct();
+      return r.showNotification(namebo, options);
+    }).catch(direct);
   },
 
   // ─── Screen (Video Stage) ────────────────────────────────────────────────

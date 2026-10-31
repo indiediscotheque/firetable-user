@@ -59,7 +59,9 @@ const check = (ok, msg) => { console.log((ok ? "  PASS " : "  FAIL ") + msg); if
 
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: "127.0.0.1,localhost" } : undefined;
 const browser = await chromium.launch(proxy ? { proxy } : {});
-const page = await browser.newPage();
+const context = await browser.newContext();
+await context.grantPermissions(["notifications"], { origin: SITE.slice(0, -1) });
+const page = await context.newPage();
 const pageErrors = [], violations = [], requested = [];
 page.on("pageerror", (e) => pageErrors.push(e.message));
 page.on("request", (r) => requested.push(r.url()));
@@ -79,6 +81,39 @@ try {
   check(loaded("/s/player/") || loaded("www-widgetapi"), "YouTube's player API loaded under the policy");
   check(!loaded("pixi.min.js") && !loaded("p5.min.js") && !loaded("TweenMax.min.js"), "the stage effects' libraries aren't loaded with the page");
 
+  console.log("-- push notifications: the service worker gets a pushed @mention");
+  const swReady = await page.evaluate(() => Promise.race([
+    navigator.serviceWorker.ready.then((r) => !!r.active && r.scope),
+    new Promise((r) => setTimeout(() => r(false), 15000))
+  ]));
+  check(swReady === SITE, "sw.js registers for the whole site, under the policy");
+  check(await page.$eval("#pushMentionsToggle", () => true).catch(() => false), "the settings have the push toggle");
+  await page.evaluate(() => {
+    window.__swMessages = [];
+    navigator.serviceWorker.addEventListener("message", (e) => window.__swMessages.push(JSON.stringify(e.data)));
+  });
+  // a push message as the bot sends it, delivered by the browser (DevTools protocol)
+  const cdp = await context.newCDPSession(page);
+  const regs = [];
+  cdp.on("ServiceWorker.workerRegistrationUpdated", (e) => regs.push(...e.registrations));
+  await cdp.send("ServiceWorker.enable");
+  await sleep(500);
+  const reg = regs.find((r) => r.scopeURL === SITE && !r.isDeleted);
+  if (reg) {
+    await cdp.send("ServiceWorker.deliverPushMessage", { origin: SITE.slice(0, -1), registrationId: reg.registrationId,
+      data: JSON.stringify({ kind: "mention", id: "c1", title: "dj2", body: "hey @smoke", tag: "m-c1", url: "./#mentions" }) }); // no badge: setting the app badge crashes headless Chromium
+  }
+  const got = await page.evaluate(() => new Promise((resolve) => {
+    const t = Date.now();
+    (function poll() {
+      if (window.__swMessages.length || Date.now() - t > 10000) return resolve(window.__swMessages[0] || null);
+      setTimeout(poll, 200);
+    })();
+  }));
+  // (headless Chromium can't show notifications, so this checks the worker
+  // received and read the push; it messages open windows as it shows one)
+  check(!!reg && got === '{"type":"push","kind":"mention","id":"c1"}', "the service worker receives a pushed mention" + (got ? "" : " (nothing arrived)"));
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));
@@ -93,6 +128,7 @@ try {
   check(!!(await page.$("#fyre canvas")), "the fire is drawn");
   await page.evaluate(() => window.firetableSetFyreIntensity(0));
   await sleep(1500);
+
 } catch (e) {
   check(false, "smoke test threw: " + e.message);
 }

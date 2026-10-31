@@ -53,6 +53,12 @@ export default [
     }
   },
   { files: ["js/glitch.js"], languageOptions: { globals: p5Globals } },
+  // the service worker (push notifications)
+  {
+    files: ["sw.js"],
+    languageOptions: { ecmaVersion: 2022, sourceType: "script", globals: { ...globals.serviceworker } },
+    rules: { "no-undef": "error", "no-unused-vars": ["warn", { args: "none", caughtErrors: "none" }] }
+  },
   // fire.js keeps its original animation (one tween lists `ease` twice; the
   // second one is what runs). Left as is so the fire looks exactly the same.
   { files: ["js/fire.js"], rules: { "no-dupe-keys": "off", "no-redeclare": "off" } }

@@ -3,7 +3,7 @@
   "private": true,
   "description": "Front end for firetable, a virtual music listening room powered by Firebase.",
   "scripts": {
-    "lint": "eslint js"
+    "lint": "eslint js sw.js"
   },
   "devDependencies": {
     "eslint": "9.39.1",

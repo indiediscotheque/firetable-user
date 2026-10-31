@@ -704,6 +704,17 @@
 						<input type="checkbox" id="desktopNotifyMentionsToggle" name="DTNMToggle">
 						<label for="desktopNotifyMentionsToggle">Desktop notifications for @mentions</label>
 					</div>
+					<div class="settingline pushSetting">
+						<input type="checkbox" id="pushMentionsToggle" name="pushMentionsToggle">
+						<label for="pushMentionsToggle">Push @mentions to this device</label>
+						<button type="button" id="pushTest" class="butt graybutt small" hidden>Send a test</button>
+					</div>
+					<div class="settingline settingSub" id="pushEveryoneLine">
+						<input type="checkbox" id="pushEveryoneToggle" name="pushEveryoneToggle">
+						<label for="pushEveryoneToggle">Also push @everyone announcements</label>
+					</div>
+					<p id="pushHint" class="settingHint" role="status" hidden></p>
+					<ul id="pushDevices" class="pushDevices" aria-label="Devices getting push notifications" hidden></ul>
 					<div class="settingline">
 						<input type="checkbox" id="shareTypingToggle" name="shareTypingToggle">
 						<label for="shareTypingToggle">Show others when I'm typing</label>
@@ -889,6 +900,12 @@
 		<div id="inboxArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box inboxBox" role="dialog" aria-label="Mentions">
 			<div class="inboxHead"><b>Mentions</b><button type="button" id="inboxClear" class="butt graybutt small">Clear all</button></div>
+			<div id="inboxPush" class="inboxPush" hidden>
+				<i class="material-symbols-outlined" aria-hidden="true">notifications</i>
+				<span id="inboxPushText"></span>
+				<button type="button" id="inboxPushOn" class="butt small">Turn on</button>
+				<button type="button" id="inboxPushDismiss" class="row-icon material-symbols-outlined" title="Don't show this again" aria-label="Don't show this again">close</button>
+			</div>
 			<div id="inboxList"></div>
 		</div>
 	</div>
@@ -960,6 +977,7 @@
 	<script type="text/javascript" src="js/player.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/cards.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/chat.js?v=01.12.07"></script>
+	<script type="text/javascript" src="js/push.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/search.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/playlist.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/playlists.js?v=01.12.07"></script>

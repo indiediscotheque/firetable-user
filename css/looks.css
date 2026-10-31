@@ -6169,3 +6169,25 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
   &[hidden] { display: none; }
   &.has-flagged::after { content: " ⚠"; color: var(--color-accent); }
 }
+
+/* ─── Push notifications (js/push.js) ─────────────────────────────────────── */
+.pushSetting { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.pushSetting #pushTest { margin-left: auto; }
+.settingSub { padding-left: 1.5rem; }
+.settingSub.is-disabled { opacity: 0.5; }
+.settingHint { margin: calc(-1 * var(--pad1, 0.25rem)) 0 var(--pad2); font-size: 0.8rem; color: var(--color-text-muted); }
+.pushDevices { list-style: none; margin: 0 0 var(--pad2); padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.pushDevice {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    padding: 0.25rem 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    font-size: 0.85rem;
+}
+.pushDeviceName { overflow-wrap: anywhere; }
+.inboxPush {
+    display: flex; align-items: center; gap: 0.5rem; margin-bottom: var(--pad2);
+    padding: 0.5rem; border-radius: var(--radius-md); font-size: 0.8rem;
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.inboxPush[hidden] { display: none; }
+.inboxPush > span { flex: 1; min-width: 0; }
+.inboxPush > [class*="material-symbols-"] { font-size: 1.25rem; }
