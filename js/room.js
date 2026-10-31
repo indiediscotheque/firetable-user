@@ -805,6 +805,12 @@ firetable.ui.setupRoomEvents = function () {
   });
   themePill.addEventListener("animationend", function () { themePill.classList.remove("is-new"); });
 
+  // "first 4/14/2013 by matt"; the DJ only when known (plays from before the
+  // room logged its DJs, e.g. Last.fm's, have none)
+  function playLine(word, date, dj) {
+    return word + " " + firetable.utilities.format_date(date) + (dj ? " by " + dj : "");
+  }
+
   // ── Tag Update (metadata correction while song is playing) ──
   ftapi.events.on("tagUpdate", function (data) {
     firetable.debug && console.log("TAG UPDATE", data);
@@ -821,12 +827,12 @@ firetable.ui.setupRoomEvents = function () {
     var showPlaycount = data.adamData.playcount && data.adamData.playcount > 0;
 
     if (data.adamData.last_play) {
-      $("#lastPlay").text("last " + firetable.utilities.format_date(data.adamData.last_play) + " by " + data.adamData.last_play_dj);
+      $("#lastPlay").text(playLine("last", data.adamData.last_play, data.adamData.last_play_dj));
     } else {
       $("#lastPlay").text("");
     }
     if (data.adamData.first_play) {
-      $("#firstPlay").text("first " + firetable.utilities.format_date(data.adamData.first_play) + " by " + data.adamData.first_play_dj);
+      $("#firstPlay").text(playLine("first", data.adamData.first_play, data.adamData.first_play_dj));
     } else {
       $("#firstPlay").text("");
     }
@@ -888,10 +894,10 @@ firetable.ui.setupRoomEvents = function () {
       data.title = firetable.tagUpdate.adamData.track_name;
       data.artist = firetable.tagUpdate.adamData.artist;
       if (firetable.tagUpdate.adamData.last_play) {
-        $("#lastPlay").text("last " + firetable.utilities.format_date(firetable.tagUpdate.adamData.last_play) + " by " + firetable.tagUpdate.adamData.last_play_dj);
+        $("#lastPlay").text(playLine("last", firetable.tagUpdate.adamData.last_play, firetable.tagUpdate.adamData.last_play_dj));
       }
       if (firetable.tagUpdate.adamData.first_play) {
-        $("#firstPlay").text("first " + firetable.utilities.format_date(firetable.tagUpdate.adamData.first_play) + " by " + firetable.tagUpdate.adamData.first_play_dj);
+        $("#firstPlay").text(playLine("first", firetable.tagUpdate.adamData.first_play, firetable.tagUpdate.adamData.first_play_dj));
       }
       if (firetable.tagUpdate.adamData.playcount > 0) {
         showPlaycount = true;
