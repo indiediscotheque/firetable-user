@@ -955,7 +955,19 @@ ftapi.actions = {
       }
       updates["globalTracks/" + type + cid + "/artist"] = theartist;
       updates["globalTracks/" + type + cid + "/title"] = thetitle;
-      return ftapi.db().ref().update(updates);
+      // keep every fix: the hostbot's play history trusts these most, and the
+      // spelling joins the same song when another copy of it turns up
+      // (needs the hostbot's current database rules; older rules refuse it,
+      // so the fix is retried without the log entry)
+      var logKey = /^[12][A-Za-z0-9_-]{1,64}$/.test(String(type) + cid) ? "tagLog/" + ftapi.db().ref("tagLog").push().key : null;
+      if (logKey) {
+        updates[logKey] = { k: String(type) + cid, a: theartist, t: thetitle, by: ftapi.uid, at: firebase.database.ServerValue.TIMESTAMP };
+      }
+      return ftapi.db().ref().update(updates).catch(function(err) {
+        if (!logKey || !/permission/i.test(String(err && (err.code || err.message)))) throw err;
+        delete updates[logKey]; // database rules from before the tag log: save the fix without it
+        return ftapi.db().ref().update(updates);
+      });
     }).then(function() {
       ftapi.events.emit("editedHistory", { histID: histID, artist: theartist, title: thetitle, list: list || "songHistory" });
       if (callback) callback(null);
