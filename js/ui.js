@@ -1826,6 +1826,7 @@ firetable.ui.init = function () {
   firetable.ui.setupSearchEvents();
   firetable.ui.setupPlaylistEvents();
   firetable.ui.setupBrokenCheck();
+  firetable.ui.setupSwaps();
   firetable.ui.setupPlaylistIndex();
   firetable.ui.setupPickName();
   firetable.ui.setupProviderSignIn();

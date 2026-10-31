@@ -126,6 +126,57 @@ try {
   });
   check(guide, "the install guide opens with this device's steps first, the others one tap away");
 
+  console.log("-- swap suggestions: ⇄ on a broken track, Swap, Undo, Swap all");
+  const flaggedTrack = (cid, name, swapCid) => ({ type: 1, cid, name, flagged: { date: 1, code: 2 },
+    swap: { cid: swapCid, artist: name.split(" - ")[0], title: name.split(" - ")[1], album: "Album", dur: 200, date: 1 } });
+  await put("/queues/smoke", {
+    k1: flaggedTrack("deadvideo01", "Radiohead - Karma Police", "kpstudio001"),
+    k2: flaggedTrack("deadvideo02", "Daft Punk - One More Time", "omtstudio01"),
+    k3: Object.assign(flaggedTrack("deadvideo03", "Air - La Femme d'Argent", "airstudio01"), { swap: { dismissed: "airstudio01", date: 1 } }),
+    k4: { type: 1, cid: "finevideo01", name: "Fine - Track" }
+  });
+  const listNow = () => page.evaluate(() => ftapi.db().ref("queues/smoke").once("value").then((s) => s.val()));
+  await page.evaluate(() => {
+    // the playlist panel is only in the page while signed in: put it back for this part
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    ftapi.queueRef = ftapi.db().ref("queues/smoke");
+    return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+  });
+  const ui = await page.evaluate(() => ({
+    buttons: document.querySelectorAll("#mainqueue .swapsong").length,
+    bar: !document.getElementById("swapBar").hidden && document.getElementById("swapBarText").textContent,
+    all: document.getElementById("swapAllBtn").textContent
+  }));
+  check(ui.buttons === 2, "⇄ shows on the two broken tracks with a suggestion (not on a dismissed one)");
+  check(/2 broken tracks have a working copy on YouTube Music/.test(ui.bar || "") && ui.all === "Swap all 2", "the bar over the list offers Swap all");
+  const card = await page.evaluate(() => {
+    document.querySelector('#mainqueue .pvbar[data-key="k1"] .swapsong').click();
+    const pop = document.getElementById("swapPopover");
+    return pop.matches(":popover-open") && pop.querySelector(".swapName").textContent + " | " + pop.querySelector(".swapOpen").href;
+  });
+  check(card === "Radiohead - Karma Police | https://music.youtube.com/watch?v=kpstudio001", "the swap card shows the match and links to YouTube Music");
+  await page.evaluate(() => document.querySelector("#swapPopover .swapConfirm").click());
+  await sleep(800);
+  let q = await listNow();
+  check(q.k1.cid === "kpstudio001" && q.k1.name === "Radiohead - Karma Police" && !q.k1.flagged && !q.k1.swap && q.k1.swappedFrom.cid === "deadvideo01" && q.k1.duration === 200,
+    "Swap puts the audio track in the same slot, keeps the tags, clears the flag and remembers the old one");
+  await page.evaluate(() => document.querySelector("#ft-toast .ft-toast-action").click());
+  await sleep(800);
+  q = await listNow();
+  check(q.k1.cid === "deadvideo01" && q.k1.flagged && q.k1.swap.cid === "kpstudio001", "Undo puts the old track back");
+  await page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
+  await page.evaluate(() => document.getElementById("swapAllBtn").click());
+  check(await page.$eval("#swapAllBtn", (b) => b.textContent) === "Yes, swap 2", "Swap all asks once more first");
+  await page.evaluate(() => document.getElementById("swapAllBtn").click());
+  await sleep(1500);
+  q = await listNow();
+  check(q.k1.cid === "kpstudio001" && q.k2.cid === "omtstudio01" && q.k3.cid === "deadvideo03" && q.k4.cid === "finevideo01",
+    "Swap all swaps every suggestion in the list and leaves the rest alone");
+  check(Object.keys(q).join() === "k1,k2,k3,k4", "the list keeps its order");
+  await page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
+  check(await page.$eval("#swapBar", (b) => b.hidden), "the bar goes once nothing is left to swap");
+  await page.evaluate(() => { firetable.$appShell = $("#appShell").detach(); });
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));

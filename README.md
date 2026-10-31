@@ -57,6 +57,14 @@ Members can get @mentions as notifications on their phone, even with the app clo
 - Nobody is pushed while they're looking at the room; the bot also skips blocked people and stale messages.
 - **Get the app** (`js/install.js`): a guide to installing the site, with the steps for the visitor's own device first (iPhone/iPad, Android, computer) and a one-tap **Install the app** button where the browser offers one (Chrome, Edge, Samsung Internet). It opens from the "Get the app" card at the top of Settings, "Get the app on your phone" on the login screen (phones), and the push setting's and @ inbox's hints. Inside the installed app it says so instead.
 
+## swap suggestions
+Broken tracks get a one-tap fix when YouTube Music has a working copy. Every night the [indiediscotheque hostbot](https://github.com/indiediscotheque/firetable-hostbot) (its README, "swap suggestions") searches YouTube Music for the flagged tracks in everyone's lists, among its audio tracks only (never music videos or "Official Audio" uploads), checks each match plays here, and saves it with the track as `swap`. It searches with no API key or quota.
+- **⇄ on the track** (`js/playlist.js`) opens a card with the match (artwork, artist, title, album, length): **Swap**, **Preview**, **Open** on YouTube Music, or **Not this one** (not suggested again for that track). On narrow rows it's in the ⋮ menu too.
+- **Swap all** in the bar over the list swaps every suggestion in the playlist on screen (a second tap confirms). **Show them** filters the list to its broken tracks.
+- Swapping keeps the track's place and tags, clears the flag, and saves where it came from (`swappedFrom`); the toast's **Undo** puts it back. Each track is its own small write, so a list edited meanwhile is never overwritten.
+- The playlist picker and All Playlists show how many swaps are ready; the bot's notice ("Show me") opens the list's broken tracks.
+- Clearing a flag (by hand, or when the checker finds the track plays again) clears its suggestion.
+
 ## checks
 `npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every push and pull request, and before every deploy. None of these tooling files are deployed.
 

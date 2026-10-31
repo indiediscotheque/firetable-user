@@ -674,8 +674,58 @@ ftapi.actions = {
       });
   },
   unflagTrack: function(trackID) {
-    var removeThis = ftapi.queueRef.child(trackID + "/flagged");
-    removeThis.remove();
+    // a swap suggestion only means something on a flagged track
+    ftapi.queueRef.child(trackID).update({ flagged: null, swap: null });
+  },
+  /**
+   * Swap a flagged track for the YouTube Music audio track the bot found
+   * (its `swap`). Keeps the track's place and its tags; remembers where it
+   * came from (`swappedFrom`). Only if the slot still holds that track with
+   * that suggestion (the list may have changed meanwhile).
+   * @param {Object} ref - Playlist ref
+   * @param {string} key - Track key
+   * @param {string} cid - The track's cid as shown
+   * @returns {Promise<Object|null>} the track as it was (for undo), or null when nothing changed
+   */
+  swapTrack: function(ref, key, cid) {
+    var before = null;
+    return ref.child(key).transaction(function(cur) {
+      before = null;
+      if (cur === null) return null; // not loaded yet (asked again with the real value), or gone
+      var sw = cur.swap;
+      if (String(cur.cid) !== String(cid) || !sw || !sw.cid || sw.dismissed) return; // changed: leave it
+      before = JSON.parse(JSON.stringify(cur));
+      var next = {};
+      Object.keys(cur).forEach(function(k) {
+        // what described the old upload goes (art, link, length, flag)
+        if (!/^(?:flagged|swap|swappedFrom|img|url|duration|length|dur|time|seconds|msecs|ms|type|cid)$/.test(k)) next[k] = cur[k];
+      });
+      next.type = MEDIA_YOUTUBE;
+      next.cid = sw.cid;
+      next.url = "https://www.youtube.com/watch?v=" + sw.cid;
+      if (sw.dur) next.duration = sw.dur;
+      next.swappedFrom = { type: cur.type, cid: cur.cid, date: ftapi.now() };
+      return next;
+    }).then(function(r) {
+      return r.committed && before ? before : null;
+    });
+  },
+  /** Put a swapped track back the way it was, if it's still the swapped one. */
+  unswapTrack: function(ref, key, before, swappedCid) {
+    return ref.child(key).transaction(function(cur) {
+      if (cur === null) return null;
+      if (String(cur.cid) !== String(swappedCid)) return;
+      return before;
+    });
+  },
+  /** "Not this one": the bot won't suggest this match for this track again for a while. */
+  dismissSwap: function(ref, key, cid) {
+    return ref.child(key).transaction(function(cur) {
+      if (cur === null) return null;
+      if (String(cur.cid) !== String(cid) || !cur.swap || !cur.swap.cid) return;
+      cur.swap = { dismissed: cur.swap.cid, date: ftapi.now() };
+      return cur;
+    });
   },
   deleteList: function(listID) {
     var removeThis = ftapi.db().ref("playlists/" + ftapi.uid + "/" + listID);

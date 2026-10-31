@@ -143,15 +143,16 @@ firetable.ui.relabelList = function (listID, name) {
 
 firetable.plIndex = { lists: [], selected: {} };
 
-/** Track count and how many are flagged. */
+/** Track count, how many are flagged, and how many of those have a swap ready. */
 firetable.utilities.listStats = function (tracks) {
-  var n = 0, broken = 0;
+  var n = 0, broken = 0, swaps = 0;
   Object.keys(tracks || {}).forEach(function (k) {
     if (!tracks[k]) return;
     n++;
     if (tracks[k].flagged) broken++;
+    if (firetable.utilities.activeSwap(tracks[k])) swaps++;
   });
-  return { n: n, broken: broken };
+  return { n: n, broken: broken, swaps: swaps };
 };
 
 firetable.actions.openPlaylistIndex = function () {
@@ -187,7 +188,8 @@ firetable.ui.renderPlaylistIndex = function () {
     var $main = $('<div class="plx-main"></div>').appendTo($row);
     $('<input type="text" class="plx-name" maxlength="80" spellcheck="false" enterkeyhint="done">')
       .val(l.name).attr("aria-label", "Name of " + l.name).appendTo($main);
-    var meta = s.n + (s.n === 1 ? " track" : " tracks") + (s.broken ? " · " + s.broken + " flagged" : "");
+    var meta = s.n + (s.n === 1 ? " track" : " tracks") + (s.broken ? " · " + s.broken + " flagged" : "") +
+      (s.swaps ? " · " + s.swaps + (s.swaps === 1 ? " swap" : " swaps") + " ready" : "");
     $('<div class="plx-meta"></div>').text(meta).appendTo($main);
     var $acts = $('<div class="plx-actions"></div>').appendTo($row);
     $('<button type="button" class="butt graybutt iconbutt plx-star"><i class="material-symbols-outlined">star</i></button>')

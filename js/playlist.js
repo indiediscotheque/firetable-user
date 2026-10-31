@@ -746,8 +746,16 @@ function buildQueueItemHTML(key, track, isPreview) {
     flagHtml = '<button type="button" class="track-warning" title="' + flagTitle + '" aria-label="' + flagTitle + '"><span class="material-symbols-filled" aria-hidden="true"> ' + flagIcon + ' </span></button>';
   }
 
+  // A working copy on YouTube Music the bot found (#swap): one tap to swap it in
+  var swap = firetable.utilities.activeSwap(track);
+  var swapHtml = '';
+  if (swap) {
+    var swapTitle = firetable.utilities.htmlEscape('Swap for ' + swap.artist + ' - ' + swap.title + ' (YouTube Music audio)');
+    swapHtml = '<button type="button" class="material-symbols-outlined row-icon swapsong" title="' + swapTitle + '" aria-label="' + swapTitle + '" aria-haspopup="dialog">swap_horiz</button>';
+  }
+
   return (
-    '<div class="pvbar' + (isPreview ? ' previewing' : '') + '" id="pvbar' + key + '"' +
+    '<div class="pvbar' + (isPreview ? ' previewing' : '') + (swap ? ' has-swap' : '') + '" id="pvbar' + key + '"' +
     ' data-key="' + key + '" data-type="' + track.type + '"' +
     ' data-cid="' + firetable.utilities.htmlEscape(String(track.cid)) + '"' +
     ' data-tags="' + safeTrackName + '" data-broken="' + (track.flagged ? '1' : '0') + '"' +
@@ -757,6 +765,7 @@ function buildQueueItemHTML(key, track, isPreview) {
     '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
     (track.flagged ? flagHtml : '<span class="track-warning"></span>') +
     '<div class="listwords">' + safeTrackName + durationHtml + '</div>' +
+    swapHtml +
     // Order matches Recent / Fresh: move actions, link, add, destructive last
     '<button type="button" class="material-symbols-outlined row-icon bumpsongs" title="Send to top" aria-label="Send to top">vertical_align_top</button>' +
     '<button type="button" class="material-symbols-outlined row-icon bottomsongs" title="Send to bottom" aria-label="Send to bottom">vertical_align_bottom</button>' +
@@ -780,8 +789,10 @@ firetable.ui.renderListCount = function (tracks, listID) {
   var s = firetable.utilities.listStats(tracks);
   if (listID == null) listID = firetable.viewListID || $("#listpicker").val() || "0";
   firetable.ui.setListCount(listID, s);
-  var label = s.n.toLocaleString() + (s.n === 1 ? " track" : " tracks") + (s.broken ? ", " + s.broken.toLocaleString() + " flagged" : "");
+  var label = s.n.toLocaleString() + (s.n === 1 ? " track" : " tracks") + (s.broken ? ", " + s.broken.toLocaleString() + " flagged" : "") +
+    (s.swaps ? ", " + s.swaps.toLocaleString() + (s.swaps === 1 ? " swap" : " swaps") + " ready" : "");
   $("#listpicker").attr("title", label);
+  firetable.ui.renderSwapBar(tracks);
 };
 
 firetable.ui.setupPlaylistEvents = function () {
@@ -847,6 +858,10 @@ firetable.ui.setupPlaylistEvents = function () {
     .on('click', '.histeal', function () {
       firetable.actions.openStealPicker($(this), queueRowTarget($(this).closest('.pvbar')));
     })
+    .on('click', '.swapsong', function () {
+      var $p = $(this).closest('.pvbar');
+      firetable.actions.swapPrompt($p.attr('data-key'), this);
+    })
     .on('click', '.row-more', function () {
       openTrackMenu(this);
     });
@@ -880,6 +895,7 @@ firetable.ui.setupPlaylistEvents = function () {
     $menu.find('[data-act="open"]').attr('href', $link.attr('href') || '#');
     $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
     $menu.find('.ft-menu-open-logo').html($link.find('svg').prop('outerHTML') || '');
+    $menu.find('[data-act="swap"]').prop('hidden', !$p.hasClass('has-swap'));
     $(btn).addClass('on').attr('aria-expanded', 'true');
     trackMenuEl.style.visibility = 'hidden';
     trackMenuEl.showPopover();
@@ -910,10 +926,12 @@ firetable.ui.setupPlaylistEvents = function () {
         firetable.actions.openStealPicker($(btn), queueRowTarget($p));
       } else if (act === 'delete') {
         firetable.actions.deleteSongPrompt($p.attr('data-key'), $p.attr('data-tags') || $p.find('.listwords').text(), $p.attr('data-type'), btn);
+      } else if (act === 'swap') {
+        firetable.actions.swapPrompt($p.attr('data-key'), btn);
       }
     })
     .on('keydown', function (e) {
-      var $items = $(trackMenuEl).find('[role="menuitem"]');
+      var $items = $(trackMenuEl).find('[role="menuitem"]:not([hidden])');
       var idx = $items.index($items.filter(':focus'));
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -1507,6 +1525,7 @@ firetable.actions.checkBrokenTracks = function (listID, opts) {
             else if (auto && flag.code !== code) updates[key + "/flagged"] = { date: now, code: code };
           } else if (flag && auto) {
             updates[key + "/flagged"] = null;
+            if (tracks[key].swap) updates[key + "/swap"] = null;
             result.fixed++;
           }
         });
@@ -1616,4 +1635,189 @@ firetable.ui.setupBrokenCheck = function () {
     setTimeout(function () { if (firetable.viewListID === id) firetable.actions.autoCheckBroken(id); }, 4000);
   });
   ftapi.events.on("loggedOut", function () { lastList = null; firetable.viewListID = "0"; });
+};
+
+
+// ─── Swap suggestions (#swap) ────────────────────────────────────────────────
+// Every night the hostbot looks for the flagged tracks in everyone's lists on
+// YouTube Music, among its audio tracks only (never music videos or "Official
+// Audio" uploads), checks the match plays here, and saves it with the track as
+// `swap`. Here that shows as a ⇄ button on the track (swap it, preview it, or
+// "not this one") and a bar over the list with "Swap all". Swapping keeps the
+// track's place and tags; Undo puts it back.
+
+/** The bot's suggestion for a track, if there's one to offer. */
+firetable.utilities.activeSwap = function (track) {
+  var sw = track && track.flagged && track.swap;
+  return sw && sw.cid && !sw.dismissed ? sw : null;
+};
+
+/** Keys of the tracks in a list with a swap to offer, in list order. */
+firetable.utilities.swapKeys = function (tracks) {
+  return Object.keys(tracks || {}).filter(function (k) { return firetable.utilities.activeSwap(tracks[k]); });
+};
+
+/** "Artist - Title" of a suggestion, and its album and length. */
+firetable.utilities.swapLabel = function (sw) {
+  return { name: (sw.artist || "Unknown") + " - " + (sw.title || "Untitled"),
+    meta: [sw.album, sw.dur ? firetable.actions.formatTrackDuration(sw.dur) : "", sw.explicit ? "Explicit" : ""].filter(Boolean).join(" · ") };
+};
+
+/** The bar over the list: how many swaps are ready, with "Swap all". */
+firetable.ui.renderSwapBar = function (tracks) {
+  var n = firetable.utilities.swapKeys(tracks).length;
+  var $bar = $("#swapBar");
+  if (!$bar.length) return;
+  $bar.prop("hidden", !n);
+  if (!n) return;
+  $("#swapBarText").text(n === 1
+    ? "1 broken track has a working copy on YouTube Music."
+    : n.toLocaleString() + " broken tracks have a working copy on YouTube Music.");
+  $("#swapAllBtn").text(n === 1 ? "Swap it" : "Swap all " + n.toLocaleString()).prop("disabled", false);
+};
+
+/** Show the swap card for a track. */
+firetable.actions.swapPrompt = function (key, anchorEl) {
+  var popoverEl = document.getElementById("swapPopover");
+  var track = firetable.queue && firetable.queue[key];
+  var sw = firetable.utilities.activeSwap(track);
+  if (!popoverEl || !sw) return;
+  if (popoverEl.matches(":popover-open")) {
+    var same = firetable.swapping && firetable.swapping.key === key;
+    popoverEl.hidePopover();
+    if (same) return;
+  }
+  firetable.swapping = { key: key, cid: String(track.cid), swapCid: sw.cid, name: track.name };
+  var label = firetable.utilities.swapLabel(sw);
+  var $p = $(popoverEl);
+  $p.find(".swapArt").css("background-image", "url(https://i.ytimg.com/vi/" + encodeURIComponent(sw.cid) + "/mqdefault.jpg)");
+  $p.find(".swapName").text(label.name);
+  $p.find(".swapMeta").text(label.meta || "YouTube Music");
+  $p.find(".swapWas").text("Replaces: " + firetable.utilities.decodeEntities(track.name || "") + ". Your tags stay as they are.");
+  $p.find(".swapOpen").attr("href", "https://music.youtube.com/watch?v=" + encodeURIComponent(sw.cid));
+  firetable.ui.swapPreviewLabel();
+  $(".pvbar.swapping").removeClass("swapping");
+  $('.pvbar[data-key="' + key + '"]').addClass("swapping");
+  popoverEl.style.visibility = "hidden";
+  popoverEl.showPopover();
+  firetable.ui.positionPopover(anchorEl, popoverEl, document.getElementById("swapArrow"), "bottom-end").then(function () {
+    var primary = popoverEl.querySelector(".swapConfirm");
+    if (primary) primary.focus();
+  });
+};
+
+firetable.ui.swapPreviewLabel = function () {
+  var s = firetable.swapping;
+  var on = !!(s && firetable.preview === "ytcid" + s.swapCid);
+  $("#swapPopover .swapPreview").attr("aria-pressed", on ? "true" : "false")
+    .html('<i class="material-symbols-outlined" aria-hidden="true">' + (on ? "stop" : "play_arrow") + "</i> " + (on ? "Stop" : "Preview"));
+};
+
+/** Swap one track; a toast offers Undo. */
+firetable.actions.swapOne = function (key, cid) {
+  var ref = ftapi.queueRef;
+  var sw = firetable.utilities.activeSwap(firetable.queue && firetable.queue[key]);
+  if (!ref || !sw) return;
+  ftapi.actions.swapTrack(ref, key, cid).then(function (before) {
+    if (!before) { firetable.ui.toast("That track changed meanwhile, so nothing was swapped.", "error"); return; }
+    firetable.ui.toast("Swapped in the YouTube Music audio track.", "success", {
+      duration: 8000,
+      action: { label: "Undo", fn: function () { ftapi.actions.unswapTrack(ref, key, before, sw.cid); } }
+    });
+  }, function (err) {
+    firetable.ui.toast("Couldn't swap that track (" + ((err && err.message) || "error") + ").", "error");
+  });
+};
+
+/** Swap every track in the list on screen that has a suggestion. */
+firetable.actions.swapAll = function () {
+  var ref = ftapi.queueRef;
+  var tracks = firetable.queue || {};
+  var keys = firetable.utilities.swapKeys(tracks);
+  if (!ref || !keys.length) return;
+  $("#swapAllBtn").prop("disabled", true).text("Swapping…");
+  var done = [];
+  // one track at a time: each is its own small write, safe if the list changes meanwhile
+  keys.reduce(function (p, key) {
+    return p.then(function () {
+      var cid = String(tracks[key].cid), swapCid = tracks[key].swap.cid;
+      return ftapi.actions.swapTrack(ref, key, cid).then(function (before) {
+        if (before) done.push({ key: key, before: before, swapCid: swapCid });
+      }, function () { /* skip this one */ });
+    });
+  }, Promise.resolve()).then(function () {
+    var n = done.length, missed = keys.length - n;
+    firetable.ui.renderSwapBar(firetable.queue);
+    if (!n) { firetable.ui.toast("Nothing was swapped; the list changed meanwhile.", "error"); return; }
+    firetable.ui.toast("Swapped " + n + (n === 1 ? " track" : " tracks") + " for YouTube Music audio." +
+      (missed ? " " + missed + " changed meanwhile and " + (missed === 1 ? "was" : "were") + " left alone." : ""), "success", {
+      duration: 10000,
+      action: { label: "Undo", fn: function () {
+        done.reduce(function (p, d) {
+          return p.then(function () { return ftapi.actions.unswapTrack(ref, d.key, d.before, d.swapCid); });
+        }, Promise.resolve());
+      } }
+    });
+  });
+};
+
+firetable.ui.setupSwaps = function () {
+  var popoverEl = document.getElementById("swapPopover");
+  if (!popoverEl) return;
+  var stopPreview = function () {
+    var s = firetable.swapping;
+    if (s && firetable.preview === "ytcid" + s.swapCid) firetable.actions.pview("ytcid" + s.swapCid, true, MEDIA_YOUTUBE);
+  };
+  $(popoverEl)
+    .on("click", ".swapConfirm", function () {
+      var s = firetable.swapping;
+      stopPreview();
+      popoverEl.hidePopover();
+      if (s) firetable.actions.swapOne(s.key, s.cid);
+    })
+    .on("click", ".swapPreview", function () {
+      var s = firetable.swapping;
+      if (!s) return;
+      firetable.actions.pview("ytcid" + s.swapCid, true, MEDIA_YOUTUBE);
+      firetable.ui.swapPreviewLabel();
+    })
+    .on("click", ".swapDismiss", function () {
+      var s = firetable.swapping;
+      stopPreview();
+      popoverEl.hidePopover();
+      if (s && ftapi.queueRef) {
+        ftapi.actions.dismissSwap(ftapi.queueRef, s.key, s.cid).then(function () {
+          firetable.ui.toast("Got it. That match won't be suggested again for this track.", "notice");
+        });
+      }
+    })
+    .on("click", ".swapCancel", function () {
+      popoverEl.hidePopover();
+    });
+  popoverEl.addEventListener("toggle", function (e) {
+    if (e.newState !== "closed") return;
+    $(".pvbar.swapping").removeClass("swapping");
+    stopPreview();
+  });
+
+  $("#swapAllBtn").on("click", function () {
+    var $b = $(this);
+    var n = firetable.utilities.swapKeys(firetable.queue).length;
+    if (n > 1 && !$b.hasClass("confirming")) {
+      // second click swaps: a big change to a list deserves a second look
+      $b.addClass("confirming").text("Yes, swap " + n.toLocaleString());
+      setTimeout(function () { if ($b.hasClass("confirming")) { $b.removeClass("confirming"); firetable.ui.renderSwapBar(firetable.queue); } }, 5000);
+      return;
+    }
+    $b.removeClass("confirming");
+    firetable.actions.swapAll();
+  });
+  $("#swapShowBtn").on("click", function () {
+    var $f = $("#queueFilterBrokenOnly");
+    $f.prop("checked", !$f.is(":checked")).trigger("change");
+    $(this).text($f.is(":checked") ? "Show all" : "Show them");
+  });
+  $("#queueFilterBrokenOnly").on("change", function () {
+    $("#swapShowBtn").text(this.checked ? "Show all" : "Show them");
+  });
 };
