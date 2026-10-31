@@ -2604,6 +2604,7 @@ ul.lightrope li {
 
 .queuetop {
     container: queuetop / inline-size;
+    margin-inline-end: var(--queue-gutter, 0px);
     background-color: var(--color-bg-t1);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -2725,13 +2726,11 @@ input.ft-filter {
     margin-top: var(--pad1);
 }
 
+/* Rows run edge to edge so they line up with the header panel above.
+   The header gives up the list's scrollbar gutter (--queue-gutter, set in ui.js)
+   so both right edges match too. */
 #mainqueue {
-    padding: var(--pad1) 0.75rem;
-}
-@media only screen and (hover: hover) {
-    #mainqueue {
-        padding-right: 0;
-    }
+    padding: var(--pad1) 0;
 }
 #mainqueue.emptyList:before,
 #mainqueue.loading:before,
@@ -2816,6 +2815,9 @@ input.ft-filter {
 
 #queuelist .pvbar {
     cursor: grab;
+    /* Row icons share a centre line with the header's buttons
+       (header: 1rem inset + half a 2rem button; row: 1rem + 0.125rem margin + half a 1.75rem icon). */
+    padding-right: var(--pad3);
 }
 
 /* Large playlists: let the browser skip layout/paint for rows that are
@@ -3051,7 +3053,7 @@ input.ft-filter {
     flex: 1;
     min-height: 0;
     overflow: auto;
-    padding: var(--pad1) 0 var(--pad1) 0.75rem;
+    padding: var(--pad1) 0;
 }
 
 #searchResults .previewicon {
@@ -5608,7 +5610,9 @@ html#about body {
     #mainGrid.mmchat,
     #mainGrid.mmusrs {
         grid-template-rows: auto auto 1fr;
-        grid-template-columns: 24vw 46vw auto;
+        /* The middle column caps at 56rem so the stage, the tabs and the view
+           panel below always share one width; chat takes whatever is left. */
+        grid-template-columns: 24vw min(46vw, 56rem) auto;
         grid-template-areas:
             "people  stage   chat"
             "people  nav     chat"
@@ -5655,17 +5659,6 @@ html#about body {
 
     #mainGrid.login #topbar {
         display: flex;
-    }
-
-    #mainGrid.login #stage {
-        width: 100%;
-        max-width: none;
-        justify-self: unset;
-    }
-
-    /* Stage sizing */
-    #stage {
-        max-width: 56rem;
     }
 
     #djStage {

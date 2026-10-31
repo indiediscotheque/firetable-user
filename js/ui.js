@@ -1832,6 +1832,24 @@ firetable.ui.init = function () {
     obs.observe(inner, { childList: true });
   });
 
+  // ── Playlist header: give up the list's scrollbar gutter so its edges line up with the rows ──
+  // The gutter is 0 with overlay scrollbars and varies by OS, browser and zoom, so measure it.
+  (function () {
+    var listEl = document.getElementById('queuelist');
+    var boxEl  = document.getElementById('queuebox');
+    if (!listEl || !boxEl || typeof ResizeObserver === 'undefined') return;
+    var last = -1;
+    new ResizeObserver(function () {
+      if (!listEl.offsetWidth) return; // hidden tab
+      var cs = getComputedStyle(listEl);
+      var gutter = Math.max(0, listEl.offsetWidth - listEl.clientWidth -
+        parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth));
+      if (gutter === last) return;
+      last = gutter;
+      boxEl.style.setProperty('--queue-gutter', gutter + 'px');
+    }).observe(listEl);
+  }());
+
   // ── Deck placement: move #ondeck to People tab when stage is narrow ──
   (function () {
     var stageEl  = document.getElementById('djStage');
