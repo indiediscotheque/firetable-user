@@ -531,17 +531,27 @@ firetable.ui.setupRoomEvents = function () {
   var $historyItem = $('#thehistory .pvbar').remove();
   firetable._historyCache = firetable._historyCache || [];
 
+  // Hide with a class, deciding every row before writing any, so filtering a
+  // long history never recalculates styles once per row.
   function applyHistoryFilter() {
     var q = ($("#histFilter").val() || "").toLowerCase().trim();
-    $("#thehistory .hist-entry").each(function () {
-      var $pvbar = $(this).find('.pvbar');
-      var text = ($pvbar.find('.histlink').text() + " " + $pvbar.find('.histdj').text()).toLowerCase();
-      $(this).toggle(q.length === 0 || text.indexOf(q) !== -1);
-    });
-    $("#thehistory .hist-day-group").each(function () {
-      var hasVisible = $(this).find('.hist-entry:visible').length > 0;
-      $(this).toggle(!q.length || hasVisible);
-    });
+    var root = document.getElementById("thehistory");
+    if (!root) return;
+    var entries = root.querySelectorAll(".hist-entry");
+    var hide = [];
+    for (var i = 0; i < entries.length; i++) {
+      var pv = entries[i].querySelector(".pvbar");
+      var link = pv && pv.querySelector(".histlink");
+      var dj = pv && pv.querySelector(".histdj");
+      var text = ((link ? link.textContent : "") + " " + (dj ? dj.textContent : "")).toLowerCase();
+      hide.push(q.length > 0 && text.indexOf(q) === -1);
+    }
+    for (i = 0; i < entries.length; i++) entries[i].classList.toggle("ft-filtered", hide[i]);
+    var groups = root.querySelectorAll(".hist-day-group");
+    for (i = 0; i < groups.length; i++) {
+      groups[i].classList.toggle("ft-filtered",
+        q.length > 0 && !groups[i].querySelector(".hist-entry:not(.ft-filtered)"));
+    }
   }
 
   $(document).on('input.histfilter', '#histFilter', applyHistoryFilter);

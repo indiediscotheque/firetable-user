@@ -2758,6 +2758,14 @@ input.ft-filter {
     content: "no tracks meet your search criteria";
 }
 
+/* Rows hidden by the playlist and history filters (see filterQueue and
+   applyHistoryFilter). A class rather than inline styles, so the whole list
+   is restyled in one pass. */
+#mainqueue > .pvbar.ft-filtered,
+#thehistory .ft-filtered {
+    display: none !important;
+}
+
 #mainqueue [class*="material-symbols-"]:not(.row-icon),
 #thehistory [class*="material-symbols-"]:not(.row-icon) {
     margin: 0 var(--pad1);
