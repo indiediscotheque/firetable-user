@@ -6169,3 +6169,55 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
   &[hidden] { display: none; }
   &.has-flagged::after { content: " ⚠"; color: var(--color-accent); }
 }
+
+/* ─── Push notifications (js/push.js) ─────────────────────────────────────── */
+.pushSetting { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.pushSetting #pushTest { margin-left: auto; }
+.settingSub { padding-left: 1.5rem; }
+.settingSub.is-disabled { opacity: 0.5; }
+.settingHint { margin: calc(-1 * var(--pad1, 0.25rem)) 0 var(--pad2); font-size: 0.8rem; color: var(--color-text-muted); }
+.pushDevices { list-style: none; margin: 0 0 var(--pad2); padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.pushDevice {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    padding: 0.25rem 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    font-size: 0.85rem;
+}
+.pushDeviceName { overflow-wrap: anywhere; }
+.inboxPush {
+    display: flex; align-items: center; gap: 0.5rem; margin-bottom: var(--pad2);
+    padding: 0.5rem; border-radius: var(--radius-md); font-size: 0.8rem;
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.inboxPush[hidden] { display: none; }
+.inboxPush > span { flex: 1; min-width: 0; }
+.inboxPush > [class*="material-symbols-"] { font-size: 1.25rem; }
+
+/* ─── Get the app (js/install.js) ─────────────────────────────────────────── */
+.linkButton {
+    background: none; border: 0; padding: 0; font: inherit; color: var(--color-accent); box-shadow: none;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+    display: inline-flex; align-items: center; gap: 0.25rem;
+}
+.linkButton [class*="material-symbols-"] { font-size: 1.1em; text-decoration: none; }
+.welcomeGetApp { margin-top: var(--pad2); }
+.getAppCard {
+    display: flex; align-items: center; gap: 0.75rem; margin-bottom: var(--pad3);
+    padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.getAppCard[hidden] { display: none; }
+.getAppCard > [class*="material-symbols-"] { font-size: 1.75rem; }
+.getAppCard > div { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 0.85rem; }
+.getAppCard > div span { color: var(--color-text-muted); }
+#installAppBox .modalBox { max-width: min(30rem, 94vw); }
+.installGuide { display: flex; flex-direction: column; gap: var(--pad2); }
+.installGuide p { margin: 0; }
+.installNow { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.4rem; }
+.installNow[hidden], .installDone[hidden] { display: none; }
+.installDone { display: flex; align-items: flex-start; gap: 0.4rem; }
+.installDone [class*="material-symbols-"] { color: var(--color-accent); }
+.installSteps { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.5rem 0.75rem; }
+.installSteps summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
+.installSteps ol { list-style: decimal; margin: 0.5rem 0 0.25rem; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; }
+.installSteps .inline { font-size: 1.1em; vertical-align: -0.2em; }
+.installNext { font-size: 0.85rem; color: var(--color-text-muted); }

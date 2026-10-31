@@ -169,7 +169,17 @@ firetable.ui.setupPickName = function () {
 /** Sign out. */
 firetable.actions.logOut = function () {
   document.querySelectorAll("dialog[open]").forEach(function (d) { d.close(); });
-  ftapi.actions.logOut();
+  // Stop this device's push notifications for the account first (needs the
+  // sign-in); they come back on their own when the same account signs in here.
+  var forget = firetable.push ? firetable.push.forget() : Promise.resolve();
+  var done = false;
+  var out = function () {
+    if (done) return;
+    done = true;
+    ftapi.actions.logOut();
+  };
+  forget.then(out, out);
+  setTimeout(out, 2000);
   firetable.debug && console.log("logout");
 };
 

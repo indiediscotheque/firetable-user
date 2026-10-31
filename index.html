@@ -510,6 +510,7 @@
 					conversation?
 				</p>
 				<div id="roomPulse" aria-live="polite"></div>
+				<p class="welcomeGetApp" id="welcomeGetApp" hidden><button type="button" class="linkButton showInstallGuide"><i class="material-symbols-outlined" aria-hidden="true">install_mobile</i> Get the app on your phone</button></p>
 				<div class="miniLoginNavOnly"><br/><br/><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
 			</div>
 			<div id="oauthBox" hidden>
@@ -589,6 +590,49 @@
 						<button type="submit" class="butt" id="pickNameSave">Let's go</button>
 					</div>
 				</form>
+			</div>
+		</div>
+	</dialog>
+
+	<!-- How to install the site as an app (js/install.js) -->
+	<dialog id="installAppBox" aria-labelledby="installAppTitle">
+		<div class="modalBox">
+			<div class="modalHeader">
+				<h2 id="installAppTitle">Get the app</h2>
+				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			</div>
+			<div class="modalContent installGuide">
+				<p id="installIntro">Put the room on your phone's Home Screen. It opens full screen like any other app, and it can send you a notification when someone @mentions you.</p>
+				<p id="installDone" class="installDone" hidden><i class="material-symbols-outlined" aria-hidden="true">check_circle</i> You're using the app. Turn on <b>Push @mentions to this device</b> in Settings to get notifications.</p>
+				<button type="button" id="installNow" class="butt installNow" hidden><i class="material-symbols-outlined" aria-hidden="true">install_mobile</i> Install the app</button>
+
+				<details class="installSteps" data-platform="ios">
+					<summary><i class="material-symbols-outlined" aria-hidden="true">phone_iphone</i> iPhone and iPad</summary>
+					<ol>
+						<li>Open this page in <b>Safari</b> (Chrome and Edge work too on iOS 16.4 or newer).</li>
+						<li>Tap <b>Share</b> <i class="material-symbols-outlined inline" aria-label="the Share icon">ios_share</i> (on newer iPhones it's in the <b>•••</b> menu next to the address).</li>
+						<li>Scroll down and tap <b>Add to Home Screen</b> <i class="material-symbols-outlined inline" aria-hidden="true">add_box</i>.</li>
+						<li>Leave <b>Open as Web App</b> on, then tap <b>Add</b>.</li>
+						<li>Open <b>Indie Disco</b> from your Home Screen and sign in. Notifications only work from the Home Screen app on iPhone and iPad.</li>
+					</ol>
+				</details>
+				<details class="installSteps" data-platform="android">
+					<summary><i class="material-symbols-outlined" aria-hidden="true">android</i> Android</summary>
+					<ol>
+						<li><b>Chrome:</b> tap the menu <i class="material-symbols-outlined inline" aria-label="the menu icon">more_vert</i> and choose <b>Install app</b> (or <b>Add to Home screen</b>, then <b>Install</b>).</li>
+						<li><b>Samsung Internet:</b> tap the menu <i class="material-symbols-outlined inline" aria-label="the menu icon">menu</i>, then <b>Add page to</b> → <b>Home screen</b>.</li>
+						<li><b>Firefox:</b> tap the menu <i class="material-symbols-outlined inline" aria-label="the menu icon">more_vert</i>, then <b>Install</b>.</li>
+						<li>Open <b>Indie Disco</b> from your home screen or app drawer.</li>
+					</ol>
+				</details>
+				<details class="installSteps" data-platform="desktop">
+					<summary><i class="material-symbols-outlined" aria-hidden="true">computer</i> Computer</summary>
+					<ol>
+						<li><b>Chrome or Edge:</b> click the install icon <i class="material-symbols-outlined inline" aria-hidden="true">install_desktop</i> at the right of the address bar (or menu → <b>Cast, save, and share</b> → <b>Install page as app</b>).</li>
+						<li><b>Safari on a Mac:</b> <b>File</b> → <b>Add to Dock</b>.</li>
+					</ol>
+				</details>
+				<p class="installNext">Then, in the app: <b>Settings → Push @mentions to this device</b>.</p>
 			</div>
 		</div>
 	</dialog>
@@ -696,6 +740,11 @@
 				<div id="settings-tab" class="tabPanel active">
 					Set all of the things here on the table.
 					<br /><br />
+					<div class="getAppCard" id="getAppCard" hidden>
+						<i class="material-symbols-outlined" aria-hidden="true">install_mobile</i>
+						<div><b>Get the app</b><span>Install the room on your phone, with @mention notifications.</span></div>
+						<button type="button" class="butt small showInstallGuide">How to install</button>
+					</div>
 					<div class="settingline">
 						<input type="checkbox" id="badoopToggle" name="badoopToggle">
 						<label for="badoopToggle">Badoop sound for @mentions</label>
@@ -704,6 +753,18 @@
 						<input type="checkbox" id="desktopNotifyMentionsToggle" name="DTNMToggle">
 						<label for="desktopNotifyMentionsToggle">Desktop notifications for @mentions</label>
 					</div>
+					<div class="settingline pushSetting">
+						<input type="checkbox" id="pushMentionsToggle" name="pushMentionsToggle">
+						<label for="pushMentionsToggle">Push @mentions to this device</label>
+						<button type="button" id="pushTest" class="butt graybutt small" hidden>Send a test</button>
+					</div>
+					<div class="settingline settingSub" id="pushEveryoneLine">
+						<input type="checkbox" id="pushEveryoneToggle" name="pushEveryoneToggle">
+						<label for="pushEveryoneToggle">Also push @everyone announcements</label>
+					</div>
+					<p id="pushHint" class="settingHint" role="status" hidden></p>
+					<p id="pushHowInstall" class="settingHint" hidden><button type="button" class="linkButton showInstallGuide">How to install the app</button></p>
+					<ul id="pushDevices" class="pushDevices" aria-label="Devices getting push notifications" hidden></ul>
 					<div class="settingline">
 						<input type="checkbox" id="shareTypingToggle" name="shareTypingToggle">
 						<label for="shareTypingToggle">Show others when I'm typing</label>
@@ -889,6 +950,13 @@
 		<div id="inboxArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box inboxBox" role="dialog" aria-label="Mentions">
 			<div class="inboxHead"><b>Mentions</b><button type="button" id="inboxClear" class="butt graybutt small">Clear all</button></div>
+			<div id="inboxPush" class="inboxPush" hidden>
+				<i class="material-symbols-outlined" aria-hidden="true">notifications</i>
+				<span id="inboxPushText"></span>
+				<button type="button" id="inboxPushOn" class="butt small">Turn on</button>
+				<button type="button" id="inboxPushHow" class="butt small showInstallGuide" hidden>How?</button>
+				<button type="button" id="inboxPushDismiss" class="row-icon material-symbols-outlined" title="Don't show this again" aria-label="Don't show this again">close</button>
+			</div>
 			<div id="inboxList"></div>
 		</div>
 	</div>
@@ -960,6 +1028,8 @@
 	<script type="text/javascript" src="js/player.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/cards.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/chat.js?v=01.12.07"></script>
+	<script type="text/javascript" src="js/install.js?v=01.12.07"></script>
+	<script type="text/javascript" src="js/push.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/search.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/playlist.js?v=01.12.07"></script>
 	<script type="text/javascript" src="js/playlists.js?v=01.12.07"></script>

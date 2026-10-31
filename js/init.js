@@ -10,7 +10,9 @@
  *  6. Removes playlist/tag editor DOM templates for later cloning
  *  7. Boots Firebase via ftapi.init()
  *  8. Binds auth lifecycle events (login, logout, reconnect, ban)
- *  9. Calls firetable.ui.init() to wire up the rest of the UI
+ *  9. Calls firetable.ui.init() to wire up the rest of the UI, then
+ *     firetable.install.init() ("Get the app" guide, js/install.js) and
+ *     firetable.push.init() (@mention push notifications, js/push.js)
  *
  * The final line auto-starts the app: `if (!firetable.started) firetable.init();`
  *
@@ -208,6 +210,8 @@ firetable.init = function () {
 
   // ── UI Init (wires everything up) ──
   firetable.ui.init();
+  firetable.install.init();
+  firetable.push.init();
   firetable.snow.init();
 };
 

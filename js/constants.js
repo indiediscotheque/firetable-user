@@ -37,6 +37,11 @@ var STORAGE = {
   showSongAnnouncements: "firetableShowSongAnnouncements",
   badoop:             "firetableBadoop",
   notifyMentions:     "firetableDTNM",
+  pushMentions:       "firetablePushMentions", // the uid that turned push on here
+  pushEveryone:       "firetablePushEveryone",
+  pushDevice:         "firetablePushDevice",   // this device's id under pushSubs/<uid>/
+  pushSeen:           "firetablePushSeen",
+  pushNudge:          "firetablePushNudge",
   screenControl:      "firetableScreenControl",
   avatarStyle:        "firetableAvatarStyle",
   density:            "firetableDensity",

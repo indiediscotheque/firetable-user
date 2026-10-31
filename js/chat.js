@@ -317,6 +317,10 @@ firetable.ui.renderInbox = function () {
   var unread = items.filter(function (m) { return !m.read; }).length;
   $("#inboxBadge").prop("hidden", !unread).text(unread > 9 ? "9+" : unread);
   $("#inboxTrigger").attr("aria-label", unread ? "Mentions, " + unread + " unread" : "Mentions");
+  // the number on the installed app's icon (push notifications set it too)
+  if (ftapi.uid && navigator.setAppBadge) {
+    (unread ? navigator.setAppBadge(unread) : navigator.clearAppBadge()).catch(function () {});
+  }
   var $list = $("#inboxList").empty();
   $("#inboxClear").prop("hidden", !items.length);
   if (!items.length) {
@@ -990,15 +994,30 @@ firetable.ui.setupChatEvents = function () {
   var inboxPop = document.getElementById('inboxPopover');
   ftapi.events.on('loggedIn', firetable.actions.watchInbox);
   ftapi.events.on('loggedOut', firetable.actions.unwatchInbox);
-  $('#inboxTrigger').on('click', function () {
-    if (inboxPop.matches(':popover-open')) { inboxPop.hidePopover(); return; }
-    inboxPop.style.visibility = 'hidden';
-    inboxPop.showPopover();
-    firetable.ui.positionPopover(this, inboxPop, document.getElementById('inboxArrow'), 'bottom');
+  firetable.ui.openInbox = function () {
+    if (!ftapi.uid) return;
+    if (!inboxPop.matches(':popover-open')) {
+      inboxPop.style.visibility = 'hidden';
+      inboxPop.showPopover();
+      firetable.ui.positionPopover(document.getElementById('inboxTrigger'), inboxPop, document.getElementById('inboxArrow'), 'bottom');
+    }
     // opening the inbox reads everything in it
     var updates = {};
     firetable.inbox.items.forEach(function (m) { if (!m.read) updates[m.id + '/read'] = true; });
     if (Object.keys(updates).length) ftapi.db().ref('mentions/' + ftapi.uid).update(updates).catch(function () {});
+  };
+  $('#inboxTrigger').on('click', function () {
+    if (inboxPop.matches(':popover-open')) { inboxPop.hidePopover(); return; }
+    firetable.ui.openInbox();
+  });
+  // A tapped push notification opens the app at #mentions: show the inbox
+  // once signed in (and its mentions have loaded), then drop the #.
+  var wantsInbox = location.hash === '#mentions';
+  if (wantsInbox) history.replaceState(null, '', location.pathname + location.search);
+  ftapi.events.on('loggedIn', function () {
+    if (!wantsInbox) return;
+    wantsInbox = false;
+    setTimeout(firetable.ui.openInbox, 800);
   });
   $(inboxPop).on('click', '.inboxReply', function () {
     var id = $(this).closest('.inboxItem').attr('data-id');
