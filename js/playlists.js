@@ -76,9 +76,30 @@ firetable.utilities.sortedLists = function (allPlaylists) {
   return lists;
 };
 
-/** Option text for a list: a star marks the default. */
+/** Known track counts per list id: { n, broken }. Filled as lists load. */
+firetable.listCounts = firetable.listCounts || {};
+
+/**
+ * Option text for a list: a star marks the default, and the track count
+ * (with any flagged ones) follows the name once it's known.
+ */
 firetable.utilities.listLabel = function (listID, name) {
-  return (firetable.utilities.isDefaultList(listID) ? "★ " : "") + name;
+  var c = firetable.listCounts[String(listID)];
+  var count = c ? " (" + c.n.toLocaleString() + (c.broken ? ", " + c.broken.toLocaleString() + " ⚠" : "") + ")" : "";
+  return (firetable.utilities.isDefaultList(listID) ? "★ " : "") + name + count;
+};
+
+/**
+ * Store a list's track count and update its text in every picker.
+ * @param {string} listID
+ * @param {{n:number, broken:number}} stats
+ */
+firetable.ui.setListCount = function (listID, stats) {
+  listID = String(listID);
+  var prev = firetable.listCounts[listID];
+  if (prev && prev.n === stats.n && prev.broken === stats.broken) return;
+  firetable.listCounts[listID] = { n: stats.n, broken: stats.broken };
+  firetable.ui.relabelList(listID);
 };
 
 /**
@@ -93,7 +114,8 @@ firetable.ui.fillPlaylistSelect = function ($sel, allPlaylists, lead, idPrefix) 
   $sel.empty();
   (lead || []).forEach(function (o) { $sel.append($("<option></option>").val(o.value).text(o.text)); });
   firetable.utilities.sortedLists(allPlaylists).forEach(function (l) {
-    var $o = $("<option></option>").val(l.id).text(firetable.utilities.listLabel(l.id, l.name));
+    if (l.list && !l.builtIn) firetable.listCounts[String(l.id)] = firetable.utilities.listStats(l.list);
+    var $o = $("<option></option>").val(l.id).attr("data-name", l.name).text(firetable.utilities.listLabel(l.id, l.name));
     if (idPrefix && l.id !== "0") $o.attr("id", idPrefix + l.id);
     $sel.append($o);
   });
@@ -107,10 +129,13 @@ firetable.ui.fillPlaylistPickers = function (allPlaylists) {
   firetable.ui.fillPlaylistSelect($("#djlistpicker"), allPlaylists);
 };
 
-/** Update a list's name (and star) in every picker without reloading them. */
+/** Update a list's name (and star, and count) in every picker without reloading them. */
 firetable.ui.relabelList = function (listID, name) {
   $("#listpicker, #djlistpicker, #stealpicker, #mergepicker, #mergepicker2").find("option").each(function () {
-    if (this.value === String(listID)) this.textContent = firetable.utilities.listLabel(listID, name);
+    if (this.value !== String(listID)) return;
+    if (name != null) this.setAttribute("data-name", name);
+    var label = this.getAttribute("data-name");
+    if (label != null) this.textContent = firetable.utilities.listLabel(listID, label);
   });
 };
 
@@ -151,6 +176,7 @@ firetable.ui.renderPlaylistIndex = function () {
   lists.forEach(function (l) {
     var tracks = l.builtIn ? firetable.plIndex.defaultTracks : l.list;
     var s = firetable.utilities.listStats(tracks);
+    firetable.ui.setListCount(l.id, s);
     var isDefault = firetable.utilities.isDefaultList(l.id);
     var $row = $('<li class="plx-row" role="listitem"></li>').attr("data-id", l.id)
       .toggleClass("is-default", isDefault).toggleClass("is-dj", l.id === djList).toggleClass("is-viewing", l.id === viewing);
@@ -162,9 +188,7 @@ firetable.ui.renderPlaylistIndex = function () {
     $('<input type="text" class="plx-name" maxlength="80" spellcheck="false" enterkeyhint="done">')
       .val(l.name).attr("aria-label", "Name of " + l.name).appendTo($main);
     var meta = s.n + (s.n === 1 ? " track" : " tracks") + (s.broken ? " · " + s.broken + " flagged" : "");
-    var $meta = $('<div class="plx-meta"></div>').text(meta).appendTo($main);
-    if (l.id === djList) $('<span class="plx-tag plx-tag-dj">DJing from</span>').prependTo($meta);
-    if (isDefault) $('<span class="plx-tag plx-tag-default">Default</span>').prependTo($meta);
+    $('<div class="plx-meta"></div>').text(meta).appendTo($main);
     var $acts = $('<div class="plx-actions"></div>').appendTo($row);
     $('<button type="button" class="butt graybutt iconbutt plx-star"><i class="material-symbols-outlined">star</i></button>')
       .attr({ "aria-pressed": isDefault ? "true" : "false", "aria-label": isDefault ? l.name + " is your default" : "Make " + l.name + " your default", title: isDefault ? "Your default list" : "Make default" })
@@ -251,7 +275,7 @@ firetable.ui.setupPlaylistIndex = function () {
   var currentOrder = function () {
     return $list.children(".plx-row").map(function () { return this.getAttribute("data-id"); }).get().join(",");
   };
-  var scroller = $list.closest(".modalContent")[0];
+  var scroller = $list[0]; // the list scrolls; the help text and new-list box stay put
   var onDragMove = function (e) {
     if (!drag || e.pointerId !== drag.pointer) return;
     e.preventDefault();

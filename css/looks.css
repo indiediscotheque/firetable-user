@@ -6073,13 +6073,17 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
 
 /* ─── Playlist overview (#118, #117) ─── */
 #plIndexBox .modalBox { width: 36rem; max-width: 100vw; max-height: 100dvh; }
-#plIndexBox .modalContent { flex-direction: column; gap: var(--pad3); }
+/* Only the list scrolls: the help text, new-list box and bulk bar stay in view (#229) */
+#plIndexBox .modalContent { flex-direction: column; gap: var(--pad3); min-height: 0; overflow: hidden; }
+#plIndexBox .modalContent > :not(#plIndexList) { flex: none; }
 .plx-help {
   margin: 0; font-size: .85rem; line-height: 1.5; opacity: .8;
   & i { font-size: 1rem; vertical-align: -.2em; }
 }
 #plIndexList {
-  list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem;
+  list-style: none; margin: 0; padding: 0; display: grid; align-content: start; gap: .25rem;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-gutter: stable;
 }
 .plx-row {
   display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: .5rem;
@@ -6093,18 +6097,15 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
   touch-action: none; /* the handle drags; the rest of the list still scrolls */
   &:hover, &:focus-visible { opacity: 1; }
 }
-.plx-main { min-width: 0; display: grid; gap: .1rem; }
+/* Name, then the track count to its right (#228) */
+.plx-main { min-width: 0; display: flex; align-items: center; gap: .5rem; }
 .plx-name {
-  width: 100%; min-width: 0; font: inherit; font-weight: 600; color: inherit;
+  flex: 1 1 0; width: 100%; min-width: 0; font: inherit; font-weight: 600; color: inherit;
   background: transparent; border: 1px solid transparent; border-radius: 6px; padding: .15rem .35rem;
   &:hover { border-color: color-mix(in srgb, currentColor 20%, transparent); }
   &:focus { border-color: currentColor; background: var(--color-bg-s2); outline: none; }
 }
-.plx-meta { font-size: .8rem; opacity: .75; padding-left: .4rem; display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
-.plx-tag {
-  font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
-  padding: 0 .4rem; border-radius: 99px; background: color-mix(in srgb, currentColor 15%, transparent);
-}
+.plx-meta { flex: 0 0 auto; max-width: 55%; font-size: .8rem; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .plx-actions {
   display: flex; gap: .2rem;
   & .butt { width: 2rem; height: 2rem; }
@@ -6179,13 +6180,6 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
 /* ─── Track count next to the playlist name (#210) ─── */
 #listpickerWrap { display: flex; align-items: center; gap: var(--pad2); }
 #listpickerWrap #listpicker { flex: 1; min-width: 0; }
-#listCount {
-  flex: none; font-size: .75rem; font-weight: 600; font-variant-numeric: tabular-nums;
-  padding: .1rem .5rem; border-radius: 99px; opacity: .8;
-  background: color-mix(in srgb, currentColor 12%, transparent);
-  &[hidden] { display: none; }
-  &.has-flagged::after { content: " ⚠"; color: var(--color-accent); }
-}
 
 /* ─── Push notifications (js/push.js) ─────────────────────────────────────── */
 .pushSetting { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem 0.5rem; }

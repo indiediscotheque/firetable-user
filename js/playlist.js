@@ -775,18 +775,13 @@ function buildQueueItemHTML(key, track, isPreview) {
  * Set up the playlistChanged event handler and queue-related UI bindings.
  * Called once from firetable.ui.init().
  */
-/** Track count (and flagged count) next to the playlist name (#210). */
-firetable.ui.renderListCount = function (tracks) {
-  var n = 0, flagged = 0;
-  Object.keys(tracks || {}).forEach(function (k) {
-    if (!tracks[k]) return;
-    n++;
-    if (tracks[k].flagged) flagged++;
-  });
-  var label = n.toLocaleString() + (n === 1 ? " track" : " tracks") + (flagged ? ", " + flagged + " flagged" : "");
-  $("#listCount").prop("hidden", false).attr({ title: label, "aria-label": label })
-    .text(n.toLocaleString())
-    .toggleClass("has-flagged", flagged > 0);
+/** Track count (and flagged count) in the playlist picker, after the name (#210, #226). */
+firetable.ui.renderListCount = function (tracks, listID) {
+  var s = firetable.utilities.listStats(tracks);
+  if (listID == null) listID = firetable.viewListID || $("#listpicker").val() || "0";
+  firetable.ui.setListCount(listID, s);
+  var label = s.n.toLocaleString() + (s.n === 1 ? " track" : " tracks") + (s.broken ? ", " + s.broken.toLocaleString() + " flagged" : "");
+  $("#listpicker").attr("title", label);
 };
 
 firetable.ui.setupPlaylistEvents = function () {
@@ -932,7 +927,7 @@ firetable.ui.setupPlaylistEvents = function () {
   // ── Playlist changed: re-render the queue ──
   ftapi.events.on("playlistChanged", function (okdata, listID) {
     firetable.queue = okdata;
-    firetable.ui.renderListCount(okdata);
+    firetable.ui.renderListCount(okdata, listID);
     // Each render gets a number; chunks from an older render stop when a
     // newer one starts, so stale rows never get appended to the new list.
     var renderGen = firetable._queueRenderGen = (firetable._queueRenderGen || 0) + 1;
@@ -1056,7 +1051,7 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   function enterCreateMode() {
-    $("#listpicker, #listCount").hide();
+    $("#listpicker").hide();
     $("#plmanager").css("display", "flex");
     $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").hide().next(".ft-tip").hide();
     $("#plAddLauncher").next(".ft-tip").text("Cancel Create Playlist");
@@ -1067,7 +1062,7 @@ firetable.ui.setupPlaylistEvents = function () {
 
   function exitCreateMode() {
     $("#plmanager").css("display", "none");
-    $("#listpicker, #listCount").show();
+    $("#listpicker").show();
     $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").show().next(".ft-tip").show();
     $("#plAddLauncher").next(".ft-tip").text("New / Import playlist");
     $("#plAddLauncher i").text("add");
