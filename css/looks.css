@@ -5120,6 +5120,31 @@ input.tagMachine,
     border-left-color: var(--color-success);
 }
 
+/* A private notice from the bot (#231), sometimes with a button */
+#ft-toast.has-action {
+    display: flex;
+    align-items: center;
+    gap: var(--pad3);
+    pointer-events: auto;
+}
+
+.ft-toast-action {
+    flex: none;
+    padding: 0.25rem 0.75rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+    border: 0;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+}
+
+.ft-toast-action:hover,
+.ft-toast-action:focus-visible {
+    background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+
 /* ============================================
    Unauthenticated / Disconnected State
    ============================================ */
@@ -5854,6 +5879,9 @@ body.media-off .q-art.no-art {
 /* Mods: one tools button on the stage (fix tags, flag; #136 #125) */
 #npModBtn { display: none; }
 body.is-mod #npModBtn { display: inline-flex; }
+/* Skip: mods use Mod tools; the DJ playing now (not a mod) gets this button (#233) */
+#skipTrigger { display: none; }
+body.is-current-dj:not(.is-mod) #skipTrigger { display: inline-flex; }
 
 /* Recent rows: Flag button for mods (#167) */
 #thehistory .flagplay { display: none; }

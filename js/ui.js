@@ -92,28 +92,58 @@ firetable.ui.showPlayerControls = function () {
  * Replaces browser alert() pop-ups. Uses a manual popover so it also shows
  * above open dialogs.
  * @param {string} msg
- * @param {"error"|"success"} [type]
+ * @param {"error"|"success"|"notice"} [type]
+ * @param {Object} [opts]
+ * @param {number} [opts.duration] - ms on screen (default 3.5 s, errors 5 s)
+ * @param {{label:string, fn:Function}} [opts.action] - a button in the toast
+ * @param {Function} [opts.onHide] - called once it has gone
  */
-firetable.ui.toast = function (msg, type) {
+firetable.ui.toast = function (msg, type, opts) {
   var el = document.getElementById('ft-toast');
   if (!el || !msg) return;
+  opts = opts || {};
   clearTimeout(firetable.ui._toastTimer);
   clearTimeout(firetable.ui._toastHideTimer);
+  // A toast that replaces one still showing hands on its "gone" callback, so
+  // queued notices carry on once this one has gone too.
+  var prevHide = firetable.ui._toastOnHide;
+  firetable.ui._toastOnHide = (prevHide || opts.onHide) ? function () {
+    if (opts.onHide) opts.onHide();
+    if (prevHide) prevHide();
+  } : null;
   el.textContent = msg;
-  el.classList.remove('is-error', 'is-success', 'show');
+  el.classList.remove('is-error', 'is-success', 'is-notice', 'show', 'has-action');
   if (type) el.classList.add('is-' + type);
+  if (opts.action) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ft-toast-action';
+    btn.textContent = opts.action.label;
+    btn.addEventListener('click', function () {
+      opts.action.fn();
+      firetable.ui._toastTimer && clearTimeout(firetable.ui._toastTimer);
+      el.classList.remove('show');
+      firetable.ui._toastHideTimer = setTimeout(hideToast, 220);
+    });
+    el.appendChild(btn);
+    el.classList.add('has-action');
+  }
   try {
     if (el.showPopover && !el.matches(':popover-open')) el.showPopover();
   } catch (e) { /* popover unsupported: plain fixed element */ }
   requestAnimationFrame(function () { el.classList.add('show'); });
+  function hideToast() {
+    try {
+      if (el.hidePopover && el.matches(':popover-open')) el.hidePopover();
+    } catch (e) { /* ignore */ }
+    var done = firetable.ui._toastOnHide;
+    firetable.ui._toastOnHide = null;
+    if (done) done();
+  }
   firetable.ui._toastTimer = setTimeout(function () {
     el.classList.remove('show');
-    firetable.ui._toastHideTimer = setTimeout(function () {
-      try {
-        if (el.hidePopover && el.matches(':popover-open')) el.hidePopover();
-      } catch (e) { /* ignore */ }
-    }, 220);
-  }, type === 'error' ? 5000 : 3500);
+    firetable.ui._toastHideTimer = setTimeout(hideToast, 220);
+  }, opts.duration || (type === 'error' ? 5000 : 3500));
 };
 
 /**

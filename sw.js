@@ -66,11 +66,13 @@ self.addEventListener("notificationclick", function (event) {
   var data = event.notification.data || {};
   var url = new URL(data.url || "./", self.registration.scope).href;
   var openInbox = /#mentions$/.test(url);
+  var openView = (url.match(/#(cards)$/) || [])[1]; // a card notice opens the card case
   event.waitUntil(appWindows().then(function (wins) {
     var win = wins.filter(function (w) { return w.focused; })[0] ||
       wins.filter(function (w) { return w.visibilityState === "visible"; })[0] || wins[0];
     if (win) {
       if (openInbox) win.postMessage({ type: "openInbox", id: data.id });
+      else if (openView) win.postMessage({ type: "openView", view: openView });
       return win.focus();
     }
     return self.clients.openWindow(url);

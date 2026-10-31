@@ -214,7 +214,6 @@ firetable.actions.showLoginScreen = function () {
   $("#logOutButton").hide().off();
   $('#mainGrid').removeClass().addClass('login');
   $("#grab").css("display", "none");
-  $("#skipTrigger").css("display", "none");
 
   if (firetable.loginForm && !$("#login").html()) {
     $("#mainGrid").append('<div id="login" class="scroll-view" role="region" aria-label="Log in or sign up">' + firetable.loginForm + '</div>');
@@ -314,7 +313,6 @@ firetable.actions.loggedIn = function (user) {
   firetable.nav.restore();
   firetable.nav.apply();
   $("#grab").css("display", "inline-block");
-  $("#skipTrigger").css("display", "inline-block");
 };
 
 // ─── User Lookup ─────────────────────────────────────────────────────────────

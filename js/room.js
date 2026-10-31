@@ -672,12 +672,20 @@ firetable.ui.setupRoomEvents = function () {
     applyHistoryFilter();
   });
 
+  // body.is-current-dj while your own song plays: shows the stage's skip
+  // button to DJs who aren't mods (mods skip from Mod tools)
+  firetable.ui.markCurrentDj = function () {
+    var song = firetable.song;
+    $("body").toggleClass("is-current-dj", !!(ftapi.uid && song && song.cid != 0 && song.djid === ftapi.uid));
+  };
+
   // ── Mod Check (show edit buttons for mods) ──
   ftapi.events.on('modCheck', function (data) {
     if (data) $(".edittags").show();
     $("body").toggleClass("is-mod", !!data);
   });
-  ftapi.events.on('loggedOut', function () { $("body").removeClass("is-mod"); });
+  ftapi.events.on('loggedOut', function () { $("body").removeClass("is-mod is-current-dj"); });
+  ftapi.events.on('loggedIn', function () { firetable.ui.markCurrentDj(); });
 
   // ── Flag a track (mods): now playing (#125) or a play in Recent (#167) ──
   var flagMenuEl = document.getElementById('flagMenuPopover');
@@ -732,6 +740,14 @@ firetable.ui.setupRoomEvents = function () {
     var idx = $items.index($items.filter(':focus'));
     if (e.key === 'ArrowDown') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
+  });
+
+  // Skip is a mod action (#233); the DJ playing now skips their own track
+  // with the stage's skip button instead.
+  $('#npSkip').on('click', function () {
+    npModMenu.hidePopover();
+    if (!firetable.song || firetable.song.cid == 0) return;
+    ftapi.actions.sendBotCommand('!skip');
   });
 
   $('#npFlag').on('click', function () {
@@ -959,6 +975,7 @@ firetable.ui.setupRoomEvents = function () {
     var secSince = Math.floor(timeSince / 1000);
     var timeLeft = data.duration - secSince;
     firetable.song = data;
+    firetable.ui.markCurrentDj();
     firetable.media.songChanged();
     firetable.ui.applyBeat();
     firetable.debug && console.log("NEW TRACK", data);
