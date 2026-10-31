@@ -1832,22 +1832,29 @@ firetable.ui.init = function () {
     obs.observe(inner, { childList: true });
   });
 
-  // ── Playlist header: give up the list's scrollbar gutter so its edges line up with the rows ──
-  // The gutter is 0 with overlay scrollbars and varies by OS, browser and zoom, so measure it.
+  // ── Scrollbar gutters: expose each view's gutter width as --scroll-gutter ──
+  // Lets the Playlists header give up the same strip as its list, and lets the
+  // other views keep an even 1rem inset on both sides. The gutter is 0 with
+  // overlay scrollbars and varies by OS, browser and zoom, so it is measured.
   (function () {
-    var listEl = document.getElementById('queuelist');
-    var boxEl  = document.getElementById('queuebox');
-    if (!listEl || !boxEl || typeof ResizeObserver === 'undefined') return;
-    var last = -1;
-    new ResizeObserver(function () {
-      if (!listEl.offsetWidth) return; // hidden tab
-      var cs = getComputedStyle(listEl);
-      var gutter = Math.max(0, listEl.offsetWidth - listEl.clientWidth -
-        parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth));
-      if (gutter === last) return;
-      last = gutter;
-      boxEl.style.setProperty('--queue-gutter', gutter + 'px');
-    }).observe(listEl);
+    if (typeof ResizeObserver === 'undefined') return;
+    // [scroller, element that carries the variable]
+    [['queuelist', 'queuebox'], ['thehistory', 'thehistory'], ['discover', 'discover'], ['cardsWrap', 'cardsWrap']]
+      .forEach(function (ids) {
+        var el = document.getElementById(ids[0]);
+        var target = document.getElementById(ids[1]);
+        if (!el || !target) return;
+        var last = -1;
+        new ResizeObserver(function () {
+          if (!el.offsetWidth) return; // hidden tab
+          var cs = getComputedStyle(el);
+          var gutter = Math.max(0, el.offsetWidth - el.clientWidth -
+            parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth));
+          if (gutter === last) return;
+          last = gutter;
+          target.style.setProperty('--scroll-gutter', gutter + 'px');
+        }).observe(el);
+      });
   }());
 
   // ── Deck placement: move #ondeck to People tab when stage is narrow ──
