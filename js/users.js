@@ -670,6 +670,21 @@ firetable.ui.setupUserEvents = function () {
   
 
   // ── Username change ──
+  // The avatar beside the box previews the face the typed name would give
+  // (robohash and DiceBear faces are made from the name).
+  var previewTimer = 0;
+  firetable.ui.updateUsernamePreview = function () {
+    var typed = String($("#changeUsername").val() || "").trim();
+    var name = typed || ftapi.uname || firetable.uname || "";
+    if (!ftapi.uid) return;
+    $("#usernameAvatarPreview")
+      .css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, name, null, null, true) + ")")
+      .attr("aria-label", typed ? "Your avatar as " + typed : "Your avatar");
+  };
+  $("#changeUsername").on("input", function () {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(firetable.ui.updateUsernamePreview, 250);
+  });
   $("#changeUsername").on("keyup", function (e) {
     if (e.which !== 13) return;
     var newDjName = $(this).val();
@@ -681,6 +696,10 @@ firetable.ui.setupUserEvents = function () {
         } else {
           $("#usernameResponse").text("Great job! Your name is now " + newDjName);
           $("#loggedInName").text(newDjName);
+          ftapi.uname = newDjName;
+          $("#loggedInUser .ft-avatar").css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, newDjName, null, null, true) + ")");
+          $("#changeUsername").val("");
+          firetable.ui.updateUsernamePreview();
         }
       });
     }

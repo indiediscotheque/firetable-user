@@ -135,6 +135,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
   // Metadata
   $histItem.find('.histdj').text(data.dj);
   $histItem.find('.pv-dj-avatar')
+    .attr({ 'data-avatar-uid': data.djid || null, 'data-avatar-size': '40x40' })
     .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
     .attr('aria-label', data.dj);
   $histItem.find('.dj-avatar-tip').attr('label', data.dj);
@@ -295,7 +296,12 @@ firetable.ui.setupRoomEvents = function () {
     }
   }
 
-  function renderDeckAndQueue(data, activeIdx) {
+  // useAnchor: keep the DJ already shown as playing in the spotlight, wherever
+  // their seat moved to. The table and the spotlight index arrive as separate
+  // updates, so a seat number alone can briefly point at the wrong DJ (someone
+  // who just joined would show as playing, or the on-deck order would start
+  // from the wrong seat).
+  function renderDeckAndQueue(data, activeIdx, useAnchor) {
     var deckHtml = '';
     var onDeckDjs = [];
     var isSelfOnDeck = false;
@@ -317,13 +323,23 @@ firetable.ui.setupRoomEvents = function () {
       // Seats can shift mid-song (a DJ joins or leaves before the spotlight).
       // Unless a song change is still being animated in, keep the highlight on
       // the DJ whose song is playing.
+      var anchored = false;
+      if (useAnchor && firetable.displayedDjId) {
+        for (var a = 0; a < allDjs.length; a++) {
+          if (allDjs[a].id === firetable.displayedDjId) { activeIdx = a; anchored = true; break; }
+        }
+      }
       var songDj = firetable.song && firetable.song.djid;
-      if (songDj && firetable._djActiveTimer === undefined &&
+      if (!anchored && songDj && firetable._djActiveTimer === undefined &&
           !(allDjs[activeIdx] && allDjs[activeIdx].id === songDj)) {
         for (var d = 0; d < allDjs.length; d++) {
           if (allDjs[d].id === songDj) { activeIdx = d; break; }
         }
       }
+
+      if (!(activeIdx >= 0 && activeIdx < allDjs.length)) activeIdx = 0;
+      firetable.displayedDjId = allDjs.length ? allDjs[activeIdx].id : null;
+      firetable.displayedPlaydex = activeIdx;
 
       if (activeIdx < allDjs.length) {
         var activeEntry = allDjs[activeIdx];
@@ -531,27 +547,25 @@ firetable.ui.setupRoomEvents = function () {
   var $historyItem = $('#thehistory .pvbar').remove();
   firetable._historyCache = firetable._historyCache || [];
 
-  // Hide with a class, deciding every row before writing any, so filtering a
-  // long history never recalculates styles once per row.
+  // Filter Recent plays. Only the plays are hidden: day headers and hour
+  // markers always stay, so the timeline keeps its shape with no matches and
+  // plays come back as soon as the text matches again. Every row is decided
+  // before any is changed, so a long history is restyled once, not per row.
   function applyHistoryFilter() {
     var q = ($("#histFilter").val() || "").toLowerCase().trim();
     var root = document.getElementById("thehistory");
     if (!root) return;
     var entries = root.querySelectorAll(".hist-entry");
-    var hide = [];
+    var hide = [], shown = 0;
     for (var i = 0; i < entries.length; i++) {
-      var pv = entries[i].querySelector(".pvbar");
-      var link = pv && pv.querySelector(".histlink");
-      var dj = pv && pv.querySelector(".histdj");
+      var link = entries[i].querySelector(".histlink");
+      var dj = entries[i].querySelector(".histdj");
       var text = ((link ? link.textContent : "") + " " + (dj ? dj.textContent : "")).toLowerCase();
       hide.push(q.length > 0 && text.indexOf(q) === -1);
+      if (!hide[i]) shown++;
     }
     for (i = 0; i < entries.length; i++) entries[i].classList.toggle("ft-filtered", hide[i]);
-    var groups = root.querySelectorAll(".hist-day-group");
-    for (i = 0; i < groups.length; i++) {
-      groups[i].classList.toggle("ft-filtered",
-        q.length > 0 && !groups[i].querySelector(".hist-entry:not(.ft-filtered)"));
-    }
+    root.classList.toggle("overFiltered", q.length > 0 && entries.length > 0 && shown === 0);
   }
 
   $(document).on('input.histfilter', '#histFilter', applyHistoryFilter);
@@ -1211,7 +1225,7 @@ firetable.ui.setupRoomEvents = function () {
   ftapi.events.on("tableChanged", function (data) {
     firetable.tableData = data;
     var _activeIdx = (firetable.displayedPlaydex !== undefined) ? firetable.displayedPlaydex : firetable.playdex;
-    renderDeckAndQueue(data, _activeIdx);
+    renderDeckAndQueue(data, _activeIdx, true);
 
     $('#usersWaitlist').off('click.wladdme').on('click.wladdme', '.waitlist-addme-row .ft-avatar, .wlAddMeBtn', function () {
       ftapi.actions.sendBotCommand('!addme');

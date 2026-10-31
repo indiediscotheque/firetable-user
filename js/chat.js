@@ -329,7 +329,8 @@ firetable.ui.renderInbox = function () {
   }
   items.forEach(function (m) {
     var $row = $('<div class="inboxItem"></div>').toggleClass("unread", !m.read).attr("data-id", m.id);
-    $('<span class="ft-avatar"></span>').css("background-image", "url(" + firetable.utilities.avatarURL(m.fromId, m.from, "40x40") + ")").appendTo($row);
+    $('<span class="ft-avatar"></span>').attr({ "data-avatar-uid": m.fromId, "data-avatar-size": "40x40" })
+      .css("background-image", "url(" + firetable.utilities.avatarURL(m.fromId, m.from, "40x40") + ")").appendTo($row);
     var $body = $('<div class="inboxBody"></div>').appendTo($row);
     $('<div class="inboxMeta"></div>')
       .append($('<b></b>').text(m.from))
@@ -604,7 +605,7 @@ firetable.ui.setupChatEvents = function () {
       // ── New message block (different user or @-mention break) ──
       var $chatthing = $chatTemplate.clone();
       $chatthing.attr('id', "chat" + chatData.chatID);
-      $chatthing.find('.ft-avatar').css(
+      $chatthing.find('.ft-avatar').attr('data-avatar-uid', chatData.id).css(
         'background-image',
         "url(" + firetable.utilities.avatarURL(chatData.id, namebo) + ")"
       );

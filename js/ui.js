@@ -1538,6 +1538,9 @@ firetable.ui.setupMiscEvents = function () {
     var modalContentID = $(this).attr('data-modal');
     var targetTab = $(this).attr('data-tab');
     document.getElementById(modalContentID).showModal();
+    if (modalContentID === 'accountSettingsBox' && firetable.ui.updateUsernamePreview) {
+      firetable.ui.updateUsernamePreview();
+    }
     if (targetTab) {
       var $modal = $("#" + modalContentID);
       $modal.find('.tab').removeClass('on');
@@ -1739,6 +1742,7 @@ firetable.ui.setupMiscEvents = function () {
       .catch(function (err) { console.error("[firetable] Avatar style save failed:", err); });
     $("#loggedInUser .ft-avatar").css("background-image",
       "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname, null, firetable.roomAvatarStyle || val) + ")");
+    if (firetable.ui.updateUsernamePreview) firetable.ui.updateUsernamePreview();
   });
 
   // (Search / Done buttons are bound in playlist.js)

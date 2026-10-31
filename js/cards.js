@@ -435,8 +435,8 @@ firetable.actions.displayCard = function (data, chatid, opts) {
    */
   var loadAvatar = function (px, onDone) {
     var img = new Image();
-    var tries = [firetable.utilities.avatarURL(data.djid, data.djname, avatarPx(px), "robohash:" + set)];
-    if (scale !== 1) tries.push(firetable.utilities.avatarURL(data.djid, data.djname, px + "x" + px, "robohash:" + set));
+    var tries = [firetable.utilities.avatarURL(data.djid, data.djname, avatarPx(px), "robohash:" + set, true)];
+    if (scale !== 1) tries.push(firetable.utilities.avatarURL(data.djid, data.djname, px + "x" + px, "robohash:" + set, true));
     img.onload = function () { onDone(img); };
     img.onerror = function () {
       if (tries.length) img.src = tries.shift();
@@ -613,7 +613,7 @@ firetable.actions.displayCard = function (data, chatid, opts) {
           };
           legId9.src = 'img/id9.png';
         };
-          legRobot.src = firetable.utilities.avatarURL(data.djid, data.djname, avatarPx(110), "robohash:" + set);
+          legRobot.src = firetable.utilities.avatarURL(data.djid, data.djname, avatarPx(110), "robohash:" + set, true);
       };
       legArnold.src = 'img/arnold.png';
 

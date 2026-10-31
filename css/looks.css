@@ -2762,8 +2762,16 @@ input.ft-filter {
    applyHistoryFilter). A class rather than inline styles, so the whole list
    is restyled in one pass. */
 #mainqueue > .pvbar.ft-filtered,
-#thehistory .ft-filtered {
+#thehistory .hist-entry.ft-filtered {
     display: none !important;
+}
+#thehistory.overFiltered::before {
+    content: "no plays match your filter";
+    display: flex;
+    justify-content: center;
+    padding: var(--pad2);
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.4);
 }
 
 #mainqueue [class*="material-symbols-"]:not(.row-icon),
@@ -4994,6 +5002,24 @@ input.tagMachine,
     width: 100%;
     padding: 0.5rem;
     margin-bottom: 1rem;
+}
+
+/* Username box with a live preview of the avatar the new name would make */
+.usernameRow {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    margin-bottom: 1rem;
+}
+.usernameRow #changeUsername {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
+}
+#usernameAvatarPreview {
+    width: 3rem;
+    height: 3rem;
+    transition: background-image 0.2s ease;
 }
 
 #songlink svg {
