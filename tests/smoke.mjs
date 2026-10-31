@@ -114,6 +114,18 @@ try {
   // received and read the push; it messages open windows as it shows one)
   check(!!reg && got === '{"type":"push","kind":"mention","id":"c1"}', "the service worker receives a pushed mention" + (got ? "" : " (nothing arrived)"));
 
+  console.log("-- \"Get the app\" guide");
+  const guide = await page.evaluate(() => {
+    firetable.install.open();
+    const dlg = document.getElementById("installAppBox");
+    const open = [...dlg.querySelectorAll(".installSteps")].filter((d) => d.open).map((d) => d.dataset.platform);
+    const first = dlg.querySelector(".installSteps").dataset.platform;
+    const ok = dlg.open && open.join() === "desktop" && first === "desktop" && dlg.querySelectorAll(".installSteps li").length >= 8;
+    dlg.close();
+    return ok;
+  });
+  check(guide, "the install guide opens with this device's steps first, the others one tap away");
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));

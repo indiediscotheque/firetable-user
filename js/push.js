@@ -288,7 +288,7 @@ firetable.push = {
     var hint = "";
     if (!works) {
       hint = p.isIOS() && !p.isApp()
-        ? "On iPhone and iPad, notifications work in the app: tap Share, then Add to Home Screen, and open Indie Disco from your Home Screen."
+        ? "On iPhone and iPad, notifications work in the app: add Indie Disco to your Home Screen and open it from there."
         : "This browser can't get push notifications.";
     } else if (p.key === "") {
       hint = "Push notifications aren't set up on the room's bot yet.";
@@ -299,12 +299,14 @@ firetable.push = {
     } else if (on) {
       hint = "You'll get a notification when someone @mentions you while you're away from the room.";
     } else if (p.isPhone() && !p.isApp()) {
-      hint = "Tip: install the app (browser menu → Install app or Add to Home Screen) to get notifications like any other app.";
+      hint = "Tip: install the app to get notifications like any other app.";
     }
     $toggle.prop({ checked: on, disabled: !works || !p.key || p.busy });
     $every.prop({ checked: on && p.wantsEveryone(), disabled: !on || p.busy });
     $("#pushEveryoneLine").toggleClass("is-disabled", !on);
     $hint.text(hint).prop("hidden", !hint);
+    // not installed yet on a phone (or an iPhone, where it's required): link the guide
+    $("#pushHowInstall").prop("hidden", p.isApp() || !(p.isPhone() || (!works && p.isIOS())));
     $("#pushTest").prop("hidden", !on).prop("disabled", p.busy);
 
     // this account's devices
@@ -328,8 +330,9 @@ firetable.push = {
     }
     $("#inboxPush").prop("hidden", !nudge).attr("data-kind", nudge);
     $("#inboxPushOn").prop("hidden", nudge !== "turnOn").prop("disabled", p.busy);
+    $("#inboxPushHow").prop("hidden", nudge !== "install");
     $("#inboxPushText").text(nudge === "install"
-      ? "Get these as notifications: tap Share, then Add to Home Screen, and turn them on in the app."
+      ? "Get these as notifications: add the app to your Home Screen."
       : "Get these on this " + (p.isPhone() ? "phone" : "device") + ", even with the app closed.");
   },
 

@@ -55,6 +55,7 @@ Members can get @mentions as notifications on their phone, even with the app clo
 - `js/push.js` signs the device up and saves it under `pushSubs/<uid>/` for the bot, and re-checks on every visit (a subscription the browser replaced, a new bot key, or notifications blocked in the phone's settings are all picked up). Signing out removes the device; signing back in with the same account restores it.
 - Options: "Also push @everyone announcements" (from mods and the bot), "Send a test" (goes through the bot, like a real mention), and the list of the account's devices with a button to remove each. The @ inbox suggests turning it on when it's opened in the installed app or on a phone.
 - Nobody is pushed while they're looking at the room; the bot also skips blocked people and stale messages.
+- **Get the app** (`js/install.js`): a guide to installing the site, with the steps for the visitor's own device first (iPhone/iPad, Android, computer) and a one-tap **Install the app** button where the browser offers one (Chrome, Edge, Samsung Internet). It opens from the "Get the app" card at the top of Settings, "Get the app on your phone" on the login screen (phones), and the push setting's and @ inbox's hints. Inside the installed app it says so instead.
 
 ## checks
 `npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every push and pull request, and before every deploy. None of these tooling files are deployed.
