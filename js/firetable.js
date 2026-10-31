@@ -200,6 +200,9 @@ ftapi.init = function(firebaseConfig) {
     // No one online => Firebase returns null; keep users an object (as it
     // starts out) so lookups like ftapi.users[id] don't throw.
     ftapi.users = okdata || {};
+    if (window.firetable && firetable.utilities && firetable.utilities.trackNames) {
+      firetable.utilities.trackNames(ftapi.users);
+    }
     if (ftapi.users[ftapi.uid]) {
       if (ftapi.users[ftapi.uid].username) {
         ftapi.uname = ftapi.users[ftapi.uid].username;

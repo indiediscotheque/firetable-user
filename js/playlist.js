@@ -286,10 +286,6 @@ firetable.actions.formatTrackDuration = function (seconds) {
 };
 
 
-/**
- * Filter visible queue items by a search string.
- * @param {string} val - Filter text (empty string shows all)
- */
 /** True when the text filter or either filter checkbox is in use. */
 firetable.actions.queueFilterActive = function () {
   return !!(String($("#queueFilter").val() || "").trim() ||
@@ -297,27 +293,41 @@ firetable.actions.queueFilterActive = function () {
     $("#queueFilterBrokenOnly").is(":checked"));
 };
 
-firetable.actions.filterQueue = function (val) {
+/**
+ * Show only the queue rows that match the filter text and checkboxes.
+ * Rows are hidden with a class, and only rows whose state changes are
+ * touched, so clearing the filter on a list of thousands of tracks is one
+ * style pass rather than one per row.
+ * @param {string} [val]  - Filter text (empty string shows all; omitted reads #queueFilter)
+ * @param {Element[]} [rows] - Only filter these rows (newly rendered ones); defaults to every row
+ */
+firetable.actions.filterQueue = function (val, rows) {
   var textFilter = String(typeof val === "string" ? val : $("#queueFilter").val() || "").toLowerCase().trim();
   var remixOnly = $("#queueFilterRemixOnly").is(":checked");
   var brokenOnly = $("#queueFilterBrokenOnly").is(":checked");
-  var visibleCount = 0;
+  var container = document.getElementById("mainqueue");
+  if (!container) return;
+  var list = rows || container.querySelectorAll(".pvbar");
 
-  $("#mainqueue .pvbar").each(function (p, q) {
-    var $row = $(q);
-    var tags = String($row.attr("data-tags") || "");
-    var searchText = tags.toLowerCase();
-    var matchesText = !textFilter || searchText.indexOf(textFilter) !== -1;
-    var matchesRemix = !remixOnly || /\([^)]*\)/.test(tags);
-    var isBroken = String($row.attr("data-broken") || "0") === "1";
-    var matchesBroken = !brokenOnly || isBroken;
+  // Decide every row first, then write, so the browser never recalculates
+  // styles between rows.
+  var toHide = [], toShow = [];
+  for (var i = 0; i < list.length; i++) {
+    var row = list[i];
+    var tags = row.getAttribute("data-tags") || "";
+    var show = (!textFilter || tags.toLowerCase().indexOf(textFilter) !== -1) &&
+      (!remixOnly || /\([^)]*\)/.test(tags)) &&
+      (!brokenOnly || row.getAttribute("data-broken") === "1");
+    var hidden = row.classList.contains("ft-filtered");
+    if (show && hidden) toShow.push(row);
+    else if (!show && !hidden) toHide.push(row);
+  }
+  for (i = 0; i < toShow.length; i++) toShow[i].classList.remove("ft-filtered");
+  for (i = 0; i < toHide.length; i++) toHide[i].classList.add("ft-filtered");
 
-    var show = matchesText && matchesRemix && matchesBroken;
-    $row.toggle(show);
-    if (show) visibleCount += 1;
-  });
-
-  $("#mainqueue").toggleClass("overFiltered", visibleCount === 0 && $("#mainqueue .pvbar").length > 0);
+  var anyRows = container.querySelector(".pvbar") !== null;
+  var anyShown = container.querySelector(".pvbar:not(.ft-filtered)") !== null;
+  container.classList.toggle("overFiltered", anyRows && !anyShown);
 };
 
 // ─── Merge / Copy Lists ──────────────────────────────────────────────────────
@@ -765,18 +775,13 @@ function buildQueueItemHTML(key, track, isPreview) {
  * Set up the playlistChanged event handler and queue-related UI bindings.
  * Called once from firetable.ui.init().
  */
-/** Track count (and flagged count) next to the playlist name (#210). */
-firetable.ui.renderListCount = function (tracks) {
-  var n = 0, flagged = 0;
-  Object.keys(tracks || {}).forEach(function (k) {
-    if (!tracks[k]) return;
-    n++;
-    if (tracks[k].flagged) flagged++;
-  });
-  var label = n.toLocaleString() + (n === 1 ? " track" : " tracks") + (flagged ? ", " + flagged + " flagged" : "");
-  $("#listCount").prop("hidden", false).attr({ title: label, "aria-label": label })
-    .text(n.toLocaleString())
-    .toggleClass("has-flagged", flagged > 0);
+/** Track count (and flagged count) in the playlist picker, after the name (#210, #226). */
+firetable.ui.renderListCount = function (tracks, listID) {
+  var s = firetable.utilities.listStats(tracks);
+  if (listID == null) listID = firetable.viewListID || $("#listpicker").val() || "0";
+  firetable.ui.setListCount(listID, s);
+  var label = s.n.toLocaleString() + (s.n === 1 ? " track" : " tracks") + (s.broken ? ", " + s.broken.toLocaleString() + " flagged" : "");
+  $("#listpicker").attr("title", label);
 };
 
 firetable.ui.setupPlaylistEvents = function () {
@@ -922,7 +927,7 @@ firetable.ui.setupPlaylistEvents = function () {
   // ── Playlist changed: re-render the queue ──
   ftapi.events.on("playlistChanged", function (okdata, listID) {
     firetable.queue = okdata;
-    firetable.ui.renderListCount(okdata);
+    firetable.ui.renderListCount(okdata, listID);
     // Each render gets a number; chunks from an older render stop when a
     // newer one starts, so stale rows never get appended to the new list.
     var renderGen = firetable._queueRenderGen = (firetable._queueRenderGen || 0) + 1;
@@ -979,12 +984,13 @@ firetable.ui.setupPlaylistEvents = function () {
         chunkHtml += buildQueueItemHTML(ck, okdata[ck], ck === firetable.preview);
       }
       tmp.innerHTML = chunkHtml;
+      var newRows = Array.prototype.slice.call(tmp.children);
       while (tmp.firstChild) frag.appendChild(tmp.firstChild);
       container.appendChild(frag);
       idx = end;
-      // Apply the active filter to the newly added rows
+      // Apply the active filter to just the newly added rows
       if (firetable.actions.queueFilterActive()) {
-        firetable.actions.filterQueue($('#queueFilter').val() || '');
+        firetable.actions.filterQueue($('#queueFilter').val() || '', newRows);
       }
       if (idx < keys.length) schedule(renderNextChunk);
     }
@@ -993,8 +999,15 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   // ── Queue filter input ──
-  $("#queueFilter").on("change paste keyup", function () {
-    firetable.actions.filterQueue($(this).val());
+  // "input" covers typing, paste, cut, undo and the search box's clear (X)
+  // button. Bursts of input are folded into one filter pass per frame.
+  var queueFilterFrame = 0;
+  $("#queueFilter").on("input search", function () {
+    if (queueFilterFrame) return;
+    queueFilterFrame = requestAnimationFrame(function () {
+      queueFilterFrame = 0;
+      firetable.actions.filterQueue($("#queueFilter").val() || "");
+    });
   });
   $("#queueFilterRemixOnly").on("change", function () {
     firetable.actions.filterQueue($("#queueFilter").val() || "");
@@ -1038,7 +1051,7 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   function enterCreateMode() {
-    $("#listpicker, #listCount").hide();
+    $("#listpicker").hide();
     $("#plmanager").css("display", "flex");
     $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").hide().next(".ft-tip").hide();
     $("#plAddLauncher").next(".ft-tip").text("Cancel Create Playlist");
@@ -1049,7 +1062,7 @@ firetable.ui.setupPlaylistEvents = function () {
 
   function exitCreateMode() {
     $("#plmanager").css("display", "none");
-    $("#listpicker, #listCount").show();
+    $("#listpicker").show();
     $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").show().next(".ft-tip").show();
     $("#plAddLauncher").next(".ft-tip").text("New / Import playlist");
     $("#plAddLauncher i").text("add");

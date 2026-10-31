@@ -304,6 +304,56 @@ firetable.actions.watchInbox = function () {
   }, function () { /* rules not deployed yet */ });
 };
 
+// ─── Private notices from the bot (#231) ─────────────────────────────────────
+// What the bot has to tell just you (you got a card, a mod put you on the bus,
+// your track can't play, "are you there?") arrives under notices/<your uid>
+// instead of an @ping in chat. Each shows as a toast, one after another, and
+// is removed once shown. Your phone gets the same as a push when you're away.
+
+firetable.notices = { ref: null, fn: null, queue: [], showing: false };
+
+firetable.ui.showNextNotice = function () {
+  var n = firetable.notices;
+  if (n.showing || !n.queue.length) return;
+  var v = n.queue.shift();
+  n.showing = true;
+  var txt = firetable.utilities.emojiShortnamestoUnicode
+    ? firetable.utilities.emojiShortnamestoUnicode(String(v.txt || "")) : String(v.txt || "");
+  var opts = {
+    duration: Math.min(12000, 4000 + txt.length * 40),
+    onHide: function () { n.showing = false; firetable.ui.showNextNotice(); }
+  };
+  if (v.card) {
+    opts.action = { label: "See it", fn: function () { firetable.nav.setView("cards"); } };
+  }
+  firetable.ui.toast(txt, "notice", opts);
+  firetable.utilities.playSound && firetable.utilities.playSound("sound");
+};
+
+firetable.actions.watchNotices = function () {
+  firetable.actions.unwatchNotices();
+  if (!ftapi.uid) return;
+  var ref = ftapi.db().ref("notices/" + ftapi.uid).orderByChild("time").limitToLast(20);
+  firetable.notices.ref = ref;
+  firetable.notices.fn = ref.on("child_added", function (snap) {
+    var v = snap.val();
+    snap.ref.remove().catch(function () {});
+    if (!v || !v.txt) return;
+    var now = Date.now() + (ftapi.serverTimeOffset || 0);
+    if (v.expires && v.expires < now) return; // "are you there?" after you came back
+    if (v.time && now - v.time > 6 * 60 * 60 * 1000) return; // stale
+    firetable.notices.queue.push(v);
+    firetable.ui.showNextNotice();
+  }, function () { /* rules not deployed yet: the bot pings in chat instead */ });
+};
+
+firetable.actions.unwatchNotices = function () {
+  var n = firetable.notices;
+  if (n.ref && n.fn) n.ref.off("child_added", n.fn);
+  n.ref = n.fn = null;
+  n.queue = [];
+};
+
 firetable.actions.unwatchInbox = function () {
   var i = firetable.inbox;
   if (i.ref && i.fn) i.ref.off("value", i.fn);
@@ -329,7 +379,8 @@ firetable.ui.renderInbox = function () {
   }
   items.forEach(function (m) {
     var $row = $('<div class="inboxItem"></div>').toggleClass("unread", !m.read).attr("data-id", m.id);
-    $('<span class="ft-avatar"></span>').css("background-image", "url(" + firetable.utilities.avatarURL(m.fromId, m.from, "40x40") + ")").appendTo($row);
+    $('<span class="ft-avatar"></span>').attr({ "data-avatar-uid": m.fromId, "data-avatar-size": "40x40" })
+      .css("background-image", "url(" + firetable.utilities.avatarURL(m.fromId, m.from, "40x40") + ")").appendTo($row);
     var $body = $('<div class="inboxBody"></div>').appendTo($row);
     $('<div class="inboxMeta"></div>')
       .append($('<b></b>').text(m.from))
@@ -604,7 +655,7 @@ firetable.ui.setupChatEvents = function () {
       // ── New message block (different user or @-mention break) ──
       var $chatthing = $chatTemplate.clone();
       $chatthing.attr('id', "chat" + chatData.chatID);
-      $chatthing.find('.ft-avatar').css(
+      $chatthing.find('.ft-avatar').attr('data-avatar-uid', chatData.id).css(
         'background-image',
         "url(" + firetable.utilities.avatarURL(chatData.id, namebo) + ")"
       );
@@ -994,6 +1045,8 @@ firetable.ui.setupChatEvents = function () {
   var inboxPop = document.getElementById('inboxPopover');
   ftapi.events.on('loggedIn', firetable.actions.watchInbox);
   ftapi.events.on('loggedOut', firetable.actions.unwatchInbox);
+  ftapi.events.on('loggedIn', firetable.actions.watchNotices);
+  ftapi.events.on('loggedOut', firetable.actions.unwatchNotices);
   firetable.ui.openInbox = function () {
     if (!ftapi.uid) return;
     if (!inboxPop.matches(':popover-open')) {
@@ -1012,9 +1065,15 @@ firetable.ui.setupChatEvents = function () {
   });
   // A tapped push notification opens the app at #mentions: show the inbox
   // once signed in (and its mentions have loaded), then drop the #.
+  // A card notice opens it at #cards: show the card case.
   var wantsInbox = location.hash === '#mentions';
-  if (wantsInbox) history.replaceState(null, '', location.pathname + location.search);
+  var wantsCards = location.hash === '#cards';
+  if (wantsInbox || wantsCards) history.replaceState(null, '', location.pathname + location.search);
   ftapi.events.on('loggedIn', function () {
+    if (wantsCards) {
+      wantsCards = false;
+      setTimeout(function () { firetable.nav.setView('cards'); }, 800);
+    }
     if (!wantsInbox) return;
     wantsInbox = false;
     setTimeout(firetable.ui.openInbox, 800);

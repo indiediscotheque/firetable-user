@@ -2758,6 +2758,22 @@ input.ft-filter {
     content: "no tracks meet your search criteria";
 }
 
+/* Rows hidden by the playlist and history filters (see filterQueue and
+   applyHistoryFilter). A class rather than inline styles, so the whole list
+   is restyled in one pass. */
+#mainqueue > .pvbar.ft-filtered,
+#thehistory .hist-entry.ft-filtered {
+    display: none !important;
+}
+#thehistory.overFiltered::before {
+    content: "no plays match your filter";
+    display: flex;
+    justify-content: center;
+    padding: var(--pad2);
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.4);
+}
+
 #mainqueue [class*="material-symbols-"]:not(.row-icon),
 #thehistory [class*="material-symbols-"]:not(.row-icon) {
     margin: 0 var(--pad1);
@@ -4988,6 +5004,24 @@ input.tagMachine,
     margin-bottom: 1rem;
 }
 
+/* Username box with a live preview of the avatar the new name would make */
+.usernameRow {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    margin-bottom: 1rem;
+}
+.usernameRow #changeUsername {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
+}
+#usernameAvatarPreview {
+    width: 3rem;
+    height: 3rem;
+    transition: background-image 0.2s ease;
+}
+
 #songlink svg {
     width: 100%;
     height: 100%;
@@ -5084,6 +5118,31 @@ input.tagMachine,
 
 #ft-toast.is-success {
     border-left-color: var(--color-success);
+}
+
+/* A private notice from the bot (#231), sometimes with a button */
+#ft-toast.has-action {
+    display: flex;
+    align-items: center;
+    gap: var(--pad3);
+    pointer-events: auto;
+}
+
+.ft-toast-action {
+    flex: none;
+    padding: 0.25rem 0.75rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+    border: 0;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+}
+
+.ft-toast-action:hover,
+.ft-toast-action:focus-visible {
+    background: color-mix(in srgb, var(--color-accent) 28%, transparent);
 }
 
 /* ============================================
@@ -5820,6 +5879,9 @@ body.media-off .q-art.no-art {
 /* Mods: one tools button on the stage (fix tags, flag; #136 #125) */
 #npModBtn { display: none; }
 body.is-mod #npModBtn { display: inline-flex; }
+/* Skip: mods use Mod tools; the DJ playing now (not a mod) gets this button (#233) */
+#skipTrigger { display: none; }
+body.is-current-dj:not(.is-mod) #skipTrigger { display: inline-flex; }
 
 /* Recent rows: Flag button for mods (#167) */
 #thehistory .flagplay { display: none; }
@@ -6039,13 +6101,17 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
 
 /* ─── Playlist overview (#118, #117) ─── */
 #plIndexBox .modalBox { width: 36rem; max-width: 100vw; max-height: 100dvh; }
-#plIndexBox .modalContent { flex-direction: column; gap: var(--pad3); }
+/* Only the list scrolls: the help text, new-list box and bulk bar stay in view (#229) */
+#plIndexBox .modalContent { flex-direction: column; gap: var(--pad3); min-height: 0; overflow: hidden; }
+#plIndexBox .modalContent > :not(#plIndexList) { flex: none; }
 .plx-help {
   margin: 0; font-size: .85rem; line-height: 1.5; opacity: .8;
   & i { font-size: 1rem; vertical-align: -.2em; }
 }
 #plIndexList {
-  list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem;
+  list-style: none; margin: 0; padding: 0; display: grid; align-content: start; gap: .25rem;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-gutter: stable;
 }
 .plx-row {
   display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: .5rem;
@@ -6059,18 +6125,15 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
   touch-action: none; /* the handle drags; the rest of the list still scrolls */
   &:hover, &:focus-visible { opacity: 1; }
 }
-.plx-main { min-width: 0; display: grid; gap: .1rem; }
+/* Name, then the track count to its right (#228) */
+.plx-main { min-width: 0; display: flex; align-items: center; gap: .5rem; }
 .plx-name {
-  width: 100%; min-width: 0; font: inherit; font-weight: 600; color: inherit;
+  flex: 1 1 0; width: 100%; min-width: 0; font: inherit; font-weight: 600; color: inherit;
   background: transparent; border: 1px solid transparent; border-radius: 6px; padding: .15rem .35rem;
   &:hover { border-color: color-mix(in srgb, currentColor 20%, transparent); }
   &:focus { border-color: currentColor; background: var(--color-bg-s2); outline: none; }
 }
-.plx-meta { font-size: .8rem; opacity: .75; padding-left: .4rem; display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
-.plx-tag {
-  font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
-  padding: 0 .4rem; border-radius: 99px; background: color-mix(in srgb, currentColor 15%, transparent);
-}
+.plx-meta { flex: 0 0 auto; max-width: 55%; font-size: .8rem; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .plx-actions {
   display: flex; gap: .2rem;
   & .butt { width: 2rem; height: 2rem; }
@@ -6145,13 +6208,6 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
 /* ─── Track count next to the playlist name (#210) ─── */
 #listpickerWrap { display: flex; align-items: center; gap: var(--pad2); }
 #listpickerWrap #listpicker { flex: 1; min-width: 0; }
-#listCount {
-  flex: none; font-size: .75rem; font-weight: 600; font-variant-numeric: tabular-nums;
-  padding: .1rem .5rem; border-radius: 99px; opacity: .8;
-  background: color-mix(in srgb, currentColor 12%, transparent);
-  &[hidden] { display: none; }
-  &.has-flagged::after { content: " ⚠"; color: var(--color-accent); }
-}
 
 /* ─── Push notifications (js/push.js) ─────────────────────────────────────── */
 .pushSetting { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem 0.5rem; }

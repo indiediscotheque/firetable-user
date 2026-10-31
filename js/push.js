@@ -83,6 +83,7 @@ firetable.push = {
     navigator.serviceWorker.addEventListener("message", function (e) {
       var msg = e.data || {};
       if (msg.type === "openInbox") firetable.ui.openInbox();
+      else if (msg.type === "openView" && msg.view) firetable.nav.setView(msg.view);
       else if (msg.type === "resubscribed") firetable.push.sync(true);
     });
     return firetable.push._reg;

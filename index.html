@@ -145,10 +145,11 @@
 					<i class="material-symbols-outlined"> link </i>
 				</a>
 				<span id="tip-songlink" role="tooltip" class="ft-tip" style="position-anchor: --tip-songlink">Song link</span>
-				<button id="skipTrigger" type="button" role="button" class="butt graybutt iconbutt" aria-label="Skip options" popovertarget="skipPopover" tabindex="0" style="anchor-name: --tip-skipTrigger" aria-describedby="tip-skipTrigger">
+				<!-- Only for the DJ playing now, to skip their own track; mods skip from Mod tools (#233) -->
+				<button id="skipTrigger" type="button" role="button" class="butt graybutt iconbutt" aria-label="Skip your track" popovertarget="skipPopover" tabindex="0" style="anchor-name: --tip-skipTrigger" aria-describedby="tip-skipTrigger">
 					<i class="material-symbols-outlined">skip_next</i>
 				</button>
-				<span id="tip-skipTrigger" role="tooltip" class="ft-tip" style="position-anchor: --tip-skipTrigger">Skip options</span>
+				<span id="tip-skipTrigger" role="tooltip" class="ft-tip" style="position-anchor: --tip-skipTrigger">Skip your track</span>
 				<button id="npModBtn" type="button" class="butt graybutt iconbutt" aria-label="Mod tools" aria-haspopup="menu" popovertarget="npModMenu" style="anchor-name: --tip-npModBtn" aria-describedby="tip-npModBtn">
 					<i class="material-symbols-outlined">shield_person</i>
 				</button>
@@ -341,7 +342,6 @@
 						<select id="listpicker" aria-label="Playlist">
 							<option value="0">Default Playlist</option>
 						</select>
-						<span id="listCount" aria-live="polite" hidden></span>
 						<div id="plmanager">
 							<input type="text" placeholder="Name your playlist, hit Enter" id="plmaker" enterkeyhint="done" />
 						</div>
@@ -707,7 +707,10 @@
 					<div id="accountSettingsMain"></div>
 					<div class="grabStatsBox"><i class="material-symbols-outlined" aria-hidden="true">playlist_add</i><p id="grabStats" aria-live="polite"></p></div>
 					Change your username to some other thing...<br /><br />
-					<input type="text" placeholder="Change Username" id="changeUsername" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+					<div class="usernameRow">
+						<span class="ft-avatar" id="usernameAvatarPreview" role="img" aria-label="Your avatar"></span>
+						<input type="text" placeholder="Change Username" id="changeUsername" aria-describedby="usernameResponse" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+					</div>
 					<div class="responseBox" id="usernameResponse"></div>
 					<div id="avatarPickerSection">
 					<br />
@@ -930,6 +933,7 @@
 	<div id="npModMenu" popover="auto" class="ft-popover">
 		<div id="npModArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box ft-menu" role="menu" aria-label="Mod tools">
+			<button type="button" role="menuitem" class="butt graybutt" id="npSkip"><i class="material-symbols-outlined">skip_next</i> Skip</button>
 			<button type="button" role="menuitem" class="butt graybutt" id="npFixTags"><i class="material-symbols-outlined">edit</i> Fix tags</button>
 			<button type="button" role="menuitem" class="butt graybutt" id="npFlag" aria-haspopup="menu"><i class="material-symbols-outlined">flag</i> Flag…</button>
 		</div>

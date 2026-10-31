@@ -37,10 +37,18 @@ firetable.utilities = {
    * @param {string} username - Display name
    * @param {string|null} [size="110x110"] - Dimensions (Robohash only)
    * @param {string} [style] - Style key e.g. "robohash:set1" or "dicebear:pixel-art"
+   * @param {boolean} [keepName] - Use `username` as given (trading cards, which
+   *   keep the face they were made with; the settings preview of a new name).
+   *   Otherwise the person's current name wins, so a rename shows everywhere.
    * @returns {string} Full avatar URL
    */
-  avatarURL: function (uid, username, size, style) {
+  avatarURL: function (uid, username, size, style, keepName) {
     size = size || "110x110";
+    if (!keepName && uid) {
+      var current = (ftapi.users && ftapi.users[uid] && ftapi.users[uid].username) ||
+        (firetable.knownNames && firetable.knownNames[uid]);
+      if (current) username = current;
+    }
     if (!style) {
       style = firetable.roomAvatarStyle
            || (ftapi.users && ftapi.users[uid] && ftapi.users[uid].avatarStyle)
@@ -52,6 +60,33 @@ firetable.utilities = {
     }
     var set = style.indexOf("robohash:") === 0 ? style.slice(9) : style;
     return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + (set || "set1");
+  },
+
+  /**
+   * Remember everyone's latest name, and redraw every avatar already on the
+   * page (chat, Recent, inbox) for anyone whose name changed, since robohash
+   * faces are made from the name. Avatars opt in with data-avatar-uid (and
+   * data-avatar-size when not the default).
+   * @param {Object} users - uid -> user, as in ftapi.users
+   */
+  trackNames: function (users) {
+    var known = firetable.knownNames = firetable.knownNames || {};
+    var changed = [];
+    for (var uid in users || {}) {
+      if (!Object.prototype.hasOwnProperty.call(users, uid)) continue;
+      var name = users[uid] && users[uid].username;
+      if (!name) continue;
+      if (known[uid] && known[uid] !== name) changed.push(uid);
+      known[uid] = name;
+    }
+    changed.forEach(function (id) {
+      var els = document.querySelectorAll('[data-avatar-uid="' + CSS.escape(id) + '"]');
+      for (var i = 0; i < els.length; i++) {
+        var size = els[i].getAttribute("data-avatar-size") || null;
+        els[i].style.backgroundImage = "url(" + JSON.stringify(firetable.utilities.avatarURL(id, known[id], size)) + ")";
+      }
+    });
+    return changed;
   },
 
   /**
