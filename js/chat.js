@@ -325,6 +325,13 @@ firetable.ui.showNextNotice = function () {
   };
   if (v.card) {
     opts.action = { label: "See it", fn: function () { firetable.nav.setView("cards"); } };
+  } else if (v.kind === "swap") {
+    // the bot found YouTube Music copies of broken tracks (#swap)
+    opts.action = { label: "Show me", fn: function () {
+      if (firetable.nav.view !== "playlists") firetable.nav.setView("playlists");
+      var $f = $("#queueFilterBrokenOnly");
+      if (!$f.is(":checked")) $f.prop("checked", true).trigger("change");
+    } };
   }
   firetable.ui.toast(txt, "notice", opts);
   firetable.utilities.playSound && firetable.utilities.playSound("sound");

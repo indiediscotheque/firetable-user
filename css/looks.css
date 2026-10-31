@@ -6260,3 +6260,122 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
 .installSteps ol { list-style: decimal; margin: 0.5rem 0 0.25rem; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; }
 .installSteps .inline { font-size: 1.1em; vertical-align: -0.2em; }
 .installNext { font-size: 0.85rem; color: var(--color-text-muted); }
+
+/* ─── Swap suggestions (#swap) ──────────────────────────────────────────────
+   The ⇄ on a broken track the bot found a YouTube Music copy of, the card it
+   opens, and the bar over the list with "Swap all". */
+#mainqueue .swapsong {
+    color: var(--color-accent);
+    opacity: 1;
+}
+#mainqueue .swapsong:hover,
+#mainqueue .swapsong:focus-visible {
+    color: var(--color-orange-lite);
+}
+#mainqueue .pvbar.swapping {
+    background-color: var(--color-bg-t2);
+}
+
+.swapBar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--pad1) var(--pad2);
+    padding: var(--pad1) var(--pad2);
+    font-size: 0.8125rem;
+    color: var(--color-text);
+    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-bg-t1));
+    border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+}
+.swapBar[hidden] { display: none; }
+.swapBar > .material-symbols-outlined {
+    color: var(--color-accent);
+    font-size: 1.2rem;
+}
+.swapBar #swapBarText {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+.swapBarActions {
+    display: flex;
+    gap: var(--pad1);
+    margin-left: auto;
+}
+#swapAllBtn.confirming {
+    background-color: var(--color-orange-lite);
+}
+
+.swapBox {
+    width: min(20rem, 92vw);
+    font-size: 0.875rem;
+}
+.swapHead {
+    margin-bottom: var(--pad2);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+.swapCard {
+    display: flex;
+    gap: var(--pad2);
+    align-items: center;
+}
+.swapArt {
+    flex: 0 0 4.5rem;
+    height: 4.5rem;
+    border-radius: 4px;
+    background: var(--color-bg-t3) center / cover no-repeat;
+}
+.swapText {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+.swapName {
+    color: var(--color-text-light);
+    overflow-wrap: anywhere;
+}
+.swapMeta,
+.swapKind {
+    font-size: 0.75rem;
+    color: var(--color-text-subtle);
+}
+.swapKind {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--color-success);
+}
+.swapKind .material-symbols-outlined {
+    font-size: 0.9rem;
+}
+.swapWas {
+    margin: var(--pad2) 0;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    overflow-wrap: anywhere;
+}
+.swapActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--pad1);
+}
+.swapActions .swapConfirm {
+    grid-column: 1 / -1;
+}
+.swapActions .butt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    text-decoration: none;
+}
+.swapActions .material-symbols-outlined {
+    font-size: 1rem;
+}
+.ft-menu [hidden] { display: none; }

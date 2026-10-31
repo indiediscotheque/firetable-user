@@ -418,6 +418,14 @@
 			</div>
 			<div id="queuelist" class="scroll-view">
 				<div id="mainqueuestuff">
+					<div id="swapBar" class="swapBar" role="status" hidden>
+						<i class="material-symbols-outlined" aria-hidden="true">swap_horiz</i>
+						<span id="swapBarText"></span>
+						<span class="swapBarActions">
+							<button type="button" id="swapShowBtn" class="butt graybutt small">Show them</button>
+							<button type="button" id="swapAllBtn" class="butt small">Swap all</button>
+						</span>
+					</div>
 					<div id="mainqueue" class="innr">
 						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:14rem"></div></div>
 						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:10rem"></div></div>
@@ -897,6 +905,29 @@
 		</div>
 	</div>
 
+	<!-- Swap a broken track for the YouTube Music audio track the bot found (#swap) -->
+	<div id="swapPopover" popover="auto" class="ft-popover">
+		<div id="swapArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box swapBox" role="dialog" aria-labelledby="swapHead">
+			<div class="swapHead" id="swapHead">Working copy on YouTube Music</div>
+			<div class="swapCard">
+				<div class="swapArt" aria-hidden="true"></div>
+				<div class="swapText">
+					<b class="swapName"></b>
+					<span class="swapMeta"></span>
+					<span class="swapKind"><i class="material-symbols-outlined" aria-hidden="true">graphic_eq</i> Audio track, not a video</span>
+				</div>
+			</div>
+			<p class="swapWas"></p>
+			<div class="swapActions">
+				<button type="button" class="butt swapConfirm">Swap</button>
+				<button type="button" class="butt graybutt swapPreview" aria-pressed="false">Preview</button>
+				<a class="butt graybutt swapOpen" target="_blank" rel="noopener">Open</a>
+				<button type="button" class="butt graybutt swapDismiss">Not this one</button>
+			</div>
+		</div>
+	</div>
+
 	<div id="shuffleQueuePopover" popover="auto" class="ft-popover">
 		<div id="shuffleQueueArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box deleteSongPromptBox shuffleQueuePromptBox">
@@ -921,6 +952,7 @@
 	<div id="trackMenuPopover" popover="auto" class="ft-popover">
 		<div id="trackMenuArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box ft-menu" role="menu" aria-label="Track options">
+			<button type="button" role="menuitem" class="butt graybutt" data-act="swap" hidden><i class="material-symbols-outlined">swap_horiz</i> Swap for YouTube Music audio…</button>
 			<button type="button" role="menuitem" class="butt graybutt" data-act="bottom"><i class="material-symbols-outlined">vertical_align_bottom</i> Send to bottom</button>
 			<button type="button" role="menuitem" class="butt graybutt" data-act="add"><i class="material-symbols-outlined">playlist_add</i> Add to playlist</button>
 			<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><span class="ft-menu-open-logo" aria-hidden="true"></span> <span class="ft-menu-open-label">Open track</span></a>
