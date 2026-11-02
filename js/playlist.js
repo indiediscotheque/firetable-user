@@ -788,6 +788,7 @@ function buildQueueItemHTML(key, track, isPreview) {
 firetable.ui.renderListCount = function (tracks, listID) {
   var s = firetable.utilities.listStats(tracks);
   if (listID == null) listID = firetable.viewListID || $("#listpicker").val() || "0";
+  firetable.liveCountID = String(listID);
   firetable.ui.setListCount(listID, s);
   var label = s.n.toLocaleString() + (s.n === 1 ? " track" : " tracks") + (s.broken ? ", " + s.broken.toLocaleString() + " flagged" : "") +
     (s.swaps ? ", " + s.swaps.toLocaleString() + (s.swaps === 1 ? " swap" : " swaps") + " ready" : "");

@@ -47,6 +47,7 @@ var STORAGE = {
   density:            "firetableDensity",
   shareTyping:        "firetableShareTyping",
   brokenCheck:        "firetableBrokenCheck",
+  listCounts:         "firetableListCounts.", // + uid: last known track counts per list
   lastfmSession:      "ftLastfmSession",
   navView:            "firetableNavView",
   navSide:            "firetableNavSide",

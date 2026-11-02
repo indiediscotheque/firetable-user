@@ -251,11 +251,13 @@ firetable.actions.loggedIn = function (user) {
   $("#avatarStylePicker").val(firetable.avatarStyle || "robohash:" + firetable.avatarset);
 
   // Load all playlists into the picker
+  firetable.actions.restoreListCounts();
   firetable.actions.loadPlaylistPrefs().then(function () { ftapi.lookup.listNames(function (allPlaylists) {
     var viewListStorageKey = "firetable.viewList." + ftapi.uid;
     $("#listpicker").off("change");
     $("#djlistpicker").off("change");
     firetable.ui.fillPlaylistPickers(allPlaylists);
+    firetable.actions.loadListCounts(allPlaylists);
     var defaultList = firetable.plPrefs.defaultList;
     if (!$("#listpicker option[value='" + defaultList + "']").length) defaultList = "0";
 

@@ -1171,22 +1171,9 @@ ftapi.lookup = {
    */
   listNames: function(callback) {
     var uid = ftapi.uid;
-    var app = firebase.app("firetable");
-    var user = app.auth().currentUser;
-    var base = app.options.databaseURL;
-    if (!uid || !user || !base || typeof fetch !== "function") return ftapi.lookup.allLists(callback);
-    user.getIdToken().then(function(token) {
-      var url = new URL(base);
-      url.pathname = url.pathname.replace(/\/?$/, "/") + "playlists/" + encodeURIComponent(uid) + ".json";
-      url.searchParams.set("shallow", "true");
-      url.searchParams.set("auth", token);
-      return fetch(url.toString(), { cache: "no-store" });
-    }).then(function(res) {
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.json();
-    }).then(function(ids) {
+    ftapi.utilities.shallowKeys("playlists/" + uid).then(function(ids) {
       var db = ftapi.db();
-      return Promise.all(Object.keys(ids && typeof ids === "object" ? ids : {}).map(function(id) {
+      return Promise.all(Object.keys(ids).map(function(id) {
         return db.ref("playlists/" + uid + "/" + id + "/name").once("value").then(function(snap) {
           return [id, snap.val()];
         });
@@ -1200,6 +1187,23 @@ ftapi.lookup = {
       ftapi.lookup.allLists(callback);
     });
   },
+  /**
+   * How many tracks a list has, and how many are flagged, without
+   * downloading it: a shallow read gives the track keys, and the
+   * flagged/date index gives just the flagged tracks.
+   * @param {string} listID - "0" is the built-in list (queues/<uid>)
+   * @returns {Promise<{n:number, broken:number, swaps:number}>}
+   */
+  listCount: function(listID) {
+    var path = String(listID) === "0" ? "queues/" + ftapi.uid : "playlists/" + ftapi.uid + "/" + listID + "/list";
+    var flagged = ftapi.db().ref(path).orderByChild("flagged/date").startAt(1).once("value").then(function(snap) {
+      return snap.val() || {};
+    });
+    return Promise.all([ftapi.utilities.shallowKeys(path), flagged]).then(function(res) {
+      var s = firetable.utilities.listStats(res[1]);
+      return { n: Object.keys(res[0]).length, broken: s.broken, swaps: s.swaps };
+    });
+  },
   /** Every playlist with all its tracks (the playlist overview counts them). */
   allLists: function(callback) {
     ftapi.utilities.read(ftapi.db().ref("playlists/" + ftapi.uid), null, "your playlists").then(callback);
@@ -1210,6 +1214,31 @@ ftapi.lookup = {
 UTILITY FUNCTIONS
 */
 ftapi.utilities = {
+  /**
+   * The child keys under a path, without their data, via the database's
+   * REST "shallow" read. Rejects if it can't be done (signed out, no fetch,
+   * network, rules).
+   * @param {string} path
+   * @returns {Promise<Object>} {key: true}
+   */
+  shallowKeys: function(path) {
+    var app = firebase.app("firetable");
+    var user = app.auth().currentUser;
+    var base = app.options.databaseURL;
+    if (!ftapi.uid || !user || !base || typeof fetch !== "function") return Promise.reject(new Error("can't read shallow"));
+    return user.getIdToken().then(function(token) {
+      var url = new URL(base);
+      url.pathname = url.pathname.replace(/\/?$/, "/") + path.split("/").map(encodeURIComponent).join("/") + ".json";
+      url.searchParams.set("shallow", "true");
+      url.searchParams.set("auth", token);
+      return fetch(url.toString(), { cache: "no-store" });
+    }).then(function(res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }).then(function(keys) {
+      return keys && typeof keys === "object" ? keys : {};
+    });
+  },
   /**
    * Read a ref or query once. Resolves its value, or `fallback` when it can't
    * be read (network, or the rules refuse it), so callers always get an answer.
