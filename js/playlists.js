@@ -100,7 +100,68 @@ firetable.ui.setListCount = function (listID, stats) {
   if (prev && prev.n === stats.n && prev.broken === stats.broken) return;
   firetable.listCounts[listID] = { n: stats.n, broken: stats.broken };
   firetable.ui.relabelList(listID);
+  firetable.actions.saveListCounts();
 };
+
+/** Remember the counts on this device so they show right away next visit. */
+firetable.actions.saveListCounts = function () {
+  clearTimeout(firetable.actions.saveListCounts.timer);
+  firetable.actions.saveListCounts.timer = setTimeout(function () {
+    if (!ftapi.uid) return;
+    try { localStorage.setItem(STORAGE.listCounts + ftapi.uid, JSON.stringify(firetable.listCounts)); } catch (e) { /* storage full or blocked */ }
+  }, 500);
+};
+
+/** Show the counts saved last visit until fresh ones arrive. */
+firetable.actions.restoreListCounts = function () {
+  firetable.listCounts = {};
+  if (!ftapi.uid) return;
+  try {
+    var saved = JSON.parse(localStorage.getItem(STORAGE.listCounts + ftapi.uid) || "{}");
+    Object.keys(saved || {}).forEach(function (id) {
+      var c = saved[id];
+      if (c && typeof c.n === "number") firetable.listCounts[id] = { n: c.n, broken: Number(c.broken) || 0 };
+    });
+  } catch (e) { /* unreadable: start empty */ }
+};
+
+/**
+ * Count every list's tracks (and flagged ones) in the background and put the
+ * numbers in the pickers. A few lists at a time; never downloads whole lists.
+ * @param {Object} allPlaylists - {listID: {name}}
+ */
+firetable.actions.loadListCounts = function (allPlaylists) {
+  var uid = ftapi.uid;
+  var ids = ["0"].concat(Object.keys(allPlaylists || {}));
+  // forget lists that are gone
+  Object.keys(firetable.listCounts).forEach(function (id) {
+    if (ids.indexOf(id) === -1) delete firetable.listCounts[id];
+  });
+  firetable.listCountsLoaded = Date.now();
+  var next = 0;
+  var worker = function () {
+    if (next >= ids.length || ftapi.uid !== uid) return Promise.resolve();
+    var id = ids[next++];
+    return ftapi.lookup.listCount(id).then(function (s) {
+      // the list you're viewing is counted live; don't overwrite it
+      if (ftapi.uid === uid && id !== firetable.liveCountID) firetable.ui.setListCount(id, s);
+    }, function (err) {
+      console.warn("[firetable] couldn't count the tracks in list " + id + ":", err && err.message);
+    }).then(worker);
+  };
+  var workers = [];
+  for (var i = 0; i < Math.min(4, ids.length); i++) workers.push(worker());
+  return Promise.all(workers).then(function () { firetable.actions.saveListCounts(); });
+};
+
+// Recount when you come back to the tab after a while (the bot flags tracks
+// and plays from your lists while you're away).
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState !== "visible" || !ftapi.uid || !firetable.listCountsLoaded) return;
+  if (Date.now() - firetable.listCountsLoaded < 15 * 60 * 1000) return;
+  firetable.listCountsLoaded = Date.now();
+  ftapi.lookup.listNames(function (all) { firetable.actions.loadListCounts(all); });
+});
 
 /**
  * Fill a playlist <select>.
@@ -421,6 +482,9 @@ firetable.ui.setupPlaylistIndex = function () {
 
   ftapi.events.on("loggedOut", function () {
     firetable.plPrefs = { defaultList: "0", defaultName: "", order: {} };
+    firetable.listCounts = {};
+    firetable.listCountsLoaded = 0;
+    firetable.liveCountID = null;
     if (dlg.open) dlg.close();
   });
 };

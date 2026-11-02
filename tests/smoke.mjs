@@ -177,6 +177,26 @@ try {
   check(await page.$eval("#swapBar", (b) => b.hidden), "the bar goes once nothing is left to swap");
   await page.evaluate(() => { firetable.$appShell = $("#appShell").detach(); });
 
+  console.log("-- playlist counts fill in on load, without opening each list");
+  await put("/playlists/smoke", {
+    p1: { name: "Mix", list: { a: { type: 1, cid: "c1", name: "A - 1" }, b: { type: 1, cid: "c2", name: "B - 2", flagged: { date: 1, code: 2 } }, c: { type: 1, cid: "c3", name: "C - 3" } } },
+    p2: { name: "Empty" }
+  });
+  const counts = await page.evaluate((db) => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    ftapi.uid = "smoke";
+    // the real one signs the shallow read with your token; the test database is open
+    ftapi.utilities.shallowKeys = (path) => fetch(db + "/" + path + ".json?ns=demo-smoke&shallow=true").then((r) => r.json()).then((k) => k || {});
+    firetable.listCounts = {};
+    firetable.liveCountID = null;
+    const all = { p1: { name: "Mix" }, p2: { name: "Empty" } };
+    firetable.ui.fillPlaylistPickers(all);
+    return firetable.actions.loadListCounts(all).then(() => [...document.querySelectorAll("#listpicker option")].map((o) => o.value + "=" + o.textContent))
+      .catch((e) => ["error: " + e.message]);
+  }, DB).catch((e) => ["error: " + e.message]);
+  check(counts.includes("p1=Mix (3, 1 ⚠)") && counts.includes("p2=Empty (0)") && counts.some((t) => /^0=.* \(4, 1 ⚠\)$/.test(t)),
+    "every list's track and flagged counts show in the picker (" + counts.join(" | ") + ")");
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));
