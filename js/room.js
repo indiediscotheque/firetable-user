@@ -250,6 +250,19 @@ function nowPlayingText(value) {
   return firetable.utilities.htmlEscape(firetable.ui.strip(String(value)));
 }
 
+// "12 plays", or "12 plays · 31 all versions" when the bot counts remixes,
+// live versions and edits of the song together (all_versions_playcount)
+function playCountLabel(ad) {
+  var label = firetable.utilities.pluralize(ad.playcount, "play");
+  if (ad.all_versions_playcount > ad.playcount) label += " · " + ad.all_versions_playcount + " all versions";
+  return label;
+}
+function playedSentence(ad) {
+  var text = "This song has been played " + firetable.utilities.pluralize(ad.playcount, "time");
+  if (ad.all_versions_playcount > ad.playcount) text += " (" + ad.all_versions_playcount + " counting every version)";
+  return nowPlayingText(text) + ".";
+}
+
 // ─── Room Event Binding ──────────────────────────────────────────────────────
 
 /**
@@ -879,10 +892,9 @@ firetable.ui.setupRoomEvents = function () {
 
     var doTheScrollThing = firetable.utilities.isChatPrettyMuchAtBottom();
     if (showPlaycount) {
-      var count = data.adamData.playcount;
-      $("#playCount").text(firetable.utilities.pluralize(count, "play"));
+      $("#playCount").text(playCountLabel(data.adamData));
       $(".npmsg" + data.cid).last().find(".npmsg").html(
-        'DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.adamData.track_name) + '</strong> by <strong>' + nowPlayingText(data.adamData.artist) + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(count, "time") + '.'
+        'DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.adamData.track_name) + '</strong> by <strong>' + nowPlayingText(data.adamData.artist) + '</strong><br/>' + playedSentence(data.adamData)
       );
     } else {
       $("#playCount").text("");
@@ -941,7 +953,7 @@ firetable.ui.setupRoomEvents = function () {
       }
       if (firetable.tagUpdate.adamData.playcount > 0) {
         showPlaycount = true;
-        $("#playCount").text(firetable.utilities.pluralize(firetable.tagUpdate.adamData.playcount, "play"));
+        $("#playCount").text(playCountLabel(firetable.tagUpdate.adamData));
       }
     }
 
@@ -1059,7 +1071,7 @@ firetable.ui.setupRoomEvents = function () {
         var npmsgTime = firetable.utilities.format_time(Date.now());
         var npmsgHTML;
         if (showPlaycount) {
-          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong><br/>This song has been played ' + firetable.utilities.pluralize(firetable.tagUpdate.adamData.playcount, "time") + '.</div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
+          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong><br/>' + playedSentence(firetable.tagUpdate.adamData) + '</div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
         } else {
           npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong></div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
         }
