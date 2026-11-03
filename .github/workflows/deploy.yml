@@ -219,7 +219,7 @@ jobs:
             --exclude-glob node_modules/ --exclude-glob package.json --exclude-glob package-lock.json \
             --exclude-glob eslint.config.mjs --exclude-glob .gitignore --exclude-glob .DS_Store \
             --exclude-glob config.js --exclude-glob soundcloud-config.php --exclude-glob lastfm-config.php \
-            --exclude-glob README.md"
+            --exclude-glob README.md --exclude-glob CLAUDE.md"
           # Pages last: a visitor loading the site mid-upload gets either the
           # old pages or new pages whose scripts and styles are already there
           echo "Scripts, styles and other files:"
@@ -321,7 +321,7 @@ jobs:
           count=0
           while IFS= read -r -d '' f; do
             case "$f" in
-              config.js|api/soundcloud-config.php|api/lastfm-config.php|.htaccess|.htaccess.firetable-previous|README.md|.gitignore|.github/*|tools/*|tests/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
+              config.js|api/soundcloud-config.php|api/lastfm-config.php|.htaccess|.htaccess.firetable-previous|README.md|CLAUDE.md|.gitignore|.github/*|tools/*|tests/*|node_modules/*|package.json|package-lock.json|eslint.config.mjs|*.DS_Store) continue ;;
             esac
             printf 'rm -f "%s/%s"\n' "$DEST" "$f" >> "$script"
             echo "Removing $f"
