@@ -1215,10 +1215,15 @@ firetable.ui.setupPlaylistEvents = function () {
       ftapi.lookup.listNames(function (allPlaylists) {
         firetable.ui.fillPlaylistSelect($("#mergepicker"), allPlaylists);
         firetable.ui.fillPlaylistSelect($("#mergepicker2"), allPlaylists, [{ value: "-1", text: "Create New Copy" }]);
-        if (ftapi.users[ftapi.uid] && ftapi.users[ftapi.uid].selectedList) {
-          $("#mergepicker").val(ftapi.users[ftapi.uid].selectedList).change();
-          $("#mergepicker2").val(-1).change();
-        }
+        // Default the source to the playlist on screen, not the one the DJ plays from
+        var $src = $("#mergepicker");
+        var viewing = String(firetable.viewListID || $("#listpicker").val() || "");
+        var djList = ftapi.users[ftapi.uid] && ftapi.users[ftapi.uid].selectedList;
+        var source = [viewing, djList].filter(function (id) {
+          return id != null && id !== "" && $src.find("option").filter(function () { return this.value === String(id); }).length;
+        })[0];
+        if (source != null) $src.val(String(source)).change();
+        $("#mergepicker2").val(-1).change();
         $("#mergeContain").show();
         $this.addClass('on');
         // Point the arrow at the merge button wherever it sits in the toolbar
