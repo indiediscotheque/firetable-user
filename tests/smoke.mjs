@@ -197,6 +197,52 @@ try {
   check(counts.includes("p1=Mix (3, 1 ⚠)") && counts.includes("p2=Empty (0)") && counts.some((t) => /^0=.* \(4, 1 ⚠\)$/.test(t)),
     "every list's track and flagged counts show in the picker (" + counts.join(" | ") + ")");
 
+  console.log("-- emoji: Emoji 17.0 in the picker, old shortnames still work");
+  await page.waitForFunction(() => firetable.emojiMap && firetable.emojiMap.trombone, null, { timeout: 30000 }).catch(() => {});
+  const emo = await page.evaluate(() => ({
+    newest: firetable.emojiMap.trombone, renamed: firetable.emojiMap.hugging_face, old: firetable.emojiMap.smile,
+    sections: document.querySelectorAll("#pickerContents > div").length, picker: document.querySelectorAll(".pickerResult").length,
+    chat: firetable.utilities.emojiShortnamestoUnicode(":orca: :pouting_face:")
+  }));
+  check(emo.newest === "\u{1FA8A}" && emo.renamed === "🤗" && emo.old === "😄", "Emoji 17.0 shortnames load, and renamed and old ones still work");
+  check(emo.sections === 9 && emo.picker > 1900 && /\u{1FACD}/u.test(emo.chat) && /😡/.test(emo.chat), "the picker has every group and " + emo.picker + " emoji");
+
+  console.log("-- a printed card: GRAB, then YOURS / GRABBED BY / GONE");
+  await put("/cards", { cardA: { owner: false, cardnum: 1 }, cardB: { owner: false, cardnum: 2 }, cardC: { owner: false, cardnum: 3 } });
+  await put("/users/bot", { username: "hostbot", hostbot: true });
+  const grab = await page.evaluate(async () => {
+    const sent = [];
+    ftapi.actions.sendBotCommand = (t) => { sent.push(t); return Promise.resolve(); };
+    const add = (id) => { const $t = $('<div class="chatText"></div>').appendTo("#chats"); firetable.ui.addGrabButton($t, id); return $t.find(".chat-grab-btn"); };
+    const wait = (fn) => new Promise((r) => { const t = Date.now(); (function poll() { if (fn() || Date.now() - t > 8000) return r(); setTimeout(poll, 50); })(); });
+    const $a = add("cardA");
+    await wait(() => firetable.cardGrabs.cardA && firetable.cardGrabs.cardA.loaded);
+    const first = $a.attr("data-state") + ":" + $a.text();
+    $a.trigger("click");
+    const pending = $a.attr("data-state") + ":" + $a.prop("disabled");
+    return { first, pending, sent: sent.join() };
+  });
+  check(grab.first === "open:Grab" && grab.pending === "pending:true" && grab.sent === "!grab cardA", "GRAB sends \"!grab <card>\" quietly and waits (" + JSON.stringify(grab) + ")");
+  await put("/cards/cardA/owner", "smoke");
+  await page.waitForFunction(() => $('.chat-grab-btn[data-card="cardA"]').attr("data-state") === "mine", null, { timeout: 8000 }).catch(() => {});
+  const after = await page.evaluate(async () => {
+    const $a = $('.chat-grab-btn[data-card="cardA"]');
+    const mine = $a.attr("data-state") + ":" + $a.text() + ":" + $a.prop("disabled");
+    const $t = $('<div class="chatText"></div>').appendTo("#chats");
+    firetable.ui.addGrabButton($t, "cardB");
+    const $t2 = $('<div class="chatText"></div>').appendTo("#chats");
+    await new Promise((r) => setTimeout(r, 1500));
+    firetable.ui.addGrabButton($t2, "cardC"); // a newer card: B is gone
+    await new Promise((r) => setTimeout(r, 300));
+    const b = $('.chat-grab-btn[data-card="cardB"]');
+    return { mine, b: b.attr("data-state") + ":" + b.prop("disabled"), listening: Object.keys(firetable.cardGrabs).filter((k) => firetable.cardGrabs[k].fn).join() };
+  });
+  check(after.mine === "mine:Yours! See it:false", "the winner's button opens their card case (" + after.mine + ")");
+  check(after.b === "gone:true" && after.listening === "cardC", "a newer card greys out an older one nobody grabbed, and stops following it (" + JSON.stringify(after) + ")");
+  await put("/cards/cardC", { owner: "dj2", cardnum: 3 });
+  await page.waitForFunction(() => $('.chat-grab-btn[data-card="cardC"]').attr("data-state") === "taken", null, { timeout: 8000 }).catch(() => {});
+  check(await page.$eval('.chat-grab-btn[data-card="cardC"]', (b) => b.textContent + ":" + b.disabled) === "Grabbed by dj2:true", "someone else's grab shows who got it");
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));

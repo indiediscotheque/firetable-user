@@ -323,7 +323,7 @@ firetable.ui.showNextNotice = function () {
     duration: Math.min(12000, 4000 + txt.length * 40),
     onHide: function () { n.showing = false; firetable.ui.showNextNotice(); }
   };
-  if (v.card) {
+  if (v.card && v.kind !== "grab-missed") {
     opts.action = { label: "See it", fn: function () { firetable.nav.setView("cards"); } };
   } else if (v.kind === "swap") {
     // the bot found YouTube Music copies of broken tracks (#swap)
@@ -349,6 +349,7 @@ firetable.actions.watchNotices = function () {
     var now = Date.now() + (ftapi.serverTimeOffset || 0);
     if (v.expires && v.expires < now) return; // "are you there?" after you came back
     if (v.time && now - v.time > 6 * 60 * 60 * 1000) return; // stale
+    if (v.kind === "grab-missed" && v.card) firetable.actions.settleGrab(v.card, "gone");
     firetable.notices.queue.push(v);
     firetable.ui.showNextNotice();
   }, function () { /* rules not deployed yet: the bot pings in chat instead */ });
@@ -360,6 +361,116 @@ firetable.actions.unwatchNotices = function () {
   n.ref = n.fn = null;
   n.queue = [];
 };
+
+// ─── GRAB buttons on printed cards (#247) ────────────────────────────────────
+// The bot's "A new trading card has been printed!" names the card (grab). Its
+// button sends "!grab <card>" as a bot command (nothing shows in chat) and
+// follows the card's owner: GRAB → YOURS! SEE IT, or GRABBED BY <name>. It
+// greys out as GONE once a newer card is printed or the bot says you were too
+// late. The room sees "<name> grabbed the card!" with the card (#245).
+
+firetable.cardGrabs = {}; // card id -> { ref, fn, timer, loaded, superseded, state, who }
+
+var GRAB_LABELS = { open: "Grab", pending: "Grabbing…", mine: "Yours! See it", gone: "Gone" };
+
+/** The GRAB buttons for a card (normally one). */
+firetable.ui.grabButtons = function (cardid) {
+  return $(".chat-grab-btn").filter(function () { return this.getAttribute("data-card") === cardid; });
+};
+
+/**
+ * @param {string} cardid
+ * @param {"open"|"pending"|"mine"|"taken"|"gone"} state
+ * @param {string} [who] - Who got it (for "taken")
+ */
+firetable.ui.setGrabState = function (cardid, state, who) {
+  var label = state === "taken" ? "Grabbed by " + (who || "someone") : GRAB_LABELS[state];
+  firetable.ui.grabButtons(cardid)
+    .attr("data-state", state)
+    .prop("disabled", state !== "open" && state !== "mine")
+    .attr("aria-label", state === "open" ? "Grab this card" : state === "mine" ? "Your card: open your card case" : label)
+    .text(label);
+  var g = firetable.cardGrabs[cardid];
+  if (g && state !== "pending") {
+    clearTimeout(g.timer);
+    g.timer = null;
+    g.state = state;
+    g.who = who;
+  }
+};
+
+/** Settle a card's button for good: someone has it, or it's gone. */
+firetable.actions.settleGrab = function (cardid, state, who) {
+  firetable.ui.setGrabState(cardid, state, who);
+  firetable.actions.unwatchGrab(cardid, true);
+};
+
+/** Follow a card's owner until someone has it (or a newer card replaces it). */
+firetable.actions.watchGrab = function (cardid) {
+  var g = firetable.cardGrabs[cardid] = { ref: ftapi.db().ref("cards/" + cardid), fn: null, timer: null, loaded: false, superseded: false };
+  var fn = g.fn = function (snap) {
+    var card = snap.val();
+    g.loaded = true;
+    if (card && card.owner) {
+      var who = (ftapi.users[card.owner] && ftapi.users[card.owner].username) || "someone";
+      firetable.actions.settleGrab(cardid, card.owner === ftapi.uid ? "mine" : "taken", who);
+    } else if (!card || g.superseded) {
+      firetable.actions.settleGrab(cardid, "gone");
+    }
+  };
+  g.ref.on("value", fn, function () { firetable.actions.settleGrab(cardid, "gone"); });
+  if (g.fn !== fn) g.ref.off("value", fn); // settled straight from the cache
+};
+
+/**
+ * @param {string} cardid
+ * @param {boolean} [keepState] - Stop listening but remember how it ended
+ */
+firetable.actions.unwatchGrab = function (cardid, keepState) {
+  var g = firetable.cardGrabs[cardid];
+  if (!g) return;
+  if (g.fn) g.ref.off("value", g.fn);
+  clearTimeout(g.timer);
+  g.fn = g.timer = null;
+  if (!keepState) delete firetable.cardGrabs[cardid];
+};
+
+/** Add the GRAB button to a message; older cards nobody grabbed are gone. */
+firetable.ui.addGrabButton = function ($chatText, cardid) {
+  if (!$chatText.length || !cardid) return;
+  Object.keys(firetable.cardGrabs).forEach(function (id) {
+    var g = firetable.cardGrabs[id];
+    if (id === cardid || !g.fn) return;
+    g.superseded = true;
+    // still loading: its first answer says whether someone got it
+    if (g.loaded) firetable.actions.settleGrab(id, "gone");
+  });
+  $('<div class="chat-grab-wrap"></div>')
+    .append($('<button type="button" class="butt chat-grab-btn"></button>').attr("data-card", cardid))
+    .appendTo($chatText);
+  var known = firetable.cardGrabs[cardid];
+  if (known && !known.fn) return firetable.ui.setGrabState(cardid, known.state || "gone", known.who);
+  firetable.ui.setGrabState(cardid, "open");
+  if (!known) firetable.actions.watchGrab(cardid);
+};
+
+firetable.actions.grabCard = function (cardid) {
+  if (!ftapi.uid) return firetable.ui.toast("Sign in to grab cards.", "error");
+  firetable.ui.setGrabState(cardid, "pending");
+  ftapi.actions.sendBotCommand("!grab " + cardid);
+  var g = firetable.cardGrabs[cardid];
+  if (!g) return;
+  // no answer (the bot is restarting?): let them try again
+  g.timer = setTimeout(function () {
+    if (firetable.ui.grabButtons(cardid).attr("data-state") === "pending") firetable.ui.setGrabState(cardid, "open");
+  }, 10000);
+};
+
+$(document).on("click.cardGrab", ".chat-grab-btn", function () {
+  var cardid = this.getAttribute("data-card"), state = this.getAttribute("data-state");
+  if (state === "open") firetable.actions.grabCard(cardid);
+  else if (state === "mine") firetable.nav.setView("cards");
+});
 
 firetable.actions.unwatchInbox = function () {
   var i = firetable.inbox;
@@ -743,6 +854,11 @@ firetable.ui.setupChatEvents = function () {
       firetable.actions.showCard(chatData.card, chatData.chatID);
     }
 
+    // ── GRAB button on a newly printed card (only the bot can add one) ──
+    if (chatData.grab && !chatData.hidden && ftapi.users[chatData.id] && ftapi.users[chatData.id].hostbot) {
+      firetable.ui.addGrabButton($("#chattxt" + chatData.chatID), String(chatData.grab));
+    }
+
     // Reactions (not on removed messages)
     var $txt = $("#chattxt" + chatData.chatID);
     if (!chatData.hidden && ftapi.uid) {
@@ -761,6 +877,7 @@ firetable.ui.setupChatEvents = function () {
     if ($allChats.length > MAX_CHAT_MESSAGES) {
       var $gone = $allChats.slice(0, $allChats.length - MAX_CHAT_MESSAGES);
       $gone.find('.chatText[data-chat]').each(function () { firetable.actions.unwatchReactions(this.getAttribute('data-chat')); });
+      $gone.find('.chat-grab-btn').each(function () { firetable.actions.unwatchGrab(this.getAttribute('data-card')); });
       $gone.remove();
       // Invalidate grouping state so the next message always starts a fresh block
       firetable.lastChatPerson = false;
@@ -770,6 +887,7 @@ firetable.ui.setupChatEvents = function () {
 
   // ── Chat Removal (mod delete) ──
   ftapi.events.on("chatRemoved", function (data) {
+    $("#chattxt" + data.chatID).find('.chat-grab-btn').each(function () { firetable.actions.unwatchGrab(this.getAttribute('data-card'), true); });
     $("#chattxt" + data.chatID).text("[message removed]");
     firetable.actions.unwatchReactions(data.chatID);
     $("#reactions" + data.chatID).remove();

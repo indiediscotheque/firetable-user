@@ -91,12 +91,25 @@ var LASTFM_PROXY_URL = new URL(
 ).href;
 
 // ─── Emoji Data Sources ─────────────────────────────────────────────────────
-/** Exact versions, checked with Subresource Integrity when fetched */
+/**
+ * Exact versions, checked with Subresource Integrity when fetched.
+ * [0] the emoji themselves, by group (Emoji 17.0; keep in step with twemoji.js)
+ * [1] emojilib v2: the old shortnames (:smile:, :+1:) people still type
+ * [2] emojilib v4: search keywords for the picker
+ */
 var EMOJI_URLS = [
-  { url: "https://unpkg.com/unicode-emoji-json@0.3.0/data-by-group.json", integrity: "sha384-d1qaRGroEtfyQyqsz7inMLNoSB7O4uGtKgKXB9DdiE1gm1xuOOxPF+ljQj/vwB0F" },
+  { url: "https://unpkg.com/unicode-emoji-json@0.9.0/data-by-group.json", integrity: "sha384-BHUZGp3aPuJFNoJr+570U5rYE7MyCXiYJle7rjt1pzyMeGM5mEUsxcL88ZVRjAvz" },
   { url: "https://unpkg.com/emojilib@2.4.0/emojis.json", integrity: "sha384-uPYLJyYHqrmSMGbd6WnbkvIvF3ta0lPsa9FU0u5mU/ea8G11HlacTMpr2IyplN2d" },
-  { url: "https://unpkg.com/emojilib@3.0.4/dist/emoji-en-US.json", integrity: "sha384-SKTZEsmwjSonhLYsjUIm1DdaCmnRLA3oASU0EG7srbWYeiwjuVoD7AQNLVA+88Ux" }
+  { url: "https://unpkg.com/emojilib@4.0.3/dist/emoji-en-US.json", integrity: "sha384-BXnUdYkXV4Grqd72PWIbgz6IdTWDSuv+ced8DStGuk1h0Rpvn2GYzVUcCqU/kC50" }
 ];
+
+/** Shortnames Unicode has since renamed, so old messages and habits still work */
+var EMOJI_RENAMED = {
+  hugging_face: "smiling_face_with_open_hands",
+  knocked_out_face: "face_with_crossed_out_eyes",
+  pouting_face: "enraged_face",
+  flag_turkey: "flag_turkiye"
+};
 
 // ─── History Limits ──────────────────────────────────────────────────────────
 /** Chat messages loaded when joining (older ones are pruned by the bot anyway) */
