@@ -219,9 +219,11 @@ firetable.ui.renderTyping = function () {
 // chatData/<id>/reactions/<emoji>/<uid> = true. Each message on screen
 // listens to its own reactions; the listener goes when the message does.
 
+// [key, emoji, name if not the key's]. Keys are stored, so never rename one.
 var CHAT_REACTIONS = [
   ["thumbsup", "👍"], ["heart", "❤️"], ["joy", "😂"], ["fire", "🔥"],
-  ["open_mouth", "😮"], ["cry", "😢"], ["clap", "👏"], ["raised_hands", "🙌"]
+  ["open_mouth", "😮"], ["cry", "😢"], ["clap", "👏"], ["raised_hands", "🙌"],
+  ["mirror_ball", "🪩", "disco ball"], ["man_dancing", "🕺"], ["woman_dancing", "💃"]
 ];
 firetable.reactionListeners = {};
 
@@ -1142,7 +1144,7 @@ firetable.ui.setupChatEvents = function () {
   var $picker = $(reactPop).find('.reactPicker');
   CHAT_REACTIONS.forEach(function (r) {
     $('<button type="button" role="menuitem" class="reactPick"></button>')
-      .attr({ 'data-key': r[0], title: r[0].replace(/_/g, ' '), 'aria-label': r[0].replace(/_/g, ' ') })
+      .attr({ 'data-key': r[0], title: r[2] || r[0].replace(/_/g, ' '), 'aria-label': r[2] || r[0].replace(/_/g, ' ') })
       .text(r[1]).appendTo($picker);
   });
   if (typeof twemoji !== 'undefined') twemoji.parse($picker[0]);

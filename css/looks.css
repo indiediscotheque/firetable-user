@@ -6078,7 +6078,11 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
     border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
 }
 .reactChip img.emoji, .reactPick img.emoji { width: 1em; height: 1em; }
-.reactPicker { display: flex; gap: 0.15rem; padding: 0.3rem; }
+.reactPicker { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.15rem; padding: 0.3rem; max-width: calc(100vw - 2rem); }
+/* phones: two even rows instead of one too wide for the screen */
+@media (max-width: 480px) {
+    .reactPicker { display: grid; grid-template-columns: repeat(6, auto); }
+}
 .reactPick {
     font-size: 1.3rem;
     line-height: 1;
