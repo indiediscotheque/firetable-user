@@ -3755,13 +3755,15 @@ a.importLinkCheck {
     opacity: 1;
 }
 
-.chat-dance-wrap {
+.chat-dance-wrap,
+.chat-grab-wrap {
     margin-top: var(--pad2);
     text-align: center;
 }
 
 
-.chat-dance-btn {
+.chat-dance-btn,
+.chat-grab-btn {
     display: inline-flex;
     height: auto;
     padding: 0.4em 0.6em;
@@ -3786,12 +3788,14 @@ a.importLinkCheck {
     transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.12s ease;
 }
 
-.chat-dance-btn:hover:not(:disabled) {
+.chat-dance-btn:hover:not(:disabled),
+.chat-grab-btn:hover:not(:disabled) {
     filter: brightness(1.05) saturate(1.05);
 }
 
 .chat-dance-btn:active:not(:disabled),
-.chat-dance-btn.is-pressed {
+.chat-dance-btn.is-pressed,
+.chat-grab-btn:active:not(:disabled) {
     transform: translateY(2px);
     box-shadow:
         inset 0 2px 4px rgba(0, 0, 0, 0.33),
@@ -3799,8 +3803,28 @@ a.importLinkCheck {
 }
 
 .chat-dance-btn.is-pressed,
-.chat-dance-btn:disabled {
+.chat-dance-btn:disabled,
+.chat-grab-btn:disabled {
     cursor: default;
+}
+
+/* GRAB button on a freshly printed card (#247) */
+.chat-grab-btn {
+    font-size: 2rem;
+    padding: 0.4em 1.2em;
+}
+
+.chat-grab-btn[data-state="pending"],
+.chat-grab-btn[data-state="taken"],
+.chat-grab-btn[data-state="gone"] {
+    font-size: 1rem;
+    padding: 0.5em 0.9em;
+    filter: grayscale(1) brightness(0.8);
+    box-shadow: none;
+}
+
+.chat-grab-btn[data-state="mine"] {
+    font-size: 1.25rem;
 }
 
 .chatText a {

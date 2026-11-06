@@ -11,7 +11,7 @@ const appGlobals = {
   IDLE_TIMEOUT: "readonly", PREVIEW_DURATION: "readonly", ASPECT_RATIO: "readonly",
   COLOR_ORANGE: "readonly", STORAGE: "readonly", AVATAR_BASE_URL: "readonly",
   SC_API_PROXY_URL: "readonly", SC_RESOLVE_URL: "readonly", SC_PROXY_URL: "readonly",
-  SC_API_TRACK_URL: "readonly", SC_PLAYER_PAGE_URL: "readonly", LASTFM_PROXY_URL: "readonly", EMOJI_URLS: "readonly",
+  SC_API_TRACK_URL: "readonly", SC_PLAYER_PAGE_URL: "readonly", LASTFM_PROXY_URL: "readonly", EMOJI_URLS: "readonly", EMOJI_RENAMED: "readonly",
   CHAT_HISTORY_LIMIT: "readonly", HISTORY_PAGE_SIZE: "readonly",
   SEARCH_MAX_RESULTS: "readonly", IMPORT_PAGE_SIZE: "readonly",
   PREVIEW_BAR_INTERVAL: "readonly", PROGRESS_BAR_INTERVAL: "readonly",

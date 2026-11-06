@@ -1,7 +1,7 @@
 /**
  * emoji.js — Emoji picker, search, and shortname-to-unicode conversion.
  *
- * Loads emoji data from unpkg CDN (unicode-emoji-json + emojilib),
+ * Loads emoji data (Emoji 17.0) from unpkg CDN (unicode-emoji-json + emojilib),
  * builds the picker DOM, and converts :shortname: strings to unicode
  * characters in chat messages.
  */
@@ -101,13 +101,11 @@ firetable.utilities.getEmojiMap = function () {
       var promises = responses.map(function (response) { return response.json(); });
       var data = await Promise.all(promises);
 
-      // Build a reverse map from emojilib v2: emoji_char → old_shortname
+      var groups = data[0], oldLib = data[1], keywords = data[2];
+
+      // emojilib v2: emoji char -> its old shortname
       var oldmojis = {};
-      for (var oldSlug in data[1]) {
-        if (data[1].hasOwnProperty(oldSlug)) {
-          oldmojis[data[1][oldSlug].char] = oldSlug;
-        }
-      }
+      Object.keys(oldLib).forEach(function (oldSlug) { oldmojis[oldLib[oldSlug].char] = oldSlug; });
 
       // The app shell is detached on the login screen, so look there too
       var findEl = function (id) {
@@ -116,43 +114,35 @@ firetable.utilities.getEmojiMap = function () {
       var $nav = $(findEl("pickerNav"));
       var $contents = $(findEl("pickerContents"));
 
-      // Walk the grouped emoji data and build picker DOM + emojiMap
-      for (var category in data[0]) {
-        if (!data[0].hasOwnProperty(category)) continue;
-        var emojisArr = data[0][category];
-        var catid = category.replace(/[\s&]+/g, '_').toLowerCase();
+      // One nav button (its first emoji as the icon) and one section per group
+      groups.forEach(function (group) {
+        var list = group.emojis || [];
+        if (!list.length) return;
+        $('<span></span>').attr({ id: "bpicker" + group.slug, title: group.name }).text(list[0].emoji).appendTo($nav);
+        var $section = $('<div></div>').attr("id", "picker" + group.slug).append($('<h3></h3>').text(group.name));
+        var frag = document.createDocumentFragment();
+        list.forEach(function (item) {
+          firetable.emojiMap[item.slug] = item.emoji;
+          var words = (keywords[item.emoji] || []).slice();
+          if (oldmojis[item.emoji]) words.push(oldmojis[item.emoji]);
+          var el = document.createElement("span");
+          el.setAttribute("role", "button");
+          el.className = "pickerResult";
+          el.title = item.slug;
+          el.setAttribute("data-alternative-name", words.join(","));
+          el.textContent = item.emoji;
+          frag.appendChild(el);
+        });
+        $section[0].appendChild(frag);
+        $section.appendTo($contents);
+      });
 
-        // Category nav button (uses first emoji as icon)
-        $nav.append(
-          '<span id="bpicker' + catid + '" title="' + category + '">' + emojisArr[0].emoji + '</span>'
-        );
-        // Category content section
-        var $section = $('<div id="picker' + catid + '"><h3>' + category + '</h3></div>').appendTo($contents);
-
-        for (var i = 0; i < emojisArr.length; i++) {
-          firetable.emojiMap[emojisArr[i].slug] = emojisArr[i].emoji;
-
-          // Gather alternative search keywords from emojilib v3 + v2
-          var words = "";
-          if (data[2][emojisArr[i].emoji] !== undefined) {
-            words += data[2][emojisArr[i].emoji].join(',');
-          }
-          if (oldmojis[emojisArr[i].emoji] !== undefined) {
-            words += ',' + oldmojis[emojisArr[i].emoji];
-          }
-          $section.append(
-            '<span role="button" class="pickerResult" title="' + emojisArr[i].slug +
-            '" data-alternative-name="' + words + '">' + emojisArr[i].emoji + '</span>'
-          );
-        }
-
-        // Also add old emojilib v2 shortnames to the map
-        for (var emoji in oldmojis) {
-          if (oldmojis.hasOwnProperty(emoji)) {
-            firetable.emojiMap[oldmojis[emoji]] = emoji;
-          }
-        }
-      }
+      // Old emojilib v2 shortnames (:smile:, :+1:) and names Unicode has since changed
+      Object.keys(oldmojis).forEach(function (emoji) { firetable.emojiMap[oldmojis[emoji]] = emoji; });
+      Object.keys(EMOJI_RENAMED).forEach(function (oldName) {
+        var now = firetable.emojiMap[EMOJI_RENAMED[oldName]];
+        if (now && !Object.prototype.hasOwnProperty.call(firetable.emojiMap, oldName)) firetable.emojiMap[oldName] = now;
+      });
       if ($nav[0]) twemoji.parse($nav[0]);
     } catch (err) {
       console.error("Failed to load emoji data:", err);
