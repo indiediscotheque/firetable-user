@@ -437,9 +437,16 @@ firetable.actions.unwatchGrab = function (cardid, keepState) {
   if (!keepState) delete firetable.cardGrabs[cardid];
 };
 
+// Before the bot's database rules allow it to name the card, it still says
+// "...printed. Type !grab to grab it for yourself!". That message gets a
+// button too, without a card id (""): it sends a plain "!grab" and learns
+// which card it was from the bot's "<name> grabbed the card!".
+var GRAB_ASK_RE = /\s*Type !grab to grab it for yourself!\s*$/;
+var GRABBED_RE = /grabbed the card!$/;
+
 /** Add the GRAB button to a message; older cards nobody grabbed are gone. */
 firetable.ui.addGrabButton = function ($chatText, cardid) {
-  if (!$chatText.length || !cardid) return;
+  if (!$chatText.length || cardid == null) return;
   Object.keys(firetable.cardGrabs).forEach(function (id) {
     var g = firetable.cardGrabs[id];
     if (id === cardid || !g.fn) return;
@@ -447,25 +454,45 @@ firetable.ui.addGrabButton = function ($chatText, cardid) {
     // still loading: its first answer says whether someone got it
     if (g.loaded) firetable.actions.settleGrab(id, "gone");
   });
+  if (firetable.ui.unclaimedGrabButtons().length) firetable.ui.setGrabState("", "gone");
   $('<div class="chat-grab-wrap"></div>')
     .append($('<button type="button" class="butt chat-grab-btn"></button>').attr("data-card", cardid))
     .appendTo($chatText);
+  if (!cardid) return firetable.ui.setGrabState("", "open");
   var known = firetable.cardGrabs[cardid];
   if (known && !known.fn) return firetable.ui.setGrabState(cardid, known.state || "gone", known.who);
   firetable.ui.setGrabState(cardid, "open");
   if (!known) firetable.actions.watchGrab(cardid);
 };
 
+/** Buttons without a card id still waiting to hear which card it was. */
+firetable.ui.unclaimedGrabButtons = function () {
+  return firetable.ui.grabButtons("").filter(function () {
+    var st = this.getAttribute("data-state");
+    return st === "open" || st === "pending";
+  });
+};
+
+/** "<name> grabbed the card!": the card-less button was for this card. */
+firetable.actions.claimGrab = function (cardid) {
+  var $btns = firetable.ui.unclaimedGrabButtons();
+  if (!$btns.length || !cardid) return;
+  $btns.attr("data-card", cardid);
+  var known = firetable.cardGrabs[cardid];
+  if (known && !known.fn) firetable.ui.setGrabState(cardid, known.state || "gone", known.who);
+  else if (!known) firetable.actions.watchGrab(cardid);
+};
+
 firetable.actions.grabCard = function (cardid) {
   if (!ftapi.uid) return firetable.ui.toast("Sign in to grab cards.", "error");
   firetable.ui.setGrabState(cardid, "pending");
-  ftapi.actions.sendBotCommand("!grab " + cardid);
-  var g = firetable.cardGrabs[cardid];
-  if (!g) return;
+  ftapi.actions.sendBotCommand(cardid ? "!grab " + cardid : "!grab");
   // no answer (the bot is restarting?): let them try again
-  g.timer = setTimeout(function () {
+  var timer = setTimeout(function () {
     if (firetable.ui.grabButtons(cardid).attr("data-state") === "pending") firetable.ui.setGrabState(cardid, "open");
   }, 10000);
+  var g = firetable.cardGrabs[cardid];
+  if (g) g.timer = timer;
 };
 
 $(document).on("click.cardGrab", ".chat-grab-btn", function () {
@@ -777,7 +804,8 @@ firetable.ui.setupChatEvents = function () {
     };
 
     // Format the message text
-    var txtOut = firetable.ui.formatChatText(chatData.txt);
+    var grabAsk = !chatData.grab && !chatData.hidden && GRAB_ASK_RE.test(chatData.txt || "");
+    var txtOut = firetable.ui.formatChatText(grabAsk ? chatData.txt.replace(GRAB_ASK_RE, "") : chatData.txt);
     if (chatData.hidden) txtOut = "[message removed]";
 
     if (chatData.id === firetable.lastChatPerson && !hasMention) {
@@ -856,9 +884,15 @@ firetable.ui.setupChatEvents = function () {
       firetable.actions.showCard(chatData.card, chatData.chatID);
     }
 
-    // ── GRAB button on a newly printed card (only the bot can add one) ──
-    if (chatData.grab && !chatData.hidden && ftapi.users[chatData.id] && ftapi.users[chatData.id].hostbot) {
+    // ── GRAB button on a newly printed card ──
+    // (the database rules let only the bot add grab; history can arrive
+    // before the people list, so this doesn't wait to check who sent it)
+    if (chatData.grab && !chatData.hidden) {
       firetable.ui.addGrabButton($("#chattxt" + chatData.chatID), String(chatData.grab));
+    } else if (grabAsk) {
+      firetable.ui.addGrabButton($("#chattxt" + chatData.chatID), "");
+    } else if (chatData.card && GRABBED_RE.test(chatData.txt || "")) {
+      firetable.actions.claimGrab(String(chatData.card));
     }
 
     // Reactions (not on removed messages)
