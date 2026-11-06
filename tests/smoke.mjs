@@ -81,6 +81,23 @@ try {
   check(loaded("/s/player/") || loaded("www-widgetapi"), "YouTube's player API loaded under the policy");
   check(!loaded("pixi.min.js") && !loaded("p5.min.js") && !loaded("TweenMax.min.js"), "the stage effects' libraries aren't loaded with the page");
 
+  console.log("-- the song's tempo leads the plays line");
+  await put("/tagUpdate", { cid: youtubeSong.cid, adamData: { track_name: "Smoke Song", artist: "Smoke Artist", playcount: 67 } });
+  await put("/songBpm", { started: youtubeSong.started, bpm: 111.3, src: "deezer" });
+  await page.waitForFunction(() => !document.getElementById("npBpm").hidden, null, { timeout: 10000 }).catch(() => {});
+  // as drawn: the ", " between them is CSS, which innerText leaves out
+  const stats = await page.evaluate(() => {
+    const count = document.getElementById("playCount");
+    const sep = getComputedStyle(count, "::before").content.replace(/^"|"$/g, "");
+    return document.getElementById("npBpm").textContent + (sep === "none" ? "" : sep) + count.textContent;
+  }).catch(() => "");
+  check(stats === "111 BPM, 67 plays", "\"111 BPM, 67 plays\" (" + JSON.stringify(stats) + ")");
+  check(await page.evaluate(() => document.body.classList.contains("has-beat")), "the stage bops to it");
+  if (process.env.SHOTS) await page.locator("#nowplaying").screenshot({ path: process.env.SHOTS + "/nowplaying-bpm.png" });
+  await put("/songBpm", null);
+  await page.waitForFunction(() => document.getElementById("npBpm").hidden, null, { timeout: 10000 }).catch(() => {});
+  check(await page.$eval("#playStats", (el) => el.innerText.trim()) === "67 plays", "no tempo: just \"67 plays\"");
+
   console.log("-- push notifications: the service worker gets a pushed @mention");
   const swReady = await page.evaluate(() => Promise.race([
     navigator.serviceWorker.ready.then((r) => !!r.active && r.scope),
