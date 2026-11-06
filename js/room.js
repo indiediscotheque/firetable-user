@@ -26,7 +26,7 @@
  * Match the stage animations to the playing song's tempo (from songBpm). Sets
  * --beat (one beat), --bop (one DJ bob: a beat, or two for fast songs) and
  * --beat-phase (so the bobbing lines up with the song's start, not page load)
- * on <html>, and shows "128 BPM" under the artist.
+ * on <html>, and shows "128 BPM" on the plays line, before the play count.
  */
 firetable.ui.applyBeat = function () {
   var b = firetable.songBpm, s = firetable.song, root = document.documentElement;

@@ -6187,13 +6187,10 @@ button.track-warning:focus-visible { outline: 2px solid var(--color-accent); out
 #pickNameForm { display: grid; gap: .75rem; width: 100%; & p { margin: 0; } }
 
 /* ─── On the beat (#143) ─── */
-.npArtistRow { display: flex; align-items: baseline; gap: .45em; min-width: 0; }
-.npArtistRow #artist { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* "111 BPM, 67 plays": the tempo always comes first on the plays line */
 #npBpm {
-  flex: none; font-size: .7rem; font-weight: 600; letter-spacing: .03em; opacity: .65;
-  text-shadow: 0 1px 0.3rem rgba(0, 0, 0, 0.6);
-  &::before { content: "· "; }
   &[hidden] { display: none; }
+  &:not([hidden]) + #playCount:not(:empty)::before { content: ", "; }
 }
 body.has-beat .avtr.animate {
   animation-duration: var(--bop);
