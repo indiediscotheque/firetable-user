@@ -42,7 +42,7 @@
 				<span id="tip-socialTrigger" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-socialTrigger">Community</span>
 				<a id="roomInfo" class="header_icon" aria-label="About" target="_blank" href="about" style="anchor-name: --tip-roomInfo" aria-describedby="tip-roomInfo"><i class="material-symbols-outlined">&#xE887;</i></a>
 				<span id="tip-roomInfo" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-roomInfo">About</span>
-				<button id="inboxTrigger" type="button" class="header_icon" aria-label="Mentions" aria-haspopup="dialog" style="anchor-name: --tip-inboxTrigger" aria-describedby="tip-inboxTrigger">
+				<button id="inboxTrigger" type="button" class="header_icon" aria-label="Mentions" aria-haspopup="dialog" aria-expanded="false" popovertarget="inboxPopover" style="anchor-name: --tip-inboxTrigger" aria-describedby="tip-inboxTrigger">
 					<i class="material-symbols-outlined">alternate_email</i><span id="inboxBadge" hidden></span>
 				</button>
 				<span id="tip-inboxTrigger" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-inboxTrigger">Mentions</span>
@@ -985,7 +985,7 @@
 	<div id="inboxPopover" popover="auto" class="ft-popover">
 		<div id="inboxArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box inboxBox" role="dialog" aria-label="Mentions">
-			<div class="inboxHead"><b>Mentions</b><button type="button" id="inboxClear" class="butt graybutt small">Clear all</button></div>
+			<div class="inboxHead"><b>Mentions</b><span class="inboxHeadActions"><button type="button" id="inboxClear" class="butt graybutt small">Clear all</button><button type="button" class="row-icon material-symbols-outlined" popovertarget="inboxPopover" popovertargetaction="hide" title="Close" aria-label="Close">close</button></span></div>
 			<div id="inboxPush" class="inboxPush" hidden>
 				<i class="material-symbols-outlined" aria-hidden="true">notifications</i>
 				<span id="inboxPushText"></span>

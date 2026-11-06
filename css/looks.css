@@ -6072,6 +6072,7 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
 }
 .inboxBox { width: min(22rem, 92vw); max-height: 70vh; overflow: auto; }
 .inboxHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--pad2); }
+.inboxHeadActions { display: flex; align-items: center; gap: var(--pad2); }
 .inboxEmpty { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); }
 .inboxItem {
     display: flex;
