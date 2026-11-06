@@ -243,6 +243,30 @@ try {
   await page.waitForFunction(() => $('.chat-grab-btn[data-card="cardC"]').attr("data-state") === "taken", null, { timeout: 8000 }).catch(() => {});
   check(await page.$eval('.chat-grab-btn[data-card="cardC"]', (b) => b.textContent + ":" + b.disabled) === "Grabbed by dj2:true", "someone else's grab shows who got it");
 
+  console.log("-- before the bot's rules are published: the old \"Type !grab\" message still gets a button");
+  await put("/cards/cardL", { owner: false, cardnum: 4 });
+  const legacy = await page.evaluate(async () => {
+    const sent = [];
+    ftapi.actions.sendBotCommand = (t) => { sent.push(t); return Promise.resolve(); };
+    const showCard = firetable.actions.showCard;
+    firetable.actions.showCard = () => {};
+    const say = (id, txt, extra) => ftapi.events.emit("newChat", Object.assign({ chatID: "smk" + Math.random().toString(36).slice(2), feedID: "f", id, name: id, txt, time: Date.now() }, extra));
+    say("bot", "A new trading card has been printed. Type !grab to grab it for yourself!");
+    const $b = $('.chat-grab-btn[data-card=""]').last();
+    const shown = $b.closest(".chatText").clone().children().remove().end().text().trim();
+    const first = $b.attr("data-state");
+    $b.trigger("click");
+    say("bot", "smoke grabbed the card!", { card: "cardL" });
+    await new Promise((r) => setTimeout(r, 300));
+    firetable.actions.showCard = showCard;
+    return { shown, first, sent: sent.join(), card: $b.attr("data-card") };
+  });
+  await put("/cards/cardL/owner", "smoke");
+  await page.waitForFunction(() => $('.chat-grab-btn[data-card="cardL"]').attr("data-state") === "mine", null, { timeout: 8000 }).catch(() => {});
+  legacy.after = await page.$eval('.chat-grab-btn[data-card="cardL"]', (b) => b.dataset.state).catch(() => "missing");
+  check(legacy.shown === "A new trading card has been printed." && legacy.first === "open" && legacy.sent === "!grab" && legacy.card === "cardL" && legacy.after === "mine",
+    "it hides \"Type !grab\", sends a plain !grab and learns the card from \"… grabbed the card!\" (" + JSON.stringify(legacy) + ")");
+
   console.log("-- reaction picker: disco ball and dancers, fits a phone");
   const fits = async () => page.evaluate(async () => {
     const pop = document.getElementById("reactPickerPopover");
