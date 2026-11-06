@@ -28,6 +28,63 @@ var ftapi = {
   blockedUsers: {}
 };
 
+/*
+PRESENCE
+Idle DJs keep their seat for as long as the room is open in their browser.
+The bot tells "closed the browser" (step down soon) from "the connection
+dropped" (computer asleep, tab frozen: keep the seat) by two marks:
+- offlineAt: when the connection dropped (set by the database itself)
+- closed: set as the page closes, cleared when it's back online
+*/
+var quietly = function() {}; // these marks need the hostbot's current database rules
+ftapi.markOnline = function() {
+  if (!ftapi.uid) return;
+  var me = ftapi.db().ref("users/" + ftapi.uid);
+  ftapi.presenceDetectRef = me.child("status");
+  ftapi.presenceDetectEvent = ftapi.presenceDetectRef.onDisconnect().set(false);
+  me.child("offlineAt").onDisconnect().set(firebase.database.ServerValue.TIMESTAMP).catch(quietly);
+  ftapi.presenceDetectRef.set(true);
+  me.child("closed").remove().catch(quietly);
+  ftapi.keepAwake.update();
+};
+ftapi.markClosed = function() {
+  if (!ftapi.uid || ftapi.banned) return;
+  ftapi.db().ref("users/" + ftapi.uid + "/closed").set(firebase.database.ServerValue.TIMESTAMP).catch(quietly);
+};
+// The tab or browser is closing, or the page is being left (a reload clears
+// it again a moment later)
+window.addEventListener("pagehide", function() { ftapi.markClosed(); });
+
+// While you're on deck or in line, the page holds a Web Lock: Chrome doesn't
+// freeze a background tab that holds one, so the room keeps its connection
+// (and you your seat) while you're idle in another tab.
+ftapi.keepAwake = {
+  table: null,
+  waitlist: null,
+  wanted: false,
+  requested: false,
+  release: null,
+  has: function(list) {
+    var people = list ? Object.values(list) : [];
+    return people.some(function(p) { return p && p.id === ftapi.uid; });
+  },
+  update: function() {
+    var self = ftapi.keepAwake;
+    self.wanted = !!ftapi.uid && (self.has(self.table) || self.has(self.waitlist));
+    if (!self.wanted && self.release) {
+      self.release();
+      self.release = null;
+    }
+    if (!self.wanted || self.release || self.requested || !navigator.locks) return;
+    self.requested = true;
+    navigator.locks.request("firetable-on-deck", { mode: "shared" }, function() {
+      self.requested = false;
+      if (!self.wanted) return null; // stepped down while it was being granted
+      return new Promise(function(resolve) { self.release = resolve; });
+    }).catch(function() { self.requested = false; });
+  }
+};
+
 /** The room's Realtime Database (the "firetable" Firebase app). */
 ftapi.db = function() {
   return firebase.app("firetable").database();
@@ -65,8 +122,10 @@ ftapi.detachSession = function() {
   });
   if (ftapi.presenceDetectRef) {
     ftapi.presenceDetectRef.onDisconnect().cancel();
+    ftapi.presenceDetectRef.parent.child("offlineAt").onDisconnect().cancel().catch(function() {});
     ftapi.presenceDetectRef = null;
   }
+  ftapi.keepAwake.update();
   ftapi.isMod = false;
   ftapi.banned = false;
   ftapi.blockedUsers = {};
@@ -212,9 +271,7 @@ ftapi.init = function(firebaseConfig) {
     if (ftapi.uid) {
       if (!ftapi.users[ftapi.uid]) {
         //Firebase thinks you are not here (but you are totally here!)
-        ftapi.presenceDetectRef = ftapi.db().ref("users/" + ftapi.uid + "/status");
-        ftapi.presenceDetectEvent = ftapi.presenceDetectRef.onDisconnect().set(false);
-        ftapi.presenceDetectRef.set(true);
+        ftapi.markOnline();
       } else {
         if (ftapi.users[ftapi.uid].supermod) {
           if (!ftapi.superCopBanUpdates) {
@@ -259,6 +316,8 @@ ftapi.init = function(firebaseConfig) {
   var tbl = ftapi.db().ref("table");
   tbl.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
+    ftapi.keepAwake.table = data;
+    ftapi.keepAwake.update();
     ftapi.events.emit("tableChanged", data);
   });
 
@@ -280,6 +339,8 @@ ftapi.init = function(firebaseConfig) {
   var wl = ftapi.db().ref("waitlist");
   wl.on('value', function(dataSnapshot) {
     var data = dataSnapshot.val();
+    ftapi.keepAwake.waitlist = data;
+    ftapi.keepAwake.update();
     ftapi.events.emit("waitlistChanged", data);
   });
 
@@ -332,11 +393,7 @@ ftapi.init = function(firebaseConfig) {
         ftapi.uname = user.uid;
         ftapi.connectedRef = ftapi.db().ref('.info/connected');
         ftapi.connectedEvent = ftapi.connectedRef.on('value', function(snap) {
-          if (snap.val() === true && ftapi.uid) {
-            ftapi.presenceDetectRef = ftapi.db().ref("users/" + ftapi.uid + "/status");
-            ftapi.presenceDetectEvent = ftapi.presenceDetectRef.onDisconnect().set(false);
-            ftapi.presenceDetectRef.set(true);
-          }
+          if (snap.val() === true && ftapi.uid) ftapi.markOnline();
         });
         var returnData = {
           email: user.email,
@@ -885,6 +942,8 @@ ftapi.actions = {
   },
   logOut: function() {
     var ref0 = ftapi.db().ref("users/" + ftapi.uid + "/status");
+    ftapi.markClosed(); // signing out is leaving, like closing the browser
+    ref0.parent.child("offlineAt").set(firebase.database.ServerValue.TIMESTAMP).catch(function() {});
     ref0.set(false);
     ftapi.detachSession();
     ftapi.uid = null;
