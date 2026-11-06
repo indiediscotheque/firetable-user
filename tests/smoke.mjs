@@ -243,6 +243,34 @@ try {
   await page.waitForFunction(() => $('.chat-grab-btn[data-card="cardC"]').attr("data-state") === "taken", null, { timeout: 8000 }).catch(() => {});
   check(await page.$eval('.chat-grab-btn[data-card="cardC"]', (b) => b.textContent + ":" + b.disabled) === "Grabbed by dj2:true", "someone else's grab shows who got it");
 
+  console.log("-- reaction picker: disco ball and dancers, fits a phone");
+  const fits = async () => page.evaluate(async () => {
+    const pop = document.getElementById("reactPickerPopover");
+    pop.showPopover();
+    await new Promise((r) => setTimeout(r, 300));
+    const box = pop.querySelector(".reactPicker").getBoundingClientRect();
+    const out = { keys: [...pop.querySelectorAll(".reactPick")].map((b) => b.dataset.key).slice(-3).join(), count: pop.querySelectorAll(".reactPick").length,
+      inside: box.left >= 0 && box.right <= window.innerWidth, w: Math.round(box.width) };
+    pop.hidePopover();
+    return out;
+  });
+  const wide = await fits();
+  await page.setViewportSize({ width: 375, height: 740 });
+  const phone = await fits();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  check(wide.count === 11 && wide.keys === "mirror_ball,man_dancing,woman_dancing", "the picker has 🪩 🕺 💃 (" + JSON.stringify(wide) + ")");
+  check(phone.inside, "the picker fits a 375px phone (" + JSON.stringify(phone) + ")");
+  if (process.env.SHOTS) {
+    for (const [w, name] of [[1280, "wide"], [375, "phone"]]) {
+      await page.setViewportSize({ width: w, height: 740 });
+      await page.evaluate(() => document.getElementById("reactPickerPopover").showPopover());
+      await sleep(400);
+      await page.locator("#reactPickerPopover .reactPicker").screenshot({ path: process.env.SHOTS + "/react-" + name + ".png" });
+      await page.evaluate(() => document.getElementById("reactPickerPopover").hidePopover());
+    }
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));
