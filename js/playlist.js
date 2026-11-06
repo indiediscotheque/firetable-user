@@ -99,7 +99,7 @@ firetable.actions.queueTrack = function (cid, name, type, tobottom, extra) {
  * Reads the new DOM order and pushes it to the server.
  */
 firetable.actions.updateQueue = function () {
-  var arr = $('#mainqueue > div').map(function () {
+  var arr = $('#mainqueue .pvbar:not(.ui-sortable-placeholder)').map(function () {
     return this.id.slice(5);
   }).get();
   // Rows not on screen yet (long lists render in chunks) keep their order
@@ -324,6 +324,19 @@ firetable.actions.filterQueue = function (val, rows) {
   }
   for (i = 0; i < toShow.length; i++) toShow[i].classList.remove("ft-filtered");
   for (i = 0; i < toHide.length; i++) toHide[i].classList.add("ft-filtered");
+
+  // Off-screen blocks are sized from their shown rows; a block with none is hidden
+  var blocks = [];
+  toShow.concat(toHide).forEach(function (r) {
+    var b = r.parentNode;
+    if (b && b.classList.contains("pvchunk") && !b._ftCount) { b._ftCount = true; blocks.push(b); }
+  });
+  blocks.forEach(function (b) {
+    b._ftCount = false;
+    var n = b.querySelectorAll(".pvbar:not(.ft-filtered)").length;
+    b.style.setProperty("--rows", n);
+    b.classList.toggle("ft-filtered", !n);
+  });
 
   var anyRows = container.querySelector(".pvbar") !== null;
   var anyShown = container.querySelector(".pvbar:not(.ft-filtered)") !== null;
@@ -796,12 +809,31 @@ firetable.ui.renderListCount = function (tracks, listID) {
   firetable.ui.renderSwapBar(tracks);
 };
 
+/** Rows per block in the playlist (see .pvchunk in looks.css). */
+firetable.ui.QUEUE_BLOCK = 100;
+
+/**
+ * Wrap queue rows' HTML in one block.
+ * @param {string} rowsHtml - Rows from buildQueueItemHTML
+ * @param {number} count    - How many rows
+ * @returns {string}
+ */
+firetable.ui.queueBlockHTML = function (rowsHtml, count) {
+  return '<div class="pvchunk" style="--rows:' + count + '">' + rowsHtml + '</div>';
+};
+
 firetable.ui.setupPlaylistEvents = function () {
 
   // ── Sortable drag-and-drop queue ──
+  // Rows sit in blocks (.pvchunk), and a row can be dropped into any block.
   $('#mainqueue').sortable({
+    items: '.pvbar',
     start: function (event, ui) {
       ui.item.data('start_pos', ui.item.index());
+      ui.item.parent('.pvchunk').addClass('sort-src');
+    },
+    stop: function () {
+      $('#mainqueue > .pvchunk.sort-src').removeClass('sort-src');
     },
     update: function () {
       firetable.debug && console.log("UPDATE");
@@ -943,6 +975,26 @@ firetable.ui.setupPlaylistEvents = function () {
       }
     });
 
+  // ── Row spacing for off-screen blocks (--q-pitch, see .pvchunk in looks.css) ──
+  // Measured from the list's first row whenever its size changes (density
+  // setting, fonts loading, the tab being shown).
+  var queueEl = document.getElementById('mainqueue');
+  var pitchObserver = typeof ResizeObserver !== 'undefined' && new ResizeObserver(function (entries) {
+    var row = entries[0].target;
+    var h = row.offsetHeight;
+    if (!h || !row.isConnected) return;
+    var cs = getComputedStyle(row);
+    // neighbouring rows' margins collapse into one
+    var pitch = h + Math.max(parseFloat(cs.marginTop) || 0, parseFloat(cs.marginBottom) || 0);
+    queueEl.style.setProperty('--q-pitch', pitch + 'px');
+  });
+  function watchRowPitch() {
+    if (!pitchObserver) return;
+    pitchObserver.disconnect();
+    var first = queueEl.querySelector('.pvbar');
+    if (first) pitchObserver.observe(first);
+  }
+
   // ── Playlist changed: re-render the queue ──
   ftapi.events.on("playlistChanged", function (okdata, listID) {
     firetable.queue = okdata;
@@ -972,12 +1024,18 @@ firetable.ui.setupPlaylistEvents = function () {
     var FIRST = isUpdate ? keys.length : Math.min(30, keys.length);
     var scroller = document.getElementById('queuelist');
     var keepScroll = isUpdate && scroller ? scroller.scrollTop : null;
-    var html = '';
+    var BLOCK = firetable.ui.QUEUE_BLOCK;
+    var html = '', block = '';
     for (var i = 0; i < FIRST; i++) {
       var k = keys[i];
-      html += buildQueueItemHTML(k, okdata[k], k === firetable.preview);
+      block += buildQueueItemHTML(k, okdata[k], k === firetable.preview);
+      if ((i + 1) % BLOCK === 0 || i === FIRST - 1) {
+        html += firetable.ui.queueBlockHTML(block, (i % BLOCK) + 1);
+        block = '';
+      }
     }
     container.innerHTML = html;
+    watchRowPitch();
 
     firetable.actions.filterQueue($('#queueFilter').val() || '');
 
@@ -985,8 +1043,9 @@ firetable.ui.setupPlaylistEvents = function () {
 
     if (keys.length <= FIRST) return;
 
-    // Render remaining items in idle-time batches to keep the first paint fast
-    var CHUNK = 50;
+    // Render remaining items in idle-time batches (one block each) to keep
+    // the first paint fast
+    var CHUNK = BLOCK;
     var idx = FIRST;
     var schedule = window.requestIdleCallback
       ? function (fn) { requestIdleCallback(fn, { timeout: 300 }); }
@@ -1002,8 +1061,8 @@ firetable.ui.setupPlaylistEvents = function () {
         var ck = keys[j];
         chunkHtml += buildQueueItemHTML(ck, okdata[ck], ck === firetable.preview);
       }
-      tmp.innerHTML = chunkHtml;
-      var newRows = Array.prototype.slice.call(tmp.children);
+      tmp.innerHTML = firetable.ui.queueBlockHTML(chunkHtml, end - idx);
+      var newRows = Array.prototype.slice.call(tmp.firstChild.children);
       while (tmp.firstChild) frag.appendChild(tmp.firstChild);
       container.appendChild(frag);
       idx = end;

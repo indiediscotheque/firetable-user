@@ -2761,7 +2761,7 @@ input.ft-filter {
 /* Rows hidden by the playlist and history filters (see filterQueue and
    applyHistoryFilter). A class rather than inline styles, so the whole list
    is restyled in one pass. */
-#mainqueue > .pvbar.ft-filtered,
+#mainqueue .ft-filtered,
 #thehistory .hist-entry.ft-filtered {
     display: none !important;
 }
@@ -2836,16 +2836,33 @@ input.ft-filter {
     padding-right: var(--pad3);
 }
 
-/* Large playlists: let the browser skip layout/paint for rows that are
-   off-screen, so redrawing a 2,000+ track list stays fast. "auto" remembers
-   each row's real height once it has been shown. The drag placeholder and the
-   row being dragged are excluded so drag-to-reorder positions are unchanged.
-   The size is the row's content box (the art: 34px row minus its 1px borders): any
-   other value makes rows that haven't been shown yet the wrong height, so the
-   list jumps when it is redrawn (send to top / bottom). */
-#mainqueue > .pvbar:not(.ui-sortable-placeholder):not(.ui-sortable-helper) {
+/* Large playlists: rows come in blocks of up to 100 (.pvchunk, see
+   playlist.js) and the browser skips layout and paint for blocks that are
+   off-screen, so a list of thousands of tracks stays fast.
+   The skipping is per block, not per row: Chrome checks every skippable
+   element against the screen on each frame, and with one per row a long
+   list kept the page busy on every frame (taps took seconds on phones).
+   An off-screen block that hasn't been shown yet is sized from its shown
+   rows (--rows, kept up to date by filterQueue) times the spacing of a real
+   row (--q-pitch: its height plus one margin, measured in playlist.js since
+   it depends on the density setting), plus one margin for its first row's
+   top. The size has to be exact, or the list jumps when it is redrawn
+   (send to top / bottom). "auto" remembers a block's real height once it
+   has been shown. */
+#mainqueue > .pvchunk {
+    display: flow-root; /* row margins stay inside, the same on- and off-screen */
     content-visibility: auto;
-    contain-intrinsic-size: auto var(--q-art, 2rem); /* the art sets the row height */
+    contain-intrinsic-size: auto calc(var(--rows, 100) * var(--q-pitch, calc(var(--q-art, 2rem) + 2px + var(--pad1))) + var(--pad1));
+}
+/* Pull each block up by one margin, so the gap across a block's edge is the
+   same single margin as between rows inside it. */
+#mainqueue > .pvchunk + .pvchunk {
+    margin-top: calc(-1 * var(--pad1));
+}
+/* The block a row is dragged out of stays drawn, so the row being dragged
+   doesn't vanish when that block scrolls off-screen. */
+#mainqueue > .pvchunk.sort-src {
+    content-visibility: visible;
 }
 
 #queuelist .q-art,
@@ -6072,6 +6089,7 @@ body.density-comfortable #thehistory .histlink { font-size: 1rem; }
 }
 .inboxBox { width: min(22rem, 92vw); max-height: 70vh; overflow: auto; }
 .inboxHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--pad2); }
+.inboxHeadActions { display: flex; align-items: center; gap: var(--pad2); }
 .inboxEmpty { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); }
 .inboxItem {
     display: flex;

@@ -607,9 +607,7 @@ firetable.utilities = {
       } else if (element.hasClass("chatName")) {
         nameToAt = $(this).text();
       }
-      $("#newchat").val(function (i, val) {
-        return val + "@" + nameToAt + " ";
-      }).focus();
+      firetable.ui.mentionInChat(nameToAt);
     });
   },
 

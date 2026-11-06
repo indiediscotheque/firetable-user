@@ -20,29 +20,39 @@
 firetable.ui.positionPopover = function (anchorEl, floatingEl, arrowEl, preferredPlacement) {
   var ARROW_SIZE = 8; // px — must match .ft-arrow width/height in CSS
 
+  // Callers hide the popover until it's placed; if placing fails, show it
+  // where it is rather than leave an invisible popover over the page.
+  var reveal = function () { floatingEl.style.visibility = 'visible'; };
+
   // Reset to known origin before computePosition measures the element
   floatingEl.style.top  = '0';
   floatingEl.style.left = '0';
 
-  // When a preferred placement is given, use flip() to respect it but fall
-  // back to the opposite side if there's no space.
-  // Otherwise use autoPlacement() to always pick the side with most space.
-  var options = {
-    strategy: 'fixed',
-    middleware: [
-      FloatingUIDOM.offset(ARROW_SIZE),
-      preferredPlacement
-        ? FloatingUIDOM.flip()
-        : FloatingUIDOM.autoPlacement({ padding: 8 }),
-      FloatingUIDOM.shift({ padding: 8 }),
-      arrowEl ? FloatingUIDOM.arrow({ element: arrowEl, padding: 8 }) : null
-    ]
-  };
-  if (preferredPlacement) {
-    options.placement = preferredPlacement;
+  try {
+    // When a preferred placement is given, use flip() to respect it but fall
+    // back to the opposite side if there's no space.
+    // Otherwise use autoPlacement() to always pick the side with most space.
+    var options = {
+      strategy: 'fixed',
+      middleware: [
+        FloatingUIDOM.offset(ARROW_SIZE),
+        preferredPlacement
+          ? FloatingUIDOM.flip()
+          : FloatingUIDOM.autoPlacement({ padding: 8 }),
+        FloatingUIDOM.shift({ padding: 8 }),
+        arrowEl ? FloatingUIDOM.arrow({ element: arrowEl, padding: 8 }) : null
+      ]
+    };
+    if (preferredPlacement) {
+      options.placement = preferredPlacement;
+    }
+    return FloatingUIDOM.computePosition(anchorEl, floatingEl, options).then(place).catch(reveal);
+  } catch (e) {
+    reveal();
+    return Promise.resolve();
   }
 
-  return FloatingUIDOM.computePosition(anchorEl, floatingEl, options).then(function (pos) {
+  function place(pos) {
     floatingEl.style.left = pos.x + 'px';
     floatingEl.style.top  = pos.y + 'px';
 
@@ -60,8 +70,8 @@ firetable.ui.positionPopover = function (anchorEl, floatingEl, arrowEl, preferre
       });
     }
 
-    floatingEl.style.visibility = 'visible';
-  });
+    reveal();
+  }
 };
 
 /**
@@ -1255,8 +1265,8 @@ firetable.ui.tooltip = (function () {
         var uid = $userTip.attr('data-for');
         var userData = uid && ftapi.users && ftapi.users[uid];
         if (!userData || !userData.username) return;
-        $('#newchat').val(function (i, val) { return val + '@' + userData.username + ' '; }).focus();
         userTipEl.hidePopover();
+        firetable.ui.mentionInChat(userData.username);
       })
       .on('click', '[data-action="add-to-deck"]', function () {
         if ($(this).hasClass('is-disabled')) return;

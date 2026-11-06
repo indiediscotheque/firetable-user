@@ -369,6 +369,35 @@ firetable.actions.unwatchInbox = function () {
   firetable.ui.renderInbox();
 };
 
+/** Mark every mention in the inbox read (opening the inbox reads them). */
+firetable.actions.markInboxRead = function () {
+  if (!ftapi.uid) return;
+  var updates = {};
+  firetable.inbox.items.forEach(function (m) { if (!m.read) updates[m.id + "/read"] = true; });
+  if (Object.keys(updates).length) ftapi.db().ref("mentions/" + ftapi.uid).update(updates).catch(function () {});
+};
+
+/**
+ * Add "@name " to the chat box and put the cursor after it. On phones the
+ * chat can be on another tab (People, Playlists): switch to it, then focus
+ * once it has faded in, since a hidden box can't take focus.
+ * @param {string} name - Username to mention
+ */
+firetable.ui.mentionInChat = function (name) {
+  var el = document.getElementById("newchat");
+  if (!name || !el || el.disabled) return;
+  var v = el.value;
+  el.value = (v && !/\s$/.test(v) ? v + " " : v) + "@" + name + " ";
+  $(el).trigger("input");
+  var focus = function () {
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  };
+  if ($("#actualChat").is(":visible")) return focus();
+  firetable.nav.setMobileTab("mmchat");
+  setTimeout(focus, firetable.nav._fadeMs * 2 + 50);
+};
+
 firetable.ui.renderInbox = function () {
   var items = firetable.inbox.items || [];
   var unread = items.filter(function (m) { return !m.read; }).length;
@@ -401,6 +430,8 @@ firetable.ui.renderInbox = function () {
     $list.append($row);
   });
   if (typeof twemoji !== "undefined") twemoji.parse($list[0]);
+  // new mentions that arrive while you're reading the inbox are read too
+  if (unread && document.getElementById("inboxPopover").matches(":popover-open")) firetable.actions.markInboxRead();
 };
 
 // ─── Text Processing Helpers ─────────────────────────────────────────────────
@@ -1054,22 +1085,25 @@ firetable.ui.setupChatEvents = function () {
   ftapi.events.on('loggedOut', firetable.actions.unwatchInbox);
   ftapi.events.on('loggedIn', firetable.actions.watchNotices);
   ftapi.events.on('loggedOut', firetable.actions.unwatchNotices);
-  firetable.ui.openInbox = function () {
-    if (!ftapi.uid) return;
-    if (!inboxPop.matches(':popover-open')) {
-      inboxPop.style.visibility = 'hidden';
-      inboxPop.showPopover();
-      firetable.ui.positionPopover(document.getElementById('inboxTrigger'), inboxPop, document.getElementById('inboxArrow'), 'bottom');
-    }
-    // opening the inbox reads everything in it
-    var updates = {};
-    firetable.inbox.items.forEach(function (m) { if (!m.read) updates[m.id + '/read'] = true; });
-    if (Object.keys(updates).length) ftapi.db().ref('mentions/' + ftapi.uid).update(updates).catch(function () {});
-  };
-  $('#inboxTrigger').on('click', function () {
-    if (inboxPop.matches(':popover-open')) { inboxPop.hidePopover(); return; }
-    firetable.ui.openInbox();
+  var inboxTrigger = document.getElementById('inboxTrigger');
+  // The @ button opens and closes the inbox natively (popovertarget). A click
+  // handler that reopened it fought the popover's own tap-outside close, so
+  // tapping @ again could never shut it (it closed, then reopened at once).
+  inboxPop.addEventListener('beforetoggle', function (e) {
+    if (e.newState !== 'open') return;
+    if (!ftapi.uid) { e.preventDefault(); return; }
+    inboxPop.style.visibility = 'hidden'; // until it's placed under the @
   });
+  inboxPop.addEventListener('toggle', function (e) {
+    var open = e.newState === 'open';
+    inboxTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open) return;
+    firetable.ui.positionPopover(inboxTrigger, inboxPop, document.getElementById('inboxArrow'), 'bottom');
+    firetable.actions.markInboxRead();
+  });
+  firetable.ui.openInbox = function () {
+    if (ftapi.uid && !inboxPop.matches(':popover-open')) inboxPop.showPopover();
+  };
   // A tapped push notification opens the app at #mentions: show the inbox
   // once signed in (and its mentions have loaded), then drop the #.
   // A card notice opens it at #cards: show the card case.
@@ -1089,9 +1123,7 @@ firetable.ui.setupChatEvents = function () {
     var id = $(this).closest('.inboxItem').attr('data-id');
     var m = firetable.inbox.items.filter(function (x) { return x.id === id; })[0];
     inboxPop.hidePopover();
-    if (!m) return;
-    if (!window.matchMedia('(min-width: 640px)').matches) firetable.nav.setMobileTab('mmchat');
-    $('#newchat').val(function (i, v) { return (v ? v.replace(/\s*$/, ' ') : '') + '@' + m.from + ' '; }).trigger('input').focus();
+    if (m) firetable.ui.mentionInChat(m.from);
   }).on('click', '.inboxDelete', function () {
     ftapi.db().ref('mentions/' + ftapi.uid + '/' + $(this).closest('.inboxItem').attr('data-id')).remove().catch(function () {});
   });
