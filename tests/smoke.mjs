@@ -131,6 +131,18 @@ try {
   // received and read the push; it messages open windows as it shows one)
   check(!!reg && got === '{"type":"push","kind":"mention","id":"c1"}', "the service worker receives a pushed mention" + (got ? "" : " (nothing arrived)"));
 
+  console.log("-- on deck: the tab holds a Web Lock so it isn't frozen while idle");
+  const lockHeld = () => page.evaluate(() => navigator.locks.query().then((q) => q.held.some((l) => l.name === "firetable-on-deck")));
+  const realUid = await page.evaluate(() => ftapi.uid);
+  await page.evaluate(() => { ftapi.uid = "smokeDJ"; });
+  await put("/table", [{ name: "dj1", id: "dj1", plays: 1 }, { name: "smokeDJ", id: "smokeDJ", plays: 0 }]);
+  await page.waitForFunction(() => navigator.locks.query().then((q) => q.held.length > 0), null, { timeout: 10000 }).catch(() => {});
+  check(await lockHeld(), "held while on deck");
+  await put("/table", [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }]);
+  await sleep(500);
+  check(!(await lockHeld()), "let go after stepping down");
+  await page.evaluate((uid) => { ftapi.uid = uid; ftapi.keepAwake.update(); }, realUid);
+
   console.log("-- \"Get the app\" guide");
   const guide = await page.evaluate(() => {
     firetable.install.open();
