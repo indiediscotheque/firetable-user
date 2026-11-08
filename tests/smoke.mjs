@@ -92,7 +92,11 @@ try {
     return document.getElementById("npBpm").textContent + (sep === "none" ? "" : sep) + count.textContent;
   }).catch(() => "");
   check(stats === "111 BPM, 67 plays", "\"111 BPM, 67 plays\" (" + JSON.stringify(stats) + ")");
-  check(await page.evaluate(() => document.body.classList.contains("has-beat")), "the stage bops to it");
+  const bob = await page.evaluate(() => ({ on: document.body.classList.contains("has-beat"),
+    bop: getComputedStyle(document.documentElement).getPropertyValue("--bop").trim(),
+    dur: (document.querySelector(".avtr.animate") && getComputedStyle(document.querySelector(".avtr.animate")).animationDuration) || "" }));
+  // 111.3 BPM: a beat is 0.539 s, so one bob (two beats) takes 1.078 s
+  check(bob.on && bob.bop === "1.0782s" && (!bob.dur || bob.dur === "1.0782s"), "the DJ bobs at half the tempo, one bob every two beats (" + JSON.stringify(bob) + ")");
   if (process.env.SHOTS) await page.locator("#nowplaying").screenshot({ path: process.env.SHOTS + "/nowplaying-bpm.png" });
   await put("/songBpm", null);
   await page.waitForFunction(() => document.getElementById("npBpm").hidden, null, { timeout: 10000 }).catch(() => {});
