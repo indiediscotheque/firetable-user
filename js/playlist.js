@@ -705,15 +705,12 @@ firetable.actions.editTagsPrompt = function (songid, tag, anchorEl) {
   if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
   firetable.tagEditNowPlaying = null;
   $('.pvbar.editing').removeClass('editing');
-  var $pvbar = $('.pvbar[data-key="' + songid + '"]').first();
+  // anchorEl's own row first: the same track can be in Recent more than once
+  var $pvbar = anchorEl ? $(anchorEl).closest('.pvbar') : $();
+  if (!$pvbar.length) $pvbar = $('.pvbar[data-key="' + songid + '"]').first();
   $pvbar.addClass('editing');
   firetable.editingPvbar = $pvbar;
-  $(popoverEl).find('.tagMachine').val(tag);
-  popoverEl.style.visibility = 'hidden';
-  popoverEl.showPopover();
-  firetable.ui.positionPopover(anchorEl || $pvbar.find('.edittags')[0], popoverEl, document.getElementById('tagEditorArrow'), 'bottom').then(function () {
-    $(popoverEl).find('.tagMachine')[0].focus();
-  });
+  firetable.ui.openTagEditor(anchorEl || $pvbar.find('.edittags')[0], tag, 'bottom');
   firetable.debug && console.log('edit tags song id:', songid);
 };
 
@@ -1324,47 +1321,72 @@ firetable.ui.setupPlaylistEvents = function () {
       }
     });
 
-  // ── Tag editing (Enter in .tagMachine) ──
-  $(document).on("keyup", ".tagMachine", function (e) {
-    if (e.which !== 13) return;
+  // ── Tag editing: Save (or Enter / the keyboard's Done key) in the editor ──
+  /** Tag from the editor, or null (with a hint) when it isn't "Artist - Song Title". */
+  function readTag(input) {
+    var tag = String(input.value || "").replace(/\s+/g, " ").trim();
+    var sep = tag.indexOf(" - ");
+    var ok = sep > 0 && tag.slice(sep + 3).trim().length > 0;
+    input.toggleAttribute("aria-invalid", !ok);
+    if (!ok) {
+      firetable.ui.toast("Check yr tags: use Artist - Song Title.", "error");
+      input.focus();
+      return null;
+    }
+    return tag;
+  }
+
+  $(document).on("submit", "#tagEditorForm", function (e) {
+    e.preventDefault();
+    var popoverEl = document.getElementById('tagEditorPopover');
+    var input = this.querySelector(".tagMachine");
+    var tag = readTag(input);
+    if (!tag) return;
     var np = firetable.tagEditNowPlaying;
     if (np) {
-      var tag = String($(this).val() || "").trim();
-      if (tag.indexOf(" - ") < 1 || tag.indexOf(" - ") > tag.length - 4) {
-        firetable.ui.toast("Check yr tags: use Artist - Song Title.", "error");
-        return;
-      }
       if (firetable.song && String(firetable.song.cid) === String(np.cid)) {
         ftapi.actions.sendBotCommand("!fixtags " + tag);
         firetable.ui.toast("Tags sent: " + tag, "success");
       } else {
         firetable.ui.toast("That song has ended. Fix it from Recent instead.", "error");
       }
-      document.getElementById('tagEditorPopover').hidePopover();
+      popoverEl.hidePopover();
       return;
     }
     var $pvbar = firetable.editingPvbar;
-    if (!$pvbar || !$pvbar.length) return;
-    var val = $(this).val();
-    if (!val) return;
-    var yargo = val.split(" - ");
-    if (!yargo[0] || !yargo[1]) {
-      firetable.ui.toast("Check yr tags: use Artist - Song Title.", "error");
-    } else {
+    if (!$pvbar || !$pvbar.length) { popoverEl.hidePopover(); return; }
+    if (tag !== $pvbar.attr('data-tag')) {
       ftapi.actions.editTag(
         $pvbar.attr('data-type'),
         $pvbar.attr('data-cid'),
-        val,
+        tag,
         $pvbar.attr('data-histid'),
         $pvbar.attr('data-list'),
         function (error) {
           if (error) firetable.ui.toast("Couldn't save those tags. Please try again.", "error");
         }
       );
-      $pvbar.attr('data-tag', val);
-      document.getElementById('tagEditorPopover').hidePopover();
+      $pvbar.attr('data-tag', tag);
     }
+    popoverEl.hidePopover();
   });
+
+  $(document)
+    .on("input", "#tagEditorForm .tagMachine", function () {
+      this.removeAttribute("aria-invalid");
+    })
+    .on("click", "#tagEditorForm .tagCancel", function () {
+      document.getElementById('tagEditorPopover').hidePopover();
+    })
+    // "Song Title - Artist" (how many uploads are named) → "Artist - Song Title"
+    .on("click", "#tagEditorForm .tagSwap", function () {
+      var input = document.getElementById("tagMachine");
+      var tag = String(input.value || "");
+      var sep = tag.indexOf(" - ");
+      if (sep > 0) input.value = tag.slice(sep + 3).trim() + " - " + tag.slice(0, sep).trim();
+      input.removeAttribute("aria-invalid");
+      input.focus();
+    });
 
   // ── Tag editor popover cleanup on auto-dismiss ──
   document.getElementById('tagEditorPopover').addEventListener('toggle', function (e) {

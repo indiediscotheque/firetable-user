@@ -328,6 +328,88 @@ try {
     await page.setViewportSize({ width: 1280, height: 720 });
   }
 
+  console.log("-- Recent on a phone (mods): ⋮ menu, and the tag editor sits clear of the keyboard");
+  await page.setViewportSize({ width: 390, height: 740 });
+  const recent = await page.evaluate(async () => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login");
+    $("body").addClass("is-mod");
+    firetable.nav.view = "history";
+    firetable.nav.mobileSection = "view";
+    firetable.nav.apply();
+    const t = Date.now();
+    [["Mesh", "Exile"], ["Justice", "One Night/All Night feat. Tame Impala"], ["Satin Jackets", "Why Change the World feat. Small Black"]].forEach(([artist, title], i) =>
+      ftapi.events.emit("newHistory", { histID: "smh" + i, cid: "smcid" + i, type: 1, artist, title, dj: "dj1", djid: "dj1",
+        when: t - (3 - i) * 60000, img: "img/idlogo.png", url: "https://www.youtube.com/watch?v=smcid" + i }));
+    await new Promise((r) => setTimeout(r, 300));
+    const row = document.querySelector('#thehistory .pvbar[data-histid="smh0"]');
+    const shown = (sel) => getComputedStyle(row.querySelector(sel)).display !== "none";
+    const out = { more: shown(".row-more"), add: shown(".histeal"), edit: shown(".edittags"), flag: shown(".flagplay"), open: shown(".tracklink-btn"),
+      titleW: Math.round(row.querySelector(".histlink").getBoundingClientRect().width),
+      title: row.querySelector(".hist-track-title").textContent, artist: row.querySelector(".hist-track-artist").textContent };
+    row.querySelector(".row-more").click();
+    await new Promise((r) => setTimeout(r, 200));
+    out.menu = document.getElementById("histMenuPopover").matches(":popover-open");
+    document.querySelector('#histMenuPopover [data-act="tags"]').click();
+    await new Promise((r) => setTimeout(r, 200));
+    const pop = document.getElementById("tagEditorPopover"), input = document.getElementById("tagMachine");
+    const box = pop.getBoundingClientRect();
+    out.sheet = pop.matches(":popover-open") && pop.classList.contains("ft-sheet");
+    out.top = Math.round(box.top); out.inside = box.left >= 0 && box.right <= window.innerWidth;
+    out.focused = document.activeElement === input; out.value = input.value;
+    out.editing = row.classList.contains("editing");
+    return out;
+  });
+  check(recent.more && recent.add && !recent.edit && !recent.flag && !recent.open, "narrow rows show Add + ⋮; Open, Edit tags and Flag move into the menu (" + JSON.stringify(recent) + ")");
+  check(recent.title === "Exile" && recent.artist === "Mesh" && recent.titleW > 150, "the title gets the room: title over artist, " + recent.titleW + "px wide");
+  check(recent.menu && recent.sheet && recent.top <= 16 && recent.inside && recent.focused && recent.value === "Mesh - Exile" && recent.editing,
+    "Edit tags opens a focused sheet at the top of the screen, above where the keyboard opens");
+  if (process.env.SHOTS) await page.screenshot({ path: process.env.SHOTS + "/recent-tag-sheet.png" });
+  const saved = await page.evaluate(async () => {
+    const calls = [];
+    const editTag = ftapi.actions.editTag;
+    ftapi.actions.editTag = (...a) => { calls.push(a.slice(0, 5).join("|")); };
+    const input = document.getElementById("tagMachine");
+    input.value = "Exile (Live) - Mesh";
+    document.querySelector("#tagEditorForm .tagSwap").click();
+    const swapped = input.value;
+    document.querySelector("#tagEditorForm .tagSave").click();
+    await new Promise((r) => setTimeout(r, 200));
+    ftapi.actions.editTag = editTag;
+    return { swapped, calls: calls.join(), open: document.getElementById("tagEditorPopover").matches(":popover-open") };
+  });
+  check(saved.swapped === "Mesh - Exile (Live)", "Swap turns \"Title - Artist\" around (" + saved.swapped + ")");
+  check(saved.calls === "1|smcid0|Mesh - Exile (Live)|smh0|songHistory" && !saved.open, "Save writes the tag for that play (" + JSON.stringify(saved) + ")");
+  const typed = await page.evaluate(async () => {
+    const calls = [];
+    const editTag = ftapi.actions.editTag;
+    ftapi.actions.editTag = (...a) => { calls.push(a.slice(1, 3).join("|")); };
+    firetable.actions.editTagsPrompt("ytcidsmcid1", "Justice - One Night", document.querySelector('#thehistory .pvbar[data-histid="smh1"] .row-more'));
+    const input = document.getElementById("tagMachine");
+    input.value = "no separator";
+    input.form.requestSubmit();
+    const invalid = input.hasAttribute("aria-invalid") && document.getElementById("tagEditorPopover").matches(":popover-open");
+    input.value = "Justice - One Night/All Night";
+    input.form.requestSubmit();
+    ftapi.actions.editTag = editTag;
+    return { invalid, calls: calls.join(), closed: !document.getElementById("tagEditorPopover").matches(":popover-open") };
+  });
+  check(typed.invalid && typed.calls === "smcid1|Justice - One Night/All Night" && typed.closed, "Enter saves; a tag without \" - \" is flagged and not saved (" + JSON.stringify(typed) + ")");
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const desk = await page.evaluate(async () => {
+    const row = document.querySelector('#thehistory .pvbar[data-histid="smh0"]');
+    const shown = (sel) => getComputedStyle(row.querySelector(sel)).display !== "none";
+    row.querySelector(".edittags").click();
+    await new Promise((r) => setTimeout(r, 300));
+    const pop = document.getElementById("tagEditorPopover");
+    const b = pop.getBoundingClientRect(), a = row.querySelector(".edittags").getBoundingClientRect();
+    return { icons: shown(".tracklink-btn") && shown(".edittags") && shown(".flagplay") && !shown(".row-more"),
+      sheet: pop.classList.contains("ft-sheet"), beside: b.top >= a.bottom || b.bottom <= a.top, focused: document.activeElement.id === "tagMachine" };
+  });
+  if (process.env.SHOTS) await page.screenshot({ path: process.env.SHOTS + "/recent-tag-popover.png" });
+  check(desk.icons && !desk.sheet && desk.beside && desk.focused, "wide screens keep every button on the row and the editor beside its button (" + JSON.stringify(desk) + ")");
+  await page.evaluate(() => { document.getElementById("tagEditorPopover").hidePopover(); $("body").removeClass("is-mod"); firetable.$appShell = $("#appShell").detach(); });
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));
