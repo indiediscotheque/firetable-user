@@ -6,9 +6,9 @@
 	<title>firetable</title>
 	<meta name="description" content="Collaborative radio." />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-	<script src="js/viewport.js?v=01.12.07"></script>
+	<script src="js/viewport.js?v=01.12.08"></script>
 	<meta name="theme-color" content="#181818" />
-	<link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=01.12.07" />
+	<link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=01.12.08" />
 	<!-- Installable web app (Add to Home Screen / Install app) -->
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
@@ -17,10 +17,10 @@
 	<meta name="apple-mobile-web-app-title" content="Indie Disco" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 	<!-- Icons are a font: fetch it right away, not after the stylesheet is read -->
-	<link rel="preload" href="fonts/material-symbols-outlined.woff2?v=01.12.07" as="font" type="font/woff2" crossorigin />
-	<link rel="stylesheet" href="css/reset.css?v=01.12.07" type="text/css" />
-	<link rel="stylesheet" href="css/fonts-local.css?v=01.12.07" type="text/css" />
-	<link rel="stylesheet" href="css/looks.css?v=01.12.07" type="text/css" />
+	<link rel="preload" href="fonts/material-symbols-outlined.woff2?v=01.12.08" as="font" type="font/woff2" crossorigin />
+	<link rel="stylesheet" href="css/reset.css?v=01.12.08" type="text/css" />
+	<link rel="stylesheet" href="css/fonts-local.css?v=01.12.08" type="text/css" />
+	<link rel="stylesheet" href="css/looks.css?v=01.12.08" type="text/css" />
 </head>
 
 <body>
@@ -460,11 +460,12 @@
 						<button type="button" class="material-symbols-filled previewicon" title="Preview" aria-label="Preview">&#xE037;</button>
 					</div>
 					<span class="ft-avatar pv-dj-avatar dj-avatar-tip" role="img"></span>
-					<div class="listwords"><div class="histlink"></div></div>
+					<div class="listwords"><div class="histlink"><span class="hist-track-title"></span><span class="hist-track-artist"></span></div></div>
 					<a class="row-icon tracklink-btn" target="_blank" rel="noopener" href="" title="Open track" aria-label="Open track"></a>
 					<button type="button" class="histeal material-symbols-outlined row-icon" title="Add to playlist" aria-label="Add to playlist">&#xE03B;</button>
 					<button type="button" class="material-symbols-outlined row-icon edittags" title="Edit tags" aria-label="Edit tags">edit</button>
 					<button type="button" class="material-symbols-outlined row-icon flagplay" title="Flag track" aria-label="Flag this track in the DJ's playlists" aria-haspopup="menu">flag</button>
+					<button type="button" class="material-symbols-outlined row-icon row-more" title="More" aria-label="More options for this play" aria-haspopup="menu" aria-expanded="false">more_vert</button>
 				</div>
 				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:15rem"></div></div>
 				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:50%"></div><div class="skel" style="height:0.75rem;flex:1;max-width:11rem"></div></div>
@@ -880,18 +881,25 @@
 		</div>
 	</div>
 
-	<div id="tagEditorPopover" popover="auto" class="ft-popover">
+	<div id="tagEditorPopover" popover="auto" class="ft-popover" aria-labelledby="tagEditorLabel">
 		<div id="tagEditorArrow" class="ft-arrow"></div>
-		<div class="ft-popover-box tagPromptBox">
-			<input type="text" placeholder="Artist - Song Title" class="tagMachine" enterkeyhint="done" />
-			<small><i>Edit the song tag + hit enter to save</i></small><br />
-			<br />
-			<b>Rohn Standard Notation</b><br />
-			Standard: <i>Artist - Song Title</i><br />
-			Remix: <i>Artist - Song Title (Remixartist Remix)</i><br />
-			Featuring: <i>Artist - Song Title feat. Subartist</i><br />
-			Featuring + Remix: <i>Artist - Song Title feat. Subartist (Remixartist Remix)</i>
-		</div>
+		<form id="tagEditorForm" class="ft-popover-box tagPromptBox" novalidate>
+			<label id="tagEditorLabel" class="tagPromptLabel" for="tagMachine">Edit tags</label>
+			<input type="text" id="tagMachine" placeholder="Artist - Song Title" class="tagMachine" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="tagEditorHelp" />
+			<div class="tagPromptActions">
+				<button type="button" class="butt graybutt small tagSwap" title="Swap artist and title" aria-label="Swap artist and title"><i class="material-symbols-outlined" aria-hidden="true">swap_horiz</i> Swap</button>
+				<span class="tagPromptSpacer"></span>
+				<button type="button" class="butt graybutt small tagCancel">Cancel</button>
+				<button type="submit" class="butt small tagSave">Save</button>
+			</div>
+			<div id="tagEditorHelp" class="tagPromptHelp">
+				<b>Rohn Standard Notation</b><br />
+				Standard: <i>Artist - Song Title</i><br />
+				Remix: <i>Artist - Song Title (Remixartist Remix)</i><br />
+				Featuring: <i>Artist - Song Title feat. Subartist</i><br />
+				Featuring + Remix: <i>Artist - Song Title feat. Subartist (Remixartist Remix)</i>
+			</div>
+		</form>
 	</div>
 
 	<div id="deleteSongPopover" popover="auto" class="ft-popover">
@@ -957,6 +965,16 @@
 			<button type="button" role="menuitem" class="butt graybutt" data-act="add"><i class="material-symbols-outlined">playlist_add</i> Add to playlist</button>
 			<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><span class="ft-menu-open-logo" aria-hidden="true"></span> <span class="ft-menu-open-label">Open track</span></a>
 			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete</button>
+		</div>
+	</div>
+
+	<!-- Narrow Recent rows (mods): the actions that don't fit -->
+	<div id="histMenuPopover" popover="auto" class="ft-popover">
+		<div id="histMenuArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu" role="menu" aria-label="Play options">
+			<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><span class="ft-menu-open-logo" aria-hidden="true"></span> <span class="ft-menu-open-label">Open track</span></a>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="tags"><i class="material-symbols-outlined">edit</i> Edit tags</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="flag" aria-haspopup="menu"><i class="material-symbols-outlined">flag</i> Flag…</button>
 		</div>
 	</div>
 
@@ -1037,7 +1055,7 @@
 	<!-- Third-party libraries: exact versions, verified with Subresource Integrity -->
 	<script src="https://cdn.jsdelivr.net/npm/@floating-ui/core@1.8.0/dist/floating-ui.core.umd.min.js" integrity="sha384-HNCdK6HYLs4EKIDg2Ml3NdfNMVD/LcFbGXnagRABpWmpJjiEuhrtSIckScRnqDOD" crossorigin="anonymous"></script>
 	<script src="https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.8.0/dist/floating-ui.dom.umd.min.js" integrity="sha384-h02fHnOrZRtL8NvKyMkr2vfTxUr0lTnQdZexzrbPfME4nd74qGfOZ97tbiroJo1Y" crossorigin="anonymous"></script>
-	<script src="js/twemoji.js?v=01.12.07"></script>
+	<script src="js/twemoji.js?v=01.12.08"></script>
 	<script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js" integrity="sha384-TlPrn6ucRHEvycwgV0QgSFXJhJyUwaN4N9iqLak1MWy0/G1VhVwgttErzSlUDfa2" crossorigin="anonymous"></script>
 	<script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-auth-compat.js" integrity="sha384-VRJm5/qS935RWeVBR4A4ZoWzrWZpqPmTgnvM/z2R4A1+mlGxWYVjjlE5ZWXZE2un" crossorigin="anonymous"></script>
 	<script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-database-compat.js" integrity="sha384-LXlcKfZa4dKRGTde8HcsjmxloF7wRHDvUWCV/UFqEsccZaCsOue3gUiDYzknmbW+" crossorigin="anonymous"></script>
@@ -1046,35 +1064,35 @@
 	<script src="js/idle.min.js"></script>
 	<script src="https://w.soundcloud.com/player/api.js"></script>
 	<script src="https://www.youtube.com/iframe_api"></script>
-	<script src="js/storage.js?v=01.12.07"></script>
-	<script type="text/javascript" src="config.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/firetable.js?v=01.12.07"></script>
+	<script src="js/storage.js?v=01.12.08"></script>
+	<script type="text/javascript" src="config.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/firetable.js?v=01.12.08"></script>
 	<script src="js/linkify.min.js"></script>
 	<script src="js/linkify-string.min.js"></script>
 
 	<!-- Application modules (order matters — each builds on the previous) -->
-	<script type="text/javascript" src="js/seasons.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/constants.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/state.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/lazy.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/fire.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/helpers.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/emoji.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/lastfm.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/player.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/cards.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/chat.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/install.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/push.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/search.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/playlist.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/playlists.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/users.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/room.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/ui.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/glitch.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/snow.js?v=01.12.07"></script>
-	<script type="text/javascript" src="js/init.js?v=01.12.07"></script>
+	<script type="text/javascript" src="js/seasons.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/constants.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/state.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/lazy.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/fire.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/helpers.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/emoji.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/lastfm.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/player.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/cards.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/chat.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/install.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/push.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/search.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/playlist.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/playlists.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/users.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/room.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/ui.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/glitch.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/snow.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/init.js?v=01.12.08"></script>
 
 	<div class="notice" role="alert">
 		<p>Your account has been suspended due to a perceived violation of our <a href="terms">Terms of Service</a>.</p>

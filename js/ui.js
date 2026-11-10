@@ -75,6 +75,69 @@ firetable.ui.positionPopover = function (anchorEl, floatingEl, arrowEl, preferre
 };
 
 /**
+ * Open the tag editor (#tagEditorPopover) with a tag filled in.
+ *
+ * Mouse screens: a popover next to the button that opened it. Touch screens
+ * and phones: a sheet along the top of the visible area, so the on-screen
+ * keyboard can't cover it, kept in place while the keyboard opens or the page
+ * scrolls. The field is focused straight away (not after positioning) so iOS
+ * opens the keyboard.
+ *
+ * @param {Element} anchorEl          - Button that opened it
+ * @param {string}  tag               - "Artist - Song Title" to edit
+ * @param {string}  [placement]       - Preferred side for the popover
+ */
+firetable.ui.openTagEditor = (function () {
+  var SHEET_GAP = 8; // px from the edges of the visible area
+  var sheetQuery = window.matchMedia("(max-width: 639px), (pointer: coarse)");
+  var vv = window.visualViewport;
+  var el = null;
+
+  function placeSheet() {
+    if (!el || !el.classList.contains("ft-sheet") || !el.matches(":popover-open")) return;
+    var top = vv ? vv.offsetTop : 0;
+    var height = vv ? vv.height : window.innerHeight;
+    el.style.top = (top + SHEET_GAP) + "px";
+    el.style.maxHeight = Math.max(120, height - SHEET_GAP * 2) + "px";
+  }
+  if (vv) {
+    vv.addEventListener("resize", placeSheet);
+    vv.addEventListener("scroll", placeSheet);
+  }
+  window.addEventListener("resize", placeSheet);
+
+  function focusField(input) {
+    try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+    var end = input.value.length;
+    try { input.setSelectionRange(end, end); } catch (e) { /* not a text field */ }
+  }
+
+  return function (anchorEl, tag, placement) {
+    el = document.getElementById("tagEditorPopover");
+    var input = el.querySelector(".tagMachine");
+    if (el.matches(":popover-open")) el.hidePopover();
+    input.value = tag || "";
+    input.removeAttribute("aria-invalid");
+    var sheet = sheetQuery.matches;
+    el.classList.toggle("ft-sheet", sheet);
+    el.style.maxHeight = "";
+    if (sheet) {
+      el.style.left = "";
+      el.style.visibility = "visible";
+      el.showPopover();
+      placeSheet();
+      focusField(input);
+      return;
+    }
+    el.style.visibility = "hidden";
+    el.showPopover();
+    firetable.ui.positionPopover(anchorEl, el, document.getElementById("tagEditorArrow"), placement).then(function () {
+      focusField(input);
+    });
+  };
+})();
+
+/**
  * Hide player/preview controls (when media playback is disabled).
  */
 firetable.ui.hidePlayerControls = function () {
@@ -1349,6 +1412,7 @@ firetable.ui.keepFocusedFieldVisible = function () {
   var reveal = function () {
     var el = document.activeElement;
     if (!isField(el)) return;
+    if (el.closest(".ft-sheet")) return; // sheets keep themselves in view
     var r = el.getBoundingClientRect();
     var top = vv ? vv.offsetTop : 0;
     var bottom = top + (vv ? vv.height : window.innerHeight);

@@ -7,7 +7,7 @@
     font-style: normal;
     font-weight: 100 700;
     font-display: block;
-    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.07') format('woff2'); /* keep ?v= in step with index.html */
+    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.08') format('woff2'); /* keep ?v= in step with index.html */
 }
 
 /* ============================================
@@ -3197,7 +3197,62 @@ a.importLinkCheck {
 }
 
 .tagPromptBox {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pad2);
+    width: min(26rem, calc(100vw - 1rem));
+    box-sizing: border-box;
     font-size: 0.875rem;
+}
+
+.tagPromptLabel {
+    font-weight: 700;
+    color: var(--color-text-light);
+}
+
+.tagPromptActions {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+
+    .tagPromptSpacer { flex: 1; }
+    .tagSwap { display: inline-flex; align-items: center; gap: 0.25em; }
+    .tagSwap i { font-size: 1.25em; line-height: 1; }
+}
+
+.tagPromptHelp {
+    color: var(--color-text-subtle);
+    line-height: 1.5;
+}
+
+/* Touch screens and phones: the tag editor is a sheet along the top of the
+   visible area (placed by firetable.ui.openTagEditor), clear of the keyboard */
+[popover].ft-popover.ft-sheet {
+    left: 50%;
+    translate: -50% 0;
+    width: min(32rem, calc(100% - 1rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: var(--radius-md);
+    box-shadow: 0 0.5rem 2rem -0.5rem black;
+
+    .ft-arrow { display: none; }
+    .tagPromptBox { width: auto; }
+    input.tagMachine { font-size: 1rem; } /* 16px+: iOS doesn't zoom in */
+    .butt { min-height: var(--tap-min); }
+
+    &::backdrop { background-color: rgba(0, 0, 0, 0.55); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    [popover].ft-popover.ft-sheet {
+        transition: opacity 0.15s, transform 0.15s;
+
+        @starting-style {
+            opacity: 0;
+            transform: translateY(-0.5rem);
+        }
+    }
 }
 
 .closeeditor {
@@ -3206,7 +3261,13 @@ a.importLinkCheck {
 
 .tagPromptBox input.tagMachine {
     width: 100%;
-    margin: 0 0 var(--pad2);
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.tagPromptBox input.tagMachine[aria-invalid] {
+    outline: 2px solid #ff8a7a;
+    outline-offset: 1px;
 }
 
 .deleteSongPromptBox {
@@ -4045,6 +4106,7 @@ img.emoji,
 }
 
 #thehistory {
+    container: hist / inline-size;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -4237,6 +4299,30 @@ img.emoji,
 
 #thehistory .pvbar .row-icon + .row-icon {
     margin-left: calc(-1 * var(--pad2));
+}
+
+/* Title on top, artist under it */
+#thehistory .histlink {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1em;
+}
+
+.hist-track-title {
+    color: var(--color-text-light);
+    font-weight: 500;
+}
+
+.hist-track-artist {
+    font-size: 0.875em;
+    color: var(--color-text-subtle);
+}
+
+/* The row whose tags are being edited */
+#thehistory .pvbar.editing {
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-t2);
+    box-shadow: inset 2px 0 0 var(--color-accent);
 }
 
 
@@ -5879,9 +5965,21 @@ body.is-mod #npModBtn { display: inline-flex; }
 #skipTrigger { display: none; }
 body.is-current-dj:not(.is-mod) #skipTrigger { display: inline-flex; }
 
-/* Recent rows: Flag button for mods (#167) */
-#thehistory .flagplay { display: none; }
-body.is-mod #thehistory .flagplay { display: inline-flex; }
+/* Recent rows: Edit tags and Flag buttons for mods (#167) */
+#thehistory :is(.edittags, .flagplay) { display: none; }
+body.is-mod #thehistory :is(.edittags, .flagplay) { display: inline-flex; }
+
+/* Narrow Recent (phones): mods' Open / Edit tags / Flag move into a ⋮ menu,
+   so the title keeps the room */
+@container hist (width < 34rem) {
+    body.is-mod #thehistory :is(.tracklink-btn, .edittags, .flagplay) { display: none; }
+    body.is-mod #thehistory .row-more { display: inline-flex; }
+}
+#histMenuPopover .ft-menu-open-logo {
+    display: inline-flex;
+    width: 1.25rem;
+    justify-content: center;
+}
 
 .ft-menu-title {
     padding: 0.2rem 0.5rem 0.4rem;

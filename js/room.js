@@ -105,7 +105,10 @@ function renderHistoryItem(data, $template, containerSel, older) {
       '<span class="fresh-track-artist">' + firetable.utilities.htmlEscape(artistText) + '</span>'
     );
   } else {
-    $histLink.text(artistText + " - " + titleText);
+    // Title on top, artist under it: easier to scan on a narrow screen
+    $histLink.attr('title', artistText + " - " + titleText);
+    $histLink.find('.hist-track-title').text(titleText);
+    $histLink.find('.hist-track-artist').text(artistText);
   }
   var platform = data.type == MEDIA_SOUNDCLOUD ? 'SoundCloud' : 'YouTube';
   $histItem.find('.tracklink-btn')
@@ -126,7 +129,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
       );
     }
   });
-  if (!ftapi.isMod) $histItem.find('.edittags').hide();
+  // Shown to mods by CSS (body.is-mod), like the flag button
 
   // Flag (mods, #167): flags this track in the DJ's playlists via the bot
   $histItem.find('.flagplay').on('click', function () {
@@ -151,8 +154,8 @@ function renderHistoryItem(data, $template, containerSel, older) {
     var btnImg = $(this).closest('.pvbar').attr('data-img') || '';
     // Recent rows use .histlink; Fresh rows use .fresh-title (with artist/title spans)
     var $histlink = $(this).closest('.pvbar').find('.histlink, .fresh-title').first();
-    var $trackTitle = $histlink.find('.fresh-track-title');
-    var $trackArtist = $histlink.find('.fresh-track-artist');
+    var $trackTitle = $histlink.find('.fresh-track-title, .hist-track-title');
+    var $trackArtist = $histlink.find('.fresh-track-artist, .hist-track-artist');
     var btnTitle = ($trackTitle.length && $trackArtist.length)
       ? $trackArtist.text().trim() + ' - ' + $trackTitle.text().trim()
       : $histlink.text();
@@ -572,9 +575,9 @@ firetable.ui.setupRoomEvents = function () {
     var entries = root.querySelectorAll(".hist-entry");
     var hide = [], shown = 0;
     for (var i = 0; i < entries.length; i++) {
-      var link = entries[i].querySelector(".histlink");
+      var row = entries[i].querySelector(".pvbar");
       var dj = entries[i].querySelector(".histdj");
-      var text = ((link ? link.textContent : "") + " " + (dj ? dj.textContent : "")).toLowerCase();
+      var text = ((row ? row.getAttribute("data-tag") || "" : "") + " " + (dj ? dj.textContent : "")).toLowerCase();
       hide.push(q.length > 0 && text.indexOf(q) === -1);
       if (!hide[i]) shown++;
     }
@@ -668,10 +671,11 @@ firetable.ui.setupRoomEvents = function () {
     var el = document.getElementById(data.histID);
     if (el) {
       var $el = $(el);
-      var $title = $el.find('.fresh-track-title'), $artist = $el.find('.fresh-track-artist');
+      var $title = $el.find('.fresh-track-title, .hist-track-title'), $artist = $el.find('.fresh-track-artist, .hist-track-artist');
       if ($title.length && $artist.length) {
         $title.text(firetable.ui.strip(data.title || ''));
         $artist.text(firetable.ui.strip(data.artist || ''));
+        if ($el.hasClass('histlink')) $el.attr('title', firetable.ui.strip(data.artist || '') + " - " + firetable.ui.strip(data.title || ''));
       } else {
         $el.text(firetable.ui.strip(data.artist || '') + " - " + firetable.ui.strip(data.title || ''));
       }
@@ -695,7 +699,6 @@ firetable.ui.setupRoomEvents = function () {
 
   // ── Mod Check (show edit buttons for mods) ──
   ftapi.events.on('modCheck', function (data) {
-    if (data) $(".edittags").show();
     $("body").toggleClass("is-mod", !!data);
   });
   ftapi.events.on('loggedOut', function () { $("body").removeClass("is-mod is-current-dj"); });
@@ -737,6 +740,53 @@ firetable.ui.setupRoomEvents = function () {
     if (e.key === 'ArrowDown') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
   });
+  // ── Narrow Recent rows (mods): ⋮ menu with Open / Edit tags / Flag ──
+  var histMenuEl = document.getElementById('histMenuPopover');
+  var histMenuRow = null, histMenuBtn = null;
+  $(document).on('click', '#thehistory .row-more', function () {
+    var $p = $(this).closest('.pvbar');
+    if (histMenuEl.matches(':popover-open')) {
+      var sameRow = histMenuRow && histMenuRow.is($p);
+      histMenuEl.hidePopover();
+      if (sameRow) return;
+    }
+    histMenuRow = $p;
+    histMenuBtn = this;
+    var $link = $p.find('.tracklink-btn');
+    var $menu = $(histMenuEl);
+    $menu.find('[data-act="open"]').attr('href', $link.attr('href') || '#');
+    $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
+    $menu.find('.ft-menu-open-logo').html($link.find('svg').prop('outerHTML') || '');
+    $(this).addClass('on').attr('aria-expanded', 'true');
+    histMenuEl.style.visibility = 'hidden';
+    histMenuEl.showPopover();
+    firetable.ui.positionPopover(this, histMenuEl, document.getElementById('histMenuArrow'), 'bottom-end').then(function () {
+      var first = histMenuEl.querySelector('[role="menuitem"]');
+      if (first) first.focus();
+    });
+  });
+  histMenuEl.addEventListener('toggle', function (e) {
+    if (e.newState === 'closed' && histMenuBtn) $(histMenuBtn).removeClass('on').attr('aria-expanded', 'false');
+  });
+  $(histMenuEl).on('click', '[data-act]', function (e) {
+    var act = $(this).attr('data-act');
+    var $p = histMenuRow, btn = histMenuBtn;
+    histMenuEl.hidePopover();
+    if (!$p || !$p.length || act === 'open') return; // the link opens the track itself
+    e.preventDefault();
+    var label = $p.attr('data-tag') || '';
+    if (act === 'tags') {
+      firetable.actions.editTagsPrompt($p.attr('data-key'), label, btn);
+    } else if (act === 'flag') {
+      firetable.ui.openFlagMenu(btn, { histID: $p.attr('data-histid'), label: label });
+    }
+  }).on('keydown', function (e) {
+    var $items = $(histMenuEl).find('[role="menuitem"]');
+    var idx = $items.index($items.filter(':focus'));
+    if (e.key === 'ArrowDown') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
+  });
+
   // ── Mod tools menu on the stage ──
   var npModMenu = document.getElementById('npModMenu');
   var npModBtn = document.getElementById('npModBtn');
@@ -778,14 +828,10 @@ firetable.ui.setupRoomEvents = function () {
     var popoverEl = document.getElementById('tagEditorPopover');
     if (popoverEl.matches(':popover-open') && firetable.tagEditNowPlaying) { popoverEl.hidePopover(); return; }
     if (!firetable.song || firetable.song.cid == 0) return;
-    if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
+    $('.pvbar.editing').removeClass('editing');
+    firetable.editingPvbar = null;
     firetable.tagEditNowPlaying = { cid: firetable.song.cid, type: firetable.song.type };
-    $(popoverEl).find('.tagMachine').val(firetable.ui.strip(firetable.song.artist + " - " + firetable.song.title));
-    popoverEl.style.visibility = 'hidden';
-    popoverEl.showPopover();
-    firetable.ui.positionPopover(npModBtn, popoverEl, document.getElementById('tagEditorArrow')).then(function () {
-      $(popoverEl).find('.tagMachine')[0].focus();
-    });
+    firetable.ui.openTagEditor(npModBtn, firetable.ui.strip(firetable.song.artist + " - " + firetable.song.title));
   });
 
   // ── Theme (#87) ──
