@@ -791,6 +791,41 @@ try {
     "search finds theme nights and songs as you type, with its own address (" + JSON.stringify(search) + ")");
   check(!search.yt, "YouTube search is for members only (it uses the site's quota)");
 
+  console.log("-- Every name is a door: Live's lists and stage link to Discover, titles open the song sheet");
+  await put("/newMusic", { f1: { artist: "Alpha & Beta", title: "Fav One", dj: "dj1", djid: "dj1", type: 1, cid: "lib0000001", when: now - 3600000,
+    url: "https://www.youtube.com/watch?v=lib0000001", img: "https://i.ytimg.com/vi/lib0000001/mqdefault.jpg", colors: { color: "#333", txt: "#fff" } } });
+  await put("/globalTracks/1lib0000001", { artist: "Alpha & Beta", title: "Fav One", type: 1, song: "sL1" });
+  await put("/globalSongs/sL1", { artist: "Alpha & Beta", title: "Fav One", plays: 30, first_play_date: now - 400 * 86400000, first_play_dj: "dj1", genres: ["Nu-Disco"] });
+  const doors = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
+    location.hash = "#live";
+    await ftapi.watchFeed("fresh");
+    await until(() => document.querySelector("#thediscovers .fresh-track-artist a"));
+    const out = {};
+    out.artistLinks = [...document.querySelectorAll("#thediscovers .fresh-track-artist a")].map((a) => a.getAttribute("href")).join();
+    out.stageArtist = (document.querySelector("#artist a") || {}).getAttribute ? document.querySelector("#artist a").getAttribute("href") : null;
+    out.titleButton = (document.querySelector("#thediscovers .fresh-track-title") || {}).getAttribute("role");
+    document.querySelector("#thediscovers .fresh-track-title").click();
+    await until(() => document.querySelector("#dSheetBox[open] #dSheetHist b"));
+    const sheet = document.getElementById("dSheetBox");
+    out.sheet = (sheet.querySelector(".d-title") || {}).textContent + "|" + (sheet.querySelector("#dSheetHist") || {}).textContent;
+    sheet.querySelector(".closeModal").click();
+    document.getElementById("track").click();
+    await until(() => /playing in the room now/.test((document.getElementById("dSheetHist") || {}).textContent || ""));
+    out.stageSheet = document.getElementById("dSheetHist").textContent;
+    document.getElementById("dSheetBox").close();
+    const robot = document.querySelector("#thediscovers .pv-dj-avatar");
+    if (robot) robot.click();
+    await wait(300);
+    out.robot = location.hash;
+    return out;
+  });
+  check(doors.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && /^#discover\/artist\//.test(doors.stageArtist || "") && doors.titleButton === "button",
+    "in Live, artist names link to their pages and titles are buttons (" + JSON.stringify(doors) + ")");
+  check(/^Fav One\|.*30 plays/.test(doors.sheet || "") && /playing in the room now/.test(doors.stageSheet || ""), "a title opens its song sheet, with the room's plays; the stage's says it's playing now");
+  check(doors.robot === "#discover/djs/dj1", "a DJ's robot in Live opens their DJ page (" + doors.robot + ")");
+
   console.log("-- Discover: joining opens the sign-in form over the page, and it goes back after");
   const join = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
