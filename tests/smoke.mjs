@@ -531,6 +531,88 @@ try {
   check(false, "smoke test threw: " + e.message);
 }
 
+// Discover (config.js discover: true), in a page of its own: everything above
+// ran with it off, so the site is unchanged until it's switched on.
+const dPage = await context.newPage();
+dPage.on("pageerror", (e) => pageErrors.push("Discover: " + e.message));
+try {
+  console.log("-- Discover: visitors land on it, and the room is one step away");
+  await dPage.exposeFunction("__cspViolation", (v) => violations.push("Discover: " + v));
+  await dPage.addInitScript(() => {
+    document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI));
+    try { localStorage.clear(); } catch (e) { /* fine */ }
+  });
+  await dPage.route("**/config.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript",
+    body: CONFIG.replace(/roomName:/, 'discover: true, signInProviders: ["google"], roomName:') }));
+  const DAY = 86400000, iso = (ms) => new Date(ms).toISOString().slice(0, 10);
+  await put("/discover", {
+    new: { at: now, days: 90, tracks: [
+      { cid: "newrel0001", a: "New Band", t: "First Single", dur: 200, rel: iso(now - 2 * DAY), relSrc: "yt", plays: 3, first: now - DAY, dj: "dj1", djid: "dj1" },
+      { cid: "newrel0002", a: "Quiet One", t: "Unplayed", dur: 210, rel: iso(now - 5 * DAY), relSrc: "yt", plays: 0 },
+      { cid: "newrel0003", a: "Third", t: "Song", dur: 180, rel: iso(now - 9 * DAY), relSrc: "upload", plays: 1, first: now - DAY, dj: "dj2", djid: "dj2" }] },
+    charts: { week: { "2026-W45": { at: now, from: now - 3 * DAY, to: now + 4 * DAY, plays: 40, djs: 3, rows: [
+      { key: "a", type: 1, cid: "chart00001", a: "Top", t: "Song", plays: 9, dj: "dj1", djid: "dj1", mv: 2, wks: 3 },
+      { key: "b", type: 1, cid: "chart00002", a: "Next", t: "Song", plays: 7, mv: "new", wks: 1 }] } } },
+    chartIds: { week: { "2026-W45": true } },
+    chat: { at: now, hour: 12, msgs: [{ id: "m1", uid: "dj1", n: "dj1", txt: "great tune", w: now }, { id: "m2", txt: "hidden name here", w: now }] }
+  });
+  await dPage.goto(SITE, { waitUntil: "load", timeout: 60000 });
+  await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
+  const home = await dPage.evaluate(() => ({
+    on: document.body.classList.contains("ft-discover"),
+    tabs: [...document.querySelectorAll("#modeTabs .tab")].map((b) => b.textContent.trim() + (b.classList.contains("on") ? "*" : "")).join(),
+    cards: document.querySelectorAll("#dBrowse .ft-cards .pvbar").length,
+    chart: [...document.querySelectorAll("#dBrowse .ft-rows .hist-timestamp")].slice(0, 2).map((e) => e.textContent).join(),
+    unplayed: [...document.querySelectorAll("#dBrowse .fresh-meta .histdj")].some((e) => e.textContent === "Not played live yet"),
+    stageHidden: getComputedStyle(document.getElementById("stage")).opacity === "0",
+    live: document.getElementById("dLive").textContent
+  }));
+  check(home.on && home.tabs === "Discover*,Live" && home.cards === 3 && home.chart === "#1,#2" && home.unplayed && home.stageHidden,
+    "a visitor lands on Discover: new releases, the week's chart, the stage out of sight (" + JSON.stringify(home) + ")");
+  check(/on deck/.test(home.live) && /here/.test(home.live) && /Listen in/.test(home.live), "the room in one line: the DJ, who is here, Listen in (" + home.live.trim() + ")");
+
+  console.log("-- Discover: playing a song uses the room's player, and Live takes it back");
+  const playing = await dPage.evaluate(async () => {
+    document.querySelector("#dBrowse .ft-cards .pvbar .d-play").click();
+    await new Promise((r) => setTimeout(r, 300));
+    const during = { preview: firetable.preview, state: firetable.discover.state(), title: (document.querySelector("#dSide .d-title") || {}).textContent };
+    location.hash = "#discover/charts";
+    await new Promise((r) => setTimeout(r, 300));
+    const chart = { rows: document.querySelectorAll("#dBrowse .ft-rows .pvbar").length, mv: [...document.querySelectorAll("#dBrowse .d-mv")].map((e) => e.textContent).join() };
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await new Promise((r) => setTimeout(r, 300));
+    return { during, chart, after: firetable.preview, mode: document.body.classList.contains("ft-discover"), hash: location.hash };
+  });
+  check(playing.during.preview === "discover" && playing.during.state.playing === "newrel0001" && playing.during.title === "First Single",
+    "a song plays in Discover's player (" + JSON.stringify(playing.during) + ")");
+  check(playing.chart.rows === 2 && playing.chart.mv === "▲2,new", "the chart shows movement (" + JSON.stringify(playing.chart) + ")");
+  check(playing.after === false && !playing.mode && playing.hash === "#live", "Live gives the player back to the room (" + JSON.stringify({ after: playing.after, hash: playing.hash }) + ")");
+
+  console.log("-- Discover: visitors read the chat in Live, and save songs to a crate");
+  const peek = await dPage.evaluate(() => ({
+    shown: !document.getElementById("chatPeek").hidden,
+    lines: [...document.querySelectorAll("#chatPeek .d-chatline b")].map((b) => b.textContent).join()
+  }));
+  check(peek.shown && peek.lines === "dj1,a member", "Live shows visitors the chat to read; someone who hid their name is \"a member\" (" + JSON.stringify(peek) + ")");
+  const crate = await dPage.evaluate(async () => {
+    location.hash = "#discover/new";
+    await new Promise((r) => setTimeout(r, 300));
+    document.querySelector('.d-chip[data-new="days90"]').click();
+    const saves = () => document.querySelectorAll("#dBrowse .histeal");
+    for (let i = 0; i < 3; i++) { saves()[i].click(); await new Promise((r) => setTimeout(r, 100)); }
+    await new Promise((r) => setTimeout(r, 900));
+    const dlg = document.getElementById("keepCrateBox");
+    const out = { stored: JSON.parse(localStorage.getItem("ft-crate") || "[]").length, dialog: !!(dlg && dlg.open),
+      google: !!(dlg && dlg.querySelector(".d-google")), checked: [...saves()].filter((b) => b.classList.contains("is-saved")).length };
+    if (dlg) dlg.close();
+    return out;
+  });
+  check(crate.stored === 3 && crate.checked === 3, "saves go to a crate in this browser, each + turning into a check (" + JSON.stringify(crate) + ")");
+  check(crate.dialog && crate.google, "the third save offers to keep the crate, with Continue with Google (" + JSON.stringify(crate) + ")");
+} catch (e) {
+  check(false, "Discover test threw: " + e.message);
+}
+
 console.log("-- errors");
 check(violations.length === 0, "nothing blocked by the Content-Security-Policy" + (violations.length ? ": " + [...new Set(violations)].join("; ") : ""));
 check(pageErrors.length === 0, "no page errors" + (pageErrors.length ? ": " + pageErrors.join("; ") : ""));

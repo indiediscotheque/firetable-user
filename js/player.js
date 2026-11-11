@@ -361,6 +361,7 @@ firetable.media = {
   onYouTubeState: function (state) {
     var m = firetable.media;
     m.ytState = state;
+    if (state === 0 && firetable.preview === "discover" && firetable.discover) firetable.discover.onEnded();
     clearTimeout(m._stallTimer);
     if (state === 1) {
       m.syncYouTube();
@@ -394,6 +395,7 @@ firetable.media = {
 
   /** YouTube could not play the video (removed, private, embed blocked…). */
   onYouTubeError: function () {
+    if (firetable.preview === "discover" && firetable.discover) return firetable.discover.onFailed();
     firetable.media.ytError = true;
     firetable.media.refresh();
   },

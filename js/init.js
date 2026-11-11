@@ -122,7 +122,11 @@ firetable.init = function () {
       firetable.media.onSoundCloudPlay();
     });
     firetable.scwidget.bind(SC.Widget.Events.ERROR, function () {
+      if (firetable.preview === "discover" && firetable.discover) return firetable.discover.onFailed();
       firetable.media.onSoundCloudError();
+    });
+    firetable.scwidget.bind(SC.Widget.Events.FINISH, function () {
+      if (firetable.preview === "discover" && firetable.discover) firetable.discover.onEnded();
     });
 
     // If a SC song was already loaded before the widget was ready, start it now
@@ -149,6 +153,10 @@ firetable.init = function () {
 
   // ── Firebase Init ──
   ftapi.init(ftconfigs.firebase);
+
+  // ── Discover (off unless config.js sets discover: true). Sign-in is
+  // reported later, so its listeners are in place in time. ──
+  if (firetable.discover) firetable.discover.init();
 
   // ── Auth Lifecycle Events ──
 

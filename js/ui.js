@@ -333,7 +333,7 @@ function drawSaveButton(btn, where) {
 
 /** Redraw every add button on songs outside your own playlist. */
 firetable.ui.markSaved = firetable.utilities.oncePerFrame(function () {
-  document.querySelectorAll("#thehistory .histeal, #thediscovers .histeal, #searchResults .queuetrack").forEach(function (btn) {
+  document.querySelectorAll("#thehistory .histeal, #thediscovers .histeal, #searchResults .queuetrack, #dBrowse .histeal").forEach(function (btn) {
     var row = btn.closest(".pvbar");
     if (!row || !row.getAttribute("data-cid")) return;
     drawSaveButton(btn, firetable.saved.where(row.getAttribute("data-type") || 1, row.getAttribute("data-cid")));
@@ -1934,6 +1934,20 @@ firetable.ui.setupMiscEvents = function () {
       firetable.actions.reloadtrack();
     }
     firetable.media.refresh();
+  });
+  // Your name on public pages (charts, new releases, the visitors' chat)
+  $('#publicNameToggle').change(function () {
+    var on = this.checked;
+    if (!ftapi.uid) return;
+    ftapi.db().ref("users/" + ftapi.uid + "/publicName").set(on).then(function () {
+      firetable.ui.toast(on ? "Your name shows on public pages" : "You show as nobody on public pages", "success");
+    }, function () {
+      firetable.ui.toast("Couldn't save that setting. Try again in a moment.", "error");
+    });
+  });
+  ftapi.events.on("usersChanged", function () {
+    var me = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
+    if (me) $("#publicNameToggle").prop("checked", me.publicName !== false);
   });
   $('#showAvatarsToggle').change(function () {
     firetable.debug && console.log("show avatars " + (this.checked ? "on" : "off"));

@@ -21,6 +21,7 @@
 	<link rel="stylesheet" href="css/reset.css?v=01.12.08" type="text/css" />
 	<link rel="stylesheet" href="css/fonts-local.css?v=01.12.08" type="text/css" />
 	<link rel="stylesheet" href="css/looks.css?v=01.12.08" type="text/css" />
+	<link rel="stylesheet" href="css/discover.css?v=01.12.08" type="text/css" />
 </head>
 
 <body>
@@ -758,6 +759,11 @@
 						<button type="button" class="butt small showInstallGuide">How to install</button>
 					</div>
 					<div class="settingline">
+						<input type="checkbox" id="publicNameToggle" name="publicNameToggle" checked>
+						<label for="publicNameToggle">Show my name on public pages</label>
+					</div>
+					<p class="settingHint" id="publicNameHint">Room charts, new releases and the chat visitors can read show who played and said what. Turn this off to show you as nobody there. Members in the room still see your name.</p>
+					<div class="settingline">
 						<input type="checkbox" id="badoopToggle" name="badoopToggle">
 						<label for="badoopToggle">Badoop sound for @mentions</label>
 					</div>
@@ -1090,6 +1096,7 @@
 	<script type="text/javascript" src="js/users.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/room.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/ui.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/discover.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/glitch.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/snow.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/init.js?v=01.12.08"></script>
