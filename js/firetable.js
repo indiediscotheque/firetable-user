@@ -680,6 +680,7 @@ ftapi.actions = {
     var track = { type: info.type, name: info.name, cid: info.cid };
     if (info.img) track.img = info.img;
     if (info.url) track.url = info.url;
+    if (info.from) track.from = String(info.from).slice(0, 16); // where it was saved from ("discover")
     var finalKey = newKey;
     ftapi.utilities.rearrangeList(ref, function(items) {
       return [{ key: newKey, track: track }].concat(items);

@@ -1745,7 +1745,7 @@ firetable.ui.setupMiscEvents = function () {
         firetable.ui.savedToast(destRef, addedKey, src, destName);
       } else {
         ftapi.actions.addTrackToTop(destRef,
-          { type: src.type, name: src.title, cid: src.cid, img: src.img, url: firetable.utilities.soundCloudPageUrl(src.url) },
+          { type: src.type, name: src.title, cid: src.cid, img: src.img, url: firetable.utilities.soundCloudPageUrl(src.url), from: src.from },
           firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; },
           function (err, key) { if (!err) firetable.ui.savedToast(destRef, key, src, destName); });
       }

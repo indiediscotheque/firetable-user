@@ -770,7 +770,7 @@ function buildQueueItemHTML(key, track, isPreview) {
     '<div class="' + artClass + '"' + artStyle + '></div>' +
     '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
     (track.flagged ? flagHtml : '<span class="track-warning"></span>') +
-    '<div class="listwords">' + safeTrackName + durationHtml + '</div>' +
+    '<div class="listwords">' + safeTrackName + durationHtml + (track.from === "discover" ? '<span class="pl-from" title="Saved from Discover">Discover</span>' : '') + '</div>' +
     swapHtml +
     // Order matches Recent / Fresh: move actions, link, add, destructive last
     '<button type="button" class="material-symbols-outlined row-icon bumpsongs" title="Send to top" aria-label="Send to top">vertical_align_top</button>' +

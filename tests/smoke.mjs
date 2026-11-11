@@ -520,6 +520,25 @@ try {
     return { left, where: firetable.saved.where(1, "undo0001") };
   });
   check(!undone.left.includes("undo0001") && undone.where === "", "Undo takes the song back out and its + returns (" + JSON.stringify(undone) + ")");
+  const fromDiscover = await page.evaluate(async () => {
+    const key = await new Promise((r) => ftapi.actions.addTrackToTop(ftapi.queueRef, { type: 1, cid: "fromdisc01", name: "Found - There", from: "discover" }, null, null, (err, k) => r(k)));
+    const stored = await ftapi.queueRef.child(key).once("value").then((s) => s.val());
+    await ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+    await new Promise((r) => setTimeout(r, 200));
+    const row = document.querySelector('#mainqueue .pvbar[data-key="' + key + '"]');
+    const out = { from: stored && stored.from, label: row && (row.querySelector(".pl-from") || {}).textContent, others: document.querySelectorAll("#mainqueue .pl-from").length };
+    await ftapi.queueRef.child(key).remove();
+    return out;
+  });
+  check(fromDiscover.from === "discover" && fromDiscover.label === "Discover" && fromDiscover.others === 1,
+    "a song saved from Discover says so in the playlist (" + JSON.stringify(fromDiscover) + ")");
+  const noticeText = await page.evaluate(async () => {
+    firetable.notices.queue.push({ txt: ":white_check_mark: matt gave you a card! It's in your card case.", card: "cardA", kind: "card" });
+    firetable.ui.showNextNotice();
+    await new Promise((r) => setTimeout(r, 100));
+    return { txt: document.getElementById("ft-toast").firstChild.textContent, map: !!firetable.emojiMap };
+  });
+  check(noticeText.map && noticeText.txt === "\u2705 matt gave you a card! It's in your card case.", "a notice's emoji show as emoji, not markup (" + noticeText.txt + ")");
   const dates = await page.evaluate(() => {
     const y = new Date().getFullYear();
     return [firetable.utilities.shortDate(new Date(y, 10, 1).getTime()), firetable.utilities.shortDate(new Date(2011, 1, 3).getTime())];
@@ -904,6 +923,79 @@ try {
   check(/^dj1\|.*Friday nights/.test(libPages.dj) && libPages.artist === "Alpha|1" && libPages.year === "1|1", "DJ, artist and year pages (" + [libPages.dj, libPages.artist, libPages.year].join(" / ") + ")");
   check(/no page for this DJ/.test(libPages.missing), "a DJ without a page says so (" + libPages.missing + ")");
   check(/Open on YouTube\|Go to Alpha\|Go to Beta\|dj1's DJ page\|Copy/.test(libPages.menu) && libPages.menuClosed, "the song menu (" + libPages.menu + ")");
+
+  console.log("-- Discover: visitors in Live see what joining opens");
+  await put("/cards/cardP", { owner: "dj1", cardnum: 5, djname: "dj1", djid: "dj1", title: "Printed Song", artist: "Printer", image: "img/idlogo.png", date: now, set: "set1" });
+  await put("/songHistory", { lk1: { cid: "lockrec001", type: 1, artist: "Locked", title: "Recent One", dj: "dj1", djid: "dj1", when: now - 60000, img: "img/idlogo.png" } });
+  const locked = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    const shown = (id) => { const el = document.getElementById(id); return !!el && !el.hidden && el.offsetParent !== null; };
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await wait(300);
+    const out = { tabs: [...document.querySelectorAll("#dLocked .tab")].map((b) => b.textContent + (b.classList.contains("on") ? "*" : "")).join(), form: shown("authBox") };
+    const tab = (name) => document.querySelector('#dLocked [data-locked="' + name + '"]').click();
+    tab("playlists");
+    out.playlists = { form: shown("authBox"), text: /Your playlists/.test(document.getElementById("dLockedPane").textContent), join: !!document.querySelector("#dLockedPane .d-createaccount") };
+    tab("recent");
+    await until(() => document.querySelector('#dLockedPane .pvbar[data-cid="lockrec001"]'));
+    out.recent = document.querySelectorAll("#dLockedPane .pvbar").length;
+    document.querySelector('#dLockedPane .pvbar[data-cid="lockrec001"] .d-play').click();
+    await wait(300);
+    out.played = { discover: document.body.classList.contains("ft-discover"), playing: firetable.discover.state().playing };
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await wait(200);
+    tab("cards");
+    await until(() => document.querySelectorAll("#dLockedPane canvas").length);
+    out.cards = document.querySelectorAll("#dLockedPane canvas").length;
+    tab("join");
+    out.back = { form: shown("authBox"), pane: document.getElementById("dLockedPane").hidden };
+    return out;
+  });
+  check(locked.tabs === "Join*,Playlists,Recent,Cards" && locked.form, "a visitor in Live sees Join, Playlists, Recent and Cards (" + JSON.stringify(locked) + ")");
+  check(!locked.playlists.form && locked.playlists.text && locked.playlists.join, "Playlists says what joining gives, with Join the room (" + JSON.stringify(locked.playlists) + ")");
+  check(locked.recent >= 1 && locked.played.discover && locked.played.playing === "lockrec001", "Recent lists the room's plays, and one plays in Discover (" + JSON.stringify({ n: locked.recent, played: locked.played }) + ")");
+  check(locked.cards > 0 && locked.cards <= 3, "Cards shows the latest cards (" + locked.cards + ")");
+  check(locked.back.form && locked.back.pane, "Join brings the form back (" + JSON.stringify(locked.back) + ")");
+
+  console.log("-- Discover: members chat with the room from Discover");
+  const chatHere = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login pre-auth");
+    ftapi.uid = "smoke";
+    firetable.discover.testSignedIn(true);
+    const home = document.getElementById("actualChat").parentElement;
+    location.hash = "#discover";
+    await wait(300);
+    const out = { tab: !!document.querySelector('#dSide [data-sidetab="chat"]'), nav: !!document.querySelector("#dNav .d-chatnav") };
+    document.querySelector('#dSide [data-sidetab="chat"]').click();
+    await wait(200);
+    const chat = document.getElementById("actualChat");
+    out.moved = !!chat.closest("#dSide .d-chathost") && document.body.classList.contains("d-chat-here");
+    out.visible = chat.offsetParent !== null && document.getElementById("newchat").offsetParent !== null;
+    // a message while on another tab counts as new
+    document.querySelector('#dSide [data-sidetab="now"]').click();
+    await wait(100);
+    out.backOnNow = chat.parentElement === home;
+    ftapi.events.emit("chatHistoryLoaded");
+    ftapi.events.emit("newChat", { id: "dj1", txt: "hello" });
+    ftapi.events.emit("newChat", { id: "smoke", txt: "mine" });
+    out.unread = (document.querySelector('#dSide [data-sidetab="chat"] .d-unread') || {}).textContent;
+    document.querySelector('#dSide [data-sidetab="chat"]').click();
+    await wait(100);
+    out.cleared = !document.querySelector('#dSide [data-sidetab="chat"] .d-unread');
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await wait(300);
+    out.live = { home: chat.parentElement === home, here: document.body.classList.contains("d-chat-here") };
+    firetable.discover.testSignedIn(false);
+    firetable.$appShell = $("#appShell").detach();
+    return out;
+  });
+  check(chatHere.tab && chatHere.nav, "members get a Chat tab in Discover (" + JSON.stringify(chatHere) + ")");
+  check(chatHere.moved && chatHere.visible, "the room's chat, with its message box, opens in Discover's panel (" + JSON.stringify(chatHere) + ")");
+  check(chatHere.backOnNow && chatHere.unread === "1" && chatHere.cleared, "on another tab, new messages from others are counted, and cleared on Chat (" + JSON.stringify(chatHere) + ")");
+  check(chatHere.live.home && !chatHere.live.here, "Live gets its chat back (" + JSON.stringify(chatHere.live) + ")");
 } catch (e) {
   check(false, "Discover test threw: " + e.message);
 }

@@ -6613,3 +6613,15 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
 
 /* The preview player for "Previews play over the room": playing, out of sight */
 #pvOverPlayer { position: fixed !important; left: -10000px; top: 0; width: 320px; height: 180px; opacity: 0; pointer-events: none; }
+
+/* A playlist song saved from Discover */
+.pl-from {
+    margin-left: var(--pad2);
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-pill);
+    background: var(--color-bg-t2);
+    color: var(--color-text-muted);
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    vertical-align: middle;
+}

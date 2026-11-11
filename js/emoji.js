@@ -156,6 +156,14 @@ firetable.utilities.getEmojiMap = function () {
  * @param {string} str - Text containing :shortname: codes
  * @returns {string} Text with shortnames replaced by unicode or custom HTML
  */
+/** :shortnames: to plain emoji characters, for text that isn't HTML (toasts). */
+firetable.utilities.emojiShortnamesToText = function (str) {
+  var map = firetable.emojiMap;
+  return String(str).replace(/:([a-z0-9_+-]+):/gi, function (match, shortname) {
+    return map && Object.prototype.hasOwnProperty.call(map, shortname) ? map[shortname] : match;
+  });
+};
+
 firetable.utilities.emojiShortnamestoUnicode = function (str) {
   // HTML tags are matched first and passed through untouched, so a
   // shortname-like run inside an attribute (e.g. a URL) is never replaced.

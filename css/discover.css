@@ -731,6 +731,7 @@ section .d-chips a.d-chip {
 .d-sidebody { flex: 1; min-height: 0; overflow-y: auto; }
 .d-sidetabs { gap: 0; border-bottom: 1px solid var(--color-border); }
 .d-sidetabs .tab { flex: 1; }
+.d-sheetclose { display: none; }
 .d-panel {
     display: flex;
     flex-direction: column;
@@ -929,6 +930,47 @@ body.ft-has-discover #thediscovers .pv-dj-avatar { cursor: pointer; }
 .d-about { margin: 0; color: var(--color-text); font-size: var(--fs-title); max-width: 36rem; }
 .d-mapg.d-quiet { opacity: 0.35; }
 
+/* Live chat in Discover's right panel (members): the room's own chat, moved in */
+.d-sidechat { display: flex; flex-direction: column; overflow: hidden; }
+.d-chathost { flex: 1; min-height: 0; display: flex; }
+body.ft-discover #dSide #actualChat {
+    display: flex !important;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    grid-area: auto;
+}
+.d-unread {
+    display: inline-block;
+    min-width: 1.1rem;
+    margin-left: 0.3rem;
+    padding: 0 0.3rem;
+    border-radius: 99px;
+    background: var(--color-accent);
+    color: #fff;
+    font-family: var(--font-numbers);
+    font-size: 0.65rem;
+    line-height: 1.1rem;
+    text-align: center;
+}
+/* phones: Chat opens the panel from the nav; computers have the tab */
+.d-chatnav { display: none; }
+@media only screen and (max-width: 1023px) {
+    body.d-member .d-chatnav { display: flex; }
+}
+
+/* Visitors in Live: what joining opens */
+#dLocked { justify-content: flex-start; gap: 0; margin-bottom: var(--pad3); border-bottom: 1px solid var(--color-border); }
+#dLocked .tab { flex: 1; min-height: 2.75rem; }
+#joinBox #dLocked, #joinBox #dLockedPane { display: none !important; }
+.d-locked { display: flex; flex-direction: column; gap: var(--pad2); max-width: 36rem; }
+.d-locked > i { font-size: 2rem; color: var(--color-accent); }
+.d-locked h3 { margin: 0; color: var(--color-text-light); font-size: 1.1rem; }
+.d-locked p { margin: 0; color: var(--color-text); }
+.d-lockedlist .ft-rows { padding: 0 0 0 calc(var(--hist-time-w) + var(--hist-connector-w)); }
+.d-lockjoin { display: flex; flex-wrap: wrap; align-items: center; gap: var(--pad3); margin-top: var(--pad2); color: var(--color-text-light); font-size: var(--fs-title); }
+.d-locked .d-cards { max-width: 30rem; }
+
 /* Keep your crate */
 #keepCrateBox .modalBox { max-width: min(30rem, calc(100vw - 2rem)); }
 .d-keep { display: flex; flex-direction: column; gap: var(--pad3); }
@@ -1018,6 +1060,8 @@ body.ft-has-discover #thediscovers .pv-dj-avatar { cursor: pointer; }
         padding-top: env(safe-area-inset-top, 0px);
     }
     body.ft-discover.d-sheet-open #dSide { display: flex; }
+    body.ft-discover:has(#dMini[hidden]) #dSide { bottom: 0; }
+    .d-sheetclose { display: inline-flex; flex: none; align-self: center; margin: 0 var(--pad2); }
     body.ft-discover #dMini:not([hidden]) {
         position: fixed;
         left: 0;

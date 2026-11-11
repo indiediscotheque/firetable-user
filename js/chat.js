@@ -319,8 +319,9 @@ firetable.ui.showNextNotice = function () {
   if (n.showing || !n.queue.length) return;
   var v = n.queue.shift();
   n.showing = true;
-  var txt = firetable.utilities.emojiShortnamestoUnicode
-    ? firetable.utilities.emojiShortnamestoUnicode(String(v.txt || "")) : String(v.txt || "");
+  // the toast shows plain text: emoji as characters, not the chat's <span> markup
+  var txt = firetable.utilities.emojiShortnamesToText
+    ? firetable.utilities.emojiShortnamesToText(String(v.txt || "")) : String(v.txt || "");
   var opts = {
     duration: Math.min(12000, 4000 + txt.length * 40),
     onHide: function () { n.showing = false; firetable.ui.showNextNotice(); }
