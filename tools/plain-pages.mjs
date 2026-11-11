@@ -385,6 +385,33 @@ if (chartList.length) {
   });
 }
 
+// theme nights (discover/themes, from the bot)
+const nightIndex = (await read("discover/themes/index")) || {};
+const nightIds = Object.keys(nightIndex).sort((a, b) => nightIndex[b].from - nightIndex[a].from);
+const nightDay = (ms) => new Date(ms).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const nightPages = await readAll(nightIds.map((k) => "discover/themes/night/" + k));
+const nightList = nightIds.filter((k) => nightPages["discover/themes/night/" + k]);
+nightList.forEach((k) => {
+  const n = nightPages["discover/themes/night/" + k];
+  page({
+    path: "themes/" + k + "/", title: n.theme + ", " + nightDay(n.from), route: "discover/themes/" + k,
+    description: `${n.theme}: the ${n.n} songs ${ROOM} played on ${nightDay(n.from)}${(n.djs || []).length ? ", with " + n.djs.join(", ") : ""}.`,
+    ld: playlistLd(n.theme + " · " + nightDay(n.from), "themes/" + k + "/", n.rows),
+    body: back("themes/", "Theme nights") + pageHead(n.theme, esc(nightDay(n.from) + " · " + plural(n.n, "song", "songs") + ((n.djs || []).length ? " · " + n.djs.join(", ") : "")), {
+      mosaic: mosaic((n.rows || []).slice(0, 4).map((t) => (t.type || 1) + "_" + t.cid), true), play: ["discover/themes/" + k, "Play the night"]
+    }) + rows(n.rows, { max: 100, stamp: (t) => new Date(t.w).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).replace(" ", "").toLowerCase() })
+  });
+});
+if (nightList.length) {
+  page({
+    path: "themes/", title: "Theme nights", route: "discover/themes",
+    description: `Every theme night in ${ROOM}: the songs DJs played for each theme, night by night.`,
+    body: viewHead("Theme nights", "Every night the room played under a theme, newest first") +
+      `<div class="d-nights">` + nightList.map((k) => { const n = nightIndex[k];
+        return `<a class="d-night" href="${BASE}themes/${k}/"><b>${esc(n.theme)}</b><span>${esc(nightDay(n.from) + " · " + plural(n.n, "song", "songs") + ((n.djs || []).length ? " · " + n.djs.join(", ") : ""))}</span></a>`; }).join("") + `</div>`
+  });
+}
+
 // the library's front page
 page({
   path: "", title: "The library", route: "discover",
@@ -394,7 +421,9 @@ page({
     (djList.length ? `<section>${head("DJs", "All DJs", "djs/")}${chips(djList.slice(0, 30).map((d) => [BASE + "djs/" + d.key + "/", d.name]))}</section>` : "") +
     (yearList.length ? `<section>${head("Years", "All years", "years/")}${chips(yearList.map((y) => [BASE + "years/" + y + "/", y]))}</section>` : "") +
     (artistPages.length ? `<section>${head("Artists", "All artists", "artists/")}${chips(artistPages.slice(0, 40).map(([slug, a]) => [BASE + "artists/" + slug + "/", a.name]))}</section>` : "") +
-    (chartList.length ? `<section>${head("Charts", "All charts", "charts/")}</section>` : "")
+    (chartList.length ? `<section>${head("Charts", "All charts", "charts/")}</section>` : "") +
+    (nightList.length ? `<section>${head("Theme nights", "All theme nights", "themes/")}<div class="d-nights">${nightList.slice(0, 5).map((k) =>
+      `<a class="d-night" href="${BASE}themes/${k}/"><b>${esc(nightIndex[k].theme)}</b><span>${esc(nightDay(nightIndex[k].from))}</span></a>`).join("")}</div></section>` : "")
 });
 
 // ---------------------------------------------------------------- write
@@ -412,4 +441,4 @@ ${pages.map((p) => `<url><loc>${esc(SITE.replace(/\/$/, "") + BASE + p.path)}</l
 </urlset>
 `);
 writeFileSync(join(OUT, ".built"), new Date().toISOString() + "\n");
-console.log(`plain pages: ${pages.length} pages in ${OUT}/ (${genreList.length} genres, ${djList.length} DJs, ${artistPages.length} artists, ${yearList.length} years, ${chartList.length} charts)`);
+console.log(`plain pages: ${pages.length} pages in ${OUT}/ (${genreList.length} genres, ${djList.length} DJs, ${artistPages.length} artists, ${yearList.length} years, ${chartList.length} charts, ${nightList.length} theme nights)`);
