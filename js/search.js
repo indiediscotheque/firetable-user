@@ -68,6 +68,8 @@ firetable.ui.setupSearchEvents = function () {
   // ── Shared helper: bind addtolist + queuetrack buttons on a search result row ──
   var bindSearchResultButtons = function ($srli, mediaCid, mediaType, extra) {
     extra = extra || {};
+    $srli.attr('data-type', mediaType);
+    firetable.ui.markSaved();
     $srli.find('.addtolist').on('click', function () {
       var listid = $("#listpicker").val();
       var title = $srli.find('.listwords').text();

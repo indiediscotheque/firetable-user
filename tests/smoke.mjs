@@ -410,6 +410,55 @@ try {
   check(desk.icons && !desk.sheet && desk.beside && desk.focused, "wide screens keep every button on the row and the editor beside its button (" + JSON.stringify(desk) + ")");
   await page.evaluate(() => { document.getElementById("tagEditorPopover").hidePopover(); $("body").removeClass("is-mod"); firetable.$appShell = $("#appShell").detach(); });
 
+  console.log("-- saving a song: the + becomes a lasting gold check, and the toast can undo it");
+  await put("/queues/smoke", { q1: { type: 1, cid: "inlist01", name: "Have - It" } });
+  const saving = await page.evaluate(async () => {
+    const wait = (fn, ms = 8000) => new Promise((r) => { const t = Date.now(); (function poll() { if (fn() || Date.now() - t > ms) return r(); setTimeout(poll, 50); })(); });
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login");
+    ftapi.uid = "smoke";
+    ftapi.queueRef = ftapi.db().ref("queues/smoke");
+    ftapi.selectedListThing = "0";
+    await ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+    const t = Date.now();
+    [["inlist01", "Have", "It"], ["newsave01", "Want", "This"]].forEach(([cid, artist, title], i) =>
+      ftapi.events.emit("newHistory", { histID: "svh" + i, cid, type: 1, artist, title, dj: "dj1", djid: "dj1", when: t - i * 60000, img: "img/idlogo.png", url: "https://www.youtube.com/watch?v=" + cid }));
+    const btn = (cid) => document.querySelector('#thehistory .pvbar[data-cid="' + cid + '"] .histeal');
+    const state = (cid) => btn(cid).textContent.trim() + (btn(cid).classList.contains("is-saved") ? ":saved" : "");
+    await new Promise((r) => setTimeout(r, 200));
+    const before = { have: state("inlist01"), want: state("newsave01") };
+    btn("newsave01").click();
+    await wait(() => $("#stealContain").is(":visible") && $("#stealpicker option[value='0']").length);
+    $("#stealpicker").val("0").trigger("change");
+    await wait(() => document.querySelector("#ft-toast .ft-toast-action"));
+    const toast = document.getElementById("ft-toast").textContent;
+    await new Promise((r) => setTimeout(r, 4000)); // longer than the old 3-second check
+    const after = state("newsave01");
+    const stored = await ftapi.queueRef.once("value").then((s) => Object.values(s.val() || {}).map((x) => x.cid));
+    return { before, toast, after, stored };
+  });
+  check(saving.before.have === "playlist_add_check:saved" && saving.before.want === "playlist_add", "a song already in the open playlist shows a gold check; others show + (" + JSON.stringify(saving.before) + ")");
+  check(/^Saved to Default Playlist/.test(saving.toast) && saving.stored.includes("newsave01"), "saving shows \"Saved to …\" with Undo (" + saving.toast + ")");
+  check(saving.after === "playlist_add_check:saved", "the check stays after saving (" + saving.after + ")");
+  await put("/queues/smoke", null);
+  const undone = await page.evaluate(async () => {
+    await ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val() || {}, "0"));
+    firetable.saved.session = {};
+    const key = await ftapi.queueRef.push({ type: 1, cid: "undo0001", name: "Undo - Me" }).key;
+    firetable.ui.savedToast(ftapi.queueRef, key, { type: 1, cid: "undo0001" }, "Default Playlist");
+    document.querySelector("#ft-toast .ft-toast-action").click();
+    await new Promise((r) => setTimeout(r, 800));
+    const left = await ftapi.queueRef.once("value").then((s) => Object.values(s.val() || {}).map((x) => x.cid));
+    return { left, where: firetable.saved.where(1, "undo0001") };
+  });
+  check(!undone.left.includes("undo0001") && undone.where === "", "Undo takes the song back out and its + returns (" + JSON.stringify(undone) + ")");
+  const dates = await page.evaluate(() => {
+    const y = new Date().getFullYear();
+    return [firetable.utilities.shortDate(new Date(y, 10, 1).getTime()), firetable.utilities.shortDate(new Date(2011, 1, 3).getTime())];
+  });
+  check(dates[0] === "Nov 1" && dates[1] === "Feb 3, 2011", "one date style: \"Nov 1\" this year, \"Feb 3, 2011\" before (" + dates.join(" | ") + ")");
+  await page.evaluate(() => { firetable.$appShell = $("#appShell").detach(); });
+
   console.log("-- the waitlist's user card matches the deck's: DJ info and actions (#259)");
   await put("/users", { dj1: { username: "dj1", status: true }, dj2: { username: "dj2", status: true }, bot: { username: "hostbot", hostbot: true },
     wl1: { username: "wl1", status: true }, smokeMod: { username: "smokeMod", status: true, mod: true }, boss: { username: "boss", status: true, supermod: true } });

@@ -69,20 +69,16 @@ firetable.actions.queueTrack = function (cid, name, type, tobottom, extra) {
   extra = extra || {};
   var info = { type: type, name: name, cid: cid, img: extra.img, url: extra.url };
 
-  // Visual feedback: checkmark on the queue button
-  $("#apv" + type + cid).find(".material-symbols-filled").text("check");
-  $("#apv" + type + cid).css("color", firetable.orange);
-  $("#apv" + type + cid).css("pointer-events", "none");
-  setTimeout(function () {
-    $("#apv" + type + cid).find(".material-symbols-filled").text("playlist_add");
-    $("#apv" + type + cid).removeAttr("style");
-  }, 3000);
-
+  // The song's + turns into a lasting check, and a toast offers Undo
+  var listRef = ftapi.queueRef;
+  var listName = firetable.utilities.listName(ftapi.selectedListThing);
   if (tobottom) {
-    ftapi.actions.addToList(type, name, cid, false, null, extra.img, extra.url);
+    var key = ftapi.actions.addToList(type, name, cid, false, null, extra.img, extra.url);
+    firetable.ui.savedToast(listRef, key, info, listName);
   } else {
     // Added and moved to the top in one atomic step
-    ftapi.actions.addTrackToTop(ftapi.queueRef, info, firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
+    ftapi.actions.addTrackToTop(listRef, info, firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; },
+      function (err, newKey) { if (!err) firetable.ui.savedToast(listRef, newKey, info, listName); });
   }
 
   // Cancel any active search preview
@@ -994,6 +990,7 @@ firetable.ui.setupPlaylistEvents = function () {
 
   // ── Playlist changed: re-render the queue ──
   ftapi.events.on("playlistChanged", function (okdata, listID) {
+    firetable.saved.setOpen(okdata, listID);
     firetable.queue = okdata;
     firetable.ui.renderListCount(okdata, listID);
     // Each render gets a number; chunks from an older render stop when a

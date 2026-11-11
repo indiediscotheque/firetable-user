@@ -157,6 +157,15 @@
     --hist-time-w: 3.25rem;
     --hist-connector-w: 1rem;
     --hist-avatar-size: 1.5rem;
+
+    /* Wide screens (1024px+): the left and middle columns have these widths
+       everywhere: Live, signed out, and Discover. The right column takes the
+       rest. */
+    --col-left: 24vw;
+    --col-mid: min(46vw, 56rem);
+
+    /* Numbers (times, counts) use the site's second face, so they line up */
+    --font-numbers: "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 
 /* ============================================
@@ -5743,7 +5752,7 @@ html#about body {
         grid-template-rows: auto auto 1fr;
         /* The middle column caps at 56rem so the stage, the tabs and the view
            panel below always share one width; chat takes whatever is left. */
-        grid-template-columns: 24vw min(46vw, 56rem) auto;
+        grid-template-columns: var(--col-left) var(--col-mid) auto;
         grid-template-areas:
             "people  stage   chat"
             "people  nav     chat"
@@ -5781,7 +5790,7 @@ html#about body {
     }
 
     #mainGrid.login {
-        grid-template-columns: 24vw 46vw minmax(0, 1fr);
+        grid-template-columns: var(--col-left) var(--col-mid) minmax(0, 1fr);
         grid-template-rows: auto 1fr;
         grid-template-areas:
             "people  stage fresh"
@@ -6475,3 +6484,25 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
     font-size: 1rem;
 }
 .ft-menu [hidden] { display: none; }
+
+/* ============================================
+   Round five: one design language
+   ============================================ */
+
+/* A song you already have: the + becomes a gold check, everywhere */
+#thehistory button.histeal.is-saved,
+#thediscovers button.histeal.is-saved,
+#searchResults button.queuetrack.is-saved,
+#grab.is-saved i {
+    color: var(--color-accent);
+}
+
+/* Times, counts and timers in the numbers face */
+.themeTimr,
+.hist-timestamp,
+#thediscovers .histdate,
+#thediscovers .histtime,
+.chatTime {
+    font-family: var(--font-numbers);
+    font-variant-numeric: tabular-nums;
+}

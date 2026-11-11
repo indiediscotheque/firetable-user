@@ -143,7 +143,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
     .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
     .attr('aria-label', data.dj);
   $histItem.find('.dj-avatar-tip').attr('label', data.dj);
-  $histItem.find('.histdate').text(firetable.utilities.format_date(data.when));
+  $histItem.find('.histdate').text(firetable.utilities.shortDate(data.when));
   $histItem.find('.histtime').text(firetable.utilities.format_time(data.when));
 
   // Add-to-playlist button (shows playlist picker dropdown)
@@ -559,6 +559,7 @@ firetable.ui.setupRoomEvents = function () {
   ftapi.events.on('newProduce', function (data) {
     firetable._produceCache.push(data);
     renderHistoryItem(data, $discoverItem, "#thediscovers");
+    firetable.ui.markSaved();
   });
 
   // ── History (Your Play History) ──
@@ -643,6 +644,7 @@ firetable.ui.setupRoomEvents = function () {
     renderHistoryItem(data, $historyItem, "#thehistory");
     applyHistoryFilter();
     historyButtonSoon();
+    firetable.ui.markSaved();
   });
 
   // ── Re-render history/discover after re-login ──
@@ -906,10 +908,10 @@ firetable.ui.setupRoomEvents = function () {
   });
   themePill.addEventListener("animationend", function () { themePill.classList.remove("is-new"); });
 
-  // "first 4/14/2013 by matt"; the DJ only when known (plays from before the
+  // "first Apr 14, 2013 by matt"; the DJ only when known (plays from before the
   // room logged its DJs, e.g. Last.fm's, have none)
   function playLine(word, date, dj) {
-    return word + " " + firetable.utilities.format_date(date) + (dj ? " by " + dj : "");
+    return word + " " + firetable.utilities.shortDate(date) + (dj ? " by " + dj : "");
   }
 
   // ── Tag Update (metadata correction while song is playing) ──
@@ -961,6 +963,7 @@ firetable.ui.setupRoomEvents = function () {
 
   // ── New Song ──
   ftapi.events.on('newSong', function (data) {
+    firetable.ui.markSaved();
     firetable.fireCount = 0;
     firetable.fireReactors = {};
     if (typeof window.firetableSetFyreIntensity === 'function') {
