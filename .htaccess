@@ -46,12 +46,18 @@ Options -Indexes
   # every visit, so never let a cache hand them an old copy
   <Files "sw.js">
     Header always set Cache-Control "no-cache"
+    # the host adds its own 30-day cache headers to scripts: not for this one
+    Header set Cache-Control "no-cache"
+    Header unset Expires
   </Files>
 
   # The room's settings (config.js, server-only): checked on every load, so a
   # change there (like discover: true) reaches installed apps right away
   <Files "config.js">
     Header always set Cache-Control "no-cache"
+    # the host adds its own 30-day cache headers to scripts: not for this one
+    Header set Cache-Control "no-cache"
+    Header unset Expires
   </Files>
 
   # Site-wide: the page can't be framed by other sites (clickjacking), MIME
