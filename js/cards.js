@@ -184,6 +184,8 @@ firetable.actions.applyCardFilters = function () {
  * Open the card case modal and render all cards the user owns.
  */
 firetable.actions.cardCase = function () {
+  // signed out (the card case isn't in the page) or not yet known: nothing to show
+  if (!ftapi.uid || !document.getElementById("cardsMain")) return;
   $("#cardsMain").html("");
   $('#cardsWrap').addClass('content-loading');
   ftapi.lookup.cardCollection(function (data) {

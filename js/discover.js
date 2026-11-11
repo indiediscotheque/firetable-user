@@ -970,7 +970,7 @@ firetable.discover = (function () {
     var ref = ftapi.lookup.listRef(id);
     var updates = {};
     tracks.forEach(function (t) {
-      var track = { type: Number(t.type || 1), cid: t.cid, name: (t.a ? t.a + " - " : "") + t.t };
+      var track = { type: Number(t.type || 1), cid: t.cid, name: (t.a ? t.a + " - " : "") + t.t, from: "discover" };
       if (t.img) track.img = t.img;
       if (t.url) track.url = t.url;
       updates[ref.push().key] = track;
@@ -1112,15 +1112,57 @@ firetable.discover = (function () {
 
   function sideTabs() {
     var listLabel = D.signedIn ? "Playlists" : "Crate" + (crate().length ? " (" + crate().length + ")" : "");
-    return '<div class="tabs d-sidetabs" role="tablist">' +
-      '<button type="button" role="tab" class="tab' + (D.sideTab === "now" ? " on" : "") + '" data-sidetab="now" aria-selected="' + (D.sideTab === "now") + '">Now playing</button>' +
-      '<button type="button" role="tab" class="tab' + (D.sideTab === "list" ? " on" : "") + '" data-sidetab="list" aria-selected="' + (D.sideTab === "list") + '">' + esc(listLabel) + "</button></div>";
+    var tab = function (id, label) { return '<button type="button" role="tab" class="tab' + (D.sideTab === id ? " on" : "") + '" data-sidetab="' + id + '" aria-selected="' + (D.sideTab === id) + '">' + label + "</button>"; };
+    return '<div class="tabs d-sidetabs" role="tablist">' + tab("now", "Now playing") + tab("list", esc(listLabel)) +
+      (D.signedIn ? tab("chat", "Chat" + (D.unread ? ' <span class="d-unread" aria-label="' + D.unread + ' new">' + (D.unread > 99 ? "99+" : D.unread) + "</span>" : "")) : "") +
+      '<button type="button" class="butt graybutt iconbutt d-sheetclose" title="Close" aria-label="Close">' + ms("close") + "</button></div>";
+  }
+
+  // ─── Live chat, for members in Discover ─────────────────────────────────
+  // The room's own chat (#actualChat) moves into the right panel's Chat tab
+  // and goes back when they leave it: one chat, with everything it does.
+  var chatHome = null;
+  function chatIn(host) {
+    var chat = document.getElementById("actualChat");
+    if (!chat || !host || host.contains(chat)) return;
+    if (!chatHome) {
+      chatHome = document.createComment("chat");
+      chat.parentNode.insertBefore(chatHome, chat);
+    }
+    host.appendChild(chat);
+    document.body.classList.add("d-chat-here");
+    if (firetable.utilities.scrollToBottom) firetable.utilities.scrollToBottom();
+  }
+  function chatBack() {
+    var chat = document.getElementById("actualChat");
+    document.body.classList.remove("d-chat-here");
+    if (!chat || !chatHome || !chatHome.parentNode) return;
+    chatHome.parentNode.insertBefore(chat, chatHome);
+    chatHome.parentNode.removeChild(chatHome);
+    chatHome = null;
+    if (firetable.utilities.scrollToBottom) firetable.utilities.scrollToBottom();
   }
 
   function renderSide() {
     var el = document.getElementById("dSide");
     if (!el) return;
+    if (D.sideTab === "chat" && !(D.signedIn && D.mode === "discover")) D.sideTab = "now";
+    // the chat's tab: only its tabs change, so the chat keeps its place
+    if (D.sideTab === "chat" && el.querySelector(".d-chathost #actualChat")) {
+      var bar = el.querySelector(".d-sidetabs");
+      if (bar) bar.outerHTML = sideTabs();
+      renderMini();
+      return;
+    }
+    chatBack();
     var h = sideTabs();
+    if (D.sideTab === "chat") {
+      D.unread = 0;
+      el.innerHTML = '<div class="d-sidebody d-sidechat">' + sideTabs() + '<div class="d-chathost"></div></div>';
+      chatIn(el.querySelector(".d-chathost"));
+      renderMini();
+      return;
+    }
     if (D.sideTab === "list") h += D.signedIn ? playlistPanel() : cratePanel();
     else h += D.listening ? listeningPanel() : nowPanel();
     el.innerHTML = '<div class="d-sidebody">' + h + "</div>";
@@ -1321,7 +1363,7 @@ firetable.discover = (function () {
       var updates = {};
       c.forEach(function (t) {
         var key = ref.push().key;
-        var track = { type: t.type, cid: t.cid, name: (t.a ? t.a + " - " : "") + t.t };
+        var track = { type: t.type, cid: t.cid, name: (t.a ? t.a + " - " : "") + t.t, from: "discover" };
         if (t.img) track.img = t.img;
         if (t.url) track.url = t.url;
         updates[key] = track;
@@ -1569,6 +1611,8 @@ firetable.discover = (function () {
     });
     if (opts.remember) store.set(MODE_KEY, mode);
     if (mode === "live") {
+      chatBack();
+      if (D.sideTab === "chat") D.sideTab = "now";
       if (changed) { release(); D.listening = false; }
       window.dispatchEvent(new Event("resize")); // the stage measures itself again
     } else {
@@ -1647,9 +1691,76 @@ firetable.discover = (function () {
     else ref.once("value").then(got, function () { D.data.charts[key] = null; renderBrowse(); });
   }
 
+  // ─── Visitors' Live: what joining opens, shown not hidden ────────────────
+  // Above the sign-in form: Join (the form), Playlists, Recent and Cards. Each
+  // shows what it is, with the real thing where visitors can see it (the
+  // room's recent plays, the latest printed cards).
+
+  var lockedTab = "join";
+  function lockedTabs() {
+    var login = document.getElementById("login");
+    if (!login || D.signedIn) return;
+    if (!document.getElementById("dLocked")) {
+      var bar = document.createElement("div");
+      bar.id = "dLocked";
+      bar.className = "tabs";
+      bar.setAttribute("role", "tablist");
+      bar.setAttribute("aria-label", "In the room");
+      var pane = document.createElement("div");
+      pane.id = "dLockedPane";
+      pane.hidden = true;
+      login.insertBefore(pane, login.firstChild);
+      login.insertBefore(bar, login.firstChild);
+    }
+    var tabs = [["join", "Join"], ["playlists", "Playlists"], ["recent", "Recent"], ["cards", "Cards"]];
+    document.getElementById("dLocked").innerHTML = tabs.map(function (t) {
+      return '<button type="button" role="tab" class="tab' + (lockedTab === t[0] ? " on" : "") + '" data-locked="' + t[0] + '" aria-selected="' + (lockedTab === t[0]) + '">' + t[1] + "</button>";
+    }).join("");
+    var paneEl = document.getElementById("dLockedPane");
+    var join = lockedTab === "join";
+    paneEl.hidden = join;
+    ["welcomeInfo", "authBox"].forEach(function (id) { var el = document.getElementById(id); if (el) el.hidden = !join; });
+    if (join) { paneEl.innerHTML = ""; return; }
+    var joinLine = '<div class="d-lockjoin"><button type="button" class="butt d-createaccount">Join the room</button>' +
+      '<span>Already a member? <button type="button" class="linkButton d-login">Log in</button></span></div>';
+    if (lockedTab === "playlists") {
+      var n = crate().length;
+      paneEl.innerHTML = '<div class="d-locked">' + ms("queue_music") + "<h3>Your playlists</h3><p>Save songs from anywhere in the room or Discover, keep them in order, and play them for the room when it's your turn on the decks.</p>" +
+        (n ? "<p>Your crate of " + esc(firetable.utilities.pluralize(n, "song", "songs")) + " becomes your first playlist.</p>" : "") + joinLine + "</div>";
+    } else if (lockedTab === "recent") {
+      var rt = recentTracks().slice(0, 30);
+      setList("live-recent", "Recent plays", rt);
+      paneEl.innerHTML = '<div class="d-locked d-lockedlist"><p>The last songs played in the room. Play any of them in Discover, or save them to your crate.</p>' +
+        recentList(rt, "live-recent") + joinLine + "</div>";
+      firetable.ui.markSaved();
+    } else if (lockedTab === "cards") {
+      var latest = latestCards();
+      paneEl.innerHTML = '<div class="d-locked">' + ms("style") + "<h3>Trading cards</h3><p>Cards are printed as DJs play. Members grab them, collect them and give them to DJs. Join to start yours.</p>" +
+        (latest && latest.length ? '<div class="d-cards">' + latest.map(function (c) {
+          return '<span class="d-card"><canvas width="225" height="300" id="cardMakerdj' + esc(c.key) + '"></canvas></span>';
+        }).join("") + "</div>" : "") + joinLine + "</div>";
+      if (latest && firetable.actions.displayCard) latest.forEach(function (c) { firetable.actions.displayCard(JSON.parse(JSON.stringify(c)), "dj" + c.key); });
+    }
+  }
+  var lastCards;
+  function latestCards() {
+    if (lastCards === undefined) {
+      lastCards = null;
+      db().ref("cards").limitToLast(12).once("value").then(function (s) {
+        var out = [];
+        // cards the bot printed whole (old test rows can lack the art)
+        s.forEach(function (c) { var v = c.val(); if (v && v.djname && v.title) out.push(Object.assign({ key: c.key }, v)); });
+        lastCards = out.reverse().slice(0, 3);
+        if (lockedTab === "cards") lockedTabs();
+      }, function () { lastCards = []; });
+    }
+    return lastCards;
+  }
+
   // ─── Visitors' Live: the chat to read ───────────────────────────────────
 
   function renderPeek() {
+    lockedTabs();
     var el = document.getElementById("chatPeek");
     if (!el) return;
     if (D.signedIn) { el.hidden = true; return; }
@@ -1671,7 +1782,9 @@ firetable.discover = (function () {
     if ((b = t.closest(".d-listen"))) return listenIn();
     if ((b = t.closest(".d-stepin"))) return setMode("live", { remember: true });
     if ((b = t.closest(".d-mypick"))) { D.listening = false; return play(P.list, P.i, P.at); }
-    if ((b = t.closest("[data-sidetab]"))) { D.sideTab = b.getAttribute("data-sidetab"); return renderSide(); }
+    if ((b = t.closest("[data-sidetab]"))) { D.sideTab = b.getAttribute("data-sidetab"); if (D.sideTab === "chat") D.unread = 0; return renderSide(); }
+    if ((b = t.closest("#dLocked [data-locked]"))) { lockedTab = b.getAttribute("data-locked"); return lockedTabs(); }
+    if ((b = t.closest(".d-chatnav"))) { D.sideTab = "chat"; D.unread = 0; renderSide(); document.body.classList.add("d-sheet-open"); return; }
     if ((b = t.closest(".d-chip[data-new]"))) { D.newFilter = b.getAttribute("data-new"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-period]"))) { D.chart = { period: b.getAttribute("data-period"), id: null }; renderBrowse(); return writeAddress(); }
     if ((b = t.closest(".d-chip[data-cgenre]"))) { D.chartGenre = b.getAttribute("data-cgenre") || null; return renderBrowse(); }
@@ -1723,9 +1836,15 @@ firetable.discover = (function () {
     }
     if ((b = t.closest(".d-createaccount, .d-login"))) return showSignIn(b.classList.contains("d-login") ? "login" : "create");
     if ((b = t.closest(".d-mini-open"))) { document.body.classList.toggle("d-sheet-open"); return; }
+    if (t.closest(".d-sheetclose")) { document.body.classList.remove("d-sheet-open"); return; }
     if ((b = t.closest(".d-mini-row[data-list]"))) return play(b.getAttribute("data-list"), Number(b.getAttribute("data-i")));
-    var rowEl = t.closest("#dBrowse .pvbar[data-list]");
+    var rowEl = t.closest("#dBrowse .pvbar[data-list], #dLockedPane .pvbar[data-list]");
     if (rowEl) {
+      if (rowEl.closest("#dLockedPane") && t.closest(".d-play, .pv-art")) {
+        var pick = Number(rowEl.getAttribute("data-i"));
+        setMode("discover", { remember: true });
+        return play(rowEl.getAttribute("data-list"), pick);
+      }
       var list = rowEl.getAttribute("data-list"), i = Number(rowEl.getAttribute("data-i"));
       var track = lists[list] && lists[list].tracks[i];
       if (t.closest(".histeal")) { e.stopPropagation(); return track && save(track, t.closest(".histeal")); }
@@ -1829,7 +1948,7 @@ firetable.discover = (function () {
 
   function save(t, btn) {
     if (!D.signedIn) return saveToCrate(t);
-    firetable.actions.openStealPicker($(btn), { cid: t.cid, type: Number(t.type || 1), title: (t.a ? t.a + " - " : "") + t.t, img: t.img || artOf(t), url: t.url || "", djid: t.djid || "" }, "left");
+    firetable.actions.openStealPicker($(btn), { cid: t.cid, type: Number(t.type || 1), title: (t.a ? t.a + " - " : "") + t.t, img: t.img || artOf(t), url: t.url || "", djid: t.djid || "", from: "discover" }, "left");
   }
 
   function listenIn() {
@@ -1854,6 +1973,8 @@ firetable.discover = (function () {
     if (keep && keep.open) keep.close();
     var login = document.getElementById("login");
     if (!login || D.signedIn) return;
+    lockedTab = "join"; // the form, whatever tab Live was showing
+    lockedTabs();
     firetable.ui.showAuth(which);
     if (D.mode === "live" && login.offsetParent && !login.closest("#joinBox")) {
       login.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2218,6 +2339,7 @@ firetable.discover = (function () {
       '<input type="search" id="dQ" placeholder="Search artists, songs, genres, DJs" aria-label="Search the library" autocomplete="off" enterkeyhint="search" /></form>' +
       '<nav id="dNav" aria-label="Discover">' +
       VIEWS.map(function (v) { return '<button type="button" class="d-nav" data-view="' + v.id + '">' + ms(v.icon) + "<span>" + esc(v.label) + "</span></button>"; }).join("") +
+      '<button type="button" class="d-nav d-chatnav">' + ms("forum") + "<span>Chat</span></button>" +
       '</nav></div><div id="dBrowse" class="scroll-view"></div><aside id="dSide" aria-label="Player"></aside><div id="dMini" hidden></div>';
     document.getElementById("mainGrid").appendChild(page);
     if (filledHtml) {
@@ -2262,6 +2384,8 @@ firetable.discover = (function () {
 
   function signedIn(on) {
     D.signedIn = on;
+    document.body.classList.toggle("d-member", !!on);
+    if (!on) { chatBack(); if (D.sideTab === "chat") D.sideTab = "now"; }
     var join = document.getElementById("joinBox");
     if (on && join && join.open) join.close();
     if (on) {
@@ -2348,6 +2472,11 @@ firetable.discover = (function () {
           togglePause();
           return;
         }
+        // Escape closes the phone panel (menus and dialogs handle their own first)
+        if (e.key === "Escape" && document.body.classList.contains("d-sheet-open") && !document.querySelector("dialog[open], #dMenu:not([hidden])")) {
+          document.body.classList.remove("d-sheet-open");
+          return;
+        }
         // "/" anywhere outside a text box: search
         if (e.key === "/" && !/^(input|textarea|select)$/i.test((e.target.tagName || "")) && !e.target.isContentEditable) {
           e.preventDefault();
@@ -2391,6 +2520,17 @@ firetable.discover = (function () {
       ftapi.events.on("newHistory", firetable.utilities.oncePerFrame(function () {
         if (D.mode === "discover" && (D.view === "recent" || D.view === "home")) renderBrowse();
       }));
+      var chatLoaded = false;
+      ftapi.events.on("chatHistoryLoaded", function () { chatLoaded = true; });
+      ftapi.events.on("newChat", function (c) {
+        if (!chatLoaded || !D.signedIn || D.mode !== "discover" || D.sideTab === "chat" || (c && c.id === ftapi.uid)) return;
+        D.unread = (D.unread || 0) + 1;
+        var bar = document.querySelector("#dSide .d-sidetabs");
+        if (bar) bar.outerHTML = sideTabs();
+        var nav = document.querySelector(".d-chatnav .d-unread");
+        if (nav) nav.textContent = D.unread > 99 ? "99+" : D.unread;
+        else if (document.querySelector(".d-chatnav")) document.querySelector(".d-chatnav").insertAdjacentHTML("beforeend", '<span class="d-unread">' + D.unread + "</span>");
+      });
       ftapi.events.on("playlistChanged", function () {
         if (D.mode === "discover" && D.signedIn && D.sideTab === "list") renderSide();
       });
