@@ -410,6 +410,59 @@ try {
   check(desk.icons && !desk.sheet && desk.beside && desk.focused, "wide screens keep every button on the row and the editor beside its button (" + JSON.stringify(desk) + ")");
   await page.evaluate(() => { document.getElementById("tagEditorPopover").hidePopover(); $("body").removeClass("is-mod"); firetable.$appShell = $("#appShell").detach(); });
 
+  console.log("-- the waitlist's user card matches the deck's: DJ info and actions (#259)");
+  await put("/users", { dj1: { username: "dj1", status: true }, dj2: { username: "dj2", status: true }, bot: { username: "hostbot", hostbot: true },
+    wl1: { username: "wl1", status: true }, smokeMod: { username: "smokeMod", status: true, mod: true }, boss: { username: "boss", status: true, supermod: true } });
+  await put("/table", [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 2, removeAfter: true }]);
+  await put("/waitlist", [{ name: "wl1", id: "wl1", plays: 0 }, { name: "smokeMod", id: "smokeMod", plays: 0, removeAfter: true }, { name: "boss", id: "boss", plays: 0 }]);
+  await page.waitForFunction(() => firetable.waitlistData && ftapi.users && ftapi.users.boss, null, { timeout: 10000 }).catch(() => {});
+  const wlCard = await page.evaluate(async () => {
+    // the people panel is only in the page while signed in: put it back for this part
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login");
+    const realUid = ftapi.uid;
+    ftapi.uid = "smokeMod";
+    firetable.nav.setSide("people");
+    ftapi.events.emit("waitlistChanged", firetable.waitlistData);
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    const tip = document.getElementById("ft-user-tip");
+    const facts = () => [...tip.querySelectorAll(".utt-fact")].map((f) => f.children[0].textContent + "=" + f.children[1].textContent).filter((f) => !/^(Joined|Cards)=/.test(f)).join("|");
+    const actions = () => [...tip.querySelectorAll(".utt-icon-btn")].filter((b) => getComputedStyle(b).display !== "none" && b.offsetParent).map((b) => b.dataset.action + ":" + (b.getAttribute("title") || b.dataset.ftTitle)).join("|");
+    const open = (sel) => { document.querySelector(sel).click(); return new Promise((r) => setTimeout(r, 100)); };
+    const out = {};
+    await open('#usersWaitlist .waitlist-item[data-userid="wl1"] .ft-avatar');
+    out.wl = { open: tip.matches(":popover-open"), facts: facts(), actions: actions() };
+    await open('#ondeck .ondeck-slot[data-djid="dj2"]');
+    out.deck = { open: tip.matches(":popover-open"), facts: facts(), actions: actions() };
+    await open('#usersWaitlist .waitlist-item[data-userid="boss"] .ft-avatar');
+    out.boss = actions();
+    await open('#usersWaitlist .waitlist-item[data-userid="smokeMod"] .ft-avatar');
+    out.self = { facts: facts(), actions: actions() };
+    // the waitlist redraws while the card is open: it follows its person
+    await open('#usersWaitlist .waitlist-item[data-userid="wl1"] .ft-avatar');
+    firetable.waitlistData = [firetable.waitlistData[1], firetable.waitlistData[0], firetable.waitlistData[2]];
+    ftapi.events.emit("waitlistChanged", firetable.waitlistData);
+    await new Promise((r) => setTimeout(r, 100));
+    const anchor = document.querySelector('#usersWaitlist .waitlist-item[data-userid="wl1"] .ft-avatar');
+    out.redraw = { open: tip.matches(":popover-open"), anchored: anchor.style.getPropertyValue("anchor-name") === "--ft-user-anchor", facts: facts() };
+    tip.hidePopover();
+    ftapi.uid = realUid;
+    firetable.$appShell = $("#appShell").detach();
+    return out;
+  });
+  check(wlCard.wl.open && wlCard.wl.facts === "Name=wl1|Role=Member|DJ=Waitlist, 1 of 3", "a waitlist avatar's card shows their place in line (" + JSON.stringify(wlCard.wl) + ")");
+  check(wlCard.wl.actions === "chat-at:@ in chat|remove-from-deck:Remove from waitlist|toggle-bus:Send wl1 home after their next play|toggle-block:Block",
+    "mods get the deck's actions on the waitlist: remove and the bus, no \"Add to deck\" (" + wlCard.wl.actions + ")");
+  check(wlCard.deck.open && /DJ=On deck\|Session plays=2\/∞\|Leaving=After next play/.test(wlCard.deck.facts) && /remove-from-deck:Remove from deck\|toggle-bus:Don't send dj2 home/.test(wlCard.deck.actions),
+    "the on-deck card still shows plays and its actions (" + JSON.stringify(wlCard.deck) + ")");
+  check(!/remove-from-deck|toggle-bus/.test(wlCard.boss), "no remove or bus for someone who outranks you (" + wlCard.boss + ")");
+  check(wlCard.self.facts === "Name=smokeMod|Role=Mod|DJ=Waitlist, 2 of 3|Leaving=After next play" &&
+    wlCard.self.actions === "toggle-bus:Don't step down after your next play|step-down:Leave the waitlist",
+    "your own waitlist card lets you take the bus or leave the waitlist (" + JSON.stringify(wlCard.self) + ")");
+  check(wlCard.redraw.open && wlCard.redraw.anchored && /DJ=Waitlist, 2 of 3/.test(wlCard.redraw.facts), "an open card follows its person when the waitlist redraws (" + JSON.stringify(wlCard.redraw) + ")");
+  await put("/waitlist", null);
+  await put("/table", [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }]);
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));

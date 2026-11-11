@@ -956,6 +956,7 @@ firetable.ui.updateScreenBtn = function (val) {
 // ─── Floating UI Tooltip ─────────────────────────────────────────────────────
 firetable.ui.tooltip = (function () {
   var tipEl;
+  var refreshUserTip = null; // set by bind()
 
   // Touch screens fire a fake hover on tap, which would leave tips stuck open
   var noHover = window.matchMedia('(hover: none)');
@@ -1173,6 +1174,52 @@ firetable.ui.tooltip = (function () {
       userTipTooltipEl.style.top = '';
     });
 
+    // Where a user is DJing: on the deck, on the waitlist (with their place
+    // in line), or neither.
+    function djStatus(userid) {
+      var k;
+      for (k in firetable.tableData || {}) {
+        if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k] && firetable.tableData[k].id === userid) {
+          return { where: 'deck', entry: firetable.tableData[k] };
+        }
+      }
+      var pos = 0, found = null;
+      for (k in firetable.waitlistData || {}) {
+        if (!firetable.waitlistData.hasOwnProperty(k) || !firetable.waitlistData[k]) continue;
+        pos++;
+        if (!found && firetable.waitlistData[k].id === userid) found = { where: 'waitlist', entry: firetable.waitlistData[k], pos: pos };
+      }
+      if (found) { found.count = pos; return found; }
+      return { where: null, entry: null };
+    }
+
+    // The deck and waitlist are redrawn whenever they change, which takes the
+    // card's anchor away. Keep an open card on the same person: re-anchor it
+    // to wherever they show up now and refresh what it says.
+    function findUserAnchor(userid) {
+      var esc = window.CSS && CSS.escape ? CSS.escape(userid) : userid;
+      var candidates = [
+        '#ondeck .ondeck-slot[data-djid="' + esc + '"]',
+        '#usersWaitlist .waitlist-item[data-userid="' + esc + '"] .ft-avatar',
+        '#allUsersWrap .prson[data-userid="' + esc + '"] .ft-avatar'
+      ];
+      for (var i = 0; i < candidates.length; i++) {
+        var el = document.querySelector(candidates[i]);
+        if (el && el.getClientRects().length) return el;
+      }
+      return null;
+    }
+
+    refreshUserTip = function () {
+      if (!userTipEl.matches(':popover-open')) return;
+      var uid = $userTip.attr('data-for');
+      if (!uid || !(ftapi.users && ftapi.users[uid])) { userTipEl.hidePopover(); return; }
+      var anchor = (_currentAnchorEl && _currentAnchorEl.isConnected && _currentAnchorEl.getClientRects().length)
+        ? _currentAnchorEl : findUserAnchor(uid);
+      if (!anchor) { userTipEl.hidePopover(); return; }
+      showUserTip(anchor, uid);
+    };
+
     function showUserTip(anchorEl, userid) {
       var userData = ftapi.users && ftapi.users[userid];
       if (!userData) return;
@@ -1221,14 +1268,17 @@ firetable.ui.tooltip = (function () {
       // Cards (async — placeholder first)
       facts.push({ label: 'Cards', val: '<span class="utt-cards-val">…</span>' });
 
-      // Session plays last (if currently on the deck)
-      if (firetable.tableData) {
-        for (var k in firetable.tableData) {
-          if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userid) {
-            facts.push({ label: 'Session plays', val: firetable.tableData[k].plays });
-            break;
-          }
-        }
+      // DJ status last: the same card for the deck and the waitlist (#259)
+      var dj = djStatus(userid);
+      if (dj.where === 'deck') {
+        var playingNow = !!(firetable.song && firetable.song.djid === userid);
+        facts.push({ label: 'DJ', val: playingNow ? 'Playing now' : 'On deck' });
+        facts.push({ label: 'Session plays', val: (dj.entry.plays || 0) + '/' + (firetable.playlimit || '?') });
+      } else if (dj.where === 'waitlist') {
+        facts.push({ label: 'DJ', val: 'Waitlist, ' + dj.pos + ' of ' + dj.count });
+      }
+      if (dj.entry && dj.entry.removeAfter) {
+        facts.push({ label: 'Leaving', val: 'After next play' });
       }
 
       var factsHtml = facts.map(function (f) {
@@ -1239,11 +1289,11 @@ firetable.ui.tooltip = (function () {
       $userTip.attr('data-for', userid);
 
       // Set CSS anchor on the clicked .prson element for CSS anchor positioning
-      if (_currentAnchorEl) _currentAnchorEl.style.removeProperty('anchor-name');
+      if (_currentAnchorEl && _currentAnchorEl !== anchorEl) _currentAnchorEl.style.removeProperty('anchor-name');
       _currentAnchorEl = anchorEl;
       anchorEl.style.setProperty('anchor-name', '--ft-user-anchor');
 
-      userTipEl.showPopover();
+      if (!userTipEl.matches(':popover-open')) userTipEl.showPopover();
       requestAnimationFrame(function () {
         setUserTipTailSide(anchorEl);
       });
@@ -1264,46 +1314,33 @@ firetable.ui.tooltip = (function () {
         .attr('aria-disabled', blockAction.canToggle ? 'false' : 'true')
         .attr('title', blockAction.title);
 
-      // Mod/supermod actions
+      // Mod/supermod actions. Deck and waitlist DJs get the same ones (#259);
+      // the bot's !remove, !removeme and bus commands cover both lists.
       var ownUser = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
-      var isMod = ownUser && (ownUser.mod || ownUser.supermod);
-      var isOnDeck = !!(firetable.tableData && (function () {
-        for (var k in firetable.tableData) {
-          if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === userid) return true;
-        }
-      })());
-      var $deckBtn = $userTip.find('.utt-deck-btn');
-      $userTip.toggleClass('can-add-to-deck', !!(isMod && !isSelf && !isOnDeck));
-      $userTip.toggleClass('can-remove-from-deck', !!(isMod && !isSelf && isOnDeck));
-      $userTip.toggleClass('can-step-down', !!(isSelf && isOnDeck));
-      var departureScheduled = false;
-      if (isSelf && isOnDeck && firetable.tableData) {
-        for (var dk in firetable.tableData) {
-          if (firetable.tableData.hasOwnProperty(dk) && firetable.tableData[dk].id === ftapi.uid) {
-            departureScheduled = !!firetable.tableData[dk].removeAfter;
-            break;
-          }
-        }
-      }
-      // Mods can put someone of lower rank on the bus (#121); the bot checks rank too
+      var isMod = !!(ownUser && (ownUser.mod || ownUser.supermod));
+      var isDj = !!dj.where;
+      var onWaitlist = dj.where === 'waitlist';
+      var name = userData.username || 'them';
+      // Mods can act on someone of lower rank (#121); the bot checks rank too
       var rank = function (u) { return !u ? 0 : u.supermod ? 2 : u.mod ? 1 : 0; };
-      var djEntry = null;
-      [firetable.tableData, firetable.waitlistData].forEach(function (list) {
-        for (var bk in list || {}) {
-          if (list.hasOwnProperty(bk) && list[bk] && list[bk].id === userid) djEntry = list[bk];
-        }
-      });
-      var canBusOther = !!(isMod && !isSelf && djEntry && rank(userData) < rank(ownUser));
-      $userTip.toggleClass('can-bus-other', canBusOther);
-      if (canBusOther) departureScheduled = !!djEntry.removeAfter;
+      var outranks = rank(userData) < rank(ownUser);
+      var departureScheduled = !!(dj.entry && dj.entry.removeAfter);
+      $userTip.toggleClass('can-add-to-deck', isMod && !isSelf && !isDj);
+      $userTip.toggleClass('can-remove-from-deck', isMod && !isSelf && isDj && rank(userData) <= rank(ownUser));
+      $userTip.toggleClass('can-step-down', isSelf && isDj);
+      $userTip.toggleClass('can-bus-other', isMod && !isSelf && isDj && outranks);
+      $userTip.toggleClass('departure-on', departureScheduled);
+      $userTip.find('.utt-remove-deck-btn')
+        .attr('title', onWaitlist ? 'Remove from waitlist' : 'Remove from deck');
+      $userTip.find('.utt-stepdown-btn')
+        .attr('title', onWaitlist ? 'Leave the waitlist' : 'Step down from deck');
       $userTip.find('.utt-bus-btn').attr('title', isSelf
         ? (departureScheduled ? "Don't step down after your next play" : 'Take the bus (step down after next play)')
-        : (departureScheduled ? "Don't send " + (userData.username || 'them') + ' home after their next play' : 'Send ' + (userData.username || 'them') + ' home after their next play'));
-      $userTip.toggleClass('departure-on', departureScheduled);
-      $deckBtn
-        .toggleClass('is-disabled', isOnDeck)
-        .attr('aria-disabled', isOnDeck ? 'true' : 'false')
-        .attr('title', isOnDeck ? 'Already on deck' : 'Add to deck');
+        : (departureScheduled ? "Don't send " + name + ' home after their next play' : 'Send ' + name + ' home after their next play'));
+      $userTip.find('.utt-deck-btn')
+        .removeClass('is-disabled')
+        .attr('aria-disabled', 'false')
+        .attr('title', 'Add to deck');
 
       // Resolve card count
       if (_cardCountCache.hasOwnProperty(userid)) {
@@ -1382,9 +1419,13 @@ firetable.ui.tooltip = (function () {
       var uid = $(this).closest('.prson').attr('data-userid');
       if (uid) showUserTip(this, uid);
     });
-    $('#usersWaitlist').on('click.ft-usertip', '.waitlist-item .ft-avatar', function () {
+    $('#usersWaitlist').on('click.ft-usertip', '.waitlist-item[data-userid] .ft-avatar', function () {
       var uid = $(this).closest('.waitlist-item').attr('data-userid');
       if (uid) showUserTip(this, uid);
+    }).on('keydown.ft-usertip', '.waitlist-item[data-userid] .ft-avatar[role="button"]', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      $(this).trigger('click');
     });
     $(document).on('click.ft-usertip', '#deck .ondeck-slot:not(.empty), #ondeck .ondeck-slot:not(.empty)', function () {
       var uid = $(this).data('djid');
@@ -1392,7 +1433,11 @@ firetable.ui.tooltip = (function () {
     });
   }
 
-  return { bind: bind, show: show, hide: hide };
+  return {
+    bind: bind, show: show, hide: hide,
+    // Keep an open user card in step with the deck and waitlist
+    refreshUserTip: function () { if (refreshUserTip) refreshUserTip(); }
+  };
 })();
 
 /**
