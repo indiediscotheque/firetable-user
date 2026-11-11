@@ -191,7 +191,7 @@ firetable.discover = (function () {
     return '<div class="pvbar' + (playing ? " previewing" : "") + '"' + rowAttrs(t, list, i) + ">" +
       '<div class="pv-art discart" style="background-image:url(' + esc(artOf(t)) + ')">' +
       '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, i) ? "Pause" : "Play") + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
-      '<div class="qtxt"><div class="listwords"><div class="fresh-title"><span class="fresh-track-title">' + esc(t.t) + '</span><span class="fresh-track-artist">' + artistLinks(t.a) + "</span></div>" +
+      '<div class="qtxt"><div class="listwords"><div class="fresh-title"><span class="fresh-track-title d-sheetlink" role="button" tabindex="0">' + esc(t.t) + '</span><span class="fresh-track-artist">' + artistLinks(t.a) + "</span></div>" +
       moreButton() + saveButton(t) + "</div>" +
       '<div class="fresh-meta">' + robotLink(meta.dj) + '<span class="histdj">' + esc(meta.who || "") + '</span><span class="histdate">' + esc(meta.date || "") + '</span><span class="histtime">' + esc(meta.extra || "") + "</span></div></div></div>";
   }
@@ -203,7 +203,7 @@ firetable.discover = (function () {
       (meta.dj ? robotLink(meta.dj) : '<span class="ft-avatar pv-dj-avatar dj-avatar-tip d-nobody" aria-hidden="true"></span>') +
       '<div class="pvbar' + (playing ? " previewing" : "") + '"' + rowAttrs(t, list, i) + ">" +
       '<div class="pv-art histart" style="background-image:url(' + esc(artOf(t)) + ')"><button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, i) ? "Pause" : "Play") + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
-      '<div class="listwords"><div class="histlink"><span class="hist-track-title">' + esc(t.t) + '</span><span class="hist-track-artist">' + artistLinks(t.a) + "</span></div></div>" +
+      '<div class="listwords"><div class="histlink"><span class="hist-track-title d-sheetlink" role="button" tabindex="0">' + esc(t.t) + '</span><span class="hist-track-artist">' + artistLinks(t.a) + "</span></div></div>" +
       (meta.right ? '<span class="d-right">' + meta.right + "</span>" : "") +
       moreButton() + saveButton(t) + "</div></div>";
   }
@@ -1086,6 +1086,9 @@ firetable.discover = (function () {
         if (v.first_play_date) { out.first = v.first_play_date; out.firstDj = v.first_play_dj; }
         if (v.last_play_date) { out.last = v.last_play_date; out.lastDj = v.last_play_dj; }
         out.genres = v.genres || [];
+        out.work = v.work || null;
+        if (!v.work) return null;
+        return db().ref("globalWorks/" + v.work + "/versions").once("value").then(function (w) { out.versions = w.val() || 1; });
       });
     }).catch(function () {});
     var tempo = db().ref("bpm/" + firetable.utilities.grabKey(t.type, t.cid)).once("value").then(function (s) {
@@ -1650,6 +1653,11 @@ firetable.discover = (function () {
     if ((b = t.closest(".d-chip[data-djsort]"))) { D.djSort = b.getAttribute("data-djsort"); return renderBrowse(); }
     if ((b = t.closest(".d-homemore"))) { var k = b.getAttribute("data-more"); D.homeMore[k] = !D.homeMore[k]; return renderBrowse(); }
     if ((b = t.closest("#dSearchOpen"))) return openSearch();
+    if ((b = t.closest(".d-sheetlink"))) { e.preventDefault(); return openSheet(songFrom(b)); }
+    if ((b = t.closest("#thehistory .pv-dj-avatar, #thediscovers .pv-dj-avatar"))) {
+      var key = djKey(b.getAttribute("data-avatar-uid"), b.getAttribute("aria-label"));
+      if (key) { location.hash = "#discover/djs/" + key; return; }
+    }
     if ((b = t.closest(".d-ytsearch"))) return searchYouTube(D.sub || "");
     if ((b = t.closest(".d-playall"))) return play(b.getAttribute("data-list"), 0);
     if ((b = t.closest(".d-saveall"))) return saveAll(b.getAttribute("data-list"));
@@ -1864,6 +1872,131 @@ firetable.discover = (function () {
     if (login && login.closest("#joinBox") && loginHome.parentNode) loginHome.parentNode.insertBefore(login, loginHome);
     if (loginHome.parentNode) loginHome.parentNode.removeChild(loginHome);
     loginHome = null;
+  }
+
+  // ─── Every name is a door: Live's lists and stage, and the song sheet ───
+  // Live's Recent, Fresh and stage are drawn by room.js; this only adds to
+  // what's there, watching for new rows: artist names link to their pages,
+  // a DJ's robot to their DJ page, and a song's title opens its sheet.
+
+  function linkLive(root) {
+    root.querySelectorAll(".hist-track-artist, .fresh-track-artist, #artist").forEach(function (el) {
+      if (el.closest("#dBrowse")) return;
+      var text = el.textContent;
+      if (!text || el.getAttribute("data-linked") === text) return;
+      el.setAttribute("data-linked", text);
+      el.innerHTML = artistLinks(text);
+    });
+    root.querySelectorAll(".hist-track-title, .fresh-track-title, #track").forEach(function (el) {
+      if (el.closest("#dBrowse") || el.classList.contains("d-sheetlink")) return;
+      el.classList.add("d-sheetlink");
+      el.setAttribute("role", "button");
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("title", "About this song");
+    });
+  }
+  function watchLive() {
+    var grid = document.getElementById("mainGrid");
+    if (!grid || !window.MutationObserver) return;
+    var queued = false;
+    new MutationObserver(function () {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () { queued = false; linkLive(document); });
+    }).observe(grid, { childList: true, subtree: true, characterData: true });
+    linkLive(document);
+  }
+
+  /** A song from a title someone tapped: in Discover's lists, Live's rows or the stage. */
+  function songFrom(el) {
+    var rowEl = el.closest("[data-list]");
+    if (rowEl && rowEl.closest("#dBrowse")) {
+      var l = lists[rowEl.getAttribute("data-list")];
+      return l && l.tracks[Number(rowEl.getAttribute("data-i"))];
+    }
+    if (el.id === "track") {
+      var s = firetable.song;
+      if (!s || !s.cid) return null;
+      return { type: Number(s.type || 1), cid: s.cid, a: firetable.utilities.decodeEntities(s.artist || ""), t: firetable.utilities.decodeEntities(s.title || ""),
+        img: (firetable.imgCache && firetable.imgCache[s.cid]) || s.image, url: s.url, dj: s.djname, djid: s.djid, now: true };
+    }
+    var bar = el.closest(".pvbar");
+    if (!bar || !bar.getAttribute("data-cid")) return null;
+    var avatar = (bar.closest(".hist-entry") || bar).querySelector(".pv-dj-avatar");
+    var artistEl = bar.querySelector(".hist-track-artist, .fresh-track-artist");
+    return { type: Number(bar.getAttribute("data-type") || 1), cid: bar.getAttribute("data-cid"), a: artistEl ? artistEl.textContent : "", t: el.textContent,
+      img: bar.getAttribute("data-img") || null, url: (bar.querySelector(".tracklink-btn") || {}).href || null,
+      dj: avatar && avatar.getAttribute("aria-label"), djid: avatar && avatar.getAttribute("data-avatar-uid") };
+  }
+
+  var sheetTrack = null;
+  function openSheet(t) {
+    if (!t || !t.cid) return;
+    sheetTrack = t;
+    var dlg = document.getElementById("dSheetBox");
+    if (!dlg) {
+      dlg = document.createElement("dialog");
+      dlg.id = "dSheetBox";
+      dlg.setAttribute("aria-labelledby", "dSheetTitle");
+      document.body.appendChild(dlg);
+      dlg.addEventListener("click", function (e) {
+        var b;
+        if (e.target === dlg || e.target.closest(".closeModal")) return dlg.close();
+        if (e.target.closest("a[href^='#discover']")) return dlg.close();
+        if ((b = e.target.closest(".d-sheetplay"))) {
+          dlg.close();
+          setList("sheet", "Song", [sheetTrack]);
+          if (D.mode !== "discover") setMode("discover", { remember: true });
+          return play("sheet", 0);
+        }
+        if ((b = e.target.closest(".d-sheetsave"))) return save(sheetTrack, b);
+        if ((b = e.target.closest(".d-sheetcopy"))) {
+          var url = linkOf(sheetTrack);
+          var done = function () { firetable.ui.toast("Link copied", "success"); };
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { firetable.ui.toast(url); });
+          else firetable.ui.toast(url);
+        }
+      });
+    }
+    var link = linkOf(t);
+    var saved = firetable.saved.where(t.type, t.cid);
+    dlg.innerHTML = '<div class="modalBox"><div class="modalHeader"><h2 id="dSheetTitle">About this song</h2>' +
+      '<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close">' + ms("close") + "</button></div>" +
+      '<div class="modalContent d-sheet"><div class="d-sheethead"><span class="d-cover" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
+      '<div class="d-now"><span class="d-title">' + esc(t.t) + '</span><span class="d-artist">' + artistLinks(t.a) + "</span>" +
+      '<div class="d-tags" id="dSheetTags"></div></div></div>' +
+      '<div class="d-hist" id="dSheetHist"><p>' + ms("hourglass_empty") + "Looking it up…</p></div>" +
+      '<div class="d-actions"><button type="button" class="butt d-sheetplay">' + ms("play_arrow", true) + "<span>Play" + (D.mode === "discover" ? "" : " in Discover") + "</span></button>" +
+      '<button type="button" class="butt graybutt d-sheetsave' + (saved ? " is-saved" : "") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "<span>" + (saved ? "Saved" : "Save") + "</span></button>" +
+      (link ? '<a class="butt graybutt iconbutt" href="' + esc(link) + '" target="_blank" rel="noopener" title="Open on ' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + '" aria-label="Open on ' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + '">' + ms("open_in_new") + "</a>" +
+        '<button type="button" class="butt graybutt iconbutt d-sheetcopy" title="Copy the song\'s link" aria-label="Copy the song\'s link">' + ms("link") + "</button>" : "") +
+      "</div></div></div>";
+    if (!dlg.open) dlg.showModal();
+    loadDetails(t).then(function (d) {
+      if (sheetTrack !== t) return;
+      var tags = (d.genres || []).slice(0, 3).map(function (g) { return '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>"; });
+      if (t.rel) tags.push('<span class="d-tag d-numtag">' + esc(t.rel.slice(0, 4)) + "</span>");
+      if (d.bpm) tags.push('<span class="d-tag d-numtag">' + esc(d.bpm) + " BPM</span>");
+      tags.push('<span class="d-tag">' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + "</span>");
+      var lines = [];
+      if (t.now) {
+        var on = t.dj ? djShown(t.djid, t.dj) : null;
+        lines.push((on ? robotLink(on) : '<i class="d-dot" aria-hidden="true"></i>') + "<span>playing in the room now" + (on ? ", " + nameLink(on) + " on deck" : "") + "</span>");
+      }
+      var plays = d.plays || t.plays;
+      if (plays) lines.push("<span><b>" + esc(firetable.utilities.pluralize(plays, "play", "plays")) + "</b> in the room</span>");
+      var first = d.first ? djShown(null, d.firstDj) : null;
+      if (d.first) lines.push((first ? robotLink(first) : "") + "<span>first played " + esc(firetable.utilities.shortDate(d.first)) + (first ? " by " + nameLink(first) : "") + "</span>");
+      if (d.last && d.last !== d.first) {
+        var last = djShown(null, d.lastDj);
+        lines.push((last ? robotLink(last) : "") + "<span>last played " + esc(firetable.utilities.shortDate(d.last)) + (last ? " by " + nameLink(last) : "") + "</span>");
+      }
+      if (d.versions > 1) lines.push("<span>" + esc(d.versions) + " versions of this song have played here</span>");
+      if (!plays && !d.first && !t.now) lines.push("<span>Nobody has played this live yet. It could be you.</span>");
+      var tg = document.getElementById("dSheetTags"), hi = document.getElementById("dSheetHist");
+      if (tg) tg.innerHTML = tags.join("");
+      if (hi) hi.innerHTML = lines.map(function (l) { return "<p>" + l + "</p>"; }).join("");
+    });
   }
 
   // ─── Sharing a chart: a link, an image, an embed ────────────────────────
@@ -2156,6 +2289,7 @@ firetable.discover = (function () {
       measure();
       if (window.ResizeObserver) new ResizeObserver(measure).observe(topbar);
       document.addEventListener("click", onClick);
+      watchLive();
       var typed = null;
       document.addEventListener("input", function (e) {
         if (e.target.id === "dQ") {
@@ -2178,6 +2312,7 @@ firetable.discover = (function () {
       });
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape") closeMenu(true);
+        if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("d-sheetlink")) { e.preventDefault(); openSheet(songFrom(e.target)); return; }
         // "/" anywhere outside a text box: search
         if (e.key === "/" && !/^(input|textarea|select)$/i.test((e.target.tagName || "")) && !e.target.isContentEditable) {
           e.preventDefault();

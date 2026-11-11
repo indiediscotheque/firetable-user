@@ -898,6 +898,24 @@ body.ft-discover #joinBox #login,
 .d-embed textarea { box-sizing: border-box; width: 100%; padding: var(--pad2); font: 0.75rem var(--font-numbers); color: var(--color-text); background: rgba(0, 0, 0, 0.5); border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; }
 .d-embed iframe { align-self: center; max-width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
 
+/* Every name is a door: titles open the song sheet, robots their DJ page */
+.d-sheetlink { cursor: pointer; }
+@media (hover: hover) {
+    .d-sheetlink:hover { text-decoration: underline; text-underline-offset: 2px; }
+}
+body.ft-has-discover #thehistory .pv-dj-avatar,
+body.ft-has-discover #thediscovers .pv-dj-avatar { cursor: pointer; }
+#artist .d-alink { color: inherit; }
+
+/* The song sheet */
+#dSheetBox .modalBox { width: 30rem; max-width: min(30rem, calc(100vw - 2rem)); }
+.d-sheet { display: flex; flex-direction: column; gap: var(--pad3); overflow-y: auto; }
+.d-sheethead { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: var(--pad3); align-items: start; }
+.d-sheethead .d-cover { width: 7rem; margin: 0; }
+.d-sheethead .d-now { gap: var(--pad1); }
+.d-sheet .d-actions { margin-top: 0; }
+.d-sheet .d-actions .is-saved i { color: var(--color-accent); }
+
 /* Keep your crate */
 #keepCrateBox .modalBox { max-width: min(30rem, calc(100vw - 2rem)); }
 .d-keep { display: flex; flex-direction: column; gap: var(--pad3); }
