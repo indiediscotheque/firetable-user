@@ -131,10 +131,11 @@ try {
     localStorage.removeItem(STORAGE.mute);
     player.setVolume(60);
     firetable.actions.pview("ytcidM7lc1UVf-VE", true, MEDIA_YOUTUBE);
-    await wait(600);
+    // as it starts (where YouTube can't play here, the preview stops itself on its error)
     const during = { preview: firetable.preview, active: firetable.overlayPreview.active(), roomVol: player.getVolume(), host: !!document.getElementById("pvOverPlayer") };
-    firetable.actions.pview("ytcidM7lc1UVf-VE", true, MEDIA_YOUTUBE);
     await wait(300);
+    firetable.overlayPreview.stop();
+    await wait(100);
     const after = { active: firetable.overlayPreview.active(), roomVol: player.getVolume() };
     toggle.checked = false;
     toggle.dispatchEvent(new Event("change"));
