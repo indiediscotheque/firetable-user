@@ -292,11 +292,12 @@ firetable.overlayPreview = (function () {
     return on() && Number(type) === MEDIA_YOUTUBE && typeof YT !== "undefined" && !!YT.Player &&
       !firetable.disableMediaPlayback && firetable.preview !== "discover";
   }
-  /** The room's volume: a fifth while a preview plays over it. */
+  /** The room's volume: a fifth while a preview plays over it. (Always set:
+   *  YouTube's player reports a new volume a moment late.) */
   function duck(down) {
     var v = firetable.utilities.getEffectiveVolume();
     var want = down ? Math.round(v * DUCK) : v;
-    if (firetable.ytLoaded && player.getVolume && player.getVolume() !== want) player.setVolume(want);
+    if (firetable.ytLoaded) player.setVolume(want);
     if (firetable.scLoaded && firetable.scwidget) firetable.scwidget.setVolume(want);
   }
   function make(cb) {
@@ -342,7 +343,7 @@ firetable.overlayPreview = (function () {
       $("#pvbar" + state.id).addClass("previewing").css("background-image",
         "linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 27%, transparent) " + pcnt + "%, var(--color-bg-t1) " + pcnt + "%)");
       duck(true); // a new song in the room sets its own volume: keep it down
-      if (pv && ready && pv.getVolume && pv.getVolume() !== firetable.utilities.getEffectiveVolume()) pv.setVolume(firetable.utilities.getEffectiveVolume());
+      if (pv && ready) pv.setVolume(firetable.utilities.getEffectiveVolume());
     }, PREVIEW_BAR_INTERVAL);
     duck(true);
     make(function () {

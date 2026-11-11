@@ -129,14 +129,17 @@ try {
     toggle.dispatchEvent(new Event("change"));
     localStorage.setItem(STORAGE.volume, "60");
     localStorage.removeItem(STORAGE.mute);
-    player.setVolume(60);
+    // what the room's player is told (its own report of the volume lags)
+    const set = [];
+    const realSet = player.setVolume.bind(player);
+    player.setVolume = (v) => { set.push(v); return realSet(v); };
     firetable.actions.pview("ytcidM7lc1UVf-VE", true, MEDIA_YOUTUBE);
     // as it starts (where YouTube can't play here, the preview stops itself on its error)
-    const during = { preview: firetable.preview, active: firetable.overlayPreview.active(), roomVol: player.getVolume(), host: !!document.getElementById("pvOverPlayer") };
+    const during = { preview: firetable.preview, active: firetable.overlayPreview.active(), roomVol: set[set.length - 1], host: !!document.getElementById("pvOverPlayer") };
     await wait(300);
     firetable.overlayPreview.stop();
-    await wait(100);
-    const after = { active: firetable.overlayPreview.active(), roomVol: player.getVolume() };
+    const after = { active: firetable.overlayPreview.active(), roomVol: set[set.length - 1] };
+    player.setVolume = realSet;
     toggle.checked = false;
     toggle.dispatchEvent(new Event("change"));
     return { during, after, saved: localStorage.getItem("ft-preview-over") };
