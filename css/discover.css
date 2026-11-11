@@ -411,15 +411,6 @@ body.ft-discover #discoverPage {
 .d-chatline .ft-avatar { width: 1.5rem; height: 1.5rem; flex: none; }
 .d-chatline span { min-width: 0; overflow-wrap: anywhere; }
 .d-chatline b { display: block; color: var(--color-text-muted); font-size: var(--fs-meta); font-weight: 500; }
-.d-social {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--pad1) var(--pad3);
-    padding: var(--pad2) var(--pad3);
-    border-top: 1px solid var(--color-border);
-    font-size: var(--fs-meta);
-}
-.d-social a { color: var(--color-text-muted); }
 
 /* Keep your crate */
 #keepCrateBox .modalBox { max-width: min(30rem, calc(100vw - 2rem)); }

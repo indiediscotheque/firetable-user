@@ -368,20 +368,13 @@ firetable.discover = (function () {
       '<button type="button" role="tab" class="tab' + (D.sideTab === "list" ? " on" : "") + '" data-sidetab="list" aria-selected="' + (D.sideTab === "list") + '">' + esc(listLabel) + "</button></div>";
   }
 
-  function communityLinks() {
-    var links = [["Discord", ftconfigs.discordURL], ["Instagram", ftconfigs.instagramURL], ["Facebook", ftconfigs.facebookURL], ["Reddit", ftconfigs.redditURL], ["Last.fm", ftconfigs.lastfmURL], ["SoundCloud", ftconfigs.soundcloudURL]]
-      .filter(function (l) { return l[1]; });
-    if (!links.length) return "";
-    return '<nav class="d-social" aria-label="Community">' + links.map(function (l) { return '<a href="' + esc(l[1]) + '" target="_blank" rel="noopener">' + esc(l[0]) + "</a>"; }).join("") + "</nav>";
-  }
-
   function renderSide() {
     var el = document.getElementById("dSide");
     if (!el) return;
     var h = sideTabs();
     if (D.sideTab === "list") h += D.signedIn ? playlistPanel() : cratePanel();
     else h += D.listening ? listeningPanel() : nowPanel();
-    el.innerHTML = '<div class="d-sidebody">' + h + "</div>" + communityLinks();
+    el.innerHTML = '<div class="d-sidebody">' + h + "</div>";
     if (D.sideTab === "now" && !D.listening && P.track) fillDetails(P.track);
     renderMini();
     firetable.ui.markSaved();
