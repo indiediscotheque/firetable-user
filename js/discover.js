@@ -1142,7 +1142,7 @@ firetable.discover = (function () {
 
   function step(by) {
     var list = lists[P.list];
-    if (!list) return;
+    if (!list || D.mode !== "discover") return;
     var i = P.i + by;
     if (i < 0 || i >= list.tracks.length) {
       if (by > 0) { // the end of the list
@@ -1618,7 +1618,8 @@ firetable.discover = (function () {
       return;
     }
     firetable.ui.toast("That song can't play here. Skipping it.");
-    setTimeout(function () { step(1); }, 800);
+    // unless they've gone to Live or Listen in meanwhile
+    setTimeout(function () { if (firetable.preview === "discover" && D.mode === "discover") step(1); }, 800);
   }
 
   function signedIn(on) {
