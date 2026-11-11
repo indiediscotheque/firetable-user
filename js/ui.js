@@ -273,6 +273,101 @@ firetable.actions.openStealPicker = function ($btn, target, placement) {
   });
 };
 
+// ─── Saved songs (round five: one save icon with two states) ──────────────────
+// The + on a song becomes a gold check once it's in your playlists, and stays
+// that way: in Recent, Fresh, search results and on the stage. The site never
+// downloads all your playlists (only their counts), so "saved" means the list
+// you have open in Playlists (usually your DJ playlist) or saved to during
+// this visit.
+
+firetable.saved = {
+  open: {},     // "type_cid" -> true, the list open in Playlists
+  session: {},  // "type_cid" -> list name, saved during this visit
+  openName: "",
+  key: function (type, cid) { return String(type) + "_" + String(cid); },
+  /** The list a song is in, or "" when it isn't saved. */
+  where: function (type, cid) {
+    var k = firetable.saved.key(type, cid);
+    return firetable.saved.session[k] || (firetable.saved.open[k] ? firetable.saved.openName || "your playlist" : "");
+  },
+  /** Note a save (and redraw the buttons). */
+  mark: function (type, cid, listName) {
+    firetable.saved.session[firetable.saved.key(type, cid)] = listName || "your playlist";
+    firetable.ui.markSaved();
+  },
+  /** Forget a save that was undone. */
+  unmark: function (type, cid) {
+    delete firetable.saved.session[firetable.saved.key(type, cid)];
+    firetable.ui.markSaved();
+  },
+  /** The open list changed: rebuild its part of the index. */
+  setOpen: function (list, listID) {
+    var open = {};
+    Object.keys(list || {}).forEach(function (k) {
+      var t = list[k];
+      if (t && t.cid != null) open[firetable.saved.key(t.type, t.cid)] = true;
+    });
+    firetable.saved.open = open;
+    firetable.saved.openName = firetable.utilities.listName(listID);
+    firetable.ui.markSaved();
+  }
+};
+
+/** A playlist's name by id ("0" is the default playlist). */
+firetable.utilities.listName = function (listID) {
+  if (listID == null || String(listID) === "0") return "Default Playlist";
+  var pl = firetable.allPlaylists && firetable.allPlaylists[listID];
+  return (pl && pl.name) || "your playlist";
+};
+
+/** Draw one add button as saved or not. */
+function drawSaveButton(btn, where) {
+  var icon = btn.querySelector("i, .material-symbols-filled, .material-symbols-outlined") || btn;
+  var want = where ? "playlist_add_check" : "playlist_add";
+  if (icon.textContent.trim() !== want) icon.textContent = want;
+  btn.classList.toggle("is-saved", !!where);
+  var label = where ? "In " + where + ". Add to another playlist" : "Add to playlist";
+  btn.setAttribute("aria-label", label);
+  btn.setAttribute("title", label);
+}
+
+/** Redraw every add button on songs outside your own playlist. */
+firetable.ui.markSaved = firetable.utilities.oncePerFrame(function () {
+  document.querySelectorAll("#thehistory .histeal, #thediscovers .histeal, #searchResults .queuetrack").forEach(function (btn) {
+    var row = btn.closest(".pvbar");
+    if (!row || !row.getAttribute("data-cid")) return;
+    drawSaveButton(btn, firetable.saved.where(row.getAttribute("data-type") || 1, row.getAttribute("data-cid")));
+  });
+  var grab = document.getElementById("grab");
+  var s = firetable.song;
+  if (grab && s && s.cid && s.cid != 0) drawSaveButton(grab, firetable.saved.where(s.type, s.cid));
+});
+
+/**
+ * "Saved to Friday set", with Undo, after any save.
+ * @param {Object} ref - the list it went into
+ * @param {string} key - the track's key there
+ * @param {{type, cid}} track
+ * @param {string} listName
+ */
+firetable.ui.savedToast = function (ref, key, track, listName) {
+  firetable.saved.mark(track.type, track.cid, listName);
+  firetable.ui.toast("Saved to " + listName, "success", {
+    action: {
+      label: "Undo",
+      fn: function () {
+        if (!ref || !key) return;
+        ref.child(key).remove().then(function () {
+          firetable.saved.unmark(track.type, track.cid);
+          firetable.ui.toast("Removed from " + listName);
+        }, function () {
+          firetable.ui.toast("Couldn't undo that. The song is still in " + listName + ".", "error");
+        });
+      }
+    }
+  });
+};
+
 // ─── Grab stats (#47) ────────────────────────────────────────────────────────
 // When someone adds a track to their playlist from the stage or from Recent /
 // Fresh, the DJ who played it gets credit. It's private: only that DJ can read
@@ -1635,12 +1730,16 @@ firetable.ui.setupMiscEvents = function () {
       firetable.actions.recordGrab(src.djid || (isNowPlaying && firetable.song.djid), src.type, src.cid);
       // Now-playing track goes to the bottom; any other source (history,
       // discover, search) goes to the top, added and moved in one step.
+      var destRef = ftapi.lookup.listRef(dest);
+      var destName = firetable.utilities.listName(dest);
       if (isNowPlaying) {
-        ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img, firetable.utilities.soundCloudPageUrl(src.url));
+        var addedKey = ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img, firetable.utilities.soundCloudPageUrl(src.url));
+        firetable.ui.savedToast(destRef, addedKey, src, destName);
       } else {
-        ftapi.actions.addTrackToTop(ftapi.lookup.listRef(dest),
+        ftapi.actions.addTrackToTop(destRef,
           { type: src.type, name: src.title, cid: src.cid, img: src.img, url: firetable.utilities.soundCloudPageUrl(src.url) },
-          firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
+          firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; },
+          function (err, key) { if (!err) firetable.ui.savedToast(destRef, key, src, destName); });
       }
       $("#stealContain").hide();
       // Show "added" feedback if the source button was inside a search result row

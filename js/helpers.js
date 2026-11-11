@@ -526,6 +526,20 @@ firetable.utilities = {
   },
 
   /**
+   * The site's one date style for a moment: "Nov 10" this year, "Nov 10,
+   * 2011" before that. Used wherever a song's dates show (Fresh, the stage's
+   * first and last plays, Discover).
+   * @param {number|string|Date} d - Timestamp or Date
+   * @returns {string}
+   */
+  shortDate: function (d) {
+    var date = new Date(d);
+    var month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][date.getMonth()];
+    var out = month + " " + date.getDate();
+    return date.getFullYear() === new Date().getFullYear() ? out : out + ", " + date.getFullYear();
+  },
+
+  /**
    * Format a timestamp as a 12-hour time string: H:MMam/pm
    * @param {number|string|Date} d - Timestamp or Date
    * @returns {string}
