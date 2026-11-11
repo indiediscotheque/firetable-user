@@ -73,6 +73,8 @@ firetable.actions.logIn = function (email, password) {
   firetable.debug && console.log("login");
   firetable.ui.formMessage('#loginFormShell', '');
   ftapi.actions.logIn(email, password, function (error) {
+    if (firetable.ui.authIdle) firetable.ui.authIdle();
+    $("#loginpass").val("");
     firetable.ui.formMessage('#loginFormShell', firetable.ui.authErrorMessage(error));
     firetable.debug && console.log("log in error:", error);
   });
@@ -193,7 +195,14 @@ firetable.actions.signUp = function (email, password, username) {
   firetable.debug && console.log("signup");
   firetable.ui.formMessage('#createAccountFormShell', '');
   ftapi.actions.signUp(email, password, username, function (error) {
-    firetable.ui.formMessage('#createAccountFormShell', firetable.ui.authErrorMessage(error));
+    if (firetable.ui.authIdle) firetable.ui.authIdle();
+    var text = firetable.ui.authErrorMessage(error);
+    if (/username is not available/i.test(text)) {
+      firetable.ui.fieldNote("#newusername", username + " is taken. Try another.", "bad");
+      $("#newusername").trigger("focus");
+      text = "";
+    }
+    firetable.ui.formMessage('#createAccountFormShell', text);
   });
 };
 
@@ -228,6 +237,8 @@ firetable.actions.showLoginScreen = function () {
  */
 firetable.actions.loggedIn = function (user) {
   firetable.debug && console.log("user signed in!");
+
+  firetable.ui.rememberAuth();
 
   // Preserve login form HTML before removing
   if ($("#login").html()) {
@@ -394,110 +405,185 @@ firetable.ui.renderRoomPulse = function () {
 
 // ─── Login Form Events ──────────────────────────────────────────────────────
 
+/** Someone has signed in on this device before: open on Log in next time. */
+var AUTH_KNOWN_KEY = "ft-has-account";
+
 /**
- * Bind click/keyup handlers on the login, signup, and password reset forms.
+ * Show one of the sign-in forms: "create" (the default for new visitors),
+ * "login" (for anyone who has signed in here before) or "reset".
+ * @param {"create"|"login"|"reset"} which
+ * @param {{focus?: boolean}} [opts]
+ */
+firetable.ui.showAuth = function (which, opts) {
+  opts = opts || {};
+  if (which !== "login" && which !== "reset") which = "create";
+  var panes = { create: "#createscreen", login: "#logscreen", reset: "#resetscreen" };
+  Object.keys(panes).forEach(function (k) { $(panes[k]).prop("hidden", k !== which); });
+  var tab = which === "reset" ? "login" : which;
+  $("#authTabs [data-auth]").each(function () {
+    var on = $(this).attr("data-auth") === tab;
+    $(this).toggleClass("on", on).attr("aria-selected", String(on));
+  });
+  // Google/Apple work for both, so they stay above Create and Log in
+  $("#authBox").attr("data-auth", which);
+  $("#login .formMessage").text("").removeClass("is-success");
+  if (which === "reset" && !$("#theAddress").val()) $("#theAddress").val($("#loginemail").val());
+  if (opts.focus) setTimeout(function () { $(panes[which]).find("input").filter(":visible").first().trigger("focus"); }, 0);
+};
+
+/** The form to open on: Log in for people who've signed in here before. */
+firetable.ui.authDefault = function () {
+  try { return localStorage.getItem(AUTH_KNOWN_KEY) ? "login" : "create"; } catch (e) { return "create"; }
+};
+
+/** A note under a field: a hint, or what's wrong (marks the field invalid). */
+firetable.ui.fieldNote = function (input, text, state) {
+  var $in = $(input);
+  var $note = $("#" + $in.attr("id") + "Note");
+  $in.attr("aria-invalid", state === "bad" ? "true" : null);
+  if (!$note.length) return;
+  $note.text(text == null ? ($note.attr("data-hint") || "") : text).attr("data-state", state || null);
+};
+
+/**
+ * Bind the sign-in forms: tabs, show password, checks as you type, and
+ * submit (the button or Enter).
  */
 firetable.ui.loginEventsInit = function () {
-  // Tab switching
-  $("#resetpass").on("click", function () {
-    $("#logscreen, #createscreen").css("display", "none");
-    $("#resetscreen").css("display", "block");
-    firetable.ui.loginLinkToggle(this.id);
+  var $login = $("#login");
+  firetable.ui.showAuth(firetable.ui.authDefault());
+
+  $login.on("click.auth", "[data-auth]", function () {
+    firetable.ui.showAuth($(this).attr("data-auth"), { focus: true });
   });
-  $("#loginlink").on("click", function () {
-    $("#logscreen").css("display", "block");
-    $("#createscreen, #resetscreen").css("display", "none");
-    firetable.ui.loginLinkToggle(this.id);
+  // arrow keys move between the two tabs
+  $login.on("keydown.auth", "#authTabs [role=tab]", function (e) {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    var next = $(this).attr("data-auth") === "create" ? "login" : "create";
+    firetable.ui.showAuth(next);
+    $('#authTabs [data-auth="' + next + '"]').trigger("focus");
   });
-  $("#signuplink").on("click", function () {
-    $("#createscreen").css("display", "block");
-    $("#logscreen, #resetscreen").css("display", "none");
-    firetable.ui.loginLinkToggle(this.id);
+  $login.on("click.auth", ".showPass", function () {
+    var $in = $(this).siblings("input");
+    var show = $in.attr("type") === "password";
+    $in.attr("type", show ? "text" : "password");
+    $(this).text(show ? "visibility_off" : "visibility").attr({ "aria-pressed": String(show), "aria-label": show ? "Hide password" : "Show password" });
   });
 
-  // Login via Enter
-  $("#loginpass").on("keyup", function (e) {
-    if (e.which === 13) {
-      var email = $("#loginemail").val();
-      var pass = $("#loginpass").val();
-      $("#loginemail, #loginpass").val("");
-      firetable.actions.logIn(email, pass);
-    }
+  // checks as you type: the name's rules and whether it's free
+  var nameTimer = null;
+  var nameAsked = "";
+  $login.on("input.auth", "#newusername", function () {
+    var name = $(this).val().trim();
+    clearTimeout(nameTimer);
+    if (!name) return firetable.ui.fieldNote(this, null);
+    var check = ftapi.utilities.validateUsername(name);
+    if (!check.valid) return firetable.ui.fieldNote(this, /long/.test(check.reason) ? "Up to 22 characters." : "Only letters, numbers and underscores.", "bad");
+    firetable.ui.fieldNote(this, "Checking…");
+    var input = this;
+    nameTimer = setTimeout(function () {
+      nameAsked = name;
+      ftapi.lookup.usernameTaken(name, function (taken) {
+        if (nameAsked !== name || $(input).val().trim() !== name) return;
+        if (taken) firetable.ui.fieldNote(input, name + " is taken. Try another.", "bad");
+        else firetable.ui.fieldNote(input, name + " is free.", "good");
+      });
+    }, 350);
+  });
+  $login.on("input.auth", "#newpass", function () {
+    var n = $(this).val().length;
+    firetable.ui.fieldNote(this, n && n < 6 ? (6 - n) + " more " + (6 - n === 1 ? "character" : "characters") : null, n >= 6 ? "good" : null);
+  });
+  $login.on("blur.auth", "#newemail", function () {
+    var v = $(this).val().trim();
+    firetable.ui.fieldNote(this, v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "That doesn't look like an email address." : "", v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "bad" : null);
+  });
+  $login.on("input.auth", "#newemail", function () {
+    if ($(this).attr("aria-invalid")) firetable.ui.fieldNote(this, "");
+  });
+  $login.on("change.auth", "#agreetoterms", function () {
+    if (this.checked) $("#termsAgreement").removeAttr("data-state");
   });
 
-  // Signup via Enter — runs the same checks as the Create Account button
-  // (including the Terms of Service checkbox)
-  $("#newpass2").on("keyup", function (e) {
-    if (e.which === 13) {
-      $("#createAccountBttn").trigger("click");
-    }
-  });
+  // a button shows it's working until the answer comes back
+  var busy = function ($b, label) {
+    $b.prop("disabled", !!label).text(label || $b.attr("data-label"));
+  };
+  var idle = function () { $("#createAccountBttn, #loginBttn, #resetPassBttn").each(function () { busy($(this)); }); };
+  firetable.ui.authIdle = idle;
+  // the form comes back from a saved copy after signing out: start it fresh
+  idle();
+  $login.find(".passField input").attr("type", "password");
+  $login.find(".showPass").text("visibility").attr({ "aria-pressed": "false", "aria-label": "Show password" });
+  $login.find("[aria-invalid]").removeAttr("aria-invalid");
+  $login.find(".fieldNote[data-state]").each(function () { $(this).removeAttr("data-state").text($(this).attr("data-hint") || ""); });
+  $("#termsAgreement").removeAttr("data-state");
 
-  // Password reset via Enter
-  $("#theAddress").on("keyup", function (e) {
-    if (e.which === 13) {
-      firetable.debug && console.log("reset email return");
-      $("#resetPassBttn").trigger("click");
-    }
-  });
-
-  // Create Account button
-  $("#createAccountBttn").on("click", function () {
-    var email = $("#newemail").val();
+  $login.on("submit.auth", "#createAccountFormShell", function (e) {
+    e.preventDefault();
+    var email = $("#newemail").val().trim();
     var pass = $("#newpass").val();
-    var pass2 = $("#newpass2").val();
-    var termsAgreedTo = $("#agreetoterms").is(":checked");
-    var username = $("#newusername").val();
-    if (!termsAgreedTo) {
-      firetable.ui.formMessage('#createAccountFormShell', "You must read and agree to the Terms of Service and Privacy Policy before you can create an account.");
-    } else if (pass !== pass2) {
-      firetable.ui.formMessage('#createAccountFormShell', "Those passwords do not match!");
-    } else {
-      firetable.actions.signUp(email, pass, username);
+    var username = $("#newusername").val().trim();
+    var first = null;
+    var bad = function (input, text) { firetable.ui.fieldNote(input, text, "bad"); first = first || input; };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad("#newemail", email ? "That doesn't look like an email address." : "Enter your email.");
+    var check = ftapi.utilities.validateUsername(username);
+    if (!username) bad("#newusername", "Choose the name people see in the room.");
+    else if (!check.valid) bad("#newusername", /long/.test(check.reason) ? "Up to 22 characters." : "Only letters, numbers and underscores.");
+    if (pass.length < 6) bad("#newpass", "At least 6 characters.");
+    if (first) {
+      firetable.ui.formMessage("#createAccountFormShell", "");
+      return $(first).trigger("focus");
     }
+    if (!$("#agreetoterms").is(":checked")) {
+      $("#termsAgreement").attr("data-state", "bad");
+      return firetable.ui.formMessage("#createAccountFormShell", "Tick the box to agree to the Terms of Service and Privacy Policy.");
+    }
+    busy($("#createAccountBttn"), "Creating your account…");
+    firetable.actions.signUp(email, pass, username);
   });
 
-  // Reset Password button
-  $("#resetPassBttn").on("click", function () {
-    var email = $("#theAddress").val();
-    firetable.debug && console.log("reset email click button");
+  $login.on("submit.auth", "#loginFormShell", function (e) {
+    e.preventDefault();
+    var email = $("#loginemail").val().trim();
+    var pass = $("#loginpass").val();
+    if (!email || !pass) {
+      firetable.ui.formMessage("#loginFormShell", !email ? "Enter your email." : "Enter your password.");
+      return $(!email ? "#loginemail" : "#loginpass").trigger("focus");
+    }
+    busy($("#loginBttn"), "Logging in…");
+    firetable.actions.logIn(email, pass);
+  });
+
+  $login.on("submit.auth", "#resetPasswordFormShell", function (e) {
+    e.preventDefault();
+    var email = $("#theAddress").val().trim();
+    if (!email) {
+      firetable.ui.formMessage("#resetPasswordFormShell", "Enter the email you joined with.");
+      return $("#theAddress").trigger("focus");
+    }
     // Success shows right away; a real error (bad address, rate limit,
     // network) replaces it. "No such user" keeps the success message so the
     // form doesn't reveal which emails have accounts.
-    firetable.ui.formMessage('#resetPasswordFormShell', "If that email has an account, a reset link is on its way.", 'success');
+    firetable.ui.formMessage("#resetPasswordFormShell", "If " + email + " has an account, a reset link is on its way. Check your inbox.", "success");
     ftapi.actions.resetPassword(email, function (error) {
-      if (error && error.code === 'auth/user-not-found') return;
-      firetable.ui.formMessage('#resetPasswordFormShell', firetable.ui.authErrorMessage(error));
-      firetable.debug && console.log('send pass reset error:', error);
+      if (error && error.code === "auth/user-not-found") return;
+      firetable.ui.formMessage("#resetPasswordFormShell", firetable.ui.authErrorMessage(error));
+      firetable.debug && console.log("send pass reset error:", error);
     });
   });
-
-  // Login button
-  $("#loginBttn").on("click", function () {
-    var email = $("#loginemail").val();
-    var pass = $("#loginpass").val();
-    $("#loginemail, #loginpass").val("");
-    firetable.actions.logIn(email, pass);
-  });
 };
 
 /**
- * Unbind all login form event handlers (before removing the form from DOM).
+ * Unbind the sign-in forms (before removing them from the page).
  */
 firetable.ui.loginEventsDestroy = function () {
-  $("#resetpass, #loginlink, #signuplink").off("click");
-  $("#loginpass, #newpass2, #theAddress").off("keyup");
-  $("#createAccountBttn, #resetPassBttn, #loginBttn").off("click");
+  $("#login").off(".auth");
 };
 
-/**
- * Toggle the active state of login/signup/reset links.
- * @param {string} id - ID of the link to mark as selected
- */
-firetable.ui.loginLinkToggle = function (id) {
-  $("#formlinks").find(".selected").removeClass("selected");
-  $("#" + id).addClass("selected");
-  $("#login .formMessage").text('').removeClass('is-success');
+/** Remember that this device has an account, so the form opens on Log in. */
+firetable.ui.rememberAuth = function () {
+  try { localStorage.setItem(AUTH_KNOWN_KEY, "1"); } catch (e) { /* private window */ }
 };
 
 // ─── User Event Binding ──────────────────────────────────────────────────────
