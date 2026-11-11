@@ -442,6 +442,7 @@ firetable.ui.setupRoomEvents = function () {
     $("#deck").html(deckHtml);
     $("#ondeck").html(ondeckHtml);
     $("#deckQueue").empty();
+    if (firetable.ui.tooltip) firetable.ui.tooltip.refreshUserTip();
 
     firetable.ui.applyDeckPlacement && firetable.ui.applyDeckPlacement();
 
@@ -1294,6 +1295,7 @@ firetable.ui.setupRoomEvents = function () {
         '</div>'
       ).removeClass('has-entries');
     }
+    if (firetable.ui.tooltip) firetable.ui.tooltip.refreshUserTip();
   });
 
   // ── DJ Table ──
