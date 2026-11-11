@@ -110,9 +110,32 @@ jobs:
             exit 1
           fi
 
+      # The upload tool (lftp) comes from Ubuntu's package servers. A copy is
+      # kept between runs, so a publish never waits on those servers being up.
+      - name: Keep the upload tool between runs
+        uses: actions/cache@v6
+        with:
+          path: ~/lftp-debs
+          key: lftp-${{ runner.os }}-${{ runner.arch }}-1
+
       - name: Prepare
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+          if ls ~/lftp-debs/*.deb >/dev/null 2>&1 && sudo dpkg -i ~/lftp-debs/*.deb >/dev/null 2>&1 && command -v lftp >/dev/null; then
+            echo "lftp: the copy kept from an earlier run"
+          else
+            # from Ubuntu's servers, a few tries apart, and kept for next time
+            got=""
+            for try in 1 2 3 4; do
+              bash .github/scripts/apt-mirror.sh
+              if sudo apt-get install -y -qq --download-only lftp; then got=1; break; fi
+              echo "Ubuntu's package servers didn't answer (try $try); waiting..."
+              sleep $((try * 30))
+            done
+            [ -n "$got" ] || { echo "::error::Couldn't get lftp from Ubuntu's package servers. Nothing was uploaded; run the deploy again later."; exit 1; }
+            mkdir -p ~/lftp-debs
+            cp /var/cache/apt/archives/*.deb ~/lftp-debs/ 2>/dev/null || true
+            sudo apt-get install -y -qq lftp
+          fi
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           if [ -n "$KNOWN_HOSTS" ]; then
             # the saved host key: the password only ever goes to that server
