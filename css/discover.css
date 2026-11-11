@@ -348,6 +348,7 @@ body:not(.ft-has-discover) #dSearchOpen { display: none; }
 #dBrowse .d-headrow h1 { margin-right: auto; font-size: 1.2rem; font-weight: 700; }
 #dBrowse .d-pagetext h1 { font-size: 2rem; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; }
 #dBrowse .d-actions a.butt { color: var(--color-on-accent); mix-blend-mode: normal; }
+#dBrowse .d-actions a.butt.graybutt { color: rgba(255, 255, 255, 0.55); text-decoration: none; }
 @media only screen and (max-width: 639px) {
     #dBrowse .d-pagetext h1 { font-size: 1.6rem; }
 }

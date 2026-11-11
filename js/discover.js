@@ -539,6 +539,19 @@ firetable.discover = (function () {
     return '<button type="button" class="butt d-playall" data-list="' + esc(listName) + '">' + ms("play_arrow", true) + "<span>" + esc(label) + "</span></button>" +
       saveAllButton(listName);
   }
+  // The genre's playlist on YouTube Music, once the bot has made it (discover/ytm)
+  var ytmLists, ytmAsked = false;
+  function ytmButton(slug, name) {
+    if (!ytmAsked) {
+      ytmAsked = true;
+      db().ref("discover/ytm").once("value").then(function (s) { ytmLists = s.val() || {}; if (ytmLists[D.sub] && D.view === "genres") renderBrowse(); },
+        function (err) { quiet(err); ytmLists = {}; });
+    }
+    var id = ytmLists && ytmLists[slug];
+    if (!id || !/^[\w-]+$/.test(id)) return "";
+    return '<a class="butt graybutt d-ytm" href="https://music.youtube.com/playlist?list=' + esc(id) + '" target="_blank" rel="noopener" title="' + esc("The " + name + " room favorites as a playlist on YouTube Music") + '">' +
+      ms("open_in_new") + "<span>YouTube Music</span></a>";
+  }
   function saveAllButton(listName) {
     return '<button type="button" class="butt graybutt d-saveall" data-list="' + esc(listName) + '" title="' + (D.signedIn ? "Save these songs as a new playlist" : "Save these songs to your crate") + '">' +
       ms("playlist_add") + "<span>Save all</span></button>";
@@ -663,7 +676,7 @@ firetable.discover = (function () {
     h += '<div class="d-pagehead">' + mosaic(g.covers, true) + '<div class="d-pagetext"><h2>' + esc(g.name) + "</h2>" +
       (g.about ? '<p class="d-about">' + esc(g.about) + "</p>" : "") + '<p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
       '<div class="d-actions"><button type="button" class="butt d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>Play " + esc(g.name) + " radio</span></button>" +
-      saveAllButton("genre") + "</div></div></div>";
+      saveAllButton("genre") + ytmButton(slug, g.name) + "</div></div></div>";
     h += "<section>" + '<div class="d-headrow">' + chips("gtab", [["fav", "Room favorites"], ["newHere", "New here"], ["deep", "Deep cuts"]], tab) + "</div>" +
       '<p class="d-fact">' + esc(tab === "fav" ? "Most played in the room" : tab === "newHere" ? "Played here for the first time lately" : "Played here once or twice, last played first") + "</p>" +
       (tab === "fav" ? rankedRows(tracks, "genre") : datedRows(tracks, "genre")) + "</section>";

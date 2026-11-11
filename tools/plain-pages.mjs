@@ -178,7 +178,7 @@ const mosaic = (keys, big) => `<span class="d-mosaic${big ? " big" : ""}" aria-h
 const back = (to, label) => `<a class="d-back" href="${BASE}${to}">${icon("arrow_back")}<span>${esc(label)}</span></a>`;
 const head = (title, link, to) => `<div class="d-head"><h2>${esc(title)}</h2>${link ? `<a href="${BASE}${to}">${esc(link)}</a>` : ""}</div>`;
 const pageHead = (h1, facts, opts = {}) => `<div class="d-pagehead">${opts.mosaic || ""}<div class="d-pagetext"><h1>${esc(h1)}</h1>` +
-  `${facts ? `<p class="d-fact">${facts}</p>` : ""}${opts.more || ""}${opts.play ? `<div class="d-actions"><a class="butt" href="/#${esc(opts.play[0])}">${icon(opts.play[2] || "play_arrow")}<span>${esc(opts.play[1])}</span></a></div>` : ""}</div></div>`;
+  `${facts ? `<p class="d-fact">${facts}</p>` : ""}${opts.more || ""}${opts.play ? `<div class="d-actions"><a class="butt" href="/#${esc(opts.play[0])}">${icon(opts.play[2] || "play_arrow")}<span>${esc(opts.play[1])}</span></a>${opts.actions || ""}</div>` : ""}</div></div>`;
 const viewHead = (h1, fact) => `<div class="d-headrow"><h1>${esc(h1)}</h1></div>${fact ? `<p class="d-fact">${esc(fact)}</p>` : ""}`;
 const person = (href, name, fact, more) => {
   const inner = `<span class="d-person-text"><b>${esc(name)}</b><span>${fact}</span>${more ? `<span>${more}</span>` : ""}</span>`;
@@ -192,6 +192,8 @@ const [genres, djs, artistIndex, years, chartIds] = await Promise.all([
   read("discover/lib/genres"), read("discover/lib/djs"), read("discover/lib/artistIndex"), read("discover/lib/years"), read("discover/chartIds")
 ]);
 const meta = await read("discover/lib/meta");
+const ytm = (await read("discover/ytm")) || {}; // genre playlists on YouTube Music, by slug
+const ytmUrl = (slug) => /^[\w-]+$/.test(ytm[slug] || "") ? "https://music.youtube.com/playlist?list=" + ytm[slug] : null;
 if (meta && meta.at) updated.at = meta.at;
 if (!genres && !djs && !chartIds) {
   console.log("No library or charts published yet, so no plain pages. Run the Play history job in firetable-hostbot.");
@@ -237,8 +239,10 @@ if (genreList.length) {
     page({
       path: "genres/" + g.slug + "/", title: g.name + " songs", route: "discover/genres/" + g.slug,
       description: `${g.about ? g.about + " " : ""}The ${g.name} songs ${ROOM} plays most${top ? ", including " + top : ""}. ${facts.join(", ")}.`,
-      image: g.covers && g.covers[0] ? coverOf(g.covers[0]) : null, ld: playlistLd(g.name + " in " + ROOM, "genres/" + g.slug + "/", p.fav),
-      body: back("genres/", "Genres") + pageHead(g.name, esc(facts.join(" · ")), { mosaic: mosaic(g.covers, true), more: g.about ? `<p class="d-about">${esc(g.about)}</p>` : "", play: ["discover/genres/" + g.slug, "Play " + g.name + " radio", "radio"] }) +
+      image: g.covers && g.covers[0] ? coverOf(g.covers[0]) : null,
+      ld: Object.assign(playlistLd(g.name + " in " + ROOM, "genres/" + g.slug + "/", p.fav), ytmUrl(g.slug) ? { sameAs: ytmUrl(g.slug) } : {}),
+      body: back("genres/", "Genres") + pageHead(g.name, esc(facts.join(" · ")), { mosaic: mosaic(g.covers, true), more: g.about ? `<p class="d-about">${esc(g.about)}</p>` : "", play: ["discover/genres/" + g.slug, "Play " + g.name + " radio", "radio"],
+        actions: ytmUrl(g.slug) ? `<a class="butt graybutt d-ytm" href="${esc(ytmUrl(g.slug))}" target="_blank" rel="noopener">${icon("open_in_new")}<span>YouTube Music</span></a>` : "" }) +
         `<section>${head("Room favorites")}<p class="d-fact">Most played in the room</p>${rows(p.fav)}</section>` +
         ((p.newHere || []).length ? `<section>${head("New here")}<p class="d-fact">Played here for the first time lately</p>${rows(p.newHere, { max: 20, stamp: (t) => t.first ? day(t.first) : "" })}</section>` : "") +
         ((p.deep || []).length ? `<section>${head("Deep cuts")}<p class="d-fact">Played here once or twice</p>${rows(p.deep, { max: 20, stamp: (t) => t.first ? day(t.first) : "" })}</section>` : "") +

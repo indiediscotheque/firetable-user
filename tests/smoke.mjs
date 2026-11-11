@@ -652,6 +652,7 @@ try {
         { type: 1, cid: "night00003", a: "Italo", t: "Three", dj: "dj1", djid: "dj1", w: now - 2 * DAY + 3600000 }] } }
     },
     chartIds: { week: { "2026-W45": true } },
+    ytm: { "nu-disco": "PLsmokeNuDisco" },
     fires: { at: now, since: now - 5 * DAY, index: [{ djid: "dj1", dj: "dj1", fires: 7, plays: 3 }, { djid: "dj2", dj: "dj2", fires: 2, plays: 1 }],
       djs: { dj1: { name: "dj1", fires: 7, plays: 3, songs: [
         { key: "f1", type: 1, cid: "hot0000001", a: "Hot", t: "One", fires: 5, plays: 2, top: 3, w: now - DAY },
@@ -891,6 +892,8 @@ try {
     await until(() => document.querySelector("#dBrowse .d-pagehead h2"));
     out.genre = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length + "|" + location.hash;
     out.about = (document.querySelector("#dBrowse .d-about") || {}).textContent;
+    await until(() => document.querySelector("#dBrowse .d-ytm"));
+    out.ytm = (document.querySelector("#dBrowse .d-ytm") || { getAttribute: () => null }).getAttribute("href");
     out.artistLinks = [...document.querySelectorAll("#dBrowse .ft-rows .hist-track-artist a")].slice(0, 2).map((a) => a.getAttribute("href")).join();
     out.who = [...document.querySelectorAll("#dBrowse .d-person")].map((p) => p.getAttribute("href")).join();
     document.querySelector('.d-chip[data-gtab="newHere"]').click();
@@ -924,6 +927,7 @@ try {
   check(libPages.genres === "Nu-Disco,Soul & R&B|2" && libPages.navOn === "genres", "Genres: the sound map and a card for each (" + libPages.genres + ")");
   check(libPages.decade === "Nu-Disco,Soul & R&B(quiet)|100 plays in the 2020s" && libPages.about === "Disco's grooves rebuilt with modern synths.",
     "the sound map by decade, and a genre's line (" + libPages.decade + " / " + libPages.about + ")");
+  check(libPages.ytm === "https://music.youtube.com/playlist?list=PLsmokeNuDisco", "a genre page links to its YouTube Music playlist (" + libPages.ytm + ")");
   check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
   check(libPages.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && libPages.who === "#discover/djs/dj1", "artists and DJs link to their pages (" + libPages.artistLinks + " / " + libPages.who + ")");
   check(/^radio\|.*Nu-Disco radio/.test(libPages.radio), "genre radio plays (" + libPages.radio + ")");
@@ -1089,11 +1093,13 @@ try {
     artist: /href="\/music\/artists\/alpha\/">Alpha<\/a> &amp; Beta/.test(raw),
     dj: /href="\/music\/djs\/dj1\/"/.test(raw),
     ld: /"@type":"MusicPlaylist"/.test(raw),
+    ytm: /class="butt graybutt d-ytm" href="https:\/\/music\.youtube\.com\/playlist\?list=PLsmokeNuDisco"/.test(raw) && /"sameAs":"https:\/\/music\.youtube\.com\/playlist\?list=PLsmokeNuDisco"/.test(raw),
     site: /id="mainGrid"/.test(raw) && /<base href="\/"/.test(raw) && /class="ft-has-discover ft-discover"/.test(raw)
   };
   check(/^Nu-Disco songs/.test(read.title) && read.canonical && read.h1 && read.rows === 3 && read.ld && read.site,
     "a genre page as sent: the site itself, with the genre's songs already in Discover, and its own title and address (" + JSON.stringify(read) + ")");
   check(read.artist && read.dj, "artists and DJs link to their pages, only where a page exists");
+  check(read.ytm, "a genre page as sent links to its YouTube Music playlist");
   // what a visitor gets: the real site, on the same Discover page
   await plain.goto(SITE + "music/genres/nu-disco/", { waitUntil: "load" });
   await plain.waitForFunction(() => document.querySelector("#dBrowse .d-radio"), null, { timeout: 20000 }).catch(() => {});
