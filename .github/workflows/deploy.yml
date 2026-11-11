@@ -45,6 +45,13 @@
 #                       https://<last part of DREAMHOST_PATH>/ when that looks
 #                       like a domain, e.g. https://indiediscotheque.com/.
 #
+# The library's plain pages (/music/, for search engines) are built here from
+# the public Discover data (tools/plain-pages.mjs), uploaded to music/ (pages
+# no longer built are removed, so a DJ who hides their name drops out), and
+# robots.txt on the server gets a line pointing at music/sitemap.xml. They're
+# rebuilt every Monday after firetable-hostbot's weekly Play history job. If
+# the build fails, the pages already on the server are left as they are.
+#
 # Manual run: Actions → "Deploy to DreamHost" → Run workflow. "Dry run" lists
 # what would change without uploading anything.
 
@@ -53,6 +60,8 @@ name: Deploy to DreamHost
 on:
   push:
     branches: [master]
+  schedule:
+    - cron: "43 12 * * 1" # Mondays, after the bot's Play history job (09:17 UTC)
   workflow_dispatch:
     inputs:
       dry_run:
@@ -144,6 +153,24 @@ jobs:
           set cmd:fail-exit yes
           EOF
 
+      - name: Build the library's plain pages
+        run: |
+          # the address pages are served from, after any redirect (canonical links, sitemap)
+          site=""
+          [ -n "$SITE_URL" ] && site=$(curl -s -L --max-redirs 5 -o /dev/null -m 20 -w '%{url_effective}' "$SITE_URL" || true)
+          if [ -z "$site" ]; then
+            echo "::warning::No SITE_URL, so the plain pages weren't built."
+            exit 0
+          fi
+          if node tools/plain-pages.mjs --site "$site" --out music; then
+            # version their stylesheet links like every other page
+            [ -f music/.built ] && python3 .github/scripts/cache-bust.py .
+          else
+            rm -rf music
+            echo "::warning::The plain pages couldn't be built; the ones on the server were left as they are."
+          fi
+          echo "PAGES_SITE=$site" >> "$GITHUB_ENV"
+
       - name: Safety check (target folder must already hold config.js)
         run: |
           if ! lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; cls -1 \"$DEST/config.js\"" >/dev/null; then
@@ -219,7 +246,7 @@ jobs:
             --exclude-glob node_modules/ --exclude-glob package.json --exclude-glob package-lock.json \
             --exclude-glob eslint.config.mjs --exclude-glob .gitignore --exclude-glob .DS_Store \
             --exclude-glob config.js --exclude-glob soundcloud-config.php --exclude-glob lastfm-config.php \
-            --exclude-glob README.md --exclude-glob CLAUDE.md"
+            --exclude-glob README.md --exclude-glob CLAUDE.md --exclude-glob music/"
           # Pages last: a visitor loading the site mid-upload gets either the
           # old pages or new pages whose scripts and styles are already there
           echo "Scripts, styles and other files:"
@@ -228,6 +255,41 @@ jobs:
           echo "Pages:"
           lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
             mirror --reverse --verbose --no-perms --parallel=4 $flags --include-glob *.html $skip ./ \"$DEST/\""
+
+      - name: Upload the library's plain pages
+        run: |
+          if [ ! -f music/.built ]; then
+            echo "No plain pages this run."
+            exit 0
+          fi
+          flags=""
+          [ "$DRY_RUN" = "true" ] && flags="--dry-run"
+          # --delete: pages that weren't built this time go from the server too
+          lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
+            mirror --reverse --delete --no-perms --parallel=4 $flags --exclude-glob .built ./music/ \"$DEST/music/\""
+          echo "Plain pages: $(find music -name index.html | wc -l) pages."
+
+      - name: Point robots.txt at the plain pages' sitemap
+        if: env.DRY_RUN != 'true'
+        run: |
+          [ -f music/.built ] && [ -n "$PAGES_SITE" ] || { echo "No plain pages this run."; exit 0; }
+          remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
+          work=$(mktemp -d)
+          line="Sitemap: ${PAGES_SITE%/}/music/sitemap.xml"
+          if remote "cls -1 \"$DEST/robots.txt\"" >/dev/null 2>&1; then
+            remote "get \"$DEST/robots.txt\" -o \"$work/robots.txt\""
+          else
+            printf 'User-agent: *\nDisallow:\n' > "$work/robots.txt"
+          fi
+          if grep -qxF "$line" "$work/robots.txt"; then
+            echo "robots.txt already points at the sitemap."
+            exit 0
+          fi
+          # every other rule in the server's robots.txt stays as it is
+          [ -n "$(tail -c1 "$work/robots.txt")" ] && echo >> "$work/robots.txt"
+          printf '\n%s\n' "$line" >> "$work/robots.txt"
+          remote "put \"$work/robots.txt\" -o \"$DEST/robots.txt\""
+          echo "robots.txt now ends with: $line"
 
       - name: Check the Last.fm proxy
         if: env.DRY_RUN != 'true'

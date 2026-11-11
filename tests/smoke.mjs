@@ -605,6 +605,7 @@ try {
     djs: { dj1: { name: "dj1", djid: "dj1", plays: 120, firsts: 30, since: now - 900 * DAY, g: ["Nu-Disco"] } },
     dj: { dj1: { name: "dj1", djid: "dj1", plays: 120, firsts: 30, songs: 80, since: now - 900 * DAY, when: "Friday nights", taste: [{ g: "Nu-Disco", slug: "nu-disco", pct: 70 }],
       most: [row("lib0000001", "Alpha & Beta", "Fav One", 30, { by: 12 })], firstHere: [], similar: [], sets: [{ at: now - DAY, n: 9 }] } },
+    artistIndex: { alpha: ["Alpha", 30] },
     artist: { alpha: { name: "Alpha", plays: 30, songs: 1, first: now - 400 * DAY, firstDj: "dj1", firstDjid: "dj1", rows: [row("lib0000001", "Alpha & Beta", "Fav One", 30)], djs: [] } },
     years: { 2026: { songs: 100, plays: 50, played: 20, genre: "Nu-Disco" } },
     year: { 2026: { top: [row("lib0000002", "Gamma", "Fav Two", 20)], more: [{ type: 1, cid: "lib0000009", a: "Zed", t: "Unplayed Find", plays: 0 }] } }
@@ -735,6 +736,47 @@ try {
   check(/Open on YouTube\|Go to Alpha\|Go to Beta\|dj1's DJ page\|Copy/.test(libPages.menu) && libPages.menuClosed, "the song menu (" + libPages.menu + ")");
 } catch (e) {
   check(false, "Discover test threw: " + e.message);
+}
+
+// The library's plain pages (tools/plain-pages.mjs), built from the same data
+// and loaded under the real policy, as search engines and visitors get them
+const plain = await context.newPage();
+plain.on("pageerror", (e) => pageErrors.push("Plain pages: " + e.message));
+try {
+  console.log("-- plain pages: the library as ordinary pages, with a sitemap");
+  const { execFile } = await import("child_process");
+  // not execFileSync: the builder reads config.js from this process's server
+  const out = await new Promise((resolve, reject) => execFile(process.execPath,
+    [join(ROOT, "tools/plain-pages.mjs"), "--site", SITE, "--out", join(ROOT, "music"), "--always"],
+    { env: { ...process.env, FIREBASE_DATABASE_URL: DB + "?ns=" + NS }, timeout: 60000 },
+    (err, stdout, stderr) => (err ? reject(new Error(err.message + stderr)) : resolve(stdout))));
+  check(/plain pages: \d+ pages/.test(out), "the pages are built (" + out.trim() + ")");
+  await plain.exposeFunction("__cspViolation", (v) => violations.push("Plain pages: " + v));
+  await plain.addInitScript(() => {
+    document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI));
+  });
+  await plain.goto(SITE + "music/genres/nu-disco/", { waitUntil: "load" });
+  const g = await plain.evaluate(() => ({
+    h1: document.querySelector("h1").textContent,
+    songs: document.querySelectorAll("main section:first-of-type .p-songs li").length,
+    canonical: document.querySelector('link[rel="canonical"]').href,
+    open: document.querySelector(".p-butt[href*='#discover/genres/nu-disco']") !== null,
+    artist: [...document.querySelectorAll(".p-song > span a")].map((a) => a.getAttribute("href")).join(),
+    dj: [...document.querySelectorAll("a[href='/music/djs/dj1/']")].length > 0,
+    ld: JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent)["@type"],
+    font: getComputedStyle(document.body).fontFamily
+  }));
+  check(g.h1 === "Nu-Disco" && g.songs === 2 && /\/music\/genres\/nu-disco\/$/.test(g.canonical) && g.open && g.ld === "MusicPlaylist" && /Inter/.test(g.font),
+    "a genre page: its songs, a canonical address, a link into the room, the site's type (" + JSON.stringify(g) + ")");
+  check(g.artist === "/music/artists/alpha/" && g.dj, "artists and DJs link to their pages, only where a page exists (" + g.artist + ")");
+  const sitemap = readFileSync(join(ROOT, "music/sitemap.xml"), "utf8");
+  check(/<loc>[^<]+\/music\/djs\/dj1\/<\/loc>/.test(sitemap) && /\/music\/years\/2026\//.test(sitemap) && /\/music\/charts\/week\/2026-W45\//.test(sitemap),
+    "the sitemap lists the DJ, year and chart pages");
+} catch (e) {
+  check(false, "plain pages test threw: " + e.message);
+} finally {
+  const { rmSync } = await import("fs");
+  rmSync(join(ROOT, "music"), { recursive: true, force: true });
 }
 
 console.log("-- errors");

@@ -4,3 +4,4 @@ api/soundcloud-config.php
 node_modules/
 api/lastfm-config.php
 *-debug.log
+music/

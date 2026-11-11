@@ -1,0 +1,154 @@
+/* The library's plain pages (/music/, built by tools/plain-pages.mjs): the
+   site's colours, type and rows, without the app. */
+:root {
+    color-scheme: dark;
+    --bg: #181818;
+    --bg-t1: #222;
+    --bg-t2: #282828;
+    --border: #333;
+    --text: #e3e3e3;
+    --text-light: #fff;
+    --muted: #888;
+    --subtle: #b3b3b3;
+    --accent: #cc9933;
+    --font: "Inter", "Open Sans", helvetica, arial, sans-serif;
+    --numbers: "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+    margin: 0;
+    color: var(--text);
+    background: var(--bg);
+    font: 400 1rem/1.5 var(--font);
+    font-optical-sizing: auto;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 0.25rem; }
+
+.p-top {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.p-logo img { display: block; height: 2rem; width: auto; }
+.p-top nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-right: auto; }
+.p-top nav a {
+    color: #999;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.p-top nav a[aria-current="page"] { color: var(--text-light); }
+.p-butt {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow: 0 0.25rem 0.5rem -0.25rem black;
+}
+.p-butt:hover { text-decoration: none; filter: brightness(1.1); }
+
+main { max-width: 56rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+h1 { margin: 0.25rem 0 0.5rem; color: var(--text-light); font-size: 2rem; line-height: 1.15; }
+h2 { margin: 2rem 0 0.75rem; color: var(--text-light); font-size: 1.2rem; }
+h2 a { color: inherit; }
+.p-crumbs { margin: 0; font-size: 0.875rem; }
+.p-crumbs a { color: var(--subtle); }
+.p-lede { margin: 0 0 1rem; color: var(--subtle); }
+.p-facts { margin: 0 0 1rem; color: var(--subtle); font-size: 0.875rem; }
+.p-note { margin: -0.25rem 0 0.75rem; color: var(--muted); font-size: 0.875rem; }
+small { color: var(--muted); font-size: 0.75rem; }
+
+/* Songs: art, title over artist, the facts */
+.p-songs { margin: 0; padding: 0; list-style: none; }
+.p-songs li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+.p-n {
+    flex: none;
+    width: 2rem;
+    color: var(--text-light);
+    font: 700 0.875rem var(--numbers);
+    text-align: right;
+}
+.p-songs img { flex: none; width: 4rem; height: 2.25rem; object-fit: cover; border-radius: 0.25rem; background: var(--bg-t2); }
+.p-song { display: flex; flex-direction: column; min-width: 0; }
+.p-song b { color: var(--text-light); font-weight: 500; font-size: 0.9375rem; }
+.p-song b a { color: inherit; }
+.p-song > span { color: var(--subtle); font-size: 0.8125rem; }
+.p-song > span a { color: inherit; }
+.p-song > span a:hover { color: var(--text-light); }
+.p-song small a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Lists of names and links */
+.p-list { margin: 0; padding: 0; list-style: none; }
+.p-list li { padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
+.p-cols { columns: 2 16rem; column-gap: 2rem; }
+.p-cols li { break-inside: avoid; }
+.p-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; padding: 0; list-style: none; }
+.p-tags a {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--subtle);
+    font-size: 0.8125rem;
+}
+.p-tags a:hover { color: var(--text-light); border-color: var(--muted); text-decoration: none; }
+
+/* Genres as cards: four covers in a square */
+.p-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: 1rem 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.p-cards a { display: flex; flex-direction: column; gap: 0.15rem; color: inherit; }
+.p-cards b { color: var(--text-light); font-size: 0.9375rem; }
+.p-mosaic {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    aspect-ratio: 1;
+    margin-bottom: 0.35rem;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    background: var(--bg-t2);
+}
+.p-mosaic img, .p-mosaic i { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* A DJ's sound */
+.p-taste { margin: 0; padding: 0; list-style: none; }
+.p-taste li { display: grid; grid-template-columns: minmax(6rem, 12rem) 1fr 3rem; align-items: center; gap: 0.75rem; padding: 0.2rem 0; font-size: 0.875rem; }
+.p-taste small { text-align: right; font-family: var(--numbers); }
+.p-bar { display: block; height: 0.4rem; border-radius: 99px; background: var(--bg-t2); overflow: hidden; }
+.p-bar i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+.p-other .p-bar i { background: var(--muted); }
+
+.p-foot { max-width: 56rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.8125rem; }
+.p-foot p { margin: 0 0 0.5rem; }
+
+@media (max-width: 639px) {
+    .p-top { flex-wrap: wrap; }
+    .p-top nav { order: 3; flex-basis: 100%; }
+    h1 { font-size: 1.6rem; }
+    .p-songs img { display: none; }
+}
