@@ -34,7 +34,13 @@ jobs:
         run: |
           cd tests
           npm ci --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          # the browser's system packages come from Ubuntu's servers: a few tries
+          for try in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$try" = 3 ] && exit 1
+            echo "Ubuntu's package servers didn't answer (try $try); waiting..."
+            sleep $((try * 30))
+          done
 
       - name: Smoke test
         run: |
