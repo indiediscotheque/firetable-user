@@ -4627,27 +4627,131 @@ img.emoji,
     border-left-color: var(--color-success);
 }
 
-.formlinks {
-    margin-top: var(--pad3);
-}
-
-#login .formlinks a {
-    margin-right: 1rem;
-    cursor: pointer;
-    color: var(--color-accent);
-}
-
 #login a {
     color: var(--color-accent);
 }
 
-#login .formlinks a:last-child {
-    margin-right: 0;
+/* Sign in: Create account and Log in as tabs, Google above both, then the
+   email form with its label over each field */
+#authBox {
+    max-width: 22rem;
 }
-
-#login .formlinks .selected {
+#authTabs {
+    justify-content: flex-start;
+    gap: 0;
+    margin-bottom: var(--pad3);
+    border-bottom: 1px solid var(--color-border);
+}
+#authTabs .tab {
+    flex: 1;
+    min-height: 2.75rem;
+}
+#authBox[data-auth="reset"] #authTabs,
+#authBox[data-auth="reset"] #oauthBox {
     display: none;
 }
+.authForm {
+    display: grid;
+    gap: var(--pad3);
+}
+.authForm h3 {
+    margin: 0;
+}
+.authForm .field {
+    display: grid;
+    gap: var(--pad1);
+}
+.authForm .field > label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+.authForm .field input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 2.5rem;
+}
+.authForm .field input[aria-invalid="true"] {
+    border-color: var(--color-danger);
+}
+.passField {
+    position: relative;
+    display: block;
+}
+.passField input {
+    padding-right: 2.75rem;
+}
+.authForm .showPass {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    font-size: 1.25rem;
+    color: var(--color-text-light);
+    background: none;
+    border: 0;
+    box-shadow: none;
+    transform: translateY(-1px);
+}
+.authForm .showPass:hover {
+    color: #fff;
+}
+.fieldNote {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--color-text-light);
+}
+.fieldNote:empty {
+    display: none;
+}
+.fieldNote[data-state="bad"] {
+    color: #f2b8ae;
+}
+.fieldNote[data-state="good"] {
+    color: #b5e8cf;
+}
+.authForm .fieldLink {
+    justify-self: start;
+    font-size: 0.8125rem;
+}
+.checkLine {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pad2);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-text);
+    cursor: pointer;
+}
+.checkLine input {
+    flex: none;
+    margin: 0.15rem 0 0;
+}
+.checkLine[data-state="bad"] {
+    color: #f2b8ae;
+}
+.authForm .formMessage {
+    margin: 0;
+}
+#login .authForm .butt[type="submit"] {
+    width: 100%;
+    height: 2.75rem;
+}
+.authForm .butt[disabled] {
+    opacity: 0.7;
+    cursor: progress;
+}
+.authSwitch {
+    margin: 0;
+    & .linkButton { font-size: inherit; }
+    font-size: 0.8125rem;
+    color: var(--color-text-light);
+    text-align: center;
+}
+
 
 /* ============================================
    Modals
@@ -6273,7 +6377,7 @@ button.track-warning:focus-visible { outline: 2px solid var(--color-accent); out
 
 /* ─── Sign in with Google / Apple (#128) ─── */
 #oauthBox {
-  display: grid; gap: .6rem; max-width: 22rem; margin: 1rem 0;
+  display: grid; gap: .6rem; max-width: 22rem; margin: 0 0 var(--pad3);
   &[hidden] { display: none; }
   & .oauthBttn {
     display: inline-flex; align-items: center; justify-content: center; gap: .6rem;

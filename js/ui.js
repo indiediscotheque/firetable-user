@@ -6,7 +6,7 @@
  * - firetable.ui.LinkGrabber (drag-and-drop link detection)
  * - firetable.ui.toast / formMessage (in-app feedback instead of alert())
  * - firetable.actions.openStealPicker (shared "add to playlist" picker)
- * - firetable.ui.loginEventsInit / loginEventsDestroy / loginLinkToggle
+ * - firetable.ui.loginEventsInit / loginEventsDestroy / showAuth
  * - firetable.ui.initSettings(): restore settings from localStorage
  * - firetable.ui.setupMiscEvents(): modals, sortable, volume, grab, settings toggles, etc.
  * - firetable.ui.init(): orchestrator that calls all setup*Events functions
@@ -1363,6 +1363,10 @@ firetable.ui.tooltip = (function () {
       // Cards (async — placeholder first)
       facts.push({ label: 'Cards', val: '<span class="utt-cards-val">…</span>' });
 
+      // Their Discover page: what they play most, their sound, similar DJs
+      var djPage = firetable.discover && firetable.discover.djPage && firetable.discover.djPage(userid, userData.username);
+      if (djPage) facts.push({ label: 'Plays', val: '<a class="utt-djpage" href="' + firetable.utilities.htmlEscape(djPage) + '">Their DJ page</a>' });
+
       // DJ status last: the same card for the deck and the waitlist (#259)
       var dj = djStatus(userid);
       if (dj.where === 'deck') {
@@ -1510,6 +1514,10 @@ firetable.ui.tooltip = (function () {
         userTipEl.hidePopover();
       });
 
+    // their DJ page opens in Discover; the card's job is done
+    $(document).on('click.ft-usertip', '.utt-djpage', function () {
+      if (userTipEl.matches(':popover-open')) userTipEl.hidePopover();
+    });
     $('#allUsersWrap').on('click.ft-usertip', '.prson .ft-avatar', function () {
       var uid = $(this).closest('.prson').attr('data-userid');
       if (uid) showUserTip(this, uid);

@@ -77,6 +77,45 @@ try {
   await page.waitForFunction(() => /Smoke Song/.test(document.getElementById("track").textContent), null, { timeout: 30000 });
   check(true, "the playing song shows (from the database)");
   check(await page.$eval("#themePillText", (el) => /smoke tests/.test(el.textContent)).catch(() => false), "the theme shows");
+
+  console.log("-- sign in: Create account and Log in as tabs, checks as you type");
+  const auth = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const shown = () => ["createscreen", "logscreen", "resetscreen"].filter((id) => !document.getElementById(id).hidden).join();
+    const out = { first: shown(), tab: document.querySelector("#authTabs .tab.on").textContent };
+    document.getElementById("createAccountBttn").click();
+    out.emptyErrors = [...document.querySelectorAll("#createscreen [aria-invalid=true]")].map((e) => e.id).join();
+    const name = document.getElementById("newusername");
+    name.value = "bad name"; name.dispatchEvent(new Event("input", { bubbles: true }));
+    out.badName = document.getElementById("newusernameNote").getAttribute("data-state") + ":" + document.getElementById("newusernameNote").textContent;
+    name.value = "freshname"; name.dispatchEvent(new Event("input", { bubbles: true }));
+    await wait(1200);
+    out.freeName = document.getElementById("newusernameNote").textContent;
+    document.getElementById("newemail").value = "a@b.co";
+    document.getElementById("newpass").value = "secret1";
+    document.getElementById("createAccountBttn").click();
+    out.terms = document.querySelector("#createAccountFormShell .formMessage").textContent;
+    const eye = document.querySelector("#createscreen .showPass");
+    eye.click();
+    out.showPass = document.getElementById("newpass").type + "," + eye.getAttribute("aria-pressed");
+    eye.click();
+    document.getElementById("loginlink").click();
+    out.login = shown();
+    document.getElementById("loginemail").value = "me@x.co";
+    document.getElementById("resetpass").click();
+    out.reset = shown() + "," + document.getElementById("theAddress").value + "," + getComputedStyle(document.getElementById("authTabs")).display;
+    document.querySelector('#resetscreen [data-auth="login"]').click();
+    out.back = shown();
+    document.getElementById("signuplink").click();
+    return out;
+  });
+  check(auth.first === "createscreen" && /create/i.test(auth.tab), "a new visitor sees Create account first (" + auth.first + ")");
+  check(auth.emptyErrors === "newemail,newusername,newpass", "an empty form marks each field (" + auth.emptyErrors + ")");
+  check(/^bad:/.test(auth.badName) && /freshname is free/.test(auth.freeName), "the username is checked as you type (" + auth.badName + " / " + auth.freeName + ")");
+  check(/Tick the box/.test(auth.terms), "the terms box is asked for (" + auth.terms + ")");
+  check(auth.showPass === "text,true", "the password can be shown (" + auth.showPass + ")");
+  check(auth.login === "logscreen" && auth.reset === "resetscreen,me@x.co,none" && auth.back === "logscreen",
+    "Log in, Forgot your password (email carried over), and back (" + [auth.login, auth.reset, auth.back].join(" / ") + ")");
   await page.waitForFunction(() => typeof YT !== "undefined" && YT.Player, null, { timeout: 30000 }).catch(() => {});
   check(loaded("/s/player/") || loaded("www-widgetapi"), "YouTube's player API loaded under the policy");
   check(!loaded("pixi.min.js") && !loaded("p5.min.js") && !loaded("TweenMax.min.js"), "the stage effects' libraries aren't loaded with the page");
@@ -556,6 +595,20 @@ try {
     chartIds: { week: { "2026-W45": true } },
     chat: { at: now, hour: 12, msgs: [{ id: "m1", uid: "dj1", n: "dj1", txt: "great tune", w: now }, { id: "m2", txt: "hidden name here", w: now }] }
   });
+  // the weekly library (tools/history/library.js in firetable-hostbot)
+  const row = (cid, a, t, plays, extra) => Object.assign({ type: 1, cid, a, t, plays, first: now - 400 * DAY, dj: "dj1", djid: "dj1" }, extra || {});
+  await put("/discover/lib", {
+    genres: { "nu-disco": { name: "Nu-Disco", songs: 40, plays: 300, bpm: 118, first: 2010, djs: 2, x: 0.64, covers: ["1_lib0000001"], next: ["soul-and-randb"] },
+      "soul-and-randb": { name: "Soul & R&B", songs: 10, plays: 60, bpm: 98, first: 2012, djs: 1, x: 0.17, covers: [], next: ["nu-disco"] } },
+    genre: { "nu-disco": { fav: [row("lib0000001", "Alpha & Beta", "Fav One", 30), row("lib0000002", "Gamma", "Fav Two", 20)], newHere: [row("lib0000003", "Delta", "New One", 1)], deep: [],
+      years: { 2010: 3, 2011: 5 }, who: [{ dj: "dj1", djid: "dj1", key: "dj1", plays: 40 }] } },
+    djs: { dj1: { name: "dj1", djid: "dj1", plays: 120, firsts: 30, since: now - 900 * DAY, g: ["Nu-Disco"] } },
+    dj: { dj1: { name: "dj1", djid: "dj1", plays: 120, firsts: 30, songs: 80, since: now - 900 * DAY, when: "Friday nights", taste: [{ g: "Nu-Disco", slug: "nu-disco", pct: 70 }],
+      most: [row("lib0000001", "Alpha & Beta", "Fav One", 30, { by: 12 })], firstHere: [], similar: [], sets: [{ at: now - DAY, n: 9 }] } },
+    artist: { alpha: { name: "Alpha", plays: 30, songs: 1, first: now - 400 * DAY, firstDj: "dj1", firstDjid: "dj1", rows: [row("lib0000001", "Alpha & Beta", "Fav One", 30)], djs: [] } },
+    years: { 2026: { songs: 100, plays: 50, played: 20, genre: "Nu-Disco" } },
+    year: { 2026: { top: [row("lib0000002", "Gamma", "Fav Two", 20)], more: [{ type: 1, cid: "lib0000009", a: "Zed", t: "Unplayed Find", plays: 0 }] } }
+  });
   await dPage.goto(SITE, { waitUntil: "load", timeout: 60000 });
   await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
   const home = await dPage.evaluate(() => ({
@@ -609,6 +662,77 @@ try {
   });
   check(crate.stored === 3 && crate.checked === 3, "saves go to a crate in this browser, each + turning into a check (" + JSON.stringify(crate) + ")");
   check(crate.dialog && crate.google, "the third save offers to keep the crate, with Continue with Google (" + JSON.stringify(crate) + ")");
+
+  console.log("-- Discover: joining opens the sign-in form over the page, and it goes back after");
+  const join = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    location.hash = "#discover";
+    await wait(300);
+    document.querySelector('#dSide [data-sidetab="list"]').click();
+    await wait(100);
+    document.querySelector("#dSide .d-login").click();
+    await wait(200);
+    const dlg = document.getElementById("joinBox");
+    const out = { open: !!(dlg && dlg.open), inside: !!(dlg && dlg.querySelector("#login")), form: ["createscreen", "logscreen"].filter((id) => !document.getElementById(id).hidden).join(),
+      title: dlg && dlg.querySelector("#joinTitle").textContent, focused: document.activeElement && document.activeElement.id, stillDiscover: document.body.classList.contains("ft-discover") };
+    dlg.close();
+    await wait(50);
+    out.back = document.getElementById("login").parentElement.id;
+    return out;
+  });
+  check(join.open && join.inside && join.form === "logscreen" && join.focused === "loginemail" && join.stillDiscover,
+    "Log in opens the form in a dialog, on Discover (" + JSON.stringify(join) + ")");
+  check(join.back === "mainGrid", "closing it puts the form back in the page (" + join.back + ")");
+
+  console.log("-- Discover: genres, DJs, artists and years from the weekly library");
+  const libPages = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    const out = {};
+    location.hash = "#discover/genres";
+    await until(() => document.querySelector("#dBrowse .d-map .d-mapg"));
+    out.genres = [...document.querySelectorAll("#dBrowse .d-mapg")].map((a) => a.textContent).join() + "|" + document.querySelectorAll("#dBrowse .d-gcard").length;
+    out.navOn = document.querySelector("#dNav .d-nav.on").getAttribute("data-view");
+    document.querySelector('#dBrowse .d-gcard[href="#discover/genres/nu-disco"]').click();
+    await until(() => document.querySelector("#dBrowse .d-pagehead h2"));
+    out.genre = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length + "|" + location.hash;
+    out.artistLinks = [...document.querySelectorAll("#dBrowse .ft-rows .hist-track-artist a")].slice(0, 2).map((a) => a.getAttribute("href")).join();
+    out.who = [...document.querySelectorAll("#dBrowse .d-person")].map((p) => p.getAttribute("href")).join();
+    document.querySelector('.d-chip[data-gtab="newHere"]').click();
+    out.newHere = [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join();
+    document.querySelector("#dBrowse .d-radio").click();
+    await wait(200);
+    out.radio = firetable.discover.state().list + "|" + (document.querySelector("#dSide .d-from") || {}).textContent;
+    location.hash = "#discover/djs/dj1";
+    await until(() => document.querySelector("#dBrowse .d-taste"));
+    out.userCardLink = firetable.discover.djPage("dj1", "dj1");
+    out.dj = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelector("#dBrowse .d-pagehead .d-fact").textContent;
+    location.hash = "#discover/artist/alpha";
+    const h2 = (text) => () => (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent === text;
+    await until(h2("Alpha"));
+    out.artist = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length;
+    location.hash = "#discover/years/2026";
+    await until(h2("2026"));
+    out.year = document.querySelectorAll("#dBrowse .ft-rows .pvbar").length + "|" + document.querySelectorAll("#dBrowse .ft-cards .pvbar").length;
+    location.hash = "#discover/djs/nobody";
+    await until(() => document.querySelector("#dBrowse .d-empty") && !/Loading/.test(document.querySelector("#dBrowse .d-empty").textContent));
+    out.missing = document.querySelector("#dBrowse .d-empty").textContent;
+    // the song menu: the artist, the DJ, the song's link
+    location.hash = "#discover/genres/nu-disco";
+    await until(() => document.querySelector("#dBrowse .d-more"));
+    document.querySelector("#dBrowse .d-more").click();
+    out.menu = [...document.querySelectorAll("#dMenu .d-menuitem span")].map((e) => e.textContent).join("|");
+    document.body.click();
+    out.menuClosed = document.getElementById("dMenu").hidden;
+    return out;
+  });
+  check(libPages.genres === "Nu-Disco,Soul & R&B|2" && libPages.navOn === "genres", "Genres: the sound map and a card for each (" + libPages.genres + ")");
+  check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
+  check(libPages.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && libPages.who === "#discover/djs/dj1", "artists and DJs link to their pages (" + libPages.artistLinks + " / " + libPages.who + ")");
+  check(/^radio\|.*Nu-Disco radio/.test(libPages.radio), "genre radio plays (" + libPages.radio + ")");
+  check(/^dj1\|.*Friday nights/.test(libPages.dj) && libPages.artist === "Alpha|1" && libPages.year === "1|1", "DJ, artist and year pages (" + [libPages.dj, libPages.artist, libPages.year].join(" / ") + ")");
+  check(/no page for this DJ/.test(libPages.missing), "a DJ without a page says so (" + libPages.missing + ")");
+  check(/Open on YouTube\|Go to Alpha\|Go to Beta\|dj1's DJ page\|Copy/.test(libPages.menu) && libPages.menuClosed, "the song menu (" + libPages.menu + ")");
 } catch (e) {
   check(false, "Discover test threw: " + e.message);
 }

@@ -512,7 +512,7 @@
 			</div>
 		</div>
 
-		<div id="login" class="scroll-view" role="region" aria-label="Log in or sign up">
+		<div id="login" class="scroll-view" role="region" aria-label="Join or log in">
 			<div id="welcomeInfo">
 				<h2>Welcome To <span id="welcomeName">Firetable</span>!</h2>
 				<p>
@@ -523,55 +523,49 @@
 				<p class="welcomeGetApp" id="welcomeGetApp" hidden><button type="button" class="linkButton showInstallGuide"><i class="material-symbols-outlined" aria-hidden="true">install_mobile</i> Get the app on your phone</button></p>
 				<div class="miniLoginNavOnly"><br/><br/><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
 			</div>
-			<div id="oauthBox" hidden>
-				<button type="button" class="butt oauthBttn" data-provider="google" hidden><svg class="oauthLogo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continue with Google</button>
-				<button type="button" class="butt oauthBttn" data-provider="apple" hidden><svg class="oauthLogo" viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>Continue with Apple</button>
-				<div class="formMessage" role="alert"></div>
-				<p class="oauthTerms">By continuing you agree to the <a href="terms" target="_blank">Terms of Service</a> and <a href="privacy" target="_blank">Privacy Policy</a>.</p>
-				<div class="oauthOr" aria-hidden="true"><span>or use your email</span></div>
-			</div>
-			<div id="logscreen" style="display: none">
-				<form id="loginFormShell" novalidate>
-				<h3>Log In</h3>
-				<div class="inputline"><label for="loginemail">Email</label><input type="email" id="loginemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
-				<div class="inputline"><label for="loginpass">Password</label><input type="password" id="loginpass" autocomplete="current-password" enterkeyhint="go" /></div>
-				<div class="formMessage" role="alert"></div>
-				<div class="inputline">
-					<button type="button" class="butt" id="loginBttn">Log In</button>
+			<div id="authBox">
+				<div id="authTabs" class="tabs" role="tablist" aria-label="Create an account or log in">
+					<button type="button" role="tab" class="tab on" id="signuplink" data-auth="create" aria-selected="true" aria-controls="createscreen">Create account</button>
+					<button type="button" role="tab" class="tab" id="loginlink" data-auth="login" aria-selected="false" aria-controls="logscreen">Log in</button>
 				</div>
-				</form>
-			</div>
-			<div id="createscreen">
-				<form id="createAccountFormShell" novalidate>
-					<h3>Create an Account</h3>
-					<div class="inputline"><label for="newemail">Email</label><input type="email" id="newemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
-					<div class="inputline"><label for="newusername">Username</label><input type="text" id="newusername" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
-					<div class="inputline"><label for="newpass">Password</label><input type="password" id="newpass" autocomplete="new-password" /></div>
-					<div class="inputline"><label for="newpass2">Repeat password</label><input type="password" id="newpass2" autocomplete="new-password" enterkeyhint="go" /></div>
-					<div class="inputline">
-						<span id="termsAgreement"><input type="checkbox" id="agreetoterms" /> <label for="agreetoterms">I have read, understand, and agree to the</label>
-							<a href="terms" target="_blank">Terms of Service</a> and
-							<a href="privacy" target="_blank">Privacy Policy</a>.</span>
-					</div>
+				<div id="oauthBox" hidden>
+					<button type="button" class="butt oauthBttn" data-provider="google" hidden><svg class="oauthLogo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continue with Google</button>
+					<button type="button" class="butt oauthBttn" data-provider="apple" hidden><svg class="oauthLogo" viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>Continue with Apple</button>
 					<div class="formMessage" role="alert"></div>
-					<div class="inputline">
-						<button type="button" class="butt" id="createAccountBttn">Create Account</button>
-					</div>
-				</form>
-			</div>
-			<div id="resetscreen" style="display: none">
-				<form id="resetPasswordFormShell" novalidate>
-				<h3>Reset your password!</h3>
-
-				<div class="inputline"><label for="theAddress">Email</label><input type="email" id="theAddress" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" /></div>
-				<div class="formMessage" role="alert"></div>
-				<div class="inputline">
-					<button type="button" class="butt" id="resetPassBttn">Reset password</button>
+					<p class="oauthTerms">By continuing you agree to the <a href="terms" target="_blank">Terms of Service</a> and <a href="privacy" target="_blank">Privacy Policy</a>.</p>
+					<div class="oauthOr" aria-hidden="true"><span>or with email</span></div>
 				</div>
-				</form>
-			</div>
-			<div id="formlinks" class="formlinks">
-				<a id="loginlink" class="loginlink" role="button" tabindex="0">Log In</a> <a id="signuplink" class="selected" role="button" tabindex="0">Create Account</a><a id="resetpass" role="button" tabindex="0">Reset Password</a>
+				<div id="createscreen" role="tabpanel" aria-labelledby="signuplink">
+					<form id="createAccountFormShell" class="authForm" novalidate>
+						<div class="field"><label for="newemail">Email</label><input type="email" id="newemail" autocomplete="email" autocapitalize="off" spellcheck="false" aria-describedby="newemailNote" /><p class="fieldNote" id="newemailNote"></p></div>
+						<div class="field"><label for="newusername">Username</label><input type="text" id="newusername" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="22" aria-describedby="newusernameNote" /><p class="fieldNote" id="newusernameNote" data-hint="The name people see in the room. Letters, numbers and underscores.">The name people see in the room. Letters, numbers and underscores.</p></div>
+						<div class="field"><label for="newpass">Password</label><span class="passField"><input type="password" id="newpass" autocomplete="new-password" aria-describedby="newpassNote" enterkeyhint="go" /><button type="button" class="showPass material-symbols-outlined" aria-label="Show password" aria-pressed="false">visibility</button></span><p class="fieldNote" id="newpassNote" data-hint="At least 6 characters.">At least 6 characters.</p></div>
+						<label id="termsAgreement" class="checkLine"><input type="checkbox" id="agreetoterms" /><span>I agree to the <a href="terms" target="_blank">Terms of Service</a> and <a href="privacy" target="_blank">Privacy Policy</a>.</span></label>
+						<div class="formMessage" role="alert"></div>
+						<button type="submit" class="butt" id="createAccountBttn" data-label="Create Account">Create Account</button>
+						<p class="authSwitch">Already a member? <button type="button" class="linkButton" data-auth="login">Log in</button></p>
+					</form>
+				</div>
+				<div id="logscreen" role="tabpanel" aria-labelledby="loginlink" hidden>
+					<form id="loginFormShell" class="authForm" novalidate>
+						<div class="field"><label for="loginemail">Email</label><input type="email" id="loginemail" autocomplete="username" autocapitalize="off" spellcheck="false" /></div>
+						<div class="field"><label for="loginpass">Password</label><span class="passField"><input type="password" id="loginpass" autocomplete="current-password" enterkeyhint="go" /><button type="button" class="showPass material-symbols-outlined" aria-label="Show password" aria-pressed="false">visibility</button></span>
+							<button type="button" class="linkButton fieldLink" id="resetpass" data-auth="reset">Forgot your password?</button></div>
+						<div class="formMessage" role="alert"></div>
+						<button type="submit" class="butt" id="loginBttn" data-label="Log In">Log In</button>
+						<p class="authSwitch">New here? <button type="button" class="linkButton" data-auth="create">Create an account</button></p>
+					</form>
+				</div>
+				<div id="resetscreen" hidden>
+					<form id="resetPasswordFormShell" class="authForm" novalidate>
+						<h3>Reset your password</h3>
+						<p class="fieldNote">We'll email you a link to choose a new one.</p>
+						<div class="field"><label for="theAddress">Email</label><input type="email" id="theAddress" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" /></div>
+						<div class="formMessage" role="alert"></div>
+						<button type="submit" class="butt" id="resetPassBttn" data-label="Send reset link">Send reset link</button>
+						<p class="authSwitch"><button type="button" class="linkButton" data-auth="login">Back to log in</button></p>
+					</form>
+				</div>
 			</div>
 		</div>
 	</div>
