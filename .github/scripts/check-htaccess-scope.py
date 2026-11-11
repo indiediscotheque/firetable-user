@@ -19,6 +19,8 @@ NOT_DEPLOYED = {
 }
 # Server-only files the deploy never uploads but the site serves
 SERVER_ONLY = {"config.js"}
+# Folders the deploy builds and uploads (not in git): tools/plain-pages.mjs
+GENERATED = {"music"}
 # Paths that must stay outside the policy
 OUTSIDE = ["/basement", "/basement/", "/basement/index.html", "/basement/js/main.js",
            "/aboutx", "/jsx/", "/other/index.html"]
@@ -33,10 +35,12 @@ def main(path=".htaccess"):
     scope = re.compile(m.group(1))
 
     tracked = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True).stdout.split()
-    top = {f.split("/", 1)[0] for f in tracked} - NOT_DEPLOYED | SERVER_ONLY
+    top = {f.split("/", 1)[0] for f in tracked} - NOT_DEPLOYED | SERVER_ONLY | GENERATED
     inside = ["/"]
     for name in sorted(top):
-        inside += [f"/{name}", f"/{name}/index.html"] if any(f.startswith(name + "/") for f in tracked) else [f"/{name}"]
+        folder = name in GENERATED or any(f.startswith(name + "/") for f in tracked)
+        inside += [f"/{name}", f"/{name}/index.html"] if folder else [f"/{name}"]
+    inside += ["/music/genres/nu-disco/", "/music/sitemap.xml"]
 
     errors = [f"{p} is published but doesn't get the CSP: add it to the list in {path}"
               for p in inside if not scope.search(p)]
