@@ -126,7 +126,7 @@ jobs:
             # from Ubuntu's servers, a few tries apart, and kept for next time
             got=""
             for try in 1 2 3 4; do
-              sudo apt-get update -qq || true
+              bash .github/scripts/apt-mirror.sh
               if sudo apt-get install -y -qq --download-only lftp; then got=1; break; fi
               echo "Ubuntu's package servers didn't answer (try $try); waiting..."
               sleep $((try * 30))

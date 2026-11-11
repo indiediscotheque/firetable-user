@@ -36,6 +36,7 @@ jobs:
           npm ci --no-audit --no-fund
           # the browser's system packages come from Ubuntu's servers: a few tries
           for try in 1 2 3; do
+            bash ../.github/scripts/apt-mirror.sh
             npx playwright install --with-deps chromium && break
             [ "$try" = 3 ] && exit 1
             echo "Ubuntu's package servers didn't answer (try $try); waiting..."
