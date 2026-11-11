@@ -28,6 +28,7 @@ $(document)
     if ($(this).hasClass('cardShareChat')) firetable.actions.chatCard(key);
     else if ($(this).hasClass('cardGiftChat')) firetable.actions.giftCardPrompt(key, this);
     else if ($(this).hasClass('cardViewLarger')) firetable.actions.viewLargerCard(key);
+    else if ($(this).hasClass('cardFeature')) firetable.actions.toggleFeatured(key);
   })
   .off('click.cardStatsToggle')
   .on('click.cardStatsToggle', '#cardStats .hist-day-header', function () {
@@ -208,6 +209,7 @@ firetable.actions.cardCase = function () {
         '<button type="button" class="butt graybutt cardShareChat">Share In Chat</button>' +
         '<button type="button" class="butt graybutt cardGiftChat">Gift to DJ</button>' +
         '<button type="button" class="butt graybutt cardViewLarger">View Larger</button>' +
+        (firetable.featured.on() ? '<button type="button" class="butt graybutt cardFeature" aria-pressed="false">Feature on my DJ page</button>' : '') +
         '</div>' +
         '</span>'
       );
@@ -237,6 +239,63 @@ firetable.actions.cardCase = function () {
     }
 
     firetable.actions.applyCardFilters();
+    firetable.featured.load(firetable.featured.paint);
+  });
+};
+
+// ─── Featured cards ──────────────────────────────────────────────────────────
+// A member picks up to 6 cards from their case to show first on their DJ page
+// in Discover (users/<uid>/featured, in the order picked). A card they give
+// away drops off by itself: pages only show featured cards still theirs.
+
+firetable.featured = {
+  MAX: 6,
+  ids: [],
+  /** Only with Discover on: that's where DJ pages are. */
+  on: function () { return typeof ftconfigs !== 'undefined' && ftconfigs.discover === true; },
+  load: function (done) {
+    var f = firetable.featured;
+    if (!f.on() || !ftapi.uid) return;
+    ftapi.db().ref('users/' + ftapi.uid + '/featured').once('value').then(function (s) {
+      f.ids = (s.val() ? Object.keys(s.val()).sort().map(function (k) { return s.val()[k]; }) : []).filter(Boolean);
+      if (done) done();
+    }, function () { /* rules not published yet */ });
+  },
+  /** Mark featured cards in the case, and say how many are picked. */
+  paint: function () {
+    var f = firetable.featured;
+    // a card given away since it was picked isn't in the case: leave it out
+    var here = f.ids.filter(function (id) { return $('#caseCardSpot' + id).length; });
+    $('#cardsMain .caseCardSpot').each(function () {
+      var on = here.indexOf($(this).data('cardkey')) !== -1;
+      $(this).toggleClass('is-featured', on);
+      $(this).find('.cardFeature').attr('aria-pressed', String(on)).text(on ? 'Take off my DJ page' : 'Feature on my DJ page');
+    });
+    var $note = $('#cardFeaturedNote');
+    if (!$note.length) $note = $('<p id="cardFeaturedNote" class="cardFeaturedNote"></p>').insertAfter('#cardStats');
+    $note.text(here.length
+      ? here.length + ' of ' + f.MAX + ' cards featured on your DJ page in Discover.'
+      : 'Feature up to ' + f.MAX + ' cards on your DJ page in Discover: open a card\'s actions and choose Feature.');
+  }
+};
+
+/** Feature a card on your DJ page, or take it off. */
+firetable.actions.toggleFeatured = function (cardid) {
+  var f = firetable.featured;
+  var current = f.ids.filter(function (id) { return $('#caseCardSpot' + id).length; });
+  var adding = current.indexOf(cardid) === -1;
+  if (adding && current.length >= f.MAX) {
+    firetable.ui.toast('You can feature ' + f.MAX + ' cards. Take one off first.', 'error');
+    return;
+  }
+  var ids = adding ? current.concat(cardid) : current.filter(function (id) { return id !== cardid; });
+  ftapi.db().ref('users/' + ftapi.uid + '/featured').set(ids.length ? ids : null).then(function () {
+    f.ids = ids;
+    f.paint();
+    if (firetable.discover && firetable.discover.forgetFeatured) firetable.discover.forgetFeatured(ftapi.uid);
+    firetable.ui.toast(adding ? 'Featured on your DJ page' : 'Taken off your DJ page', 'success');
+  }, function () {
+    firetable.ui.toast('Couldn\'t save that. Try again in a moment.', 'error');
   });
 };
 
