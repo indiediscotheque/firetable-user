@@ -916,6 +916,19 @@ body.ft-has-discover #thediscovers .pv-dj-avatar { cursor: pointer; }
 .d-sheet .d-actions { margin-top: 0; }
 .d-sheet .d-actions .is-saved i { color: var(--color-accent); }
 
+/* Loading: the site's shimmer, shaped like rows */
+.d-loading { display: flex; flex-direction: column; gap: var(--pad2); padding: var(--pad2) 0; }
+.d-skelrow { display: flex; align-items: center; gap: var(--pad3); }
+.d-skelart { flex: none; width: 2.5rem; height: 2.5rem; border-radius: var(--radius-sm); }
+.d-skeltext { flex: 1; display: flex; flex-direction: column; gap: 0.35rem; }
+.d-skeltext .skel { display: block; height: 0.75rem; border-radius: var(--radius-sm); }
+.d-skeltext .skel:first-child { width: 55%; }
+.d-skeltext .skel:last-child { width: 35%; }
+
+/* A genre's line, and genres quiet in the chosen decade */
+.d-about { margin: 0; color: var(--color-text); font-size: var(--fs-title); max-width: 36rem; }
+.d-mapg.d-quiet { opacity: 0.35; }
+
 /* Keep your crate */
 #keepCrateBox .modalBox { max-width: min(30rem, calc(100vw - 2rem)); }
 .d-keep { display: flex; flex-direction: column; gap: var(--pad3); }

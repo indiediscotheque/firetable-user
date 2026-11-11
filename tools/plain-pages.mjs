@@ -236,9 +236,9 @@ if (genreList.length) {
     const top = (p.fav || []).slice(0, 3).map((t) => t.a + " - " + t.t).join(", ");
     page({
       path: "genres/" + g.slug + "/", title: g.name + " songs", route: "discover/genres/" + g.slug,
-      description: `The ${g.name} songs ${ROOM} plays most${top ? ", including " + top : ""}. ${facts.join(", ")}.`,
+      description: `${g.about ? g.about + " " : ""}The ${g.name} songs ${ROOM} plays most${top ? ", including " + top : ""}. ${facts.join(", ")}.`,
       image: g.covers && g.covers[0] ? coverOf(g.covers[0]) : null, ld: playlistLd(g.name + " in " + ROOM, "genres/" + g.slug + "/", p.fav),
-      body: back("genres/", "Genres") + pageHead(g.name, esc(facts.join(" · ")), { mosaic: mosaic(g.covers, true), play: ["discover/genres/" + g.slug, "Play " + g.name + " radio", "radio"] }) +
+      body: back("genres/", "Genres") + pageHead(g.name, esc(facts.join(" · ")), { mosaic: mosaic(g.covers, true), more: g.about ? `<p class="d-about">${esc(g.about)}</p>` : "", play: ["discover/genres/" + g.slug, "Play " + g.name + " radio", "radio"] }) +
         `<section>${head("Room favorites")}<p class="d-fact">Most played in the room</p>${rows(p.fav)}</section>` +
         ((p.newHere || []).length ? `<section>${head("New here")}<p class="d-fact">Played here for the first time lately</p>${rows(p.newHere, { max: 20, stamp: (t) => t.first ? day(t.first) : "" })}</section>` : "") +
         ((p.deep || []).length ? `<section>${head("Deep cuts")}<p class="d-fact">Played here once or twice</p>${rows(p.deep, { max: 20, stamp: (t) => t.first ? day(t.first) : "" })}</section>` : "") +
