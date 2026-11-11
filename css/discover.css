@@ -307,6 +307,19 @@ body.ft-discover #discoverPage {
     #dBrowse .d-compact .pvbar:nth-child(n + 10) { display: none; }
 }
 
+/* A library page from search, filled in before the site starts
+   (tools/plain-pages.mjs): Discover's own look, headings as h1 */
+#dBrowse .d-headrow h1,
+#dBrowse .d-pagetext h1 { margin: 0; color: var(--color-text-light); }
+#dBrowse .d-headrow h1 { margin-right: auto; font-size: 1.2rem; font-weight: 700; }
+#dBrowse .d-pagetext h1 { font-size: 2rem; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; }
+#dBrowse .d-actions a.butt { color: var(--color-on-accent); mix-blend-mode: normal; }
+@media only screen and (max-width: 639px) {
+    #dBrowse .d-pagetext h1 { font-size: 1.6rem; }
+}
+#dBrowse .hist-track-title a { color: inherit; mix-blend-mode: normal; }
+.d-plainfoot { margin-top: var(--pad4); }
+
 /* Names that open their page: quiet until pointed at */
 .d-alink,
 .d-namelink,

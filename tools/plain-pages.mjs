@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-// Plain pages for search engines: Discover's library as ordinary HTML under
-// /music/, one page per genre, DJ, artist (the 500 most played), year and
-// chart, with a sitemap. Each page lists its songs and links into the room
-// (/#discover/...), where they play.
+// Library pages for search engines: every genre, DJ, artist (the 500 most
+// played), year and chart gets an address under /music/, with a sitemap.
+// Each page is the site itself (its index.html) with that page's songs
+// already in Discover's middle column, in Discover's own markup: search
+// engines read them as they are, and a visitor lands in the real site, which
+// starts on the same Discover page (#discover/...) and takes over.
 //
 // It reads what Discover reads, from the public parts of the database:
 // discover/lib/ (the weekly Play history job in firetable-hostbot) and
@@ -11,15 +13,15 @@
 // my name on public pages" are already left out of that data.
 //
 //   node tools/plain-pages.mjs --site https://indiediscotheque.com/ [--out music]
-//     [--artists 500] [--always (even with discover off in config.js)]
+//     [--template index.html] [--artists 500] [--always (even with discover off)]
 //   FIREBASE_DATABASE_URL overrides config.js's database address.
 //
-// The deploy (.github/workflows/deploy.yml) runs it, uploads music/ and
-// removes pages that are no longer built. Never deployed itself (tools/).
-// Writes <out>/.built when it finishes, so a failed run never empties the
-// folder on the server.
+// The deploy (.github/workflows/deploy.yml) runs it after versioning the
+// site's links, uploads music/ and removes pages that are no longer built.
+// Never deployed itself (tools/). Writes <out>/.built when it finishes, so a
+// failed run never empties the folder on the server.
 
-import { mkdirSync, writeFileSync, rmSync, existsSync } from "fs";
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
 
 const args = process.argv.slice(2);
@@ -107,7 +109,7 @@ const djHref = (name, uid) => {
 };
 const artistLine = (a) => String(a || "").split(ARTIST_SPLIT).map((part, i) => {
   const slug = i % 2 ? null : artistSlug(part);
-  return slug && have.artist.has(slug) ? '<a href="' + BASE + "artists/" + slug + '/">' + esc(part) + "</a>" : esc(part);
+  return slug && have.artist.has(slug) ? '<a class="d-alink" href="' + BASE + "artists/" + slug + '/">' + esc(part) + "</a>" : esc(part);
 }).join("");
 const djName = (name, uid) => {
   const href = djHref(name, uid);
@@ -115,67 +117,54 @@ const djName = (name, uid) => {
 };
 
 // ---------------------------------------------------------------- pages
+// Each page is the site's own index.html, with that page's library already
+// in Discover's middle column, in Discover's own markup. Search engines read
+// it as it is; a visitor's browser starts the site on the same Discover page
+// (meta ft-route) and the live page takes over.
 
-const pages = []; // {path, html, lastmod}
+const TEMPLATE = readFileSync(arg("template", "index.html"), "utf8");
+const pages = []; // {path, html}
 const updated = { at: Date.now() };
+const icon = (name) => `<i class="material-symbols-outlined" aria-hidden="true">${name}</i>`;
 
-function page({ path, title, description, h1, crumbs, open, image, ld, body }) {
+function page({ path, title, description, image, ld, route, body }) {
   const url = SITE.replace(/\/$/, "") + BASE + path;
-  const nav = [["genres/", "Genres"], ["djs/", "DJs"], ["years/", "Years"], ["charts/", "Charts"]];
-  const html = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)} · ${esc(ROOM)}</title>
-<meta name="description" content="${esc(description)}">
-<link rel="canonical" href="${esc(url)}">
-<meta property="og:site_name" content="${esc(ROOM)}">
-<meta property="og:type" content="website">
-<meta property="og:title" content="${esc(title)}">
-<meta property="og:description" content="${esc(description)}">
-<meta property="og:url" content="${esc(url)}">
-${image ? `<meta property="og:image" content="${esc(image)}">\n` : ""}<meta name="theme-color" content="#181818">
-<link rel="icon" type="image/png" href="/favicon.png">
-<link rel="stylesheet" href="/css/fonts-local.css?v=1">
-<link rel="stylesheet" href="/css/plain.css?v=1">
-${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n` : ""}</head>
-<body>
-<header class="p-top">
-<a class="p-logo" href="${BASE}"><img src="/img/idlogo.png" alt="${esc(ROOM)}" width="64" height="32"></a>
-<nav aria-label="Library">${nav.map(([href, label]) => `<a href="${BASE}${href}"${path.startsWith(href) ? ' aria-current="page"' : ""}>${label}</a>`).join("")}</nav>
-<a class="p-butt" href="/${esc(open || "#discover")}">Open ${esc(ROOM)}</a>
-</header>
-<main>
-${crumbs && crumbs.length ? `<p class="p-crumbs">${crumbs.map(([href, label]) => `<a href="${BASE}${href}">${esc(label)}</a>`).join(" / ")}</p>\n` : ""}<h1>${esc(h1 || title)}</h1>
-${body}
-</main>
-<footer class="p-foot">
-<p>${esc(ROOM)} is a live room where DJs take turns playing songs for each other. These pages come from the room's play history and are updated every week.</p>
-<p><a href="/${esc(open || "#discover")}">Listen in the room</a> · <a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p>
-</footer>
-</body>
-</html>
-`;
+  const head = `<meta name="description" content="${esc(description)}" />
+	<link rel="canonical" href="${esc(url)}" />
+	<meta name="ft-route" content="${esc(route || "discover")}" />
+	<meta property="og:site_name" content="${esc(ROOM)}" />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="${esc(title)}" />
+	<meta property="og:description" content="${esc(description)}" />
+	<meta property="og:url" content="${esc(url)}" />
+${image ? `	<meta property="og:image" content="${esc(image)}" />\n` : ""}${ld ? `	<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n` : ""}`;
+  const foot = `<p class="d-fact d-plainfoot">${esc(ROOM)} is a live room where DJs take turns playing songs for each other. This page comes from the room's play history and is updated every week.</p>`;
+  let html = TEMPLATE
+    // every link in the page is the site's, from wherever this page sits
+    .replace(/(<head>\s*\n?)/i, `$1\t<base href="/" />\n`)
+    .replace(/<title>[^<]*<\/title>/i, `<title>${esc(title)} · ${esc(ROOM)}</title>`)
+    .replace(/\s*<meta name="description"[^>]*>/i, "")
+    .replace(/<\/head>/i, head + "</head>")
+    .replace(/<body([^>]*)>/i, (m, attrs) => /class=/.test(attrs) ? m.replace(/class="/, 'class="ft-has-discover ft-discover ') : `<body${attrs} class="ft-has-discover ft-discover">`)
+    .replace(/(<div id="mainGrid"[^>]*>)/i, `$1\n\t\t<div id="discoverPage" role="region" aria-label="Discover"><div id="dRail"></div><div id="dBrowse" class="scroll-view" data-prerendered="${esc(route || "discover")}">${body}${foot}</div><aside id="dSide" aria-label="Player"></aside></div>`);
+  if (!/<base href/.test(html) || !/id="discoverPage"/.test(html)) throw new Error("the template isn't the site's index.html");
   pages.push({ path, html });
 }
 
-/** A numbered list of songs. */
-function songs(list, opts = {}) {
+// Discover's markup (js/discover.js), without the buttons the live page adds
+const songUrlOf = (t) => songUrl(t) || "";
+function rows(list, opts = {}) {
   list = (list || []).filter((t) => t && t.cid).slice(0, opts.max || ROWS);
-  if (!list.length) return '<p class="p-note">Nothing here yet.</p>';
-  return `<ol class="p-songs">` + list.map((t, i) => {
-    const link = songUrl(t);
-    const who = t.dj ? djName(t.dj, t.djid) : "";
-    const facts = [];
-    if (opts.stamp) facts.push(opts.stamp(t));
-    else if (t.plays) facts.push(plural(t.plays, "play", "plays"));
-    if (t.first && !opts.noFirst) facts.push("first played " + day(t.first) + (who ? " by " + who : ""));
-    if (opts.extra) facts.push(opts.extra(t));
-    return `<li><span class="p-n">${i + 1}</span><img src="${esc(art(t))}" alt="" width="64" height="36" loading="lazy">` +
-      `<span class="p-song"><b>${link ? `<a href="${esc(link)}" rel="noopener">${esc(t.t)}</a>` : esc(t.t)}</b><span>${artistLine(t.a)}</span>` +
-      `<small>${facts.filter(Boolean).join(" · ")}</small></span></li>`;
-  }).join("") + `</ol>`;
+  if (!list.length) return '<p class="d-empty">Nothing here yet.</p>';
+  return '<div class="ft-rows d-rowlist">' + list.map((t, i) => {
+    const link = songUrlOf(t);
+    const stamp = opts.stamp ? opts.stamp(t, i) : "#" + (i + 1);
+    const right = opts.right ? opts.right(t) : (t.plays ? '<span class="d-num">' + plural(t.plays, "play", "plays") + "</span>" : "");
+    return `<div class="hist-entry"><span class="hist-timestamp${opts.stamp ? "" : " d-rank"}">${esc(stamp)}</span><span class="ft-avatar pv-dj-avatar dj-avatar-tip d-nobody" aria-hidden="true"></span>` +
+      `<div class="pvbar"><div class="pv-art histart" style="background-image:url(${esc(art(t))})"></div>` +
+      `<div class="listwords"><div class="histlink"><span class="hist-track-title">${link ? `<a href="${esc(link)}" rel="noopener">${esc(t.t)}</a>` : esc(t.t)}</span>` +
+      `<span class="hist-track-artist">${artistLine(t.a)}</span></div></div>${right ? `<span class="d-right">${right}</span>` : ""}</div></div>`;
+  }).join("") + "</div>";
 }
 const playlistLd = (name, url, list) => ({
   "@context": "https://schema.org", "@type": "MusicPlaylist", name, url: SITE.replace(/\/$/, "") + BASE + url,
@@ -184,8 +173,18 @@ const playlistLd = (name, url, list) => ({
     "@type": "MusicRecording", name: t.t, byArtist: { "@type": "MusicGroup", name: t.a }, ...(songUrl(t) ? { url: songUrl(t) } : {})
   }))
 });
-const mosaic = (keys) => `<span class="p-mosaic" aria-hidden="true">${(keys || []).slice(0, 4).concat([null, null, null, null]).slice(0, 4)
-  .map((k) => k ? `<img src="${esc(coverOf(k))}" alt="" loading="lazy">` : "<i></i>").join("")}</span>`;
+const mosaic = (keys, big) => `<span class="d-mosaic${big ? " big" : ""}" aria-hidden="true">${(keys || []).slice(0, 4).concat([null, null, null, null]).slice(0, 4)
+  .map((k) => k ? `<i style="background-image:url(${esc(coverOf(k))})"></i>` : "<i></i>").join("")}</span>`;
+const back = (to, label) => `<a class="d-back" href="${BASE}${to}">${icon("arrow_back")}<span>${esc(label)}</span></a>`;
+const head = (title, link, to) => `<div class="d-head"><h2>${esc(title)}</h2>${link ? `<a href="${BASE}${to}">${esc(link)}</a>` : ""}</div>`;
+const pageHead = (h1, facts, opts = {}) => `<div class="d-pagehead">${opts.mosaic || ""}<div class="d-pagetext"><h1>${esc(h1)}</h1>` +
+  `${facts ? `<p class="d-fact">${facts}</p>` : ""}${opts.more || ""}${opts.play ? `<div class="d-actions"><a class="butt" href="/#${esc(opts.play[0])}">${icon(opts.play[2] || "play_arrow")}<span>${esc(opts.play[1])}</span></a></div>` : ""}</div></div>`;
+const viewHead = (h1, fact) => `<div class="d-headrow"><h1>${esc(h1)}</h1></div>${fact ? `<p class="d-fact">${esc(fact)}</p>` : ""}`;
+const person = (href, name, fact, more) => {
+  const inner = `<span class="d-person-text"><b>${esc(name)}</b><span>${fact}</span>${more ? `<span>${more}</span>` : ""}</span>`;
+  return href ? `<a class="d-person" href="${href}">${inner}</a>` : `<span class="d-person">${inner}</span>`;
+};
+const chips = (items) => `<div class="d-chips">${items.map(([href, label]) => `<a class="d-chip" href="${href}">${esc(label)}</a>`).join("")}</div>`;
 
 // ---------------------------------------------------------------- build
 
@@ -218,10 +217,12 @@ const lib = await readAll([
 // genres
 if (genreList.length) {
   page({
-    path: "genres/", title: "Genres", description: `The ${genreList.length} genres played in ${ROOM}, from the room's play history: songs, plays and usual tempo for each.`,
-    open: "#discover/genres",
-    body: `<p class="p-lede">Every sound the room plays, most played first.</p><ul class="p-cards">` + genreList.map((g) =>
-      `<li><a href="${BASE}genres/${g.slug}/">${mosaic(g.covers)}<b>${esc(g.name)}</b><small>${plural(g.songs, "song", "songs")} · ${plural(g.plays, "play", "plays")}${g.bpm ? " · " + g.bpm + " BPM" : ""}</small></a></li>`).join("") + `</ul>`
+    path: "genres/", title: "Genres", route: "discover/genres",
+    description: `The ${genreList.length} genres played in ${ROOM}, from the room's play history: songs, plays and usual tempo for each.`,
+    body: viewHead("Genres", genreList.length + " sounds the room plays, most played first.") +
+      `<div class="d-gcards">` + genreList.map((g) =>
+        `<a class="d-gcard" href="${BASE}genres/${g.slug}/">${mosaic(g.covers)}<span class="d-gname">${esc(g.name)}</span>` +
+        `<span class="d-gfact d-num">${n(g.songs)} songs · ${n(g.plays)} plays</span></a>`).join("") + `</div>`
   });
   genreList.forEach((g) => {
     const p = lib["discover/lib/genre/" + g.slug];
@@ -229,21 +230,20 @@ if (genreList.length) {
     const facts = [plural(g.songs, "song", "songs"), plural(g.plays, "play", "plays")];
     if (g.bpm) facts.push("usually " + g.bpm + " BPM");
     if (g.first) facts.push("played here since " + g.first);
+    if (g.djs) facts.push(plural(g.djs, "DJ", "DJs"));
     const who = (p.who || []).filter((x) => x.dj);
     const next = (g.next || []).filter((k) => genres[k]);
     const top = (p.fav || []).slice(0, 3).map((t) => t.a + " - " + t.t).join(", ");
     page({
-      path: "genres/" + g.slug + "/", title: g.name + " songs", h1: g.name,
+      path: "genres/" + g.slug + "/", title: g.name + " songs", route: "discover/genres/" + g.slug,
       description: `The ${g.name} songs ${ROOM} plays most${top ? ", including " + top : ""}. ${facts.join(", ")}.`,
-      crumbs: [["genres/", "Genres"]], open: "#discover/genres/" + g.slug, image: g.covers && g.covers[0] ? coverOf(g.covers[0]) : null,
-      ld: playlistLd(g.name + " in " + ROOM, "genres/" + g.slug + "/", p.fav),
-      body: `<p class="p-facts">${esc(facts.join(" · "))}</p>
-<p><a class="p-butt" href="/#discover/genres/${g.slug}">Play ${esc(g.name)} radio in the room</a></p>
-<section><h2>Room favorites</h2>${songs(p.fav)}</section>
-${(p.newHere || []).length ? `<section><h2>New here</h2><p class="p-note">Played in the room for the first time lately.</p>${songs(p.newHere, { max: 20 })}</section>` : ""}
-${(p.deep || []).length ? `<section><h2>Deep cuts</h2><p class="p-note">Played here once or twice.</p>${songs(p.deep, { max: 20 })}</section>` : ""}
-${who.length ? `<section><h2>Who plays it</h2><ul class="p-list">${who.map((x) => `<li>${djName(x.dj, x.djid)} <small>${plural(x.plays, "play", "plays")}</small></li>`).join("")}</ul></section>` : ""}
-${next.length ? `<section><h2>Next door</h2><ul class="p-tags">${next.map((k) => `<li><a href="${BASE}genres/${k}/">${esc(genres[k].name)}</a></li>`).join("")}</ul></section>` : ""}`
+      image: g.covers && g.covers[0] ? coverOf(g.covers[0]) : null, ld: playlistLd(g.name + " in " + ROOM, "genres/" + g.slug + "/", p.fav),
+      body: back("genres/", "Genres") + pageHead(g.name, esc(facts.join(" · ")), { mosaic: mosaic(g.covers, true), play: ["discover/genres/" + g.slug, "Play " + g.name + " radio", "radio"] }) +
+        `<section>${head("Room favorites")}<p class="d-fact">Most played in the room</p>${rows(p.fav)}</section>` +
+        ((p.newHere || []).length ? `<section>${head("New here")}<p class="d-fact">Played here for the first time lately</p>${rows(p.newHere, { max: 20, stamp: (t) => t.first ? day(t.first) : "" })}</section>` : "") +
+        ((p.deep || []).length ? `<section>${head("Deep cuts")}<p class="d-fact">Played here once or twice</p>${rows(p.deep, { max: 20, stamp: (t) => t.first ? day(t.first) : "" })}</section>` : "") +
+        (who.length ? `<section>${head("Who plays it")}<div class="d-people">${who.map((x) => person(djHref(x.dj, x.djid), x.dj, plural(x.plays, "play", "plays"))).join("")}</div></section>` : "") +
+        (next.length ? `<section>${head("Next door")}<p class="d-fact">Genres its songs share most</p>${chips(next.map((k) => [BASE + "genres/" + k + "/", genres[k].name]))}</section>` : "")
     });
   });
 }
@@ -251,10 +251,11 @@ ${next.length ? `<section><h2>Next door</h2><ul class="p-tags">${next.map((k) =>
 // DJs
 if (djList.length) {
   page({
-    path: "djs/", title: "DJs", description: `The DJs of ${ROOM}: ${djList.length} people with 25 or more plays, their sound and the songs they play most.`,
-    open: "#discover/djs",
-    body: `<p class="p-lede">Everyone with 25 or more plays in the room, most plays first.</p><ul class="p-list p-cols">` + djList.map((d) =>
-      `<li><a href="${BASE}djs/${d.key}/">${esc(d.name)}</a> <small>${plural(d.plays, "play", "plays")}${(d.g || []).length ? " · " + esc(d.g.join(", ")) : ""}</small></li>`).join("") + `</ul>`
+    path: "djs/", title: "DJs", route: "discover/djs",
+    description: `The DJs of ${ROOM}: ${djList.length} people with 25 or more plays, their sound and the songs they play most.`,
+    body: viewHead("DJs", plural(djList.length, "DJ", "DJs") + " with 25 or more plays here") +
+      `<div class="d-people d-people-wide">` + djList.map((d) => person(BASE + "djs/" + d.key + "/", d.name,
+        esc((d.since ? "since " + year(d.since) + " · " : "") + n(d.plays) + " plays · " + n(d.firsts) + " firsts"), esc((d.g || []).join(", ")))).join("") + `</div>`
   });
   djList.forEach((d) => {
     const p = lib["discover/lib/dj/" + d.key];
@@ -267,15 +268,16 @@ if (djList.length) {
     const taste = (p.taste || []).filter((x) => x.g);
     const similar = (p.similar || []).filter((x) => x.key && djs[x.key]);
     page({
-      path: "djs/" + d.key + "/", title: p.name + ", DJ", h1: p.name,
+      path: "djs/" + d.key + "/", title: p.name + ", DJ", route: "discover/djs/" + d.key,
       description: `${p.name} DJs in ${ROOM}${taste.length ? ", mostly " + taste.filter((x) => x.slug).slice(0, 3).map((x) => x.g).join(", ") : ""}. ${facts.join(", ")}.`,
-      crumbs: [["djs/", "DJs"]], open: "#discover/djs/" + d.key,
       ld: { "@context": "https://schema.org", "@type": "ProfilePage", mainEntity: { "@type": "Person", name: p.name }, url: SITE.replace(/\/$/, "") + BASE + "djs/" + d.key + "/" },
-      body: `<p class="p-facts">${esc(facts.join(" · "))}</p>
-${taste.length ? `<section><h2>Their sound</h2><ul class="p-taste">${taste.map((x) => `<li${x.slug ? "" : ' class="p-other"'}>${x.slug && have.genre.has(x.slug) ? `<a href="${BASE}genres/${x.slug}/">${esc(x.g)}</a>` : esc(x.g)}<span class="p-bar"><i style="width:${Math.max(1, Math.min(100, Math.round(x.pct)))}%"></i></span><small>${esc(x.pct)}%</small></li>`).join("")}</ul></section>` : ""}
-<section><h2>Most played</h2>${songs(p.most, { noFirst: true, stamp: (t) => plural(t.by, "play", "plays") + " by " + esc(p.name) })}</section>
-${(p.firstHere || []).length ? `<section><h2>Brought here first</h2>${songs(p.firstHere, { max: 30, stamp: (t) => plural(t.plays, "play", "plays") + " in the room", noFirst: false })}</section>` : ""}
-${similar.length ? `<section><h2>Similar DJs</h2><ul class="p-list">${similar.map((x) => `<li><a href="${BASE}djs/${x.key}/">${esc(x.name)}</a> <small>${esc(x.pct)}% alike</small></li>`).join("")}</ul></section>` : ""}`
+      body: back("djs/", "DJs") + pageHead(p.name, esc(facts.join(" · ")), { play: ["discover/djs/" + d.key, "Play their favorites"] }) +
+        (taste.length ? `<section>${head("Their sound")}<div class="d-taste">${taste.map((x) =>
+          `<div class="d-tasterow${x.slug ? "" : " d-other"}">${x.slug && have.genre.has(x.slug) ? `<a href="${BASE}genres/${x.slug}/">${esc(x.g)}</a>` : `<span>${esc(x.g)}</span>`}` +
+          `<span class="d-bar"><i style="width:${Math.max(1, Math.min(100, Math.round(x.pct)))}%"></i></span><span class="d-num">${esc(x.pct)}%</span></div>`).join("")}</div></section>` : "") +
+        `<section>${head("Most played")}${rows(p.most, { right: (t) => '<span class="d-num">' + plural(t.by, "play", "plays") + "</span>" })}</section>` +
+        ((p.firstHere || []).length ? `<section>${head("Brought here first")}${rows(p.firstHere, { max: 30, stamp: (t) => t.first ? day(t.first) : "" })}</section>` : "") +
+        (similar.length ? `<section>${head("Similar DJs")}<p class="d-fact">The most songs in common</p><div class="d-people">${similar.map((x) => person(BASE + "djs/" + x.key + "/", x.name, esc(x.pct + "% alike"))).join("")}</div></section>` : "")
     });
   });
 }
@@ -292,43 +294,53 @@ artistPages.forEach(([slug, a]) => {
   const who = (a.djs || []).filter((x) => x.dj);
   const top = (a.rows || []).slice(0, 3).map((t) => t.t).join(", ");
   page({
-    path: "artists/" + slug + "/", title: a.name + " in " + ROOM, h1: a.name,
+    path: "artists/" + slug + "/", title: a.name + " in " + ROOM, route: "discover/artist/" + slug,
     description: `${a.name} songs played in ${ROOM}${top ? ": " + top : ""}. ${facts.join(", ")}.`,
-    crumbs: [["artists/", "Artists"]], open: "#discover/artist/" + slug, image: a.rows && a.rows[0] ? art(a.rows[0]) : null,
-    ld: playlistLd(a.name + " in " + ROOM, "artists/" + slug + "/", a.rows),
-    body: `<p class="p-facts">${esc(facts.join(" · "))}${a.first ? " · first played here " + day(a.first) + (a.firstDj ? " by " + djName(a.firstDj, a.firstDjid) : "") : ""}</p>
-<section><h2>Most played here</h2>${songs(a.rows, { noFirst: true })}</section>
-${who.length ? `<section><h2>Who plays them</h2><ul class="p-list">${who.map((x) => `<li>${djName(x.dj, x.djid)} <small>${plural(x.plays, "play", "plays")}</small></li>`).join("")}</ul></section>` : ""}`
+    image: a.rows && a.rows[0] ? art(a.rows[0]) : null, ld: playlistLd(a.name + " in " + ROOM, "artists/" + slug + "/", a.rows),
+    body: back("artists/", "Artists") + pageHead(a.name, esc(facts.join(" · ")), {
+      mosaic: mosaic((a.rows || []).slice(0, 4).map((t) => (t.type || 1) + "_" + t.cid), true),
+      more: a.first ? `<p class="d-fact">First played here ${day(a.first)}${a.firstDj ? " by " + djName(a.firstDj, a.firstDjid) : ""}</p>` : "",
+      play: ["discover/artist/" + slug, "Play all"]
+    }) +
+      `<section>${head("Most played here")}${rows(a.rows)}</section>` +
+      (who.length ? `<section>${head("Who plays them")}<div class="d-people">${who.map((x) => person(djHref(x.dj, x.djid), x.dj, plural(x.plays, "play", "plays"))).join("")}</div></section>` : "")
   });
 });
 if (artistPages.length) {
   page({
-    path: "artists/", title: "Artists", description: `The ${artistPages.length} artists played most in ${ROOM}.`, open: "#discover",
-    body: `<p class="p-lede">The ${artistPages.length} artists the room plays most.</p><ul class="p-list p-cols">` +
-      artistPages.map(([slug, a]) => `<li><a href="${BASE}artists/${slug}/">${esc(a.name)}</a> <small>${plural(a.plays, "play", "plays")}</small></li>`).join("") + `</ul>`
+    path: "artists/", title: "Artists", route: "discover",
+    description: `The ${artistPages.length} artists played most in ${ROOM}.`,
+    body: viewHead("Artists", "The " + artistPages.length + " artists the room plays most") +
+      `<div class="d-people d-people-wide">` + artistPages.map(([slug, a]) => person(BASE + "artists/" + slug + "/", a.name, plural(a.plays, "play", "plays"))).join("") + `</div>`
   });
 }
 
 // years
 if (yearList.length) {
   page({
-    path: "years/", title: "Years", description: `${ROOM}'s playlist for each year since ${yearList[yearList.length - 1]}, and what the room played most from each.`,
-    open: "#discover/years",
-    body: `<ul class="p-list">` + yearList.map((y) => { const v = years[y] || {};
-      return `<li><a href="${BASE}years/${y}/">${y}</a> <small>${plural(v.songs, "song", "songs")} · ${n(v.played)} played here${v.genre ? " · mostly " + esc(v.genre) : ""}</small></li>`; }).join("") + `</ul>`
+    path: "years/", title: "Years", route: "discover/years",
+    description: `${ROOM}'s playlist for each year since ${yearList[yearList.length - 1]}, and what the room played most from each.`,
+    body: viewHead("Years", "The room's playlist for each year, and how much of it was played here") +
+      `<div class="d-yearlist">` + yearList.map((y) => {
+        const v = years[y] || {};
+        const pct = v.songs ? Math.round((v.played / v.songs) * 100) : 0;
+        return `<a class="d-yearrow" href="${BASE}years/${y}/"><b class="d-num">${y}</b><span class="d-yeartext"><span>${n(v.songs)} songs · ${n(v.played)} played here · ${n(v.plays)} plays</span>` +
+          `${v.genre ? `<span>mostly ${esc(v.genre)}</span>` : ""}</span><span class="d-bar"><i style="width:${pct}%"></i></span></a>`;
+      }).join("") + `</div>`
   });
   yearList.forEach((y) => {
     const p = lib["discover/lib/year/" + y];
     if (!p) return;
     const v = years[y] || {};
     page({
-      path: "years/" + y + "/", title: "The best songs of " + y, h1: y,
+      path: "years/" + y + "/", title: "The best songs of " + y, route: "discover/years/" + y,
       description: `The ${y} songs ${ROOM} played most, from the room's ${y} playlist of ${n(v.songs)} songs${v.genre ? ", mostly " + v.genre : ""}.`,
-      crumbs: [["years/", "Years"]], open: "#discover/years/" + y,
       ld: playlistLd(y + " in " + ROOM, "years/" + y + "/", p.top),
-      body: `<p class="p-facts">${plural(v.songs, "song", "songs")} on the playlist · ${n(v.played)} played here${v.genre ? " · mostly " + esc(v.genre) : ""}</p>
-<section><h2>Most played here</h2>${songs(p.top)}</section>
-${(p.more || []).length ? `<section><h2>Not played here yet</h2>${songs(p.more, { max: 24, stamp: () => "" })}</section>` : ""}`
+      body: back("years/", "Years") + pageHead(y, esc(n(v.songs) + " songs on the playlist · " + n(v.played) + " played here" + (v.genre ? " · mostly " + v.genre : "")), {
+        mosaic: mosaic((p.top || []).slice(0, 4).map((t) => (t.type || 1) + "_" + t.cid), true), play: ["discover/years/" + y, "Play the year"]
+      }) +
+        `<section>${head("Most played here")}${rows(p.top)}</section>` +
+        ((p.more || []).length ? `<section>${head("Not played here yet")}<p class="d-fact">From ${y}'s playlist. Play one for the room.</p>${rows(p.more, { max: 24, stamp: () => "", right: () => "" })}</section>` : "")
     });
   });
 }
@@ -352,36 +364,37 @@ chartPaths.forEach((p) => {
   const name = chartName(period, id, c);
   const path = "charts/" + (period === "all" ? "all-time" : period + "/" + id) + "/";
   chartList.push({ period, id, name, path, c });
+  const genre = (t) => t.g ? (have.genre.has(genreSlug(t.g)) ? `<a class="d-g" href="${BASE}genres/${genreSlug(t.g)}/">${esc(t.g)}</a>` : `<span class="d-g">${esc(t.g)}</span>`) : "";
   page({
-    path, title: ROOM + " chart: " + name, h1: "Room chart: " + name,
+    path, title: ROOM + " chart: " + name, route: "discover/charts/" + (period === "all" ? "all" : period + "/" + id),
     description: `The songs played most in ${ROOM}, ${period === "all" ? "of all time" : name}. ${c.plays ? plural(c.plays, "play", "plays") + " by " + plural(c.djs || 0, "DJ", "DJs") + "." : ""}`,
-    crumbs: [["charts/", "Charts"]], open: "#discover/charts" + (period === "all" ? "/all" : "/" + period + "/" + id),
     ld: playlistLd(ROOM + " chart: " + name, path, c.rows),
-    body: `${c.plays ? `<p class="p-facts">${plural(c.plays, "play", "plays")} by ${plural(c.djs || 0, "DJ", "DJs")}${c.final === false ? " · so far" : ""}</p>` : ""}
-${songs(c.rows, { max: 40, noFirst: period !== "all", extra: (t) => t.g && have.genre.has(genreSlug(t.g)) ? `<a href="${BASE}genres/${genreSlug(t.g)}/">${esc(t.g)}</a>` : esc(t.g || "") })}`
+    body: back("charts/", "Charts") + viewHead("Room chart: " + name, c.plays ? plural(c.plays, "play", "plays") + " by " + plural(c.djs || 0, "DJ", "DJs") + (c.final === false ? " so far" : "") : "") +
+      rows(c.rows, { max: 40, right: (t) => genre(t) + '<span class="d-num">' + plural(t.plays, "play", "plays") + "</span>" })
   });
 });
 if (chartList.length) {
   const group = (period, label) => {
     const list = chartList.filter((x) => x.period === period).sort((a, b) => (a.id < b.id ? 1 : -1));
-    return list.length ? `<section><h2>${label}</h2><ul class="p-list p-cols">${list.map((x) => `<li><a href="${BASE}${x.path}">${esc(x.name)}</a></li>`).join("")}</ul></section>` : "";
+    return list.length ? `<section>${head(label)}${chips(list.map((x) => [BASE + x.path, x.name]))}</section>` : "";
   };
   page({
-    path: "charts/", title: "Room charts", description: `${ROOM}'s weekly, monthly, yearly and all-time charts: the songs played most in the room.`,
-    open: "#discover/charts", body: group("all", "All time") + group("week", "Weeks") + group("month", "Months") + group("year", "Years")
+    path: "charts/", title: "Room charts", route: "discover/charts",
+    description: `${ROOM}'s weekly, monthly, yearly and all-time charts: the songs played most in the room.`,
+    body: viewHead("Room charts", "The songs played most in the room") + group("all", "All time") + group("week", "Weeks") + group("month", "Months") + group("year", "Years")
   });
 }
 
 // the library's front page
 page({
-  path: "", title: "The library", h1: ROOM + ": the library",
+  path: "", title: "The library", route: "discover",
   description: `${ROOM}'s library: ${genreList.length} genres, ${djList.length} DJs, ${artistPages.length} artists and every year since ${yearList[yearList.length - 1] || "the start"}, from the room's play history.`,
-  body: `<p class="p-lede">${esc(ROOM)} is a live room where DJs take turns playing songs. This is everything it has played, by genre, DJ, artist and year.</p>
-${genreList.length ? `<section><h2><a href="${BASE}genres/">Genres</a></h2><ul class="p-tags">${genreList.map((g) => `<li><a href="${BASE}genres/${g.slug}/">${esc(g.name)}</a></li>`).join("")}</ul></section>` : ""}
-${djList.length ? `<section><h2><a href="${BASE}djs/">DJs</a></h2><ul class="p-tags">${djList.slice(0, 30).map((d) => `<li><a href="${BASE}djs/${d.key}/">${esc(d.name)}</a></li>`).join("")}</ul></section>` : ""}
-${yearList.length ? `<section><h2><a href="${BASE}years/">Years</a></h2><ul class="p-tags">${yearList.map((y) => `<li><a href="${BASE}years/${y}/">${y}</a></li>`).join("")}</ul></section>` : ""}
-${artistPages.length ? `<section><h2><a href="${BASE}artists/">Artists</a></h2><ul class="p-tags">${artistPages.slice(0, 40).map(([slug, a]) => `<li><a href="${BASE}artists/${slug}/">${esc(a.name)}</a></li>`).join("")}</ul></section>` : ""}
-${chartList.length ? `<section><h2><a href="${BASE}charts/">Charts</a></h2></section>` : ""}`
+  body: viewHead(ROOM + ": the library", "Everything the room has played, by genre, DJ, artist and year.") +
+    (genreList.length ? `<section>${head("Genres", "All genres", "genres/")}${chips(genreList.map((g) => [BASE + "genres/" + g.slug + "/", g.name]))}</section>` : "") +
+    (djList.length ? `<section>${head("DJs", "All DJs", "djs/")}${chips(djList.slice(0, 30).map((d) => [BASE + "djs/" + d.key + "/", d.name]))}</section>` : "") +
+    (yearList.length ? `<section>${head("Years", "All years", "years/")}${chips(yearList.map((y) => [BASE + "years/" + y + "/", y]))}</section>` : "") +
+    (artistPages.length ? `<section>${head("Artists", "All artists", "artists/")}${chips(artistPages.slice(0, 40).map(([slug, a]) => [BASE + "artists/" + slug + "/", a.name]))}</section>` : "") +
+    (chartList.length ? `<section>${head("Charts", "All charts", "charts/")}</section>` : "")
 });
 
 // ---------------------------------------------------------------- write

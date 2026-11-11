@@ -748,7 +748,7 @@ try {
   const { execFile } = await import("child_process");
   // not execFileSync: the builder reads config.js from this process's server
   const out = await new Promise((resolve, reject) => execFile(process.execPath,
-    [join(ROOT, "tools/plain-pages.mjs"), "--site", SITE, "--out", join(ROOT, "music"), "--always"],
+    [join(ROOT, "tools/plain-pages.mjs"), "--site", SITE, "--out", join(ROOT, "music"), "--template", join(ROOT, "index.html"), "--always"],
     { env: { ...process.env, FIREBASE_DATABASE_URL: DB + "?ns=" + NS }, timeout: 60000 },
     (err, stdout, stderr) => (err ? reject(new Error(err.message + stderr)) : resolve(stdout))));
   check(/plain pages: \d+ pages/.test(out), "the pages are built (" + out.trim() + ")");
@@ -756,20 +756,35 @@ try {
   await plain.addInitScript(() => {
     document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI));
   });
+  await plain.route("**/config.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript",
+    body: CONFIG.replace(/roomName:/, 'discover: true, roomName:') }));
+  // what a search engine reads: the page as sent
+  const raw = await (await fetch(SITE + "music/genres/nu-disco/")).text();
+  const read = {
+    title: (raw.match(/<title>([^<]*)/) || [])[1],
+    canonical: /<link rel="canonical" href="[^"]*\/music\/genres\/nu-disco\/"/.test(raw),
+    h1: /<div class="d-pagetext"><h1>Nu-Disco<\/h1>/.test(raw),
+    rows: (raw.match(/class="hist-entry"/g) || []).length,
+    artist: /href="\/music\/artists\/alpha\/">Alpha<\/a> &amp; Beta/.test(raw),
+    dj: /href="\/music\/djs\/dj1\/"/.test(raw),
+    ld: /"@type":"MusicPlaylist"/.test(raw),
+    site: /id="mainGrid"/.test(raw) && /<base href="\/"/.test(raw) && /class="ft-has-discover ft-discover"/.test(raw)
+  };
+  check(/^Nu-Disco songs/.test(read.title) && read.canonical && read.h1 && read.rows === 3 && read.ld && read.site,
+    "a genre page as sent: the site itself, with the genre's songs already in Discover, and its own title and address (" + JSON.stringify(read) + ")");
+  check(read.artist && read.dj, "artists and DJs link to their pages, only where a page exists");
+  // what a visitor gets: the real site, on the same Discover page
   await plain.goto(SITE + "music/genres/nu-disco/", { waitUntil: "load" });
-  const g = await plain.evaluate(() => ({
-    h1: document.querySelector("h1").textContent,
-    songs: document.querySelectorAll("main section:first-of-type .p-songs li").length,
-    canonical: document.querySelector('link[rel="canonical"]').href,
-    open: document.querySelector(".p-butt[href*='#discover/genres/nu-disco']") !== null,
-    artist: [...document.querySelectorAll(".p-song > span a")].map((a) => a.getAttribute("href")).join(),
-    dj: [...document.querySelectorAll("a[href='/music/djs/dj1/']")].length > 0,
-    ld: JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent)["@type"],
-    font: getComputedStyle(document.body).fontFamily
+  await plain.waitForFunction(() => document.querySelector("#dBrowse .d-radio"), null, { timeout: 20000 }).catch(() => {});
+  const live = await plain.evaluate(() => ({
+    url: location.pathname + location.hash,
+    discover: document.body.classList.contains("ft-discover"),
+    tabs: !!document.getElementById("modeTabs"),
+    live: !!document.querySelector("#dBrowse .d-radio") && !document.querySelector("#dBrowse[data-prerendered]"),
+    h: (document.querySelector("#dBrowse .d-pagetext h2") || {}).textContent
   }));
-  check(g.h1 === "Nu-Disco" && g.songs === 2 && /\/music\/genres\/nu-disco\/$/.test(g.canonical) && g.open && g.ld === "MusicPlaylist" && /Inter/.test(g.font),
-    "a genre page: its songs, a canonical address, a link into the room, the site's type (" + JSON.stringify(g) + ")");
-  check(g.artist === "/music/artists/alpha/" && g.dj, "artists and DJs link to their pages, only where a page exists (" + g.artist + ")");
+  check(live.url === "/#discover/genres/nu-disco" && live.discover && live.tabs && live.live && live.h === "Nu-Disco",
+    "a visitor lands in the real site, on that genre's Discover page (" + JSON.stringify(live) + ")");
   const sitemap = readFileSync(join(ROOT, "music/sitemap.xml"), "utf8");
   check(/<loc>[^<]+\/music\/djs\/dj1\/<\/loc>/.test(sitemap) && /\/music\/years\/2026\//.test(sitemap) && /\/music\/charts\/week\/2026-W45\//.test(sitemap),
     "the sitemap lists the DJ, year and chart pages");

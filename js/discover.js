@@ -36,6 +36,16 @@
  * #discover/recent, #live.
  */
 
+// A library page from search (/music/..., tools/plain-pages.mjs) is this site
+// with that page already filled in: from here on it's the site at the same
+// Discover page (#discover/...), with nothing reloaded.
+(function () {
+  var route = document.querySelector('meta[name="ft-route"]');
+  if (route && location.pathname !== "/") {
+    try { history.replaceState(null, "", "/" + location.search + "#" + route.getAttribute("content")); } catch (e) { /* stays as it is */ }
+  }
+})();
+
 firetable.discover = (function () {
   var D = {
     on: false,
@@ -349,6 +359,11 @@ firetable.discover = (function () {
       setList("recent", "Recent plays", rt);
       h += '<div class="d-headrow"><h2>Recent plays</h2></div><p class="d-fact">The last 100 songs played live</p>';
       h += recentList(rt, "recent");
+    }
+    // a page from search keeps its filled-in copy until the live one has its data
+    if (D.prerendered) {
+      if (/class="d-empty">Loading/.test(h)) return;
+      D.prerendered = false;
     }
     el.innerHTML = h;
     if (v === "genres" && !D.sub) layoutMap();
@@ -1579,6 +1594,12 @@ firetable.discover = (function () {
   // ─── Build the page ─────────────────────────────────────────────────────
 
   function build() {
+    // a page from search comes with its Discover page filled in: start from that
+    var filled = document.querySelector("#discoverPage #dBrowse[data-prerendered]");
+    var filledHtml = filled ? filled.innerHTML : null;
+    var old = document.getElementById("discoverPage");
+    if (old) old.parentNode.removeChild(old);
+
     var tabs = document.createElement("div");
     tabs.id = "modeTabs";
     tabs.className = "tabs";
@@ -1596,6 +1617,10 @@ firetable.discover = (function () {
       VIEWS.map(function (v) { return '<button type="button" class="d-nav" data-view="' + v.id + '">' + ms(v.icon) + "<span>" + esc(v.label) + "</span></button>"; }).join("") +
       '</nav></div><div id="dBrowse" class="scroll-view"></div><aside id="dSide" aria-label="Player"></aside><div id="dMini" hidden></div>';
     document.getElementById("mainGrid").appendChild(page);
+    if (filledHtml) {
+      document.getElementById("dBrowse").innerHTML = filledHtml;
+      D.prerendered = true;
+    }
 
     // visitors' Live: the chat, above Fresh
     var fresh = document.getElementById("discover");
@@ -1674,7 +1699,13 @@ firetable.discover = (function () {
   return {
     init: function () {
       D.on = typeof ftconfigs !== "undefined" && ftconfigs.discover === true;
-      if (!D.on) return;
+      if (!D.on) {
+        // a page from search, with Discover since turned off: just the room
+        var filled = document.getElementById("discoverPage");
+        if (filled) filled.parentNode.removeChild(filled);
+        document.body.classList.remove("ft-discover", "ft-has-discover");
+        return;
+      }
       document.body.classList.add("ft-has-discover");
       D.newLayout = store.get("ft-new-layout", "grid") === "list" ? "list" : "grid";
       build();

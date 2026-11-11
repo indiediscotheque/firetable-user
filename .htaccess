@@ -41,6 +41,12 @@ Options -Indexes
     Header always set Cache-Control "no-cache"
   </Files>
 
+  # The room's settings (config.js, server-only): checked on every load, so a
+  # change there (like discover: true) reaches installed apps right away
+  <Files "config.js">
+    Header always set Cache-Control "no-cache"
+  </Files>
+
   # Site-wide: the page can't be framed by other sites (clickjacking), MIME
   # types are trusted as sent, and other sites only see our origin in the
   # Referer.
