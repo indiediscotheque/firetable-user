@@ -621,7 +621,10 @@ try {
 // Discover (config.js discover: true), in a page of its own: everything above
 // ran with it off, so the site is unchanged until it's switched on.
 const dPage = await context.newPage();
-dPage.on("pageerror", (e) => pageErrors.push("Discover: " + e.message));
+// the YouTube and SoundCloud players' own scripts sometimes throw when a song
+// is cut short (an aborted fetch): not errors of the site's
+const theirs = (e) => /^\s*at /m.test(e.stack || "") && (e.stack || "").split("\n").filter((l) => /^\s*at /.test(l)).every((l) => /sndcdn\.com|soundcloud\.com|youtube\.com|ytimg\.com/.test(l));
+dPage.on("pageerror", (e) => { if (theirs(e)) return; pageErrors.push("Discover: " + e.message); });
 try {
   console.log("-- Discover: visitors land on it, and the room is one step away");
   await dPage.exposeFunction("__cspViolation", (v) => violations.push("Discover: " + v));
