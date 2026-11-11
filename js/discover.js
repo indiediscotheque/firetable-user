@@ -209,6 +209,13 @@ firetable.discover = (function () {
     }).map(function (t) { return Object.assign({ type: 1 }, t); });
   }
 
+  /** Home's shelf: the newest releases, whatever the New view's filter is. */
+  function homeNew() {
+    var all = (D.data.new && D.data.new.tracks) || [];
+    return all.slice().sort(function (x, y) { return String(y.rel || "").localeCompare(String(x.rel || "")); })
+      .slice(0, 18).map(function (t) { return Object.assign({ type: 1 }, t); });
+  }
+
   function newMeta(t) {
     var dj = t.dj ? djShown(t.djid, t.dj) : null;
     if (!t.plays) return { who: "Not played live yet", date: "", extra: "" };
@@ -259,7 +266,7 @@ firetable.discover = (function () {
       '<button type="button" class="butt graybutt iconbutt' + (on === "list" ? " on" : "") + '" data-layout="list" title="List" aria-label="List">' + ms("view_list") + "</button></div>";
   }
 
-  function newList(tracks, layout, listName, max) {
+  function newList(tracks, layout, listName, max, compact) {
     tracks = max ? tracks.slice(0, max) : tracks;
     if (!tracks.length) return emptyNote(D.data.new ? "No new releases here yet. The bot adds them once a day." : "Loading…");
     if (layout === "list") {
@@ -268,7 +275,7 @@ firetable.discover = (function () {
         return row(t, listName, i, { stamp: firetable.utilities.shortDate(t.rel), dj: m.dj, right: m.extra || "new" });
       }).join("") + "</div>";
     }
-    return '<div class="ft-cards">' + tracks.map(function (t, i) { return card(t, listName, i, newMeta(t)); }).join("") + "</div>";
+    return '<div class="ft-cards' + (compact ? " d-compact" : "") + '">' + tracks.map(function (t, i) { return card(t, listName, i, newMeta(t)); }).join("") + "</div>";
   }
 
   function movement(mv) {
@@ -356,18 +363,21 @@ firetable.discover = (function () {
 
   function viewHome() {
     var h = "";
-    var nt = newTracks();
+    // the newest 18 releases: this month's, then the rest of the last 90 days
+    var nt = homeNew();
+    var monthOnly = nt.every(function (t) { return t.rel && Date.now() - new Date(t.rel).getTime() <= NEW_MONTH_DAYS * 86400000; });
+    var newTitle = monthOnly ? "New this month" : "New releases";
     var wk = currentId("week");
     var chart = chartRows(wk && D.data.charts["week/" + wk]);
     var recent = recentTracks();
     var rising = ((lib("rising") || {}).rows || []).map(function (r) { return Object.assign({ type: 1 }, r); });
     var today = lib("onThisDay/" + monthDay()) || [];
-    setList("home-new", "New this month", nt);
+    setList("home-new", newTitle, nt);
     setList("home-chart", "Room chart · this week", chart);
     setList("home-rising", "Rising", rising);
     setList("home-today", "On this day", today);
     setList("home-recent", "Recent plays", recent);
-    h += "<section>" + head("New this month", "All new releases", "discover/new") + newList(nt, "grid", "home-new", 6) + "</section>";
+    h += "<section>" + head(newTitle, "All new releases", "discover/new") + newList(nt, "grid", "home-new", 18, true) + "</section>";
     h += "<section>" + head("Room chart · this week", "Full chart", "discover/charts") + chartList(chart, "home-chart", 5, "week") + "</section>";
     if (rising.length) {
       var rn = D.homeMore.rising ? rising.length : 5;
