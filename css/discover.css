@@ -103,6 +103,7 @@ body.ft-discover #discoverPage {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.d-live-chat i { font-size: 0.85rem; }
 .d-live-text span,
 .d-mini-text span {
     display: flex;
@@ -126,6 +127,34 @@ body.ft-discover #discoverPage {
     white-space: nowrap;
 }
 .d-listening i { font-size: 1rem; }
+
+/* One search for both sides */
+#dSearch {
+    position: relative;
+    margin: var(--pad2) var(--pad2) 0;
+}
+#dSearch i {
+    position: absolute;
+    top: 50%;
+    left: 0.7rem;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    font-size: 1.15rem;
+    pointer-events: none;
+}
+#dSearch input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 2.5rem;
+    padding-left: 2.3rem;
+}
+.d-new { color: var(--color-text-muted); }
+.d-ytsearch { display: inline-flex; align-items: center; gap: var(--pad1); }
+.d-ytsearch i { font-size: 1.15rem; }
+body:not(.ft-has-discover) #dSearchOpen { display: none; }
+@media only screen and (max-width: 639px) {
+    #dSearchOpen { display: none; } /* phones: the search box is right under the live line */
+}
 
 #dNav {
     display: flex;
@@ -252,6 +281,10 @@ body.ft-discover #discoverPage {
     font-variant-numeric: tabular-nums;
 }
 .d-mv { min-width: 2.6rem; text-align: right; }
+.d-wks { color: var(--color-text-muted); }
+/* fires: shown beside the plays, never part of the ranking */
+.d-fires { display: inline-flex; align-items: center; gap: 0.1rem; color: var(--color-text-muted); }
+.d-fires i { font-size: 0.95rem; color: var(--color-accent); }
 .d-mv.up { color: var(--color-success); }
 .d-mv.down { color: var(--color-danger); }
 .d-mv.new, .d-mv.re { color: var(--color-accent); }
@@ -394,6 +427,8 @@ section .d-chips a.d-chip {
 .d-actions { display: flex; flex-wrap: wrap; gap: var(--pad2); margin-top: var(--pad2); }
 .d-actions .butt { display: inline-flex; align-items: center; gap: var(--pad1); }
 .d-actions .butt i { font-size: 1.2rem; }
+.d-panel .d-joinwait { display: inline-flex; align-items: center; justify-content: center; gap: var(--pad1); margin-top: var(--pad2); }
+.d-panel .d-joinwait i { font-size: 1.1rem; }
 .d-bigrobot .ft-avatar {
     width: 7.5rem;
     height: 7.5rem;
@@ -591,6 +626,44 @@ section .d-chips a.d-chip {
     font-size: var(--fs-title);
 }
 .d-set span:last-child { color: var(--color-text-muted); }
+.d-set { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; align-items: baseline; }
+.d-settheme { color: var(--color-text); mix-blend-mode: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) {
+    .d-settheme:hover { color: var(--color-text-light); text-decoration: underline; text-underline-offset: 2px; }
+}
+
+/* Theme nights: one line each, the theme first */
+.d-nights { display: flex; flex-direction: column; }
+.d-night {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: var(--pad2) var(--pad1);
+    border-bottom: 1px solid var(--color-border);
+    color: inherit;
+    mix-blend-mode: normal;
+}
+.d-night b { color: var(--color-text-light); font-size: var(--fs-title); font-weight: 600; }
+.d-night span { color: var(--color-text-muted); font-size: var(--fs-meta); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) {
+    .d-night:hover { background: var(--color-bg-t1); }
+}
+
+/* A DJ's trading cards, as the cards themselves */
+.d-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+    gap: var(--pad2);
+}
+.d-card {
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    cursor: zoom-in;
+}
+.d-card canvas { display: block; width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: var(--shadow-drop); }
 
 /* Years */
 .d-yearlist { display: flex; flex-direction: column; }
@@ -817,6 +890,13 @@ body.ft-discover #joinBox #login,
 #joinBox #welcomeInfo { display: none; }
 #joinBox #authBox { max-width: none; }
 .d-joinnote { margin: 0 0 var(--pad3); color: var(--color-text-light); font-size: var(--fs-title); }
+
+/* Put the chart on your site */
+#dEmbedBox .modalBox { width: 30rem; max-width: min(30rem, calc(100vw - 2rem)); }
+.d-embed { display: flex; flex-direction: column; gap: var(--pad3); overflow-y: auto; }
+.d-embed p { margin: 0; }
+.d-embed textarea { box-sizing: border-box; width: 100%; padding: var(--pad2); font: 0.75rem var(--font-numbers); color: var(--color-text); background: rgba(0, 0, 0, 0.5); border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; }
+.d-embed iframe { align-self: center; max-width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
 
 /* Keep your crate */
 #keepCrateBox .modalBox { max-width: min(30rem, calc(100vw - 2rem)); }

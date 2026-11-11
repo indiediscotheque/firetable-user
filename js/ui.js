@@ -1943,6 +1943,11 @@ firetable.ui.setupMiscEvents = function () {
     }
     firetable.media.refresh();
   });
+  // Previews over the room (player.js, firetable.overlayPreview)
+  $('#previewOverToggle').prop('checked', firetable.overlayPreview.on()).change(function () {
+    try { localStorage.setItem(firetable.overlayPreview.KEY, this.checked ? "1" : "0"); } catch (e) { /* private window */ }
+    if (!this.checked) firetable.overlayPreview.stop();
+  });
   // Your name on public pages (charts, new releases, the visitors' chat)
   $('#publicNameToggle').change(function () {
     var on = this.checked;

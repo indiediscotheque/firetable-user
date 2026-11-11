@@ -118,6 +118,31 @@ try {
     "Log in, Forgot your password (email carried over), and back (" + [auth.login, auth.reset, auth.back].join(" / ") + ")");
   await page.waitForFunction(() => typeof YT !== "undefined" && YT.Player, null, { timeout: 30000 }).catch(() => {});
   check(loaded("/s/player/") || loaded("www-widgetapi"), "YouTube's player API loaded under the policy");
+
+  console.log("-- Settings: previews play over the room");
+  await page.waitForFunction(() => firetable.ytLoaded, null, { timeout: 30000 }).catch(() => {});
+  const over = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    if (!firetable.ytLoaded) return { skipped: true };
+    const toggle = document.getElementById("previewOverToggle");
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change"));
+    localStorage.setItem(STORAGE.volume, "60");
+    localStorage.removeItem(STORAGE.mute);
+    player.setVolume(60);
+    firetable.actions.pview("ytcidM7lc1UVf-VE", true, MEDIA_YOUTUBE);
+    await wait(600);
+    const during = { preview: firetable.preview, active: firetable.overlayPreview.active(), roomVol: player.getVolume(), host: !!document.getElementById("pvOverPlayer") };
+    firetable.actions.pview("ytcidM7lc1UVf-VE", true, MEDIA_YOUTUBE);
+    await wait(300);
+    const after = { active: firetable.overlayPreview.active(), roomVol: player.getVolume() };
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change"));
+    return { during, after, saved: localStorage.getItem("ft-preview-over") };
+  });
+  check(over.skipped || (over.during.preview === false && over.during.active && over.during.roomVol === 12 && over.during.host),
+    "a preview plays over the room: the room keeps its player, at a fifth of the volume (" + JSON.stringify(over) + ")");
+  check(over.skipped || (!over.after.active && over.after.roomVol === 60 && over.saved === "0"), "stopping it brings the room back up; the setting is remembered");
   check(!loaded("pixi.min.js") && !loaded("p5.min.js") && !loaded("TweenMax.min.js"), "the stage effects' libraries aren't loaded with the page");
 
   console.log("-- the song's tempo leads the plays line");
@@ -591,7 +616,15 @@ try {
       { cid: "newrel0003", a: "Third", t: "Song", dur: 180, rel: iso(now - 9 * DAY), relSrc: "upload", plays: 1, first: now - DAY, dj: "dj2", djid: "dj2" }] },
     charts: { week: { "2026-W45": { at: now, from: now - 3 * DAY, to: now + 4 * DAY, plays: 40, djs: 3, rows: [
       { key: "a", type: 1, cid: "chart00001", a: "Top", t: "Song", plays: 9, dj: "dj1", djid: "dj1", mv: 2, wks: 3 },
-      { key: "b", type: 1, cid: "chart00002", a: "Next", t: "Song", plays: 7, mv: "new", wks: 1 }] } } },
+      { key: "b", type: 1, cid: "chart00002", a: "Next", t: "Song", plays: 7, mv: "new", wks: 1 },
+      { key: "c", type: 1, cid: "newrel0001", a: "New Band", t: "First Single", plays: 3, fires: 4, wks: 2 }] } } },
+    themes: {
+      index: { nT1: { theme: "Italo Night", from: now - 2 * DAY, to: now - 2 * DAY + 3600000, n: 3, djs: ["dj1"] } },
+      night: { nT1: { theme: "Italo Night", from: now - 2 * DAY, to: now - 2 * DAY + 3600000, n: 3, djs: ["dj1"], rows: [
+        { type: 1, cid: "night00001", a: "Italo", t: "One", dj: "dj1", djid: "dj1", w: now - 2 * DAY, f: 2 },
+        { type: 1, cid: "night00002", a: "Italo", t: "Two", dj: "dj1", djid: "dj1", w: now - 2 * DAY + 1800000 },
+        { type: 1, cid: "night00003", a: "Italo", t: "Three", dj: "dj1", djid: "dj1", w: now - 2 * DAY + 3600000 }] } }
+    },
     chartIds: { week: { "2026-W45": true } },
     chat: { at: now, hour: 12, msgs: [{ id: "m1", uid: "dj1", n: "dj1", txt: "great tune", w: now }, { id: "m2", txt: "hidden name here", w: now }] }
   });
@@ -639,7 +672,7 @@ try {
   });
   check(playing.during.preview === "discover" && playing.during.state.playing === "newrel0001" && playing.during.title === "First Single",
     "a song plays in Discover's player (" + JSON.stringify(playing.during) + ")");
-  check(playing.chart.rows === 2 && playing.chart.mv === "▲2,new", "the chart shows movement (" + JSON.stringify(playing.chart) + ")");
+  check(playing.chart.rows === 3 && playing.chart.mv === "▲2,new", "the chart shows movement (" + JSON.stringify(playing.chart) + ")");
   check(playing.after === false && !playing.mode && playing.hash === "#live", "Live gives the player back to the room (" + JSON.stringify({ after: playing.after, hash: playing.hash }) + ")");
 
   console.log("-- Discover: visitors read the chat in Live, and save songs to a crate");
@@ -663,6 +696,96 @@ try {
   });
   check(crate.stored === 3 && crate.checked === 3, "saves go to a crate in this browser, each + turning into a check (" + JSON.stringify(crate) + ")");
   check(crate.dialog && crate.google, "the third save offers to keep the crate, with Continue with Google (" + JSON.stringify(crate) + ")");
+
+  console.log("-- Discover: chart extras, theme nights, Save all");
+  const extras = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    const out = {};
+    location.hash = "#discover/charts";
+    await until(() => document.querySelectorAll("#dBrowse .ft-rows .pvbar").length === 3);
+    out.fires = [...document.querySelectorAll("#dBrowse .d-fires .d-num")].map((e) => e.textContent).join();
+    out.wks = [...document.querySelectorAll("#dBrowse .d-wks")].map((e) => e.textContent).join();
+    document.querySelector('.d-chip[data-cnew="1"]').click();
+    out.newOnly = [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join() + "|" + [...document.querySelectorAll("#dBrowse .hist-timestamp")].map((e) => e.textContent).join();
+    document.querySelector('.d-chip[data-cnew=""]').click();
+    out.live = document.getElementById("dLive").textContent;
+    location.hash = "#discover/themes";
+    await until(() => document.querySelector("#dBrowse .d-night"));
+    out.nights = [...document.querySelectorAll("#dBrowse .d-night b")].map((e) => e.textContent).join();
+    document.querySelector("#dBrowse .d-night").click();
+    await until(() => document.querySelectorAll("#dBrowse .ft-rows .pvbar").length === 3);
+    out.night = document.querySelector("#dBrowse .d-pagetext h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length + "|" + location.hash;
+    localStorage.setItem("ft-crate", "[]");
+    document.querySelector("#dBrowse .d-saveall").click();
+    out.saved = JSON.parse(localStorage.getItem("ft-crate") || "[]").map((t) => t.t).join();
+    document.querySelector("#dBrowse .d-playall").click();
+    await wait(200);
+    out.playing = firetable.discover.state().list + ":" + firetable.discover.state().playing;
+    out.source = [...document.querySelectorAll("#dTags .d-tag")].map((e) => e.textContent).includes("YouTube");
+    out.reload = !!document.querySelector("#dSide .d-reload");
+    localStorage.setItem("ft-crate", "[]");
+    return out;
+  });
+  check(extras.fires === "4" && extras.wks === "3 wks,2 wks", "chart rows show fires (not counted) and weeks on the chart (" + extras.fires + " / " + extras.wks + ")");
+  check(extras.newOnly === "First Single|#3", "New releases narrows the chart and keeps each song's place (" + extras.newOnly + ")");
+  check(/12 messages this hour/.test(extras.live), "the live line says how busy the chat is (" + extras.live + ")");
+  check(extras.nights === "Italo Night" && extras.night === "Italo Night|3|#discover/themes/nT1", "theme nights, and a night's songs in order (" + extras.nights + " / " + extras.night + ")");
+  check(extras.saved === "One,Two,Three", "Save all puts a whole list in the crate (" + extras.saved + ")");
+  check(extras.playing === "night:night00001" && extras.source && extras.reload, "Play the night; the player names the source and can reload (" + JSON.stringify(extras) + ")");
+
+  console.log("-- Discover: share a chart as a link, an image or an embed");
+  await dPage.evaluate(async () => { location.hash = "#discover/charts"; await new Promise((r) => setTimeout(r, 400)); });
+  await dPage.click("#dBrowse .d-share");
+  const shareItems = await dPage.$$eval("#dMenu .d-menuitem span", (els) => els.map((e) => e.textContent).join("|"));
+  const [download] = await Promise.all([dPage.waitForEvent("download", { timeout: 15000 }).catch(() => null), dPage.click('#dMenu [data-share="image"]')]);
+  const png = download ? await download.createReadStream().then((st) => new Promise((ok) => { const parts = []; st.on("data", (d) => parts.push(d)); st.on("end", () => ok(Buffer.concat(parts))); })) : null;
+  check(shareItems === "Copy a link|Save as an image|Put it on your site", "the chart's share menu (" + shareItems + ")");
+  check(!!(png && png.length > 20000 && png.slice(1, 4).toString() === "PNG" && png.readUInt32BE(16) === 1080 && png.readUInt32BE(20) === 1350),
+    "Save as an image makes a 1080 × 1350 picture of the chart (" + (download ? download.suggestedFilename() + ", " + (png ? png.length : 0) + " bytes" : "no download") + ")");
+  await dPage.click("#dBrowse .d-share");
+  await dPage.click('#dMenu [data-share="embed"]');
+  const embedCode = await dPage.$eval("#dEmbedBox textarea", (el) => el.value).catch(() => "");
+  await dPage.evaluate(() => document.getElementById("dEmbedBox").close());
+  check(/<iframe src="http:\/\/127\.0\.0\.1:\d+\/embed\/chart\/\?period=week" /.test(embedCode), "Put it on your site gives the iframe code for the latest week (" + embedCode.slice(0, 90) + ")");
+  const embed = await context.newPage();
+  embed.on("pageerror", (e) => pageErrors.push("Embed: " + e.message));
+  await embed.route("**/config.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: CONFIG }));
+  await embed.goto(SITE + "embed/chart/?period=week", { waitUntil: "load" });
+  await embed.waitForFunction(() => document.querySelectorAll("#chart li").length > 0, null, { timeout: 15000 }).catch(() => {});
+  const shown = await embed.evaluate(() => ({
+    rows: [...document.querySelectorAll("#chart .e-song b")].map((e) => e.textContent).join(),
+    head: (document.querySelector("#chart header p") || {}).textContent,
+    links: [...document.querySelectorAll("#chart a")].every((a) => a.target === "_blank")
+  }));
+  await embed.close();
+  check(shown.rows === "Song,Song,First Single" && /^Week 45/.test(shown.head || "") && shown.links, "the embed shows the latest week's chart, every link opening the room (" + JSON.stringify(shown) + ")");
+
+  console.log("-- Discover: one search for both sides");
+  const search = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await wait(100);
+    document.getElementById("dSearchOpen").click();
+    await wait(100);
+    const out = { mode: document.body.classList.contains("ft-discover"), focused: document.activeElement && document.activeElement.id };
+    const q = document.getElementById("dQ");
+    q.value = "ital";
+    q.dispatchEvent(new Event("input", { bubbles: true }));
+    await wait(600);
+    out.hash = location.hash;
+    out.nights = [...document.querySelectorAll("#dBrowse .d-night b")].map((e) => e.textContent).join();
+    q.value = "single";
+    q.dispatchEvent(new Event("input", { bubbles: true }));
+    await wait(600);
+    out.songs = [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join();
+    out.yt = !!document.querySelector("#dBrowse .d-ytsearch");
+    return out;
+  });
+  check(search.mode && search.focused === "dQ", "the header's search opens Discover's search box from Live (" + JSON.stringify(search) + ")");
+  check(search.hash === "#discover/search/ital" && search.nights === "Italo Night" && search.songs === "First Single",
+    "search finds theme nights and songs as you type, with its own address (" + JSON.stringify(search) + ")");
+  check(!search.yt, "YouTube search is for members only (it uses the site's quota)");
 
   console.log("-- Discover: joining opens the sign-in form over the page, and it goes back after");
   const join = await dPage.evaluate(async () => {
@@ -786,6 +909,7 @@ try {
   check(live.url === "/#discover/genres/nu-disco" && live.discover && live.tabs && live.live && live.h === "Nu-Disco",
     "a visitor lands in the real site, on that genre's Discover page (" + JSON.stringify(live) + ")");
   const sitemap = readFileSync(join(ROOT, "music/sitemap.xml"), "utf8");
+  check(/\/music\/themes\/nT1\//.test(sitemap), "theme nights get pages too");
   check(/<loc>[^<]+\/music\/djs\/dj1\/<\/loc>/.test(sitemap) && /\/music\/years\/2026\//.test(sitemap) && /\/music\/charts\/week\/2026-W45\//.test(sitemap),
     "the sitemap lists the DJ, year and chart pages");
 } catch (e) {

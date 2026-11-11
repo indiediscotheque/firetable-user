@@ -6610,3 +6610,6 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
     font-family: var(--font-numbers);
     font-variant-numeric: tabular-nums;
 }
+
+/* The preview player for "Previews play over the room": playing, out of sight */
+#pvOverPlayer { position: fixed !important; left: -10000px; top: 0; width: 320px; height: 180px; opacity: 0; pointer-events: none; }

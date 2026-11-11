@@ -36,6 +36,13 @@
  * #discover/recent, #live.
  */
 
+// The YouTube player's own script leaves a fetch it cancelled unhandled when a
+// song is stopped right after it starts (going to Live, Listen in, the next
+// song): "signal is aborted". Nothing's wrong; it's not an error of ours.
+window.addEventListener("unhandledrejection", function (e) {
+  if (e.reason && e.reason.name === "AbortError") e.preventDefault();
+});
+
 // A library page from search (/music/..., tools/plain-pages.mjs) is this site
 // with that page already filled in: from here on it's the site at the same
 // Discover page (#discover/...), with nothing reloaded.
@@ -57,6 +64,7 @@ firetable.discover = (function () {
     newLayout: "grid",
     sideTab: "now",      // now | list
     chartGenre: null,    // the chart, narrowed to one genre
+    chartNew: false,     // the chart, new releases only
     genreTab: "fav",     // fav | newHere | deep
     djTab: "most",       // most | firstHere
     djSort: "plays",     // plays | firsts | since | name
@@ -234,7 +242,7 @@ firetable.discover = (function () {
 
   function chartRows(chart) {
     return ((chart && chart.rows) || []).map(function (r, i) {
-      return { type: r.type || 1, cid: r.cid, a: r.a, t: r.t, plays: r.plays, mv: r.mv, wks: r.wks, dj: r.dj, djid: r.djid, first: r.first, g: r.g || null, rank: i + 1 };
+      return { type: r.type || 1, cid: r.cid, a: r.a, t: r.t, plays: r.plays, fires: r.fires || 0, mv: r.mv, wks: r.wks, dj: r.dj, djid: r.djid, first: r.first, g: r.g || null, rank: i + 1 };
     });
   }
 
@@ -259,9 +267,10 @@ firetable.discover = (function () {
     { id: "genres", label: "Genres", icon: "category" },
     { id: "djs", label: "DJs", icon: "headphones" },
     { id: "years", label: "Years", icon: "calendar_month" },
+    { id: "themes", label: "Theme nights", icon: "nightlife" },
     { id: "recent", label: "Recent plays", icon: "history" }
   ];
-  var VIEW_IDS = VIEWS.map(function (v) { return v.id; }).concat(["artist"]);
+  var VIEW_IDS = VIEWS.map(function (v) { return v.id; }).concat(["artist", "search"]);
 
   function head(title, link, linkTo) {
     return '<div class="d-head"><h2>' + esc(title) + "</h2>" + (link ? '<a href="#' + esc(linkTo) + '">' + esc(link) + "</a>" : "") + "</div>";
@@ -300,7 +309,10 @@ firetable.discover = (function () {
     tracks = max ? tracks.slice(0, max) : tracks;
     if (!tracks.length) return emptyNote("No plays in this chart yet.");
     return '<div class="ft-rows d-rowlist">' + tracks.map(function (t, i) {
-      var right = genreLink(t.g) + (period === "week" ? movement(t.mv) : "") + '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>";
+      var right = genreLink(t.g) +
+        (t.fires ? '<span class="d-fires" title="' + esc(firetable.utilities.pluralize(t.fires, "fire", "fires")) + ' (not counted)">' + ms("local_fire_department") + '<span class="d-num">' + esc(t.fires) + "</span></span>" : "") +
+        (period === "week" ? movement(t.mv) + (t.wks > 1 ? '<span class="d-num d-wks" title="weeks in a row on the chart">' + esc(t.wks) + " wks</span>" : "") : "") +
+        '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>";
       return row(t, listName, i, { stamp: "#" + (t.rank || i + 1), rank: true, dj: djShown(t.djid, t.dj), right: right });
     }).join("") + "</div>";
   }
@@ -354,6 +366,8 @@ firetable.discover = (function () {
     else if (v === "djs") h = D.sub ? viewDj(D.sub) : viewDjs();
     else if (v === "years") h = D.sub ? viewYear(D.sub) : viewYears();
     else if (v === "artist") h = viewArtist(D.sub);
+    else if (v === "themes") h = D.sub ? viewNight(D.sub) : viewNights();
+    else if (v === "search") h = viewSearch(D.sub || "");
     else if (v === "recent") {
       var rt = recentTracks();
       setList("recent", "Recent plays", rt);
@@ -367,6 +381,7 @@ firetable.discover = (function () {
     }
     el.innerHTML = h;
     if (v === "genres" && !D.sub) layoutMap();
+    if (v === "djs" && D.sub) drawCards();
     firetable.ui.markSaved();
   }
 
@@ -402,6 +417,8 @@ firetable.discover = (function () {
             right: '<span class="d-mv up">▲' + esc(t.up) + '</span><span class="d-num">' + esc(firetable.utilities.pluralize(t.recent, "play", "plays")) + "</span>" });
         }).join("") + "</div>" + more("rising", rising.length, 5) + "</section>";
     }
+    var nights = nightIndex().slice(0, 3);
+    if (nights.length) h += "<section>" + head("Theme nights", "All theme nights", "discover/themes") + '<div class="d-nights">' + nights.map(nightRow).join("") + "</div></section>";
     var genres = genreList().slice(0, 12);
     if (genres.length) {
       h += "<section>" + head("Genres", "All genres", "discover/genres") +
@@ -440,8 +457,11 @@ firetable.discover = (function () {
     all.forEach(function (r) { if (r.g) count[r.g] = (count[r.g] || 0) + 1; });
     var gs = Object.keys(count).sort(function (x, y) { return count[y] - count[x]; }).slice(0, 8);
     if (D.chartGenre && !count[D.chartGenre]) D.chartGenre = null;
-    var rows = D.chartGenre ? all.filter(function (r) { return r.g === D.chartGenre; }) : all;
-    setList("chart", "Room chart · " + chartTitle(period, id) + (D.chartGenre ? " · " + D.chartGenre : ""), rows);
+    // new releases only: songs out in the last 90 days (discover/new)
+    var fresh = {};
+    ((D.data.new && D.data.new.tracks) || []).forEach(function (t) { fresh[t.cid] = true; });
+    var rows = all.filter(function (r) { return (!D.chartGenre || r.g === D.chartGenre) && (!D.chartNew || fresh[r.cid]); });
+    setList("chart", "Room chart · " + chartTitle(period, id) + (D.chartNew ? " · new releases" : "") + (D.chartGenre ? " · " + D.chartGenre : ""), rows);
     h += '<div class="d-headrow"><h2>Room chart</h2>' + chips("period", [["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All time"]], period) + "</div>";
     var stepper = "";
     if (period !== "all") {
@@ -453,6 +473,9 @@ firetable.discover = (function () {
     var fact = c && c.plays ? " · " + firetable.utilities.pluralize(c.plays, "play", "plays") + " by " + firetable.utilities.pluralize(c.djs || 0, "DJ", "DJs") : "";
     h += '<div class="d-headrow">' + stepper + '<p class="d-fact"><b>' + esc(chartTitle(period, id)) + "</b>" + esc(fact) + (period === "all" ? " · from the room's whole history" : "") + "</p>" +
       '<button type="button" class="butt graybutt iconbutt d-share" title="Copy a link to this chart" aria-label="Copy a link to this chart">' + ms("share") + "</button></div>";
+    h += '<div class="d-chips" role="group" aria-label="Which songs">' +
+      '<button type="button" class="d-chip' + (D.chartNew ? "" : " on") + '" data-cnew="" aria-pressed="' + !D.chartNew + '">All songs</button>' +
+      '<button type="button" class="d-chip' + (D.chartNew ? " on" : "") + '" data-cnew="1" aria-pressed="' + !!D.chartNew + '">New releases</button></div>';
     if (gs.length > 1) {
       h += '<div class="d-chips" role="group" aria-label="Genre">' +
         '<button type="button" class="d-chip' + (D.chartGenre ? "" : " on") + '" data-cgenre="" aria-pressed="' + !D.chartGenre + '">All genres</button>' +
@@ -460,7 +483,8 @@ firetable.discover = (function () {
           return '<button type="button" class="d-chip' + (D.chartGenre === g ? " on" : "") + '" data-cgenre="' + esc(g) + '" aria-pressed="' + (D.chartGenre === g) + '">' + esc(g) + "</button>";
         }).join("") + "</div>";
     }
-    h += c === undefined ? loading() : chartList(rows, "chart", 0, period);
+    h += c === undefined ? loading() : rows.length || !all.length ? chartList(rows, "chart", 0, period)
+      : emptyNote(D.chartNew ? "No new releases on this chart." : "Nothing in this genre on this chart.");
     return h;
   }
 
@@ -508,7 +532,12 @@ firetable.discover = (function () {
     }).join("") + "</span>";
   }
   function playAllButton(listName, label) {
-    return '<button type="button" class="butt d-playall" data-list="' + esc(listName) + '">' + ms("play_arrow", true) + "<span>" + esc(label) + "</span></button>";
+    return '<button type="button" class="butt d-playall" data-list="' + esc(listName) + '">' + ms("play_arrow", true) + "<span>" + esc(label) + "</span></button>" +
+      saveAllButton(listName);
+  }
+  function saveAllButton(listName) {
+    return '<button type="button" class="butt graybutt d-saveall" data-list="' + esc(listName) + '" title="' + (D.signedIn ? "Save these songs as a new playlist" : "Save these songs to your crate") + '">' +
+      ms("playlist_add") + "<span>Save all</span></button>";
   }
   function rankedRows(tracks, listName, rightOf) {
     if (!tracks.length) return emptyNote("Nothing here yet.");
@@ -621,7 +650,8 @@ firetable.discover = (function () {
     var tracks = withType(tabs[tab][1]);
     setList("genre", g.name + " · " + tabs[tab][0], tracks);
     h += '<div class="d-pagehead">' + mosaic(g.covers, true) + '<div class="d-pagetext"><h2>' + esc(g.name) + '</h2><p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
-      '<div class="d-actions"><button type="button" class="butt d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>Play " + esc(g.name) + " radio</span></button></div></div></div>";
+      '<div class="d-actions"><button type="button" class="butt d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>Play " + esc(g.name) + " radio</span></button>" +
+      saveAllButton("genre") + "</div></div></div>";
     h += "<section>" + '<div class="d-headrow">' + chips("gtab", [["fav", "Room favorites"], ["newHere", "New here"], ["deep", "Deep cuts"]], tab) + "</div>" +
       '<p class="d-fact">' + esc(tab === "fav" ? "Most played in the room" : tab === "newHere" ? "Played here for the first time lately" : "Played here once or twice, last played first") + "</p>" +
       (tab === "fav" ? rankedRows(tracks, "genre") : datedRows(tracks, "genre")) + "</section>";
@@ -705,13 +735,241 @@ firetable.discover = (function () {
     if (similar.length) h += "<section>" + head("Similar DJs") + '<p class="d-fact">The most songs in common</p><div class="d-people">' + similar.join("") + "</div></section>";
     var sets = d.sets || [];
     if (sets.length) {
+      var nights = nightIndex();
       h += "<section>" + head("Recent sets") + '<div class="d-sets">' + sets.map(function (x) {
         var when = new Date(x.at);
+        var night = nightAt(nights, x.at);
         return '<div class="d-set"><span class="d-num">' + esc(when.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: when.getFullYear() === new Date().getFullYear() ? undefined : "numeric" })) +
-          "</span><span>" + esc(firetable.utilities.pluralize(x.n, "song", "songs")) + "</span></div>";
+          "</span>" + (night ? '<a class="d-settheme" href="#discover/themes/' + esc(night.id) + '">' + esc(night.theme) + "</a>" : "<span></span>") +
+          "<span>" + esc(firetable.utilities.pluralize(x.n, "song", "songs")) + "</span></div>";
       }).join("") + "</div></section>";
     }
+    if (d.djid) {
+      var held = cardsOf(d.djid);
+      if (held && held.length) {
+        h += "<section>" + head("Their cards") + '<p class="d-fact">Trading cards ' + esc(d.name) + " holds" + (d.cards > held.length ? ", the latest " + held.length + " of " + d.cards : "") + "</p>" +
+          '<div class="d-cards">' + held.map(function (c) {
+            return '<button type="button" class="d-card" data-card="' + esc(c.key) + '" aria-label="' + esc("Card: " + (c.djname || "") + ", " + (c.artist || "") + " - " + (c.title || "")) + '">' +
+              '<canvas width="225" height="300" id="cardMakerdj' + esc(c.key) + '"></canvas></button>';
+          }).join("") + "</div></section>";
+      }
+    }
     return h;
+  }
+
+  // ─── One search for both sides ──────────────────────────────────────────
+  // The room's own library answers at once: artists (the 5,000 most played),
+  // genres, DJs, theme nights and songs already loaded here. Members can also
+  // look on YouTube (Enter): each search costs the site's YouTube quota, so
+  // it's for people who can add what they find.
+
+  var fold = function (x) { return String(x || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); };
+  function matches(q, text) { return fold(text).indexOf(q) !== -1; }
+  var yt = { q: null, rows: null };
+
+  function viewSearch(query) {
+    var q = fold(query).trim();
+    var input = document.getElementById("dQ");
+    if (input && document.activeElement !== input && input.value !== query) input.value = query;
+    var h = '<div class="d-headrow"><h2>Search</h2></div>';
+    if (q.length < 2) return h + emptyNote("Type an artist, a song, a genre or a DJ.");
+    var found = 0;
+    var section = function (title, body, n) { found += n; return n ? "<section>" + head(title) + body + "</section>" : ""; };
+    // artists
+    var ai = lib("artistIndex") || {};
+    var artists = Object.keys(ai).filter(function (k) { return matches(q, ai[k][0]); }).sort(function (a, b) { return ai[b][1] - ai[a][1]; }).slice(0, 8);
+    h += section("Artists", '<div class="d-people">' + artists.map(function (k) {
+      return '<a class="d-person" href="#discover/artist/' + esc(k) + '"><span class="d-person-text"><b>' + esc(ai[k][0]) + "</b><span>" + esc(firetable.utilities.pluralize(ai[k][1], "play", "plays")) + "</span></span></a>";
+    }).join("") + "</div>", artists.length);
+    // genres
+    var gs = genreList().filter(function (g) { return matches(q, g.name); }).slice(0, 12);
+    h += section("Genres", '<div class="d-chips">' + gs.map(function (g) { return '<a class="d-chip" href="#discover/genres/' + esc(g.slug) + '">' + esc(g.name) + "</a>"; }).join("") + "</div>", gs.length);
+    // DJs
+    var dall = lib("djs") || {};
+    var djs = Object.keys(dall).filter(function (k) { return matches(q, dall[k].name); }).sort(function (a, b) { return (dall[b].plays || 0) - (dall[a].plays || 0); }).slice(0, 8);
+    h += section("DJs", '<div class="d-people">' + djs.map(function (k) {
+      return person({ djid: dall[k].djid, name: dall[k].name, key: k }, esc(firetable.utilities.pluralize(dall[k].plays, "play", "plays")));
+    }).join("") + "</div>", djs.length);
+    // theme nights
+    var nights = nightIndex().filter(function (n) { return matches(q, n.theme); }).slice(0, 6);
+    h += section("Theme nights", '<div class="d-nights">' + nights.map(nightRow).join("") + "</div>", nights.length);
+    // songs already here: new releases, charts and every page opened this visit
+    var seen = {};
+    var songs = [];
+    var pool = (((D.data.new && D.data.new.tracks) || []).map(function (t) { return Object.assign({ type: 1 }, t); }));
+    Object.keys(lists).forEach(function (name) { if (name !== "search" && name !== "search-yt") pool = pool.concat(lists[name].tracks || []); });
+    pool.forEach(function (t) {
+      var k = (t.type || 1) + "_" + t.cid;
+      if (seen[k] || !t.cid || songs.length >= 30) return;
+      if (matches(q, t.t) || matches(q, t.a)) { seen[k] = true; songs.push(t); }
+    });
+    setList("search", "Search: " + query, songs);
+    h += section("Songs", '<div class="ft-rows d-rowlist">' + songs.map(function (t, i) {
+      return row(t, "search", i, { dj: djShown(t.djid, t.dj), right: t.plays ? '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" : "" });
+    }).join("") + "</div>", songs.length);
+    // YouTube, for members
+    if (D.signedIn) {
+      if (yt.q === query && yt.rows) {
+        setList("search-yt", "YouTube: " + query, yt.rows);
+        h += "<section>" + head("On YouTube") + (yt.rows.length ? '<div class="ft-rows d-rowlist">' + yt.rows.map(function (t, i) {
+          return row(t, "search-yt", i, { right: t.plays ? '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + " here</span>" : '<span class="d-new">not played here</span>' });
+        }).join("") + "</div>" : emptyNote("Nothing on YouTube for that.")) + "</section>";
+      } else {
+        h += '<section><button type="button" class="butt graybutt d-ytsearch">' + ms("travel_explore") + "<span>Search YouTube for “" + esc(query) + "”</span></button></section>";
+      }
+    }
+    if (!found && !D.signedIn) h += emptyNote("Nothing in the room's library for that yet.");
+    return h;
+  }
+
+  /** YouTube's results for a search, with the room's plays for each. */
+  function searchYouTube(query) {
+    if (typeof ytAPI !== "function") return;
+    yt = { q: query, rows: null };
+    renderBrowse();
+    ytAPI("search", { q: query, type: "video", part: "snippet", maxResults: SEARCH_MAX_RESULTS }, function (res) {
+      var rows = ((res && res.items) || []).map(function (item) {
+        var cid = item.id && (item.id.videoId || item.id);
+        var p = firetable.utilities.parseArtistTitle(firetable.ui.strip(item.snippet.title), firetable.ui.strip(item.snippet.channelTitle).replace(" - Topic", ""));
+        return { type: MEDIA_YOUTUBE, cid: cid, a: p.artist, t: p.title };
+      }).filter(function (t) { return t.cid; });
+      Promise.all(rows.map(function (t) {
+        return db().ref("globalTracks/1" + t.cid).once("value").then(function (s) {
+          var v = s.val();
+          if (!v || !v.song) return;
+          return db().ref("globalSongs/" + v.song + "/plays").once("value").then(function (pl) { t.plays = pl.val() || 0; });
+        }).catch(function () {});
+      })).then(function () {
+        if (yt.q !== query) return;
+        yt.rows = rows;
+        if (D.view === "search") renderBrowse();
+      });
+    });
+  }
+
+  // ─── Theme nights (discover/themes, from the bot) ──────────────────────
+
+  var themeData = {};
+  var themeAsked = {};
+  function themes(path) {
+    if (!themeAsked[path]) {
+      themeAsked[path] = true;
+      db().ref("discover/themes/" + path).once("value").then(function (s) { themeData[path] = s.val(); themesLoaded(); }, function (err) { quiet(err); themeData[path] = null; themesLoaded(); });
+    }
+    return themeData[path];
+  }
+  function themesLoaded() { if (D.mode === "discover") renderBrowse(); }
+  /** Every theme night, newest first ([] while it loads or before there are any). */
+  function nightIndex() {
+    var all = themes("index") || {};
+    return Object.keys(all).map(function (k) { return Object.assign({ id: k }, all[k]); }).sort(function (a, b) { return b.from - a.from; });
+  }
+  function nightAt(nights, at) {
+    for (var i = 0; i < nights.length; i++) if (at >= nights[i].from - 3600000 && at <= nights[i].to + 3600000) return nights[i];
+    return null;
+  }
+  function nightDate(n, withYear) {
+    var d = new Date(n.from);
+    return d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: withYear || d.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined });
+  }
+  function nightRow(n) {
+    return '<a class="d-night" href="#discover/themes/' + esc(n.id) + '"><b>' + esc(n.theme) + "</b><span>" + esc(nightDate(n) + " · " + firetable.utilities.pluralize(n.n, "song", "songs") +
+      ((n.djs || []).length ? " · " + n.djs.join(", ") : "")) + "</span></a>";
+  }
+
+  function viewNights() {
+    var all = themes("index");
+    var h = '<div class="d-headrow"><h2>Theme nights</h2></div>';
+    if (all === undefined) return h + loading();
+    var list = nightIndex();
+    if (!list.length) return h + emptyNote("The room's theme is saved with every song from now on. Each night played under a theme shows up here, ready to play again.");
+    return h + '<p class="d-fact">Every night the room played under a theme, newest first</p><div class="d-nights">' + list.map(nightRow).join("") + "</div>";
+  }
+
+  function viewNight(id) {
+    var n = themes("night/" + id);
+    var h = back("discover/themes", "Theme nights");
+    var wait = libWaiting(n, "There's no theme night here.");
+    if (wait) return h + wait;
+    var rows = withType(n.rows);
+    setList("night", n.theme + " · " + nightDate(n), rows);
+    var time = function (ms) { return new Date(ms).toLocaleString("en-US", { hour: "numeric", minute: "2-digit" }).replace(" ", "").toLowerCase(); };
+    var fires = rows.reduce(function (a, t) { return a + (t.f || 0); }, 0);
+    h += '<div class="d-pagehead">' + mosaic(rows.slice(0, 4).map(function (t) { return t.type + "_" + t.cid; }), true) +
+      '<div class="d-pagetext"><h2>' + esc(n.theme) + '</h2><p class="d-fact">' + esc(nightDate(n, true) + " · " + time(n.from) + " to " + time(n.to) + " · " + firetable.utilities.pluralize(n.n, "song", "songs") +
+        (fires ? " · " + firetable.utilities.pluralize(fires, "fire", "fires") : "")) + "</p>" +
+      ((n.djs || []).length ? '<p class="d-fact">' + n.djs.map(function (name) { return nameLink({ uid: name, name: name }); }).join(", ") + "</p>" : "") +
+      '<div class="d-actions">' + playAllButton("night", "Play the night") + "</div></div></div>";
+    h += '<section><div class="ft-rows d-rowlist">' + rows.map(function (t, i) {
+      return row(t, "night", i, { stamp: time(t.w), dj: djShown(t.djid, t.dj),
+        right: t.f ? '<span class="d-fires" title="' + esc(firetable.utilities.pluralize(t.f, "fire", "fires")) + '">' + ms("local_fire_department") + '<span class="d-num">' + esc(t.f) + "</span></span>" : "" });
+    }).join("") + "</div></section>";
+    return h;
+  }
+
+  // ─── A DJ's trading cards (cards/, drawn by js/cards.js) ────────────────
+
+  var cardData = {};
+  function cardsOf(uid) {
+    if (!(uid in cardData)) {
+      cardData[uid] = undefined;
+      db().ref("cards").orderByChild("owner").equalTo(uid).limitToLast(12).once("value").then(function (s) {
+        var out = [];
+        s.forEach(function (c) { out.push(Object.assign({ key: c.key }, c.val())); });
+        cardData[uid] = out.reverse();
+        if (D.mode === "discover" && D.view === "djs") renderBrowse();
+      }, function (err) { quiet(err); cardData[uid] = []; });
+    }
+    return cardData[uid];
+  }
+  function drawCards() {
+    if (!firetable.actions.displayCard) return;
+    document.querySelectorAll("#dBrowse .d-card[data-card]").forEach(function (b) {
+      var key = b.getAttribute("data-card");
+      var all = [];
+      Object.keys(cardData).forEach(function (u) { (cardData[u] || []).forEach(function (c) { all.push(c); }); });
+      var c = all.find(function (x) { return x.key === key; });
+      if (c) firetable.actions.displayCard(JSON.parse(JSON.stringify(c)), "dj" + key);
+    });
+  }
+
+  /** Save a whole list: a new playlist for members, the crate for visitors. */
+  function saveAll(listName) {
+    var list = lists[listName];
+    if (!list || !list.tracks.length) return;
+    var tracks = list.tracks.slice(0, 50);
+    if (!D.signedIn) {
+      var c = crate();
+      var have = {};
+      c.forEach(function (t) { have[t.type + "_" + t.cid] = true; });
+      var added = 0;
+      tracks.forEach(function (t) {
+        if (have[(t.type || 1) + "_" + t.cid]) return;
+        c.push({ type: Number(t.type || 1), cid: t.cid, a: t.a, t: t.t, img: t.img || null, url: t.url || null });
+        added++;
+      });
+      setCrate(c);
+      renderSide();
+      firetable.ui.toast(added ? "Saved " + firetable.utilities.pluralize(added, "song", "songs") + " to your crate" : "They're all in your crate already", added ? "success" : null);
+      return;
+    }
+    var name = String(list.label || "Discover").slice(0, 60);
+    var id = ftapi.actions.createList(name);
+    var ref = ftapi.lookup.listRef(id);
+    var updates = {};
+    tracks.forEach(function (t) {
+      var track = { type: Number(t.type || 1), cid: t.cid, name: (t.a ? t.a + " - " : "") + t.t };
+      if (t.img) track.img = t.img;
+      if (t.url) track.url = t.url;
+      updates[ref.push().key] = track;
+      firetable.saved.session[firetable.saved.key(track.type, track.cid)] = name;
+    });
+    ref.update(updates).then(function () {
+      firetable.allPlaylists = firetable.allPlaylists || {};
+      firetable.allPlaylists[id] = { name: name, list: {} };
+      firetable.ui.markSaved();
+      firetable.ui.toast("Saved " + firetable.utilities.pluralize(tracks.length, "song", "songs") + " as the playlist " + name, "success");
+    }, function () { firetable.ui.toast("Couldn't save those songs. Try again.", "error"); });
   }
 
   function viewArtist(slug) {
@@ -802,7 +1060,9 @@ firetable.discover = (function () {
     }
     el.innerHTML = '<span class="d-live-art" style="background-image:url(' + esc(firetable.imgCache && firetable.imgCache[s.cid] || artOf({ cid: s.cid, type: s.type, img: s.image })) + ')"></span>' +
       '<span class="d-live-text"><b>' + esc(firetable.utilities.decodeEntities(s.title || "")) + "</b><span>" + '<i class="d-dot" aria-hidden="true"></i>' +
-      esc((s.djname ? s.djname + " on deck" : "Live") + here) + "</span></span>" +
+      esc((s.djname ? s.djname + " on deck" : "Live") + here) + "</span>" +
+      (D.data.chat && D.data.chat.hour ? '<span class="d-live-chat">' + ms("forum") + esc(firetable.utilities.pluralize(D.data.chat.hour, "message", "messages") + " this hour") + "</span>" : "") +
+      "</span>" +
       (D.listening
         ? '<span class="d-listening">' + ms("hearing") + " Listening</span>"
         : '<button type="button" class="butt graybutt small d-listen">Listen in</button>');
@@ -875,6 +1135,7 @@ firetable.discover = (function () {
       '<button type="button" class="butt iconbutt d-toggle d-big" title="' + (P.paused ? "Play" : "Pause") + '" aria-label="' + (P.paused ? "Play" : "Pause") + '">' + ms(P.paused ? "play_arrow" : "pause", true) + "</button>" +
       '<button type="button" class="butt graybutt iconbutt d-next" title="Next" aria-label="Next">' + ms("skip_next", true) + "</button>" +
       '<span class="d-gap"></span>' +
+      '<button type="button" class="butt graybutt iconbutt d-reload" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>" +
       (linkOf(t) ? '<a class="butt graybutt iconbutt" target="_blank" rel="noopener" href="' + esc(linkOf(t)) + '" title="Open the song" aria-label="Open the song">' + ms("open_in_new") + "</a>" : "") +
       '<button type="button" class="butt graybutt iconbutt d-mute" title="Mute" aria-label="Mute">' + ms(firetable.utilities.getEffectiveVolume() ? "volume_up" : "volume_off") + "</button>" +
       "</div>" +
@@ -904,6 +1165,7 @@ firetable.discover = (function () {
       if (!P.track || P.track.cid !== t.cid) return;
       var tags = (d.genres || []).slice(0, 2).map(function (g) { return '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>"; });
       if (t.rel) tags.push('<span class="d-tag d-numtag">' + esc(t.rel.slice(0, 4)) + "</span>");
+      tags.push('<span class="d-tag">' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + "</span>");
       if (d.bpm) tags.push('<span class="d-tag d-numtag">' + esc(d.bpm) + " BPM</span>");
       var tagEl = document.getElementById("dTags");
       if (tagEl) tagEl.innerHTML = tags.join("");
@@ -1086,6 +1348,8 @@ firetable.discover = (function () {
       '<span class="d-dj">' + ms("headphones") + " Your DJ playlist</span></div>" +
       (tracks.length ? '<p class="d-label d-plain">Plays next when you DJ</p>' + rows : '<p class="d-fact">Empty. Save songs here with ' + ms("playlist_add") + ".</p>") +
       (tracks.length > 100 ? '<p class="d-fact">The first 100 of ' + tracks.length + ". The rest are in Live, under Playlists.</p>" : "") +
+      (ftapi.keepAwake && ftapi.keepAwake.wanted ? "" : tracks.length ? '<button type="button" class="butt d-joinwait">' + ms("queue_music") + "<span>Play it for the room</span></button>" +
+        '<p class="d-fact d-center">Joins the waitlist. You take the decks in Live.</p>' : "") +
       '<p class="d-fact">Songs you saved this visit are marked. Manage every playlist in Live, under Playlists.</p></div>';
   }
 
@@ -1103,6 +1367,7 @@ firetable.discover = (function () {
 
   /** Stop a 30-second preview first, the way the room does. */
   function cancelPreview() {
+    if (firetable.overlayPreview) firetable.overlayPreview.stop();
     if (!firetable.preview || firetable.preview === "discover") return;
     clearTimeout(firetable.ptimeout);
     firetable.ptimeout = null;
@@ -1239,7 +1504,9 @@ firetable.discover = (function () {
     var r = { mode: "discover", view: view, sub: null, period: null, id: null };
     if (view === "charts") {
       if (/^(week|month|year|all)$/.test(p[2] || "")) { r.period = p[2]; r.id = /^[\w-]+$/.test(p[3] || "") ? p[3] : null; }
-    } else if (view === "genres" || view === "djs" || view === "years" || view === "artist") {
+    } else if (view === "search") {
+      r.sub = p.slice(2).join("/").slice(0, 100) || null;
+    } else if (view === "genres" || view === "djs" || view === "years" || view === "artist" || view === "themes") {
       r.sub = /^[a-z0-9_-]{1,80}$/i.test(p[2] || "") ? p[2] : null;
       if (view === "artist" && !r.sub) return null;
     }
@@ -1252,7 +1519,7 @@ firetable.discover = (function () {
       var id = D.chart.id || currentId(D.chart.period);
       return "#discover/charts" + (D.chart.period !== "week" || D.chart.id ? "/" + D.chart.period + (id && D.chart.period !== "all" ? "/" + id : "") : "");
     }
-    return "#discover/" + D.view + (D.sub ? "/" + D.sub : "");
+    return "#discover/" + D.view + (D.sub ? "/" + (D.view === "search" ? encodeURIComponent(D.sub) : D.sub) : "");
   }
   function writeAddress() {
     var want = addressFor();
@@ -1280,6 +1547,13 @@ firetable.discover = (function () {
     }
     renderLiveLine();
     writeAddress();
+  }
+
+  function openSearch() {
+    if (D.mode !== "discover") setMode("discover", { remember: true });
+    var input = document.getElementById("dQ");
+    if (input) { input.focus(); input.select(); }
+    lib("artistIndex"); // ready for the first letters
   }
 
   function setView(view, sub) {
@@ -1370,13 +1644,20 @@ firetable.discover = (function () {
     if ((b = t.closest(".d-chip[data-new]"))) { D.newFilter = b.getAttribute("data-new"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-period]"))) { D.chart = { period: b.getAttribute("data-period"), id: null }; renderBrowse(); return writeAddress(); }
     if ((b = t.closest(".d-chip[data-cgenre]"))) { D.chartGenre = b.getAttribute("data-cgenre") || null; return renderBrowse(); }
+    if ((b = t.closest(".d-chip[data-cnew]"))) { D.chartNew = !!b.getAttribute("data-cnew"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-gtab]"))) { D.genreTab = b.getAttribute("data-gtab"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-djtab]"))) { D.djTab = b.getAttribute("data-djtab"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-djsort]"))) { D.djSort = b.getAttribute("data-djsort"); return renderBrowse(); }
     if ((b = t.closest(".d-homemore"))) { var k = b.getAttribute("data-more"); D.homeMore[k] = !D.homeMore[k]; return renderBrowse(); }
+    if ((b = t.closest("#dSearchOpen"))) return openSearch();
+    if ((b = t.closest(".d-ytsearch"))) return searchYouTube(D.sub || "");
     if ((b = t.closest(".d-playall"))) return play(b.getAttribute("data-list"), 0);
+    if ((b = t.closest(".d-saveall"))) return saveAll(b.getAttribute("data-list"));
+    if ((b = t.closest(".d-card[data-card]"))) return firetable.actions.viewLargerCard && firetable.actions.viewLargerCard("dj" + b.getAttribute("data-card"));
+    if ((b = t.closest(".d-joinwait"))) { ftapi.actions.sendBotCommand("!addme"); firetable.ui.toast("You're on the waitlist. The decks are in Live.", "success"); return setMode("live", { remember: true }); }
     if ((b = t.closest(".d-radio"))) return playRadio(b.getAttribute("data-slug"));
     if ((b = t.closest(".d-more"))) { e.stopPropagation(); return openMenu(b); }
+    if ((b = t.closest("#dMenu [data-share]"))) { e.preventDefault(); var how = b.getAttribute("data-share"); closeMenu(true); return how === "link" ? copyLink() : how === "image" ? chartImage() : embedDialog(); }
     if ((b = t.closest("#dMenu [data-act]"))) { e.preventDefault(); return menuAct(b); }
     if ((b = t.closest("#dMenu a"))) { closeMenu(); return; }
     if (!t.closest("#dMenu")) closeMenu();
@@ -1387,8 +1668,9 @@ firetable.discover = (function () {
       if (ids[at]) { D.chart.id = ids[at]; renderBrowse(); writeAddress(); }
       return;
     }
-    if ((b = t.closest(".d-share"))) return copyLink();
+    if ((b = t.closest(".d-share"))) { e.stopPropagation(); return openShareMenu(b); }
     if ((b = t.closest(".d-toggle"))) return togglePause();
+    if ((b = t.closest(".d-reload"))) return P.track && play(P.list, P.i, Math.max(0, P.at - 2), true);
     if ((b = t.closest(".d-next"))) return step(1);
     if ((b = t.closest(".d-prev"))) return step(-1);
     if ((b = t.closest(".d-mute"))) { firetable.actions.muteToggle(); return setTimeout(renderSide, 50); }
@@ -1584,6 +1866,150 @@ firetable.discover = (function () {
     loginHome = null;
   }
 
+  // ─── Sharing a chart: a link, an image, an embed ────────────────────────
+
+  function openShareMenu(btn) {
+    var m = menuEl();
+    if (!m.hidden && menuButton === btn) return closeMenu();
+    menuButton = btn;
+    var item = function (icon, label, how) { return '<a role="menuitem" tabindex="-1" class="d-menuitem" href="#" data-share="' + how + '">' + ms(icon) + "<span>" + label + "</span></a>"; };
+    m.innerHTML = item("link", "Copy a link", "link") + item("image", "Save as an image", "image") + item("code", "Put it on your site", "embed");
+    m.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    var r = btn.getBoundingClientRect();
+    m.style.left = Math.max(8, Math.min(window.innerWidth - m.offsetWidth - 8, r.right - m.offsetWidth)) + "px";
+    m.style.top = (r.bottom + 4) + "px";
+    m.querySelector("[role=menuitem]").focus();
+  }
+
+  /** The chart on show as a picture (1080 × 1350, for posts and stories), drawn here. */
+  function chartImage() {
+    var period = D.chart.period;
+    var id = D.chart.id || currentId(period);
+    var c = D.data.charts[period + "/" + id];
+    var rows = chartRows(c).slice(0, 10);
+    if (!rows.length) return firetable.ui.toast("This chart has no songs yet.");
+    firetable.ui.toast("Making the image…");
+    var W = 1080, H = 1350, PAD = 72;
+    var canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    var g = canvas.getContext("2d");
+    var load = function (src) {
+      return new Promise(function (ok) {
+        var img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function () { ok(img); };
+        img.onerror = function () { ok(null); };
+        img.src = src;
+      });
+    };
+    var fonts = document.fonts && document.fonts.load ? Promise.all(["700 40px Inter", "500 30px Inter", "400 24px Inter", "700 28px 'Roboto Mono'"].map(function (f) { return document.fonts.load(f); })) : Promise.resolve();
+    Promise.all([fonts, load("img/idlogo.png")].concat(rows.map(function (t) { return load(artOf(t)); }))).then(function (got) {
+      var logo = got[1];
+      var arts = got.slice(2);
+      var fit = function (text, max) {
+        text = String(text || "");
+        if (g.measureText(text).width <= max) return text;
+        while (text.length > 1 && g.measureText(text + "…").width > max) text = text.slice(0, -1);
+        return text + "…";
+      };
+      g.fillStyle = "#181818";
+      g.fillRect(0, 0, W, H);
+      if (logo) g.drawImage(logo, PAD, PAD, 96, 48);
+      g.fillStyle = "#b3b3b3";
+      g.font = "700 22px Inter";
+      g.fillText(String(ftconfigs.roomName || "").toUpperCase(), PAD + 120, PAD + 34);
+      g.fillStyle = "#ffffff";
+      g.font = "700 64px Inter";
+      g.fillText("Room chart", PAD, PAD + 150);
+      g.fillStyle = "#cc9933";
+      g.font = "500 30px Inter";
+      g.fillText(fit(chartTitle(period, id), W - PAD * 2), PAD, PAD + 200);
+      var top = PAD + 260, rowH = 86;
+      rows.forEach(function (t, i) {
+        var y = top + i * rowH;
+        g.fillStyle = "#ffffff";
+        g.font = "700 28px 'Roboto Mono'";
+        g.textAlign = "right";
+        g.fillText(String(i + 1), PAD + 40, y + 46);
+        g.textAlign = "left";
+        var art = arts[i];
+        var ax = PAD + 64, aw = 112, ah = 63;
+        g.fillStyle = "#282828";
+        g.fillRect(ax, y + 8, aw, ah);
+        if (art) {
+          var sh = art.width * (ah / aw) > art.height ? art.height : art.width * (ah / aw);
+          g.drawImage(art, 0, (art.height - sh) / 2, art.width, sh, ax, y + 8, aw, ah);
+        }
+        var tx = ax + aw + 28, tw = W - PAD - tx - 170;
+        g.fillStyle = "#ffffff";
+        g.font = "500 30px Inter";
+        g.fillText(fit(t.t, tw), tx, y + 36);
+        g.fillStyle = "#b3b3b3";
+        g.font = "400 24px Inter";
+        g.fillText(fit(t.a, tw), tx, y + 68);
+        g.fillStyle = "#888888";
+        g.font = "400 22px 'Roboto Mono'";
+        g.textAlign = "right";
+        g.fillText(firetable.utilities.pluralize(t.plays, "play", "plays"), W - PAD, y + 50);
+        g.textAlign = "left";
+        g.fillStyle = "#333333";
+        g.fillRect(PAD, y + rowH - 2, W - PAD * 2, 1);
+      });
+      g.fillStyle = "#cc9933";
+      g.font = "500 26px Inter";
+      g.fillText(location.host.replace(/^www\./, "") + "/music/charts/", PAD, H - PAD + 10);
+      canvas.toBlob(function (blob) {
+        if (!blob) return firetable.ui.toast("Couldn't make the image.", "error");
+        var name = "room-chart-" + (period === "all" ? "all-time" : id) + ".png";
+        var file = typeof File === "function" ? new File([blob], name, { type: "image/png" }) : null;
+        if (file && navigator.canShare && navigator.canShare({ files: [file] }) && /Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) {
+          navigator.share({ files: [file], title: "Room chart · " + chartTitle(period, id) }).catch(function () {});
+          return;
+        }
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+        firetable.ui.toast("Saved " + name, "success");
+      }, "image/png");
+    });
+  }
+
+  /** The code to put the chart on another site, always showing the latest. */
+  function embedDialog() {
+    var period = D.chart.period;
+    var src = location.origin + "/embed/chart/?period=" + period + (D.chart.id && period !== "all" ? "&id=" + encodeURIComponent(D.chart.id) : "");
+    var code = '<iframe src="' + src + '" width="400" height="640" style="border:0;border-radius:8px" title="' + (ftconfigs.roomName || "Room") + ' chart" loading="lazy"></iframe>';
+    var dlg = document.getElementById("dEmbedBox");
+    if (!dlg) {
+      dlg = document.createElement("dialog");
+      dlg.id = "dEmbedBox";
+      dlg.setAttribute("aria-labelledby", "dEmbedTitle");
+      document.body.appendChild(dlg);
+      dlg.addEventListener("click", function (e) {
+        if (e.target.closest(".closeModal") || e.target === dlg) return dlg.close();
+        if (e.target.closest(".d-copycode")) {
+          var text = dlg.querySelector("textarea").value;
+          var done = function () { firetable.ui.toast("Code copied", "success"); };
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { dlg.querySelector("textarea").select(); });
+          else dlg.querySelector("textarea").select();
+        }
+      });
+    }
+    dlg.innerHTML = '<div class="modalBox"><div class="modalHeader"><h2 id="dEmbedTitle">Put the chart on your site</h2>' +
+      '<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close">' + ms("close") + "</button></div>" +
+      '<div class="modalContent d-embed"><p>Paste this where the chart should go. ' + (D.chart.id && period !== "all" ? "It shows this chart." : "It always shows the latest " + (period === "all" ? "all-time chart" : period + "'s chart") + ".") +
+      " Each song links back here.</p>" +
+      '<textarea readonly rows="4" aria-label="The code">' + esc(code) + "</textarea>" +
+      '<button type="button" class="butt d-copycode">Copy the code</button>' +
+      '<iframe src="' + esc(src) + '" width="400" height="640" title="Preview" loading="lazy"></iframe></div></div>';
+    if (!dlg.open) dlg.showModal();
+  }
+
   function copyLink() {
     var url = location.href.split("#")[0] + addressFor();
     var done = function () { firetable.ui.toast("Link copied", "success"); };
@@ -1608,12 +2034,27 @@ firetable.discover = (function () {
     tabs.innerHTML = '<button type="button" role="tab" class="tab" data-mode="discover" aria-selected="false">Discover</button>' +
       '<button type="button" role="tab" class="tab" data-mode="live" aria-selected="false"><i class="d-dot" aria-hidden="true"></i>Live</button>';
     document.getElementById("topbar").appendChild(tabs);
+    // one search for both sides: from Live, the button opens it in Discover
+    var utils = document.getElementById("topbarUtils");
+    if (utils && !document.getElementById("dSearchOpen")) {
+      var sb = document.createElement("button");
+      sb.type = "button";
+      sb.id = "dSearchOpen";
+      sb.className = "header_icon";
+      sb.title = "Search the library (/)";
+      sb.setAttribute("aria-label", "Search the library");
+      sb.innerHTML = ms("search");
+      utils.insertBefore(sb, utils.firstChild);
+    }
 
     var page = document.createElement("div");
     page.id = "discoverPage";
     page.setAttribute("role", "region");
     page.setAttribute("aria-label", "Discover");
-    page.innerHTML = '<div id="dRail"><div id="dLive" class="d-live" aria-live="polite"></div><nav id="dNav" aria-label="Discover">' +
+    page.innerHTML = '<div id="dRail"><div id="dLive" class="d-live" aria-live="polite"></div>' +
+      '<form id="dSearch" role="search"><i class="material-symbols-outlined" aria-hidden="true">search</i>' +
+      '<input type="search" id="dQ" placeholder="Search artists, songs, genres, DJs" aria-label="Search the library" autocomplete="off" enterkeyhint="search" /></form>' +
+      '<nav id="dNav" aria-label="Discover">' +
       VIEWS.map(function (v) { return '<button type="button" class="d-nav" data-view="' + v.id + '">' + ms(v.icon) + "<span>" + esc(v.label) + "</span></button>"; }).join("") +
       '</nav></div><div id="dBrowse" class="scroll-view"></div><aside id="dSide" aria-label="Player"></aside><div id="dMini" hidden></div>';
     document.getElementById("mainGrid").appendChild(page);
@@ -1715,14 +2156,43 @@ firetable.discover = (function () {
       measure();
       if (window.ResizeObserver) new ResizeObserver(measure).observe(topbar);
       document.addEventListener("click", onClick);
+      var typed = null;
       document.addEventListener("input", function (e) {
+        if (e.target.id === "dQ") {
+          clearTimeout(typed);
+          var v = e.target.value;
+          typed = setTimeout(function () {
+            D.view = "search";
+            D.sub = v.trim() || null;
+            renderRail();
+            renderBrowse();
+            writeAddress();
+          }, 200);
+          return;
+        }
         if (e.target.id !== "dDjFind") return;
         D.djFind = e.target.value;
         var all = libData.djs || {};
         var box = document.getElementById("dDjList");
         if (box) box.innerHTML = djRows(Object.keys(all).map(function (k) { return Object.assign({ key: k }, all[k]); }));
       });
-      document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenu(true); });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeMenu(true);
+        // "/" anywhere outside a text box: search
+        if (e.key === "/" && !/^(input|textarea|select)$/i.test((e.target.tagName || "")) && !e.target.isContentEditable) {
+          e.preventDefault();
+          openSearch();
+        }
+      });
+      document.addEventListener("submit", function (e) {
+        if (e.target.id !== "dSearch") return;
+        e.preventDefault();
+        var v = document.getElementById("dQ").value.trim();
+        if (!v) return;
+        clearTimeout(typed);
+        setView("search", v);
+        if (D.signedIn && yt.q !== v) searchYouTube(v);
+      });
       window.addEventListener("resize", function () { closeMenu(); });
       document.addEventListener("scroll", function () { closeMenu(); }, true);
       // DJ pages, for linking names (a small list); after the page has settled
