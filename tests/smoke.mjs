@@ -652,6 +652,10 @@ try {
         { type: 1, cid: "night00003", a: "Italo", t: "Three", dj: "dj1", djid: "dj1", w: now - 2 * DAY + 3600000 }] } }
     },
     chartIds: { week: { "2026-W45": true } },
+    fires: { at: now, since: now - 5 * DAY, index: [{ djid: "dj1", dj: "dj1", fires: 7, plays: 3 }, { djid: "dj2", dj: "dj2", fires: 2, plays: 1 }],
+      djs: { dj1: { name: "dj1", fires: 7, plays: 3, songs: [
+        { key: "f1", type: 1, cid: "hot0000001", a: "Hot", t: "One", fires: 5, plays: 2, top: 3, w: now - DAY },
+        { key: "f2", type: 1, cid: "hot0000002", a: "Warm", t: "Two", fires: 2, plays: 1, top: 2, w: now - 2 * DAY }] } } },
     chat: { at: now, hour: 12, msgs: [{ id: "m1", uid: "dj1", n: "dj1", txt: "great tune", w: now }, { id: "m2", txt: "hidden name here", w: now }] }
   });
   // the weekly library (tools/history/library.js in firetable-hostbot)
@@ -925,6 +929,25 @@ try {
   check(/^radio\|.*Nu-Disco radio/.test(libPages.radio), "genre radio plays (" + libPages.radio + ")");
   check(/^dj1\|.*Friday nights/.test(libPages.dj) && libPages.artist === "Alpha|1" && libPages.year === "1|1", "DJ, artist and year pages (" + [libPages.dj, libPages.artist, libPages.year].join(" / ") + ")");
   check(/no page for this DJ/.test(libPages.missing), "a DJ without a page says so (" + libPages.missing + ")");
+  const lit = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    location.hash = "#discover/djs/dj1";
+    const section = () => [...document.querySelectorAll("#dBrowse section")].find((x) => /Fires earned/.test(x.textContent));
+    await until(section);
+    const sec = section();
+    const out = { fact: sec && sec.querySelector(".d-fact").textContent, rows: sec ? [...sec.querySelectorAll(".pvbar")].map((r) => r.querySelector(".hist-track-title").textContent + ":" + r.querySelector(".d-fires").textContent.replace(/\D/g, "")).join() : "",
+      head: document.querySelector("#dBrowse .d-pagehead .d-fact").textContent };
+    location.hash = "#discover/djs";
+    await until(() => document.querySelector('.d-chip[data-djsort="fires"]'));
+    document.querySelector('.d-chip[data-djsort="fires"]').click();
+    out.list = (document.querySelector("#dDjList .d-person") || {}).textContent;
+    document.querySelector('.d-chip[data-djsort="plays"]').click();
+    return out;
+  });
+  check(/^7 fires on 3 plays since .* · #1 of 2 DJs$/.test(lit.fact || "") && lit.rows === "One:5,Two:2" && /7 fires/.test(lit.head),
+    "a DJ page shows their fires earned and most-fired songs (" + JSON.stringify(lit) + ")");
+  check(/7 fires/.test(lit.list || ""), "DJs can be sorted by fires (" + lit.list + ")");
   check(/Open on YouTube\|Go to Alpha\|Go to Beta\|dj1's DJ page\|Copy/.test(libPages.menu) && libPages.menuClosed, "the song menu (" + libPages.menu + ")");
 
   console.log("-- Discover: visitors in Live see what joining opens");

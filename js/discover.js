@@ -67,7 +67,7 @@ firetable.discover = (function () {
     chartNew: false,     // the chart, new releases only
     genreTab: "fav",     // fav | newHere | deep
     djTab: "most",       // most | firstHere
-    djSort: "plays",     // plays | firsts | since | name
+    djSort: "plays",     // plays | firsts | fires | since | name
     djFind: "",
     homeMore: {},
     data: { new: null, charts: {}, chartIds: {}, chat: null },
@@ -694,15 +694,17 @@ firetable.discover = (function () {
     if (wait) return h + wait;
     var list = Object.keys(all).map(function (k) { return Object.assign({ key: k }, all[k]); });
     h += '<p class="d-fact">' + esc(firetable.utilities.pluralize(list.length, "DJ", "DJs")) + " with 25 or more plays here</p>";
-    h += '<div class="d-headrow">' + chips("djsort", [["plays", "Most plays"], ["firsts", "Most firsts"], ["since", "Newest"], ["name", "A to Z"]], D.djSort) +
+    h += '<div class="d-headrow">' + chips("djsort", [["plays", "Most plays"], ["firsts", "Most firsts"]].concat(fires() && fires().index ? [["fires", "Most fires"]] : [], [["since", "Newest"], ["name", "A to Z"]]), D.djSort) +
       '<input type="search" class="d-find" id="dDjFind" placeholder="Find a DJ" aria-label="Find a DJ" value="' + esc(D.djFind) + '"></div>';
     h += '<div id="dDjList" class="d-people d-people-wide">' + djRows(list) + "</div>";
     return h;
   }
   function djRows(list) {
+    var fireCount = function (d) { var f = firesOf(d.djid); return f ? f.fires : 0; };
     var by = {
       plays: function (x, y) { return (y.plays || 0) - (x.plays || 0); },
       firsts: function (x, y) { return (y.firsts || 0) - (x.firsts || 0); },
+      fires: function (x, y) { return fireCount(y) - fireCount(x) || (y.plays || 0) - (x.plays || 0); },
       since: function (x, y) { return (y.since || 0) - (x.since || 0); },
       name: function (x, y) { return String(x.name).localeCompare(String(y.name)); }
     }[D.djSort];
@@ -710,7 +712,8 @@ firetable.discover = (function () {
     var shown = list.filter(function (d) { return !q || String(d.name).toLowerCase().indexOf(q) !== -1; }).sort(by);
     if (!shown.length) return emptyNote("No DJ by that name.");
     return shown.map(function (d) {
-      var fact = (d.since ? "since " + new Date(d.since).getFullYear() + " · " : "") + n(d.plays) + " plays · " + n(d.firsts) + " firsts";
+      var fact = (d.since ? "since " + new Date(d.since).getFullYear() + " · " : "") + n(d.plays) + " plays · " + n(d.firsts) + " firsts" +
+        (fireCount(d) ? " · " + firetable.utilities.pluralize(fireCount(d), "fire", "fires") : "");
       return person({ djid: d.djid, name: d.name, key: d.key }, esc(fact), esc((d.g || []).join(", ")));
     }).join("");
   }
@@ -727,6 +730,8 @@ firetable.discover = (function () {
     if (d.firsts) facts.push(n(d.firsts) + " songs brought here first");
     if (d.when) facts.push("usually " + d.when);
     if (d.cards) facts.push(firetable.utilities.pluralize(d.cards, "trading card", "trading cards"));
+    var litFacts = firesOf(d.djid);
+    if (litFacts && litFacts.fires) facts.push(firetable.utilities.pluralize(litFacts.fires, "fire", "fires"));
     var tab = D.djTab === "firstHere" ? "firstHere" : "most";
     var tracks = withType(tab === "most" ? d.most : d.firstHere);
     setList("dj", d.name + " · " + (tab === "most" ? "Most played" : "Brought here first"), tracks);
@@ -758,6 +763,19 @@ firetable.discover = (function () {
       (tab === "most"
         ? rankedRows(tracks, "dj", function (t) { return '<span class="d-num" title="' + esc(firetable.utilities.pluralize(t.by, "play", "plays") + " by " + d.name) + '">' + esc(firetable.utilities.pluralize(t.by, "play", "plays")) + "</span>"; })
         : datedRows(tracks, "dj")) + "</section>";
+    var lit = firesOf(d.djid);
+    if (lit && lit.fires) {
+      var ranks = (fires().index || []).map(function (x) { return x.djid; });
+      var place = ranks.indexOf(d.djid) + 1;
+      var hot = withType(lit.songs || []);
+      setList("djfires", d.name + " · Most fires", hot);
+      h += "<section>" + head("Fires earned") + '<p class="d-fact">' + esc(firetable.utilities.pluralize(lit.fires, "fire", "fires") + " on " + firetable.utilities.pluralize(lit.plays, "play", "plays") +
+          (fires().since ? " since " + new Date(fires().since).toLocaleString("en-US", { month: "short", year: "numeric" }) : "") +
+          (place && ranks.length > 1 ? " · #" + place + " of " + ranks.length + " DJs" : "")) + "</p>" +
+        rankedRows(hot, "djfires", function (t) {
+          return fireBadge(t.fires) + (t.plays > 1 ? '<span class="d-num" title="' + esc("best play: " + firetable.utilities.pluralize(t.top, "fire", "fires")) + '">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" : "");
+        }) + "</section>";
+    }
     var similar = (d.similar || []).map(function (p) { return person(p, esc(p.pct + "% alike")); }).filter(Boolean);
     if (similar.length) h += "<section>" + head("Similar DJs") + '<p class="d-fact">The most songs in common</p><div class="d-people">' + similar.join("") + "</div></section>";
     var sets = d.sets || [];
@@ -883,6 +901,25 @@ firetable.discover = (function () {
     return themeData[path];
   }
   function themesLoaded() { if (D.mode === "discover") renderBrowse(); }
+
+  // Fires earned (discover/fires, rebuilt daily by the bot): each DJ's fires
+  // and most-fired songs; undefined while it loads, null when there are none
+  var fireData, fireAsked = false;
+  function fires() {
+    if (!fireAsked) {
+      fireAsked = true;
+      db().ref("discover/fires").once("value").then(function (s) { fireData = s.val(); if (D.mode === "discover" && D.view === "djs") renderBrowse(); },
+        function (err) { quiet(err); fireData = null; });
+    }
+    return fireData;
+  }
+  function firesOf(djid) {
+    var f = fires();
+    return (f && f.djs && djid && f.djs[djid]) || null;
+  }
+  function fireBadge(n, title) {
+    return n ? '<span class="d-fires" title="' + esc(title || firetable.utilities.pluralize(n, "fire", "fires")) + '">' + ms("local_fire_department") + '<span class="d-num">' + esc(n) + "</span></span>" : "";
+  }
   /** Every theme night, newest first ([] while it loads or before there are any). */
   function nightIndex() {
     var all = themes("index") || {};
