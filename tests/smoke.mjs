@@ -677,7 +677,8 @@ try {
     const out = { open: !!(dlg && dlg.open), inside: !!(dlg && dlg.querySelector("#login")), form: ["createscreen", "logscreen"].filter((id) => !document.getElementById(id).hidden).join(),
       title: dlg && dlg.querySelector("#joinTitle").textContent, focused: document.activeElement && document.activeElement.id, stillDiscover: document.body.classList.contains("ft-discover") };
     dlg.close();
-    await wait(50);
+    // the dialog's close event comes a moment later, and puts the form back
+    for (let i = 0; i < 40 && document.getElementById("login").parentElement.id !== "mainGrid"; i++) await wait(50);
     out.back = document.getElementById("login").parentElement.id;
     return out;
   });

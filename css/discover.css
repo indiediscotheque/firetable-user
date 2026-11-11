@@ -256,6 +256,57 @@ body.ft-discover #discoverPage {
 .d-mv.down { color: var(--color-danger); }
 .d-mv.new, .d-mv.re { color: var(--color-accent); }
 
+/* Home's New this month: three rows of six small cards (three rows of three
+   on phones), with the song's buttons over the corner of its art */
+#dBrowse .ft-cards.d-compact {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--pad2) var(--pad1);
+}
+#dBrowse .d-compact .pvbar { position: relative; padding: 0.3rem; }
+#dBrowse .d-compact .discart { margin-bottom: 0.3rem; }
+#dBrowse .d-compact .discart .previewicon { width: 2.25rem; height: 2.25rem; font-size: 1.5rem; }
+#dBrowse .d-compact .listwords { line-height: 1.25; }
+#dBrowse .d-compact .listwords .row-icon {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fff;
+    background: rgb(0 0 0 / 0.6);
+    border-radius: 50%;
+}
+#dBrowse .d-compact .listwords .d-more { right: 2.5rem; }
+#dBrowse .d-compact .listwords button.histeal.is-saved { color: var(--color-accent); }
+#dBrowse .d-compact .fresh-track-title,
+#dBrowse .d-compact .fresh-track-artist {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+#dBrowse .d-compact .fresh-track-title { font-size: 0.75rem; }
+#dBrowse .d-compact .fresh-track-artist { font-size: var(--fs-micro); }
+#dBrowse .d-compact .fresh-meta { gap: 0.25rem; }
+#dBrowse .d-compact .pv-dj-avatar { width: 1.1rem; height: 1.1rem; }
+#dBrowse .d-compact .histdate {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.625rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#dBrowse .d-compact .histtime { display: none; }
+@media only screen and (max-width: 639px) {
+    #dBrowse .ft-cards.d-compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #dBrowse .d-compact .pvbar:nth-child(n + 10) { display: none; }
+}
+
 /* Names that open their page: quiet until pointed at */
 .d-alink,
 .d-namelink,
