@@ -2770,10 +2770,10 @@ input.ft-filter {
    applyHistoryFilter). A class rather than inline styles, so the whole list
    is restyled in one pass. */
 #mainqueue .ft-filtered,
-#thehistory .hist-entry.ft-filtered {
+:is(#thehistory, .ft-rows) .hist-entry.ft-filtered {
     display: none !important;
 }
-#thehistory.overFiltered::before {
+:is(#thehistory, .ft-rows).overFiltered::before {
     content: "no plays match your filter";
     display: flex;
     justify-content: center;
@@ -2783,7 +2783,7 @@ input.ft-filter {
 }
 
 #mainqueue [class*="material-symbols-"]:not(.row-icon),
-#thehistory [class*="material-symbols-"]:not(.row-icon) {
+:is(#thehistory, .ft-rows) [class*="material-symbols-"]:not(.row-icon) {
     margin: 0 var(--pad1);
     font-size: 1.2rem;
 }
@@ -2811,7 +2811,7 @@ input.ft-filter {
     }
 }
 
-#thehistory button[class*="material-symbols-"]:not(.previewicon) {
+:is(#thehistory, .ft-rows) button[class*="material-symbols-"]:not(.previewicon) {
     background: none;
     border: none;
     padding: 0;
@@ -4114,7 +4114,7 @@ img.emoji,
     }
 }
 
-#thehistory {
+:is(#thehistory, .ft-rows) {
     container: hist / inline-size;
     flex: 1;
     display: flex;
@@ -4302,16 +4302,16 @@ img.emoji,
 }
 
 /* Recent: icons sit flush together so the title keeps the room */
-#thehistory .pvbar {
+:is(#thehistory, .ft-rows) .pvbar {
     padding-right: var(--pad1);
 }
 
-#thehistory .pvbar .row-icon + .row-icon {
+:is(#thehistory, .ft-rows) .pvbar .row-icon + .row-icon {
     margin-left: calc(-1 * var(--pad2));
 }
 
 /* Title on top, artist under it */
-#thehistory .histlink {
+:is(#thehistory, .ft-rows) .histlink {
     display: flex;
     flex-direction: column;
     gap: 0.1em;
@@ -4328,7 +4328,7 @@ img.emoji,
 }
 
 /* The row whose tags are being edited */
-#thehistory .pvbar.editing {
+:is(#thehistory, .ft-rows) .pvbar.editing {
     border-radius: var(--radius-md);
     background-color: var(--color-bg-t2);
     box-shadow: inset 2px 0 0 var(--color-accent);
@@ -4383,7 +4383,7 @@ img.emoji,
 }
 
 /* Even columns that fill the row, so every tile is the same width */
-#thediscovers {
+:is(#thediscovers, .ft-cards) {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
     gap: var(--pad2);
@@ -4392,7 +4392,7 @@ img.emoji,
     box-sizing: border-box;
 }
 
-#thediscovers .pvbar {
+:is(#thediscovers, .ft-cards) .pvbar {
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -4414,13 +4414,13 @@ img.emoji,
     justify-content: center;
 }
 
-#thediscovers .qtxt {
+:is(#thediscovers, .ft-cards) .qtxt {
     display: flex;
     flex-direction: column;
     flex: 1;
 }
 
-#thediscovers .listwords {
+:is(#thediscovers, .ft-cards) .listwords {
     font-size: var(--fs-title);
     line-height: 1.3;
     display: flex;
@@ -4428,64 +4428,64 @@ img.emoji,
     gap: 0;
 }
 
-#thediscovers .listwords .fresh-title {
+:is(#thediscovers, .ft-cards) .listwords .fresh-title {
     flex: 1;
     min-width: 0;
 }
-#thediscovers .listwords .histlink {
+:is(#thediscovers, .ft-cards) .listwords .histlink {
     flex: 1;
 }
 
-#thediscovers .listwords .row-icon {
+:is(#thediscovers, .ft-cards) .listwords .row-icon {
     align-self: flex-start;
     margin-top: -0.2rem;
 }
 
 /* Fresh cards are narrow: slightly smaller buttons, hit area extended invisibly */
 @media (pointer: coarse) {
-    #thediscovers .listwords .row-icon {
+    :is(#thediscovers, .ft-cards) .listwords .row-icon {
         position: relative;
         width: 2rem;
         height: 2rem;
     }
 
-    #thediscovers .listwords .row-icon::before {
+    :is(#thediscovers, .ft-cards) .listwords .row-icon::before {
         content: "";
         position: absolute;
         inset: -0.25rem -0.125rem;
     }
 }
-#thediscovers .discart .previewicon {
+:is(#thediscovers, .ft-cards) .discart .previewicon {
     width: 3rem;
     height: 3rem;
     font-size: 2rem;
 }
 
-#thediscovers .histlink {
+:is(#thediscovers, .ft-cards) .histlink {
     display: block;
 }
 
-#thediscovers .fresh-track-title,
-#thediscovers .fresh-track-artist {
+:is(#thediscovers, .ft-cards) .fresh-track-title,
+:is(#thediscovers, .ft-cards) .fresh-track-artist {
     display: block;
     text-wrap: balance;
     overflow-wrap: anywhere;
     hyphens: auto;
 }
 
-#thediscovers .fresh-track-title {
+:is(#thediscovers, .ft-cards) .fresh-track-title {
     font-size: var(--fs-title);
     font-weight: 500;
     color: var(--color-text-light);
 }
 
-#thediscovers .fresh-track-artist {
+:is(#thediscovers, .ft-cards) .fresh-track-artist {
     margin-top: 0.1rem;
     font-size: var(--fs-meta);
     color: var(--color-text-subtle);
 }
 
-#thediscovers .fresh-meta {
+:is(#thediscovers, .ft-cards) .fresh-meta {
     margin-top: auto;
     padding-top: var(--pad1);
     display: flex;
@@ -4494,12 +4494,12 @@ img.emoji,
     gap: 0.35rem;
 }
 
-#thehistory .pv-dj-avatar {
+:is(#thehistory, .ft-rows) .pv-dj-avatar {
     background-size: auto 140%;
     background-position: center 60%;
 }
 
-#thediscovers .pv-dj-avatar {
+:is(#thediscovers, .ft-cards) .pv-dj-avatar {
     order: 3;
     width: 1.35rem;
     height: 1.35rem;
@@ -4512,23 +4512,23 @@ img.emoji,
 
 
 
-#thediscovers .histdj,
-#thediscovers .histdate,
-#thediscovers .histtime {
+:is(#thediscovers, .ft-cards) .histdj,
+:is(#thediscovers, .ft-cards) .histdate,
+:is(#thediscovers, .ft-cards) .histtime {
     font-size: var(--fs-micro);
     color: var(--color-text-muted);
     margin-top: 0;
 }
 
-#thediscovers .histdate {
+:is(#thediscovers, .ft-cards) .histdate {
     order: 1;
 }
 
-#thediscovers .histtime {
+:is(#thediscovers, .ft-cards) .histtime {
     order: 2;
 }
 
-#thediscovers .histdj {
+:is(#thediscovers, .ft-cards) .histdj {
     display: none;
 }
 
@@ -5975,14 +5975,14 @@ body.is-mod #npModBtn { display: inline-flex; }
 body.is-current-dj:not(.is-mod) #skipTrigger { display: inline-flex; }
 
 /* Recent rows: Edit tags and Flag buttons for mods (#167) */
-#thehistory :is(.edittags, .flagplay) { display: none; }
-body.is-mod #thehistory :is(.edittags, .flagplay) { display: inline-flex; }
+:is(#thehistory, .ft-rows) :is(.edittags, .flagplay) { display: none; }
+body.is-mod :is(#thehistory, .ft-rows) :is(.edittags, .flagplay) { display: inline-flex; }
 
 /* Narrow Recent (phones): mods' Open / Edit tags / Flag move into a ⋮ menu,
    so the title keeps the room */
 @container hist (width < 34rem) {
-    body.is-mod #thehistory :is(.tracklink-btn, .edittags, .flagplay) { display: none; }
-    body.is-mod #thehistory .row-more { display: inline-flex; }
+    body.is-mod :is(#thehistory, .ft-rows) :is(.tracklink-btn, .edittags, .flagplay) { display: none; }
+    body.is-mod :is(#thehistory, .ft-rows) .row-more { display: inline-flex; }
 }
 #histMenuPopover .ft-menu-open-logo {
     display: inline-flex;
@@ -6017,9 +6017,9 @@ body.density-comfortable {
     --chat-font: 0.9375rem;
 }
 body.density-compact #queuelist .listwords,
-body.density-compact #thehistory .histlink { font-size: 0.8125rem; }
+body.density-compact :is(#thehistory, .ft-rows) .histlink { font-size: 0.8125rem; }
 body.density-comfortable #queuelist .listwords,
-body.density-comfortable #thehistory .histlink { font-size: 1rem; }
+body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem; }
 
 .densityPicker { display: flex; gap: var(--pad2); align-items: center; flex-wrap: wrap; }
 
@@ -6490,8 +6490,8 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
    ============================================ */
 
 /* A song you already have: the + becomes a gold check, everywhere */
-#thehistory button.histeal.is-saved,
-#thediscovers button.histeal.is-saved,
+:is(#thehistory, .ft-rows) button.histeal.is-saved,
+:is(#thediscovers, .ft-cards) button.histeal.is-saved,
 #searchResults button.queuetrack.is-saved,
 #grab.is-saved i {
     color: var(--color-accent);
@@ -6500,8 +6500,8 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
 /* Times, counts and timers in the numbers face */
 .themeTimr,
 .hist-timestamp,
-#thediscovers .histdate,
-#thediscovers .histtime,
+:is(#thediscovers, .ft-cards) .histdate,
+:is(#thediscovers, .ft-cards) .histtime,
 .chatTime {
     font-family: var(--font-numbers);
     font-variant-numeric: tabular-nums;

@@ -30,6 +30,9 @@ var ftconfigs = {
     authDomain: "xxxxxxxxxxxxxxxxx.firebaseapp.com",
     databaseURL: "https://xxxxxxxxxxxxx.firebaseio.com"
   },
+  // discover: true, // optional: the Discover side (the library, room charts, new releases) with a Discover / Live switch.
+  //   Visitors open the site on Discover and members on Live. Needs the indiediscotheque hostbot publishing discover/
+  //   (its README, "discover") and its firebase-rules.json published. Leave it out (or false) to keep the site as it is.
   // signInProviders: ["google", "apple"], // optional: show "Continue with Google / Apple" on the login screen.
   //   Turn each one on first in the Firebase console (Authentication > Sign-in method), and make sure
   //   this site's domain is listed under Authentication > Settings > Authorized domains.

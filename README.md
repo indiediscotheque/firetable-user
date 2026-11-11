@@ -51,6 +51,15 @@ The "first … by …" / "last … by …" lines and the play count under the so
 ### seasons stay in sync with the bot
 Seasonal settings live only on this site: defaults in `js/seasons.js`, overrides in `config.js` (`avatarset`, `avatarSeasons`, `lightsMonths`, `snowMonths`). The indiediscotheque hostbot reads both files from the live site, at startup and every 10 minutes, so its trading-card avatars and `!lights` replies follow them. Change them here, deploy (or edit `config.js` on the server), and the bot picks it up with nothing to change on the bot. It needs `SITE_URL` (this site's address) in the bot's `.env`. The bot reads these settings with a parser and never runs the files, so keep them plain values (text, numbers, `true`/`false`, lists and objects), not expressions or function calls; anything else is skipped.
 
+## discover
+The library side of the site, off unless `config.js` sets `discover: true`. A Discover / Live switch sits under the room theme. Visitors open the site on Discover and members on Live, and each person's last choice is remembered.
+- **Discover** shows the library in the middle (Home, New, Charts, Recent plays) on the same cards and rows as Fresh and Recent, and a player on the right with the song's room plays, first and last plays, genres, year and tempo. Its songs play whole, through the room's own players (like previews, so they're never scrobbled). Going back to Live, or **Listen in**, picks the room up where it is now.
+- **Visitors** save songs to a crate kept in their browser. The third save offers to keep it. When they join (Google or email), it becomes the playlist "My Discover crate", and their DJ playlist if they have none yet. **Step inside** shows Live as visitors see it today, with the chat to read above Fresh.
+- **Members** see their DJ playlist in the right column. Settings has "Show my name on public pages", which hides their name from charts, new releases and the visitors' chat.
+- Addresses: `#discover`, `#discover/new`, `#discover/charts`, `#discover/charts/week/2026-W45`, `#discover/recent`, `#live`.
+
+It reads `discover/` (room charts, new releases with release dates, the chat for visitors), published by the [indiediscotheque hostbot](https://github.com/indiediscotheque/firetable-hostbot) (its README, "discover"), plus the play history and tempos already in the database. That needs the bot's latest `firebase-rules.json` published. To offer Google sign-in, turn it on in the Firebase console and add `signInProviders: ["google"]` to `config.js`.
+
 ## push notifications
 Members can get @mentions as notifications on their phone, even with the app closed: install the site as an app (iPhone/iPad: Share → Add to Home Screen, which they need for notifications; Android: Install app), then **Settings → Push @mentions to this device**. It works in desktop browsers too.
 - The [indiediscotheque hostbot](https://github.com/indiediscotheque/firetable-hostbot) sends them (its README, "push notifications"); it makes its own keys and publishes the public one as `pushKey`, so there's nothing to configure here. Until a bot with push is running, the setting says it isn't set up yet.
