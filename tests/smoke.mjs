@@ -991,14 +991,48 @@ try {
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await wait(300);
     out.live = { home: chat.parentElement === home, here: document.body.classList.contains("d-chat-here") };
-    firetable.discover.testSignedIn(false);
-    firetable.$appShell = $("#appShell").detach();
     return out;
   });
   check(chatHere.tab && chatHere.nav, "members get a Chat tab in Discover (" + JSON.stringify(chatHere) + ")");
   check(chatHere.moved && chatHere.visible, "the room's chat, with its message box, opens in Discover's panel (" + JSON.stringify(chatHere) + ")");
   check(chatHere.backOnNow && chatHere.unread === "1" && chatHere.cleared, "on another tab, new messages from others are counted, and cleared on Chat (" + JSON.stringify(chatHere) + ")");
   check(chatHere.live.home && !chatHere.live.here, "Live gets its chat back (" + JSON.stringify(chatHere.live) + ")");
+
+  console.log("-- Discover: members pick cards to feature on their DJ page");
+  await put("/users/dj1/featured", ["cardP", "cardA"]); // cardA isn't dj1's: left out
+  const featured = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
+    const heads = () => [...document.querySelectorAll("#dBrowse .d-head h2")].map((e) => e.textContent);
+    ftapi.uid = "dj1";
+    firetable.discover.forgetFeatured("dj1"); // read before the picks were put
+    location.hash = "#discover/djs/dj1";
+    await until(() => document.querySelector('#dBrowse .d-card[data-card="cardP"]'));
+    const out = { heads: heads().join("|"), cards: [...document.querySelectorAll("#dBrowse .d-card[data-card]")].map((b) => b.getAttribute("data-card")).join(),
+      change: (document.querySelector("#dBrowse .d-pickcards") || {}).textContent };
+    document.querySelector("#dBrowse .d-pickcards").click();
+    await until(() => document.querySelector("#caseCardSpotcardP .cardFeature") && document.getElementById("cardFeaturedNote"));
+    const spot = () => document.getElementById("caseCardSpotcardP");
+    out.caseOpen = { live: !document.body.classList.contains("ft-discover"), view: firetable.nav.view, featured: spot().classList.contains("is-featured"),
+      note: document.getElementById("cardFeaturedNote").textContent };
+    const stored = () => ftapi.db().ref("users/dj1/featured").once("value").then((x) => x.val());
+    spot().querySelector(".cardFeature").click();
+    await until(() => !spot().classList.contains("is-featured"));
+    out.off = { stored: await stored(), button: spot().querySelector(".cardFeature").textContent };
+    spot().querySelector(".cardFeature").click();
+    await until(() => spot().classList.contains("is-featured"));
+    out.on = { stored: await stored(), note: document.getElementById("cardFeaturedNote").textContent };
+    firetable.discover.testSignedIn(false);
+    firetable.nav.setView("history"); // the next pages share this browser's saved view
+    firetable.$appShell = $("#appShell").detach();
+    return out;
+  });
+  check(featured.heads.startsWith("Featured cards") && featured.cards.split(",")[0] === "cardP" && featured.cards.split(",").filter((k) => k === "cardP").length === 1 && featured.change === "Change",
+    "a DJ page shows the cards its DJ picked first, only theirs, and offers Change on your own (" + JSON.stringify(featured) + ")");
+  check(featured.caseOpen.live && featured.caseOpen.view === "cards" && featured.caseOpen.featured && /^1 of 6/.test(featured.caseOpen.note),
+    "Change opens the card case with the picks marked (" + JSON.stringify(featured.caseOpen) + ")");
+  check(featured.off.stored === null && featured.off.button === "Feature on my DJ page" && JSON.stringify(featured.on.stored) === '["cardP"]',
+    "Feature puts a card on the DJ page and takes it off (" + JSON.stringify({ off: featured.off, on: featured.on }) + ")");
 } catch (e) {
   check(false, "Discover test threw: " + e.message);
 }
@@ -1006,7 +1040,7 @@ try {
 // The library's plain pages (tools/plain-pages.mjs), built from the same data
 // and loaded under the real policy, as search engines and visitors get them
 const plain = await context.newPage();
-plain.on("pageerror", (e) => pageErrors.push("Plain pages: " + e.message));
+plain.on("pageerror", (e) => { pageErrors.push("Plain pages: " + e.message); });
 try {
   console.log("-- plain pages: the library as ordinary pages, with a sitemap");
   const { execFile } = await import("child_process");

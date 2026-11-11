@@ -732,6 +732,21 @@ firetable.discover = (function () {
     setList("dj", d.name + " · " + (tab === "most" ? "Most played" : "Brought here first"), tracks);
     h += '<div class="d-pagehead">' + '<span class="d-bigrobot">' + robot(dj, "160x160") + '</span><div class="d-pagetext"><h2>' + esc(d.name) + '</h2><p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
       '<div class="d-actions">' + playAllButton("dj", "Play their favorites") + "</div></div></div>";
+    var cardButton = function (c) {
+      return '<button type="button" class="d-card" data-card="' + esc(c.key) + '" aria-label="' + esc("Card: " + (c.djname || "") + ", " + (c.artist || "") + " - " + (c.title || "")) + '">' +
+        '<canvas width="225" height="300" id="cardMakerdj' + esc(c.key) + '"></canvas></button>';
+    };
+    var pickedKeys = [];
+    if (d.djid) {
+      var mine = D.signedIn && d.djid === ftapi.uid;
+      var picked = featuredOf(d.djid); // undefined while loading
+      pickedKeys = (picked || []).map(function (c) { return c.key; });
+      if (picked && (picked.length || mine)) {
+        h += "<section>" + '<div class="d-head"><h2>Featured cards</h2>' + (mine ? '<button type="button" class="linkButton d-pickcards">' + (picked.length ? "Change" : "Choose cards") + "</button>" : "") + "</div>" +
+          (picked.length ? '<p class="d-fact">Picked by ' + esc(d.name) + "</p>" + '<div class="d-cards">' + picked.map(cardButton).join("") + "</div>"
+            : '<p class="d-fact">Pick up to 6 cards from your card case to show here.</p>') + "</section>";
+      }
+    }
     var taste = d.taste || [];
     if (taste.length) {
       h += "<section>" + head("Their sound") + '<div class="d-taste">' + taste.map(function (x) {
@@ -757,13 +772,10 @@ firetable.discover = (function () {
       }).join("") + "</div></section>";
     }
     if (d.djid) {
-      var held = cardsOf(d.djid);
-      if (held && held.length) {
-        h += "<section>" + head("Their cards") + '<p class="d-fact">Trading cards ' + esc(d.name) + " holds" + (d.cards > held.length ? ", the latest " + held.length + " of " + d.cards : "") + "</p>" +
-          '<div class="d-cards">' + held.map(function (c) {
-            return '<button type="button" class="d-card" data-card="' + esc(c.key) + '" aria-label="' + esc("Card: " + (c.djname || "") + ", " + (c.artist || "") + " - " + (c.title || "")) + '">' +
-              '<canvas width="225" height="300" id="cardMakerdj' + esc(c.key) + '"></canvas></button>';
-          }).join("") + "</div></section>";
+      var held = (cardsOf(d.djid) || []).filter(function (c) { return pickedKeys.indexOf(c.key) === -1; });
+      if (held.length) {
+        h += "<section>" + head(pickedKeys.length ? "More of their cards" : "Their cards") + '<p class="d-fact">Trading cards ' + esc(d.name) + " holds" + (d.cards > held.length ? ", the latest " + held.length + " of " + d.cards : "") + "</p>" +
+          '<div class="d-cards">' + held.map(cardButton).join("") + "</div></section>";
       }
     }
     return h;
@@ -934,12 +946,30 @@ firetable.discover = (function () {
     }
     return cardData[uid];
   }
+  // The cards a DJ picked for their page (users/<uid>/featured), still theirs
+  var featuredData = {};
+  function featuredOf(uid) {
+    if (!(uid in featuredData)) {
+      featuredData[uid] = undefined;
+      db().ref("users/" + uid + "/featured").once("value").then(function (s) {
+        var v = s.val() || {};
+        var ids = Object.keys(v).sort().map(function (k) { return v[k]; }).filter(function (id) { return typeof id === "string" && id; });
+        return Promise.all(ids.map(function (id) {
+          return db().ref("cards/" + id).once("value").then(function (c) { return c.val() ? Object.assign({ key: id }, c.val()) : null; }, function () { return null; });
+        }));
+      }).then(function (cards) {
+        featuredData[uid] = cards.filter(function (c) { return c && c.owner === uid && c.djname; });
+        if (D.mode === "discover" && D.view === "djs") renderBrowse();
+      }, function (err) { quiet(err); featuredData[uid] = []; });
+    }
+    return featuredData[uid];
+  }
   function drawCards() {
     if (!firetable.actions.displayCard) return;
     document.querySelectorAll("#dBrowse .d-card[data-card]").forEach(function (b) {
       var key = b.getAttribute("data-card");
       var all = [];
-      Object.keys(cardData).forEach(function (u) { (cardData[u] || []).forEach(function (c) { all.push(c); }); });
+      [cardData, featuredData].forEach(function (src) { Object.keys(src).forEach(function (u) { (src[u] || []).forEach(function (c) { all.push(c); }); }); });
       var c = all.find(function (x) { return x.key === key; });
       if (c) firetable.actions.displayCard(JSON.parse(JSON.stringify(c)), "dj" + key);
     });
@@ -1803,6 +1833,12 @@ firetable.discover = (function () {
     if ((b = t.closest(".d-ytsearch"))) return searchYouTube(D.sub || "");
     if ((b = t.closest(".d-playall"))) return play(b.getAttribute("data-list"), 0);
     if ((b = t.closest(".d-saveall"))) return saveAll(b.getAttribute("data-list"));
+    if (t.closest(".d-pickcards")) {
+      // the card case is in Live
+      setMode("live");
+      if (firetable.nav && firetable.nav.setView) firetable.nav.setView("cards");
+      return;
+    }
     if ((b = t.closest(".d-card[data-card]"))) return firetable.actions.viewLargerCard && firetable.actions.viewLargerCard("dj" + b.getAttribute("data-card"));
     if ((b = t.closest(".d-joinwait"))) { ftapi.actions.sendBotCommand("!addme"); firetable.ui.toast("You're on the waitlist. The decks are in Live.", "success"); return setMode("live", { remember: true }); }
     if ((b = t.closest(".d-radio"))) return playRadio(b.getAttribute("data-slug"));
@@ -2547,6 +2583,8 @@ firetable.discover = (function () {
       var key = djKey(uid, name);
       return key ? "#discover/djs/" + key : null;
     },
+    /** Picks changed in the card case: read them again on the next DJ page. */
+    forgetFeatured: function (uid) { delete featuredData[uid]; },
     /** For tests: act as signed in or out without a real sign-in. */
     testSignedIn: signedIn,
     /** For tests: what's on screen. */
