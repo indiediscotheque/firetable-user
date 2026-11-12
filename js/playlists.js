@@ -14,7 +14,8 @@
  *                  others YouTube tracks only.
  * - firetable.ui.fillPlaylistSelect(): every playlist <select> is filled through here
  * - The overview dialog (#plIndexBox): rename, reorder, set the default, choose
- *   the list you DJ from, check for broken tracks and delete several at once.
+ *   the list you DJ from, choose what it's kept to, find a list by name, check
+ *   for broken tracks (a row's ⋮ menu), and delete one or several at once.
  */
 
 firetable.plPrefs = { defaultList: "0", defaultName: "", order: {}, format: {} };
@@ -266,7 +267,9 @@ firetable.utilities.listStats = function (tracks) {
 firetable.actions.openPlaylistIndex = function () {
   var dlg = document.getElementById("plIndexBox");
   firetable.plIndex.selected = {};
-  $("#plIndexList").html('<p class="plx-empty">Loading your playlists…</p>');
+  $("#cr-plFilter").val("");
+  $("#cr-plNone").prop("hidden", true);
+  $("#plIndexList").removeClass("is-filtered").html('<li class="plx-empty">Loading your playlists…</li>');
   if (!dlg.open) dlg.showModal();
   Promise.all([firetable.actions.loadPlaylistPrefs(), ftapi.db().ref("queues/" + ftapi.uid).once("value")]).then(function (res) {
     ftapi.lookup.allLists(function (all) {
@@ -275,6 +278,15 @@ firetable.actions.openPlaylistIndex = function () {
       firetable.ui.renderPlaylistIndex();
     });
   });
+};
+
+/** The line under a list's name: its tracks, flagged ones and swaps ready. */
+firetable.ui.playlistIndexMeta = function ($meta, s, viewing) {
+  $meta.empty();
+  $('<span class="plx-n"></span>').text(s.n.toLocaleString() + (s.n === 1 ? " track" : " tracks")).appendTo($meta);
+  if (s.broken) $('<span class="plx-flagged"></span>').text(s.broken.toLocaleString() + " flagged").attr("title", "Tracks that didn't play: check them, or swap them from the list").appendTo($meta);
+  if (s.swaps) $('<span class="plx-swaps"></span>').text(s.swaps.toLocaleString() + (s.swaps === 1 ? " swap" : " swaps") + " ready").appendTo($meta);
+  if (viewing) $('<span class="plx-tag"></span>').text("Open now").appendTo($meta);
 };
 
 firetable.ui.renderPlaylistIndex = function () {
@@ -286,50 +298,71 @@ firetable.ui.renderPlaylistIndex = function () {
     var tracks = l.builtIn ? firetable.plIndex.defaultTracks : l.list;
     var s = firetable.utilities.listStats(tracks);
     firetable.ui.setListCount(l.id, s);
-    var isDefault = firetable.utilities.isDefaultList(l.id);
+    var isDefault = firetable.utilities.isDefaultList(l.id), isDj = l.id === djList;
     var $row = $('<li class="plx-row" role="listitem"></li>').attr("data-id", l.id)
-      .toggleClass("is-default", isDefault).toggleClass("is-dj", l.id === djList).toggleClass("is-viewing", l.id === viewing);
-    $('<button type="button" class="plx-handle material-symbols-outlined" aria-label="Move (or use Alt + arrow keys)" title="Drag to reorder">drag_indicator</button>').appendTo($row);
+      .toggleClass("is-default", isDefault).toggleClass("is-dj", isDj).toggleClass("is-viewing", l.id === viewing);
+    $('<button type="button" class="plx-handle material-symbols-outlined" aria-label="Move (or use Alt + arrow keys)" title="Drag to reorder">drag_indicator</button>')
+      .attr("aria-label", "Move " + l.name + " (Alt + arrow keys)").appendTo($row);
     var $check = $('<input type="checkbox" class="plx-check">').attr("aria-label", "Select " + l.name);
     if (l.builtIn) $check.prop("disabled", true).attr("title", "This list can't be deleted");
     $check.prop("checked", !!firetable.plIndex.selected[l.id]).appendTo($row);
     var $main = $('<div class="plx-main"></div>').appendTo($row);
     $('<input type="text" class="plx-name" maxlength="80" spellcheck="false" enterkeyhint="done">')
-      .val(l.name).attr("aria-label", "Name of " + l.name).appendTo($main);
-    var meta = s.n + (s.n === 1 ? " track" : " tracks") + (s.broken ? " · " + s.broken + " flagged" : "") +
-      (s.swaps ? " · " + s.swaps + (s.swaps === 1 ? " swap" : " swaps") + " ready" : "");
-    $('<div class="plx-meta"></div>').text(meta).appendTo($main);
-    var $acts = $('<div class="plx-actions"></div>').appendTo($row);
+      .val(l.name).attr({ "aria-label": "Name of " + l.name, title: "Click to rename" }).appendTo($main);
+    firetable.ui.playlistIndexMeta($('<div class="plx-meta"></div>').appendTo($main), s, l.id === viewing);
     // what the list is kept to (and whether its broken tracks get YouTube Music swaps)
     var fmt = firetable.utilities.listFormat(l.id);
     var $fmt = $('<select class="plx-format"></select>')
-      .attr({ "aria-label": "What " + l.name + " is kept to", title: fmt ? firetable.utilities.LIST_FORMATS[fmt].help : "Any source. Broken tracks get YouTube Music audio tracks as swaps." });
+      .attr({ "aria-label": "What " + l.name + " is kept to", title: fmt ? firetable.utilities.LIST_FORMATS[fmt].help : "Any source. Broken tracks get YouTube Music audio tracks as swaps." })
+      .toggleClass("is-set", !!fmt);
     $fmt.append($('<option value=""></option>').text("Any source"));
     Object.keys(firetable.utilities.LIST_FORMATS).forEach(function (k) {
       $fmt.append($("<option></option>").val(k).text(firetable.utilities.LIST_FORMATS[k].name));
     });
-    $fmt.val(fmt).appendTo($acts);
-    $('<button type="button" class="butt graybutt iconbutt plx-star"><i class="material-symbols-outlined">star</i></button>')
-      .attr({ "aria-pressed": isDefault ? "true" : "false", "aria-label": isDefault ? l.name + " is your default" : "Make " + l.name + " your default", title: isDefault ? "Your default list" : "Make default" })
-      .appendTo($acts);
-    $('<button type="button" class="butt graybutt iconbutt plx-dj"><i class="material-symbols-outlined">headphones</i></button>')
-      .attr({ "aria-pressed": l.id === djList ? "true" : "false", "aria-label": "DJ from " + l.name, title: l.id === djList ? "You DJ from this list" : "DJ from this list" })
-      .appendTo($acts);
-    $('<button type="button" class="butt graybutt iconbutt plx-check-broken"><i class="material-symbols-outlined">troubleshoot</i></button>')
-      .attr({ "aria-label": "Check " + l.name + " for broken tracks", title: "Check for broken tracks" })
-      .prop("disabled", !s.n).appendTo($acts);
-    $('<button type="button" class="butt graybutt iconbutt plx-open"><i class="material-symbols-outlined">arrow_forward</i></button>')
-      .attr({ "aria-label": "Open " + l.name, title: "Open" }).appendTo($acts);
+    $fmt.val(fmt).appendTo($row);
+    $('<button type="button" class="plx-icon plx-star"><i class="material-symbols-outlined">star</i></button>')
+      .attr({ "aria-pressed": isDefault ? "true" : "false", "aria-label": isDefault ? l.name + " is your default" : "Make " + l.name + " your default", title: isDefault ? "Your default: it opens first" : "Make this your default" })
+      .appendTo($row);
+    $('<button type="button" class="plx-icon plx-dj"><i class="material-symbols-outlined">headphones</i></button>')
+      .attr({ "aria-pressed": isDj ? "true" : "false", "aria-label": "DJ from " + l.name, title: isDj ? "You DJ from this list" : "DJ from this list" })
+      .appendTo($row);
+    $('<button type="button" class="plx-icon plx-open"><i class="material-symbols-outlined">arrow_forward</i></button>')
+      .attr({ "aria-label": "Open " + l.name, title: "Open" }).appendTo($row);
+    $('<button type="button" class="plx-icon plx-more" aria-haspopup="menu" aria-expanded="false"><i class="material-symbols-outlined">more_vert</i></button>')
+      .attr({ "aria-label": "More for " + l.name, title: "Rename, check for broken tracks, delete" })
+      .attr("data-empty", s.n ? null : "1").appendTo($row);
     $list.append($row);
   });
+  $("#cr-plTotal").text(lists.length);
+  firetable.ui.filterPlaylistIndex();
   firetable.ui.updatePlaylistIndexBulk();
+};
+
+/** Show only the lists whose name has what's typed in Find a playlist. */
+firetable.ui.filterPlaylistIndex = function () {
+  var fold = function (t) { return String(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); };
+  var q = fold($("#cr-plFilter").val() || "").trim();
+  var shown = 0;
+  $("#plIndexList .plx-row").each(function () {
+    var match = !q || fold($(this).find(".plx-name").val()).indexOf(q) !== -1;
+    this.hidden = !match;
+    if (match) shown++;
+  });
+  // reordering a filtered list would scramble the hidden ones: only when all show
+  $("#plIndexList").toggleClass("is-filtered", !!q);
+  $("#cr-plNone").prop("hidden", shown > 0 || !q);
+  $("#cr-plTotal").text(q ? shown + " of " + firetable.plIndex.lists.length : firetable.plIndex.lists.length);
 };
 
 firetable.ui.updatePlaylistIndexBulk = function () {
   var ids = Object.keys(firetable.plIndex.selected).filter(function (k) { return firetable.plIndex.selected[k]; });
   $("#plIndexBulk").prop("hidden", !ids.length);
+  $("#plIndexBox .plx-new").prop("hidden", !!ids.length);
   $("#plIndexDelete").text(ids.length === 1 ? "Delete 1 playlist" : "Delete " + ids.length + " playlists").removeClass("confirming");
   $("#plIndexCount").text(ids.length + " selected");
+  var $boxes = $("#plIndexList .plx-row:not([hidden]) .plx-check:not(:disabled)");
+  var on = $boxes.filter(":checked").length;
+  $("#cr-plSelectAll").prop({ checked: !!$boxes.length && on === $boxes.length, indeterminate: on > 0 && on < $boxes.length, disabled: !$boxes.length });
 };
 
 /** Save the order shown in the dialog. */
@@ -431,7 +464,7 @@ firetable.ui.setupPlaylistIndex = function () {
   // Moving the row in the DOM drops pointer capture, so follow the pointer
   // on the document for the length of the drag.
   $list.on("pointerdown", ".plx-handle", function (e) {
-    if (e.button !== 0 || drag) return;
+    if (e.button !== 0 || drag || $list.hasClass("is-filtered")) return;
     e.preventDefault();
     var row = this.closest(".plx-row");
     drag = { row: row, pointer: e.pointerId, from: currentOrder() };
@@ -445,7 +478,7 @@ firetable.ui.setupPlaylistIndex = function () {
   $list
     // Keyboard reordering on the handle
     .on("keydown", ".plx-handle", function (e) {
-      if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+      if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown") || $list.hasClass("is-filtered")) return;
       e.preventDefault();
       var $row = $(this).closest(".plx-row");
       if (e.key === "ArrowUp") $row.prev().before($row); else $row.next().after($row);
@@ -471,6 +504,7 @@ firetable.ui.setupPlaylistIndex = function () {
       if (!val) { this.value = id === "0" ? firetable.utilities.defaultListName() : (firetable.plIndex.lists.filter(function (x) { return x.id === id; })[0] || {}).name || ""; return; }
       firetable.actions.renameList(id, val);
       firetable.plIndex.lists.forEach(function (x) { if (x.id === id) x.name = val; });
+      $row.find(".plx-check").attr("aria-label", "Select " + val);
     })
     .on("click", ".plx-star", function () {
       var id = $(this).closest(".plx-row").attr("data-id");
@@ -487,6 +521,7 @@ firetable.ui.setupPlaylistIndex = function () {
       change["format/" + id] = val || null;
       firetable.actions.savePlaylistPrefs(change);
       this.title = val ? firetable.utilities.LIST_FORMATS[val].help : "Any source. Broken tracks get YouTube Music audio tracks as swaps.";
+      $(this).toggleClass("is-set", !!val);
       if (String(id) === String(firetable.viewListID || $("#listpicker").val())) firetable.ui.matchSearchSource(id);
       firetable.ui.toast(val ? "\u201c" + firetable.utilities.listName(id) + "\u201d: " + firetable.utilities.LIST_FORMATS[val].help : "\u201c" + firetable.utilities.listName(id) + "\u201d takes any source.", "notice");
     })
@@ -498,18 +533,7 @@ firetable.ui.setupPlaylistIndex = function () {
       firetable.ui.renderPlaylistIndex();
       $list.find('.plx-row[data-id="' + id + '"] .plx-dj').trigger("focus");
     })
-    .on("click", ".plx-check-broken", function () {
-      var $btn = $(this), id = $btn.closest(".plx-row").attr("data-id");
-      var $meta = $btn.closest(".plx-row").find(".plx-meta");
-      $btn.prop("disabled", true).addClass("on");
-      firetable.actions.checkBrokenTracks(id, {
-        onProgress: function (done, total) { $meta.text("Checking… " + done + " of " + total); }
-      }).then(function (r) {
-        $meta.text(firetable.utilities.brokenSummary(r));
-      }, function (err) {
-        $meta.text((err && err.message) || "The check didn't finish.");
-      }).always(function () { $btn.prop("disabled", false).removeClass("on"); });
-    })
+    .on("click", ".plx-more", function () { openRowMenu(this); })
     .on("click", ".plx-open", function () {
       var id = $(this).closest(".plx-row").attr("data-id");
       dlg.close();
@@ -537,15 +561,113 @@ firetable.ui.setupPlaylistIndex = function () {
     $list.find(".plx-check").prop("checked", false);
     firetable.ui.updatePlaylistIndexBulk();
   });
-  $("#plIndexNew").on("keydown", function (e) {
-    if (e.key !== "Enter") return;
-    var val = this.value.trim();
+  // ── New playlist: type a name, then Enter or Create ──
+  var createList = function () {
+    var input = document.getElementById("plIndexNew");
+    var val = input.value.trim();
     if (!val) return;
     var id = ftapi.actions.createList(val);
     firetable.allPlaylists[id] = { name: val, list: {} };
     firetable.utilities.addPlaylistToPickers(id, val);
-    this.value = "";
+    input.value = "";
+    $("#cr-plCreate").prop("disabled", true);
+    $("#cr-plFilter").val("");
     firetable.ui.renderPlaylistIndex();
+    var row = $list.find('.plx-row[data-id="' + id + '"]')[0];
+    if (row) {
+      row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      row.classList.add("is-new");
+      setTimeout(function () { row.classList.remove("is-new"); }, 1600);
+    }
+    firetable.ui.toast("Made \u201c" + val + "\u201d.", "notice");
+  };
+  $("#plIndexNew").on("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); createList(); }
+  }).on("input", function () { $("#cr-plCreate").prop("disabled", !this.value.trim()); });
+  $("#cr-plCreate").on("click", createList);
+
+  // ── Find a playlist ──
+  $("#cr-plFilter").on("input", function () {
+    firetable.ui.filterPlaylistIndex();
+    firetable.ui.updatePlaylistIndexBulk();
+  }).on("keydown", function (e) {
+    // Escape clears the box first, then closes the dialog
+    if (e.key === "Escape" && this.value) { e.preventDefault(); e.stopPropagation(); this.value = ""; $(this).trigger("input"); }
+  });
+
+  // ── Select every list shown (not the built-in one) ──
+  $("#cr-plSelectAll").on("change", function () {
+    var on = this.checked;
+    $list.find(".plx-row:not([hidden]) .plx-check:not(:disabled)").each(function () {
+      this.checked = on;
+      firetable.plIndex.selected[$(this).closest(".plx-row").attr("data-id")] = on;
+    });
+    firetable.ui.updatePlaylistIndexBulk();
+  });
+
+  // ── A row's ⋮ menu: Rename, Check for broken tracks, Delete ──
+  var menu = document.getElementById("cr-plRowMenu");
+  var menuBtn = null;
+  var checkList = function (id) {
+    var $row = $list.find('.plx-row[data-id="' + id + '"]');
+    var $meta = $row.find(".plx-meta");
+    var $more = $row.find(".plx-more").prop("disabled", true).addClass("is-busy");
+    $row.addClass("is-checking");
+    $meta.text("Checking for broken tracks…");
+    firetable.actions.checkBrokenTracks(id, {
+      onProgress: function (done, total) { $meta.text("Checking… " + done.toLocaleString() + " of " + total.toLocaleString()); }
+    }).then(function (r) {
+      $meta.text(firetable.utilities.brokenSummary(r));
+    }, function (err) {
+      $meta.text((err && err.message) || "The check didn't finish.");
+    }).always(function () { $more.prop("disabled", false).removeClass("is-busy"); $row.removeClass("is-checking"); });
+  };
+  var openRowMenu = function (btn) {
+    if (menu.matches(":popover-open")) {
+      var same = menuBtn === btn;
+      menu.hidePopover();
+      if (same) return;
+    }
+    menuBtn = btn;
+    var id = $(btn).closest(".plx-row").attr("data-id");
+    $(menu).find('[data-act="delete"]').prop("disabled", id === "0").attr("title", id === "0" ? "This list can't be deleted" : null);
+    $(menu).find('[data-act="check"]').prop("disabled", !!btn.getAttribute("data-empty"));
+    $(btn).addClass("on").attr("aria-expanded", "true");
+    menu.style.visibility = "hidden";
+    menu.showPopover();
+    firetable.ui.positionPopover(btn, menu, document.getElementById("cr-plRowMenuArrow"), "bottom-end").then(function () {
+      var first = menu.querySelector('[role="menuitem"]:not(:disabled)');
+      if (first) first.focus();
+    });
+  };
+  menu.addEventListener("toggle", function (e) {
+    if (e.newState === "closed" && menuBtn) $(menuBtn).removeClass("on").attr("aria-expanded", "false");
+  });
+  $(menu).on("keydown", function (e) {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    var items = $(menu).find('[role="menuitem"]:not(:disabled)').get();
+    var i = items.indexOf(document.activeElement) + (e.key === "ArrowDown" ? 1 : -1);
+    items[(i + items.length) % items.length].focus();
+  }).on("click", "[data-act]", function () {
+    var act = this.getAttribute("data-act");
+    var $row = $(menuBtn).closest(".plx-row"), id = $row.attr("data-id");
+    menu.hidePopover();
+    if (!id) return;
+    if (act === "rename") {
+      var name = $row.find(".plx-name")[0];
+      name.focus();
+      name.select();
+    } else if (act === "check") {
+      checkList(id);
+    } else if (act === "delete" && id !== "0") {
+      // just this one: the bulk bar asks to confirm, naming it
+      firetable.plIndex.selected = {};
+      firetable.plIndex.selected[id] = true;
+      $list.find(".plx-check").each(function () { this.checked = $(this).closest(".plx-row").attr("data-id") === id; });
+      firetable.ui.updatePlaylistIndexBulk();
+      $("#plIndexDelete").trigger("click").trigger("focus");
+    }
   });
 
   ftapi.events.on("loggedOut", function () {

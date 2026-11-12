@@ -644,21 +644,58 @@
 	<dialog id="plIndexBox" aria-labelledby="plIndexTitle">
 		<div class="modalBox">
 			<div class="modalHeader">
-				<h2 id="plIndexTitle">Your Playlists</h2>
+				<h2 id="plIndexTitle">Your Playlists <span id="cr-plTotal" class="plx-total"></span></h2>
 				<button role="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
 			</div>
 			<div class="modalContent">
-				<p class="plx-help"><i class="material-symbols-outlined" aria-hidden="true">star</i> Your default opens first. <i class="material-symbols-outlined" aria-hidden="true">headphones</i> is the list you DJ from. Drag <i class="material-symbols-outlined" aria-hidden="true">drag_indicator</i> to reorder; click a name to rename it. Keep a list to YouTube Music, YouTube videos or SoundCloud: broken tracks get YouTube Music audio tracks as swaps, video lists get the artist's videos instead, and SoundCloud lists get none.</p>
+				<div class="plx-tools">
+					<label class="plx-search">
+						<i class="material-symbols-outlined" aria-hidden="true">search</i>
+						<input type="search" id="cr-plFilter" placeholder="Find a playlist" autocomplete="off" enterkeyhint="search" aria-label="Find a playlist" aria-controls="plIndexList" />
+					</label>
+					<details class="plx-help">
+						<summary>How this works</summary>
+						<ul>
+							<li><i class="material-symbols-outlined" aria-hidden="true">star</i> <b>Default</b> opens first when you come in.</li>
+							<li><i class="material-symbols-outlined" aria-hidden="true">headphones</i> <b>DJ from</b> is the list the room plays from when you're on deck.</li>
+							<li><b>Kept to</b> YouTube Music: broken tracks get YouTube Music audio tracks as swaps. YouTube videos: the artist's videos instead. SoundCloud: SoundCloud tracks only, no swaps.</li>
+							<li>Drag <i class="material-symbols-outlined" aria-hidden="true">drag_indicator</i> (or Alt + ↑ ↓) to reorder. Click a name to rename it.</li>
+						</ul>
+					</details>
+				</div>
+				<div class="plx-head">
+					<input type="checkbox" id="cr-plSelectAll" class="plx-check" aria-label="Select every playlist shown" title="Select every playlist shown" />
+					<span class="plx-head-name" aria-hidden="true">Playlist</span>
+					<span class="plx-head-fmt" aria-hidden="true">Kept to</span>
+					<span class="plx-head-ico" aria-hidden="true">Default</span>
+					<span class="plx-head-ico" aria-hidden="true">DJ from</span>
+				</div>
 				<ul id="plIndexList" role="list"></ul>
-				<input type="text" id="plIndexNew" placeholder="New playlist name, then Enter" maxlength="80" enterkeyhint="done" autocomplete="off" aria-label="New playlist name" />
-				<div id="plIndexBulk" class="plx-bulk" hidden>
-					<span id="plIndexCount" role="status" aria-live="polite"></span>
-					<button type="button" class="butt graybutt small" id="plIndexClearSel">Clear</button>
-					<button type="button" class="butt redbutt small" id="plIndexDelete">Delete</button>
+				<p id="cr-plNone" class="plx-empty" hidden>No playlist matches that.</p>
+				<div class="plx-foot">
+					<div class="plx-new">
+						<input type="text" id="plIndexNew" placeholder="New playlist name" maxlength="80" enterkeyhint="done" autocomplete="off" aria-label="New playlist name" />
+						<button type="button" class="butt small" id="cr-plCreate" disabled><i class="material-symbols-outlined" aria-hidden="true">add</i> Create</button>
+					</div>
+					<div id="plIndexBulk" class="plx-bulk" hidden>
+						<span id="plIndexCount" role="status" aria-live="polite"></span>
+						<button type="button" class="butt graybutt small" id="plIndexClearSel">Clear</button>
+						<button type="button" class="butt redbutt small" id="plIndexDelete">Delete</button>
+					</div>
 				</div>
 			</div>
 		</div>
 	</dialog>
+
+	<!-- All Playlists: a row's ⋮ menu -->
+	<div id="cr-plRowMenu" popover="auto" class="ft-popover">
+		<div id="cr-plRowMenuArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu" role="menu" aria-label="Playlist options">
+			<button type="button" role="menuitem" class="butt graybutt" data-act="rename"><i class="material-symbols-outlined">edit</i> Rename</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="check"><i class="material-symbols-outlined">troubleshoot</i> Check for broken tracks</button>
+			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete…</button>
+		</div>
+	</div>
 
 	<dialog id="deletePromptBox">
 		<div class="modalBox">
