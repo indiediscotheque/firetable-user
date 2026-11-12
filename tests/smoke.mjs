@@ -227,6 +227,43 @@ try {
   });
   check(guide, "the install guide opens with this device's steps first, the others one tap away");
 
+  console.log("-- what a playlist is kept to");
+  const formats = await page.evaluate(() => {
+    const keep = firetable.plPrefs.format;
+    const keepLists = firetable.allPlaylists;
+    firetable.plPrefs.format = { scList: "sc", vidList: "video" };
+    firetable.allPlaylists = { scList: { name: "SC finds", list: {} }, vidList: { name: "Videos", list: {} } };
+    const out = {
+      sc: firetable.utilities.listFormat("scList"),
+      none: firetable.utilities.listFormat("0"),
+      ytInSc: !!firetable.utilities.formatRefusal("scList", 1),
+      scInSc: !firetable.utilities.formatRefusal("scList", 2),
+      scInVideos: !!firetable.utilities.formatRefusal("vidList", 2),
+      anyTakesBoth: !firetable.utilities.formatRefusal("0", 1) && !firetable.utilities.formatRefusal("0", 2),
+      videoHelp: /videos as swaps, never audio/.test(firetable.utilities.LIST_FORMATS.video.help)
+    };
+    // a list kept to videos: its swap card says the match is the artist's video
+    const keepView = firetable.viewListID;
+    firetable.viewListID = "vidList";
+    out.viewingVideos = firetable.utilities.viewingVideoList();
+    firetable.viewListID = "0";
+    out.viewingAny = firetable.utilities.viewingVideoList();
+    firetable.viewListID = keepView;
+    // the picker in All Playlists shows each list's setting
+    firetable.plIndex.defaultTracks = {};
+    firetable.ui.renderPlaylistIndex();
+    out.picker = $('#plIndexList .plx-row[data-id="scList"] .plx-format').val();
+    out.pickerNone = $('#plIndexList .plx-row[data-id="0"] .plx-format').val();
+    out.options = $('#plIndexList .plx-row[data-id="0"] .plx-format option').length;
+    firetable.plPrefs.format = keep;
+    firetable.allPlaylists = keepLists;
+    return out;
+  });
+  check(formats.sc === "sc" && formats.none === "" && formats.ytInSc && formats.scInSc && formats.scInVideos && formats.anyTakesBoth,
+    "a SoundCloud list takes SoundCloud only, a videos list YouTube only, an unset list anything (" + JSON.stringify(formats) + ")");
+  check(formats.picker === "sc" && formats.pickerNone === "" && formats.options === 4, "All Playlists shows each list's setting, with four choices");
+  check(formats.videoHelp && formats.viewingVideos && !formats.viewingAny, "a videos list gets the artist's videos as swaps, and its swap card says so (" + JSON.stringify(formats) + ")");
+
   console.log("-- swap suggestions: ⇄ on a broken track, Swap, Undo, Swap all");
   const flaggedTrack = (cid, name, swapCid) => ({ type: 1, cid, name, flagged: { date: 1, code: 2 },
     swap: { cid: swapCid, artist: name.split(" - ")[0], title: name.split(" - ")[1], album: "Album", dur: 200, date: 1 } });

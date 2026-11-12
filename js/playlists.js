@@ -5,12 +5,19 @@
  *     defaultList  which list is your default (★): it opens first
  *     defaultName  a name for the built-in list (queues/<uid>), "Default Playlist" if unset
  *     order        {listID: n} your own order for the lists
+ *     format       {listID: "ytm"|"video"|"sc"} what a list is kept to: YouTube
+ *                  Music, YouTube videos or SoundCloud. Unset: any source. The
+ *                  bot's nightly swap suggestions are YouTube Music audio
+ *                  tracks, the artist's videos for lists set to videos, and
+ *                  none for SoundCloud lists (firetable-hostbot lib/swaps.js);
+ *                  a SoundCloud list takes SoundCloud tracks only, and the
+ *                  others YouTube tracks only.
  * - firetable.ui.fillPlaylistSelect(): every playlist <select> is filled through here
  * - The overview dialog (#plIndexBox): rename, reorder, set the default, choose
  *   the list you DJ from, check for broken tracks and delete several at once.
  */
 
-firetable.plPrefs = { defaultList: "0", defaultName: "", order: {} };
+firetable.plPrefs = { defaultList: "0", defaultName: "", order: {}, format: {} };
 
 // ─── Preferences ─────────────────────────────────────────────────────────────
 
@@ -22,7 +29,8 @@ firetable.actions.loadPlaylistPrefs = function () {
     firetable.plPrefs = {
       defaultList: typeof v.defaultList === "string" ? v.defaultList : "0",
       defaultName: typeof v.defaultName === "string" ? v.defaultName : "",
-      order: v.order || {}
+      order: v.order || {},
+      format: v.format && typeof v.format === "object" ? v.format : {}
     };
     return firetable.plPrefs;
   }, function () { return firetable.plPrefs; });
@@ -32,6 +40,10 @@ firetable.actions.loadPlaylistPrefs = function () {
 firetable.actions.savePlaylistPrefs = function (changes) {
   Object.keys(changes).forEach(function (k) {
     if (k.indexOf("order/") === 0) firetable.plPrefs.order[k.slice(6)] = changes[k];
+    else if (k.indexOf("format/") === 0) {
+      if (changes[k] === null) delete firetable.plPrefs.format[k.slice(7)];
+      else firetable.plPrefs.format[k.slice(7)] = changes[k];
+    }
     else firetable.plPrefs[k] = changes[k] === null ? (k === "defaultList" ? "0" : "") : changes[k];
   });
   return ftapi.db().ref("playlistPrefs/" + ftapi.uid).update(changes).catch(function (e) {
@@ -42,6 +54,41 @@ firetable.actions.savePlaylistPrefs = function (changes) {
 /** The built-in list's name. */
 firetable.utilities.defaultListName = function () {
   return firetable.plPrefs.defaultName || "Default Playlist";
+};
+
+// ─── Formats ─────────────────────────────────────────────────────────────────
+
+/** What a list can be kept to, and what each means for its tracks and swaps. */
+firetable.utilities.LIST_FORMATS = {
+  ytm: { name: "YouTube Music", help: "YouTube tracks only. Broken tracks get YouTube Music audio tracks as swaps." },
+  video: { name: "YouTube videos", help: "YouTube tracks only. Broken tracks get the artist's own videos as swaps, never audio tracks." },
+  sc: { name: "SoundCloud", help: "SoundCloud tracks only. No swaps for broken tracks." }
+};
+
+/** Does the list on screen take videos (its swaps are music videos, not audio tracks)? */
+firetable.utilities.viewingVideoList = function () {
+  return firetable.utilities.listFormat(firetable.viewListID || $("#listpicker").val() || "0") === "video";
+};
+
+/** A list's format: "ytm", "video" or "sc", or "" when it takes any source. */
+firetable.utilities.listFormat = function (listID) {
+  var f = (firetable.plPrefs.format || {})[String(listID == null ? "0" : listID)];
+  return firetable.utilities.LIST_FORMATS[f] ? f : "";
+};
+
+/**
+ * Why a track can't go in a list, or "" when it can: a SoundCloud list takes
+ * SoundCloud tracks only; one kept to YouTube Music or videos, YouTube only.
+ * @param {string} listID
+ * @param {number} type - MEDIA_YOUTUBE or MEDIA_SOUNDCLOUD
+ */
+firetable.utilities.formatRefusal = function (listID, type) {
+  var f = firetable.utilities.listFormat(listID);
+  if (!f) return "";
+  var sc = Number(type) === MEDIA_SOUNDCLOUD;
+  if (f === "sc" && !sc) return "\u201c" + firetable.utilities.listName(listID) + "\u201d is kept to SoundCloud tracks.";
+  if (f !== "sc" && sc) return "\u201c" + firetable.utilities.listName(listID) + "\u201d is kept to YouTube tracks.";
+  return "";
 };
 
 /** Is this your default list? */
@@ -253,6 +300,15 @@ firetable.ui.renderPlaylistIndex = function () {
       (s.swaps ? " · " + s.swaps + (s.swaps === 1 ? " swap" : " swaps") + " ready" : "");
     $('<div class="plx-meta"></div>').text(meta).appendTo($main);
     var $acts = $('<div class="plx-actions"></div>').appendTo($row);
+    // what the list is kept to (and whether its broken tracks get YouTube Music swaps)
+    var fmt = firetable.utilities.listFormat(l.id);
+    var $fmt = $('<select class="plx-format"></select>')
+      .attr({ "aria-label": "What " + l.name + " is kept to", title: fmt ? firetable.utilities.LIST_FORMATS[fmt].help : "Any source. Broken tracks get YouTube Music audio tracks as swaps." });
+    $fmt.append($('<option value=""></option>').text("Any source"));
+    Object.keys(firetable.utilities.LIST_FORMATS).forEach(function (k) {
+      $fmt.append($("<option></option>").val(k).text(firetable.utilities.LIST_FORMATS[k].name));
+    });
+    $fmt.val(fmt).appendTo($acts);
     $('<button type="button" class="butt graybutt iconbutt plx-star"><i class="material-symbols-outlined">star</i></button>')
       .attr({ "aria-pressed": isDefault ? "true" : "false", "aria-label": isDefault ? l.name + " is your default" : "Make " + l.name + " your default", title: isDefault ? "Your default list" : "Make default" })
       .appendTo($acts);
@@ -316,8 +372,10 @@ firetable.actions.deleteLists = function (ids) {
   ids.forEach(function (id) {
     listUpdates[id] = null;
     orderUpdates["order/" + id] = null;
+    orderUpdates["format/" + id] = null;
     if (firetable.allPlaylists) delete firetable.allPlaylists[id];
     delete firetable.plPrefs.order[id];
+    if (firetable.plPrefs.format) delete firetable.plPrefs.format[id];
   });
   ftapi.db().ref("playlists/" + ftapi.uid).update(listUpdates);
   ftapi.db().ref("playlistPrefs/" + ftapi.uid).update(orderUpdates).catch(function () { /* rules not deployed yet */ });
@@ -422,6 +480,16 @@ firetable.ui.setupPlaylistIndex = function () {
       firetable.ui.renderPlaylistIndex();
       $list.find('.plx-row[data-id="' + id + '"] .plx-star').trigger("focus");
     })
+    .on("change", ".plx-format", function () {
+      var id = $(this).closest(".plx-row").attr("data-id");
+      var val = this.value;
+      var change = {};
+      change["format/" + id] = val || null;
+      firetable.actions.savePlaylistPrefs(change);
+      this.title = val ? firetable.utilities.LIST_FORMATS[val].help : "Any source. Broken tracks get YouTube Music audio tracks as swaps.";
+      if (String(id) === String(firetable.viewListID || $("#listpicker").val())) firetable.ui.matchSearchSource(id);
+      firetable.ui.toast(val ? "\u201c" + firetable.utilities.listName(id) + "\u201d: " + firetable.utilities.LIST_FORMATS[val].help : "\u201c" + firetable.utilities.listName(id) + "\u201d takes any source.", "notice");
+    })
     .on("click", ".plx-dj", function () {
       var id = $(this).closest(".plx-row").attr("data-id");
       ftapi.actions.switchDjList(id);
@@ -481,7 +549,7 @@ firetable.ui.setupPlaylistIndex = function () {
   });
 
   ftapi.events.on("loggedOut", function () {
-    firetable.plPrefs = { defaultList: "0", defaultName: "", order: {} };
+    firetable.plPrefs = { defaultList: "0", defaultName: "", order: {}, format: {} };
     firetable.listCounts = {};
     firetable.listCountsLoaded = 0;
     firetable.liveCountID = null;

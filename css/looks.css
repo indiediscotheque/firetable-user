@@ -6347,7 +6347,11 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
 }
 .plx-meta { flex: 0 0 auto; max-width: 55%; font-size: .8rem; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .plx-actions {
-  display: flex; gap: .2rem;
+  display: flex; gap: .2rem; align-items: center;
+  & .plx-format {
+    height: 2rem; max-width: 8.5rem; font: inherit; font-size: .8rem; color: inherit; cursor: pointer;
+    background: var(--color-bg-s2); border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 6px; padding: 0 .3rem;
+  }
   & .butt { width: 2rem; height: 2rem; }
   & .plx-star[aria-pressed="true"] i, & .plx-dj[aria-pressed="true"] i { font-variation-settings: "FILL" 1; color: var(--color-accent, #f5c518); }
 }
