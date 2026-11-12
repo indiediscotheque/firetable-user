@@ -255,6 +255,24 @@ try {
     out.picker = $('#plIndexList .plx-row[data-id="scList"] .plx-format').val();
     out.pickerNone = $('#plIndexList .plx-row[data-id="0"] .plx-format').val();
     out.options = $('#plIndexList .plx-row[data-id="0"] .plx-format option').length;
+    // Find a playlist narrows the rows and stops reordering; select-all takes the rows shown
+    $("#cr-plFilter").val("sc f").trigger("input");
+    out.shown = $("#plIndexList .plx-row:not([hidden])").map(function () { return this.getAttribute("data-id"); }).get().join(",");
+    out.filtered = $("#plIndexList").hasClass("is-filtered") && /1 of 3/.test($("#cr-plTotal").text());
+    $("#cr-plSelectAll").prop("checked", true).trigger("change");
+    out.selected = Object.keys(firetable.plIndex.selected).filter(function (k) { return firetable.plIndex.selected[k]; }).join(",");
+    $("#plIndexClearSel").trigger("click");
+    $("#cr-plFilter").val("").trigger("input");
+    // a row's ⋮ menu: Delete asks to confirm just that list; the built-in list can't be deleted
+    $('#plIndexList .plx-row[data-id="vidList"] .plx-more').trigger("click");
+    const menu = document.getElementById("cr-plRowMenu");
+    out.menuOpen = menu.matches(":popover-open");
+    $(menu).find('[data-act="delete"]').trigger("click");
+    out.confirm = $("#plIndexDelete").hasClass("confirming") && /Delete Videos\?/.test($("#plIndexCount").text()) && !$("#plIndexBulk").prop("hidden");
+    $("#plIndexClearSel").trigger("click");
+    $('#plIndexList .plx-row[data-id="0"] .plx-more').trigger("click");
+    out.builtInLocked = $(menu).find('[data-act="delete"]').prop("disabled");
+    menu.hidePopover();
     firetable.plPrefs.format = keep;
     firetable.allPlaylists = keepLists;
     return out;
@@ -262,6 +280,8 @@ try {
   check(formats.sc === "sc" && formats.none === "" && formats.ytInSc && formats.scInSc && formats.scInVideos && formats.anyTakesBoth,
     "a SoundCloud list takes SoundCloud only, a videos list YouTube only, an unset list anything (" + JSON.stringify(formats) + ")");
   check(formats.picker === "sc" && formats.pickerNone === "" && formats.options === 4, "All Playlists shows each list's setting, with four choices");
+  check(formats.shown === "scList" && formats.filtered && formats.selected === "scList", "All Playlists: Find a playlist shows the matches, and select-all takes only those (" + JSON.stringify(formats) + ")");
+  check(formats.menuOpen && formats.confirm && formats.builtInLocked, "All Playlists: a row's ⋮ menu deletes that list after a confirm; the built-in list can't be deleted");
   check(formats.videoHelp && formats.viewingVideos && !formats.viewingAny, "a videos list gets the artist's videos as swaps, and its swap card says so (" + JSON.stringify(formats) + ")");
 
   console.log("-- swap suggestions: ⇄ on a broken track, Swap, Undo, Swap all");

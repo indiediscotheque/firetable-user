@@ -6311,60 +6311,206 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
 }
 
 
-/* ─── Playlist overview (#118, #117) ─── */
-#plIndexBox .modalBox { width: 36rem; max-width: 100vw; max-height: 100dvh; }
-/* Only the list scrolls: the help text, new-list box and bulk bar stay in view (#229) */
-#plIndexBox .modalContent { flex-direction: column; gap: var(--pad3); min-height: 0; overflow: hidden; }
-#plIndexBox .modalContent > :not(#plIndexList) { flex: none; }
-.plx-help {
-  margin: 0; font-size: .85rem; line-height: 1.5; opacity: .8;
-  & i { font-size: 1rem; vertical-align: -.2em; }
+/* ─── Playlist overview (#118, #117) ───
+   A table of your lists: the header and the new-list box stay put and only
+   the rows scroll (#229). Every row shares one set of columns, so names,
+   formats and the ★ / 🎧 toggles line up. */
+#plIndexBox {
+  /* handle · select · name · kept to · default · DJ from · open · more */
+  --plx-cols: 1.5rem 1.25rem minmax(0, 1fr) 9.5rem 3.5rem 3.5rem 2rem 2rem;
+  --plx-line: color-mix(in srgb, var(--color-text) 8%, transparent);
+  & .modalBox { width: min(52rem, 100vw); height: min(46rem, 100dvh); }
+  & .modalHeader h2 { display: flex; align-items: baseline; gap: var(--pad2); margin: 0; }
+  & .modalContent { flex-direction: column; gap: 0; min-height: 0; overflow: hidden; padding: var(--pad3) var(--pad4) 0; }
+  & .modalContent > :not(#plIndexList) { flex: none; }
 }
+.plx-total {
+  font-family: var(--font-numbers); font-size: var(--fs-meta); font-weight: 500;
+  color: var(--color-text-muted);
+  &:empty { display: none; }
+}
+
+/* Find a playlist, and How this works */
+.plx-tools {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--pad2) var(--pad3);
+  padding-bottom: var(--pad3);
+}
+.plx-search {
+  position: relative; flex: 1 1 14rem; display: flex; align-items: center;
+  & i { position: absolute; left: .55rem; font-size: 1.15rem; color: var(--color-text-muted); pointer-events: none; }
+  & input:not([type="checkbox"]) { width: 100%; padding-left: 2.1rem; font-size: var(--fs-title); }
+}
+.plx-help {
+  flex: 0 1 auto; font-size: var(--fs-meta); color: var(--color-text-subtle);
+  & summary {
+    cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: .3rem;
+    padding: .35rem .5rem; border-radius: var(--radius-md); color: var(--color-text-muted);
+    &::-webkit-details-marker { display: none; }
+    &::before { content: "help"; font-family: 'Material Symbols Outlined'; font-size: 1.1rem; line-height: 1; }
+    &:hover { color: var(--color-text); background: rgba(255, 255, 255, .05); }
+  }
+  &[open] { flex-basis: 100%; order: 3; }
+  &[open] summary { color: var(--color-text); }
+  & ul {
+    display: grid; gap: .35rem; margin: var(--pad2) 0 0; padding: var(--pad2) var(--pad3);
+    list-style: none; line-height: 1.45; border-radius: var(--radius-md); background: var(--color-bg-t1);
+  }
+  & b { color: var(--color-text); font-weight: 600; }
+  & li i { font-size: 1rem; vertical-align: -.2em; color: var(--color-accent); }
+}
+
+/* Column labels over the rows */
+.plx-head, .plx-row {
+  display: grid; grid-template-columns: var(--plx-cols); align-items: center; column-gap: var(--pad2);
+}
+.plx-head {
+  padding: 0 .5rem .4rem; border-bottom: 1px solid var(--plx-line);
+  overflow: hidden; scrollbar-gutter: stable; /* same gutter as the list, so columns match */
+  font-size: var(--fs-micro); font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--color-text-muted);
+  & #cr-plSelectAll { grid-column: 2; }
+  & .plx-head-name { grid-column: 3; padding-left: .4rem; }
+  & .plx-head-fmt { grid-column: 4; padding-left: .55rem; }
+  & .plx-head-ico { text-align: center; white-space: nowrap; }
+}
+
 #plIndexList {
-  list-style: none; margin: 0; padding: 0; display: grid; align-content: start; gap: .25rem;
+  list-style: none; margin: 0; padding: var(--pad1) 0; display: block;
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   scrollbar-width: thin; scrollbar-gutter: stable;
 }
-.plx-row {
-  display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: .5rem;
-  padding: .4rem .5rem; border-radius: 8px; background: var(--color-bg-t1);
-  &.is-viewing { outline: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
-  &.is-dragging { position: relative; z-index: 1; box-shadow: 0 6px 20px rgb(0 0 0 / .35); outline: 1px solid color-mix(in srgb, currentColor 35%, transparent); }
-}
 #plIndexList.is-sorting { user-select: none; cursor: grabbing; }
-.plx-handle {
-  border: 0; background: none; color: inherit; cursor: grab; padding: .2rem; opacity: .6; font-size: 1.25rem;
-  touch-action: none; /* the handle drags; the rest of the list still scrolls */
-  &:hover, &:focus-visible { opacity: 1; }
-}
-/* Name, then the track count to its right (#228) */
-.plx-main { min-width: 0; display: flex; align-items: center; gap: .5rem; }
-.plx-name {
-  flex: 1 1 0; width: 100%; min-width: 0; font: inherit; font-weight: 600; color: inherit;
-  background: transparent; border: 1px solid transparent; border-radius: 6px; padding: .15rem .35rem;
-  &:hover { border-color: color-mix(in srgb, currentColor 20%, transparent); }
-  &:focus { border-color: currentColor; background: var(--color-bg-s2); outline: none; }
-}
-.plx-meta { flex: 0 0 auto; max-width: 55%; font-size: .8rem; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.plx-actions {
-  display: flex; gap: .2rem; align-items: center;
-  & .plx-format {
-    height: 2rem; max-width: 8.5rem; font: inherit; font-size: .8rem; color: inherit; cursor: pointer;
-    background: var(--color-bg-s2); border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 6px; padding: 0 .3rem;
+
+.plx-row {
+  position: relative; min-height: 3.25rem; padding: .3rem .5rem;
+  border-radius: var(--radius-md);
+  transition: background-color 120ms ease;
+  &[hidden] { display: none; }
+  & + .plx-row::before {
+    content: ""; position: absolute; top: 0; left: .5rem; right: .5rem; height: 1px; background: var(--plx-line);
   }
-  & .butt { width: 2rem; height: 2rem; }
-  & .plx-star[aria-pressed="true"] i, & .plx-dj[aria-pressed="true"] i { font-variation-settings: "FILL" 1; color: var(--color-accent, #f5c518); }
+  &:hover, &:focus-within { background: rgba(255, 255, 255, .04); }
+  &:hover::before, &:hover + .plx-row::before, &:focus-within::before, &:focus-within + .plx-row::before { opacity: 0; }
+  /* the list you DJ from: an accent edge, so it's found at a glance */
+  &.is-dj { box-shadow: inset 3px 0 0 var(--color-accent); }
+  &.is-new { background: color-mix(in srgb, var(--color-accent) 14%, transparent); }
+  &.is-dragging {
+    z-index: 1; background: var(--color-bg-t2);
+    box-shadow: 0 .5rem 1.5rem -.25rem black, inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 50%, transparent);
+  }
+  &.is-checking .plx-meta { color: var(--color-text); }
 }
-#plIndexNew { width: 100%; }
+
+.plx-handle {
+  display: grid; place-items: center; width: 1.5rem; height: 2rem; padding: 0;
+  border: 0; background: none; box-shadow: none; color: var(--color-text-dim); cursor: grab;
+  font-size: 1.2rem; touch-action: none; /* the handle drags; the rest of the list still scrolls */
+  &:hover, &:focus-visible { color: var(--color-text); }
+  #plIndexList.is-filtered & { visibility: hidden; }
+}
+.plx-check {
+  width: 1rem; height: 1rem; margin: 0; accent-color: var(--color-accent); cursor: pointer;
+  &:disabled { opacity: .25; cursor: default; }
+}
+
+/* Name over its numbers. The name reads as text and edits in place. */
+.plx-main { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: .1rem; }
+#plIndexList .plx-name {
+  width: 100%; min-width: 0; height: auto; padding: .1rem .4rem; margin: 0;
+  font: inherit; font-size: .95rem; font-weight: 600; line-height: 1.35; color: var(--color-text-light);
+  text-overflow: ellipsis; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm);
+  box-shadow: none; transform: none; cursor: text;
+  &:hover { border-color: color-mix(in srgb, var(--color-text) 18%, transparent); }
+  &:focus { background: var(--color-bg-s2); border-color: var(--color-accent); outline: none; }
+}
+.plx-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 .6rem; padding: 0 .45rem;
+  font-family: var(--font-numbers); font-size: var(--fs-meta); color: var(--color-text-muted);
+  white-space: nowrap; min-width: 0;
+  & .plx-flagged { color: color-mix(in oklab, var(--color-danger) 55%, white); }
+  & .plx-swaps { color: var(--color-accent); }
+  & .plx-tag {
+    font-family: var(--font-family); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--color-text-subtle);
+    padding: 0 .35rem; border: 1px solid var(--plx-line); border-radius: var(--radius-sm);
+  }
+}
+
+/* Kept to: a quiet picker that brightens once a list is kept to something */
+#plIndexList .plx-format {
+  width: 100%; height: 1.875rem; padding: 0 1.6rem 0 .55rem; line-height: 1.875rem;
+  font-size: var(--fs-meta); font-weight: 500; color: var(--color-text-muted);
+  background-color: transparent; background-position: right .4rem center; background-size: .85rem;
+  border: 1px solid var(--plx-line); box-shadow: none;
+  &:hover { color: var(--color-text); border-color: color-mix(in srgb, var(--color-text) 22%, transparent); }
+  &.is-set { color: var(--color-text); background-color: rgba(255, 255, 255, .04); }
+}
+
+/* ★ / 🎧 / open / ⋮: bare icons; on = filled in the room's accent */
+.plx-icon {
+  justify-self: center; display: grid; place-items: center;
+  width: 2rem; height: 2rem; padding: 0; color: var(--color-text-dim);
+  background: transparent; border: 0; border-radius: var(--radius-md); box-shadow: none;
+  & i { font-size: 1.3rem; }
+  &:hover:not(:disabled), &:focus-visible, &.on { color: var(--color-text-light); background: rgba(255, 255, 255, .07); }
+  &:disabled { opacity: .3; cursor: default; }
+  &[aria-pressed="true"] { color: var(--color-accent); }
+  &[aria-pressed="true"] i { font-variation-settings: "FILL" 1; }
+  &.is-busy i { animation: spin 1s linear infinite; }
+}
+/* Open and ⋮ show on the row you're on (always on touch screens) */
+@media (hover: hover) {
+  .plx-row:not(:hover):not(:focus-within) :is(.plx-open, .plx-more):not(.on):not(.is-busy) { opacity: .35; }
+}
+@media (pointer: coarse) {
+  .plx-icon { position: relative; }
+  .plx-icon::before { content: ""; position: absolute; inset: -.25rem; }
+}
+
+.plx-empty {
+  margin: 0; padding: var(--pad4) var(--pad3); text-align: center;
+  font-size: var(--fs-title); color: var(--color-text-muted);
+}
+
+/* The new-list box, or, while lists are selected, what to do with them */
+.plx-foot {
+  padding: var(--pad3) 0 var(--pad4); border-top: 1px solid var(--plx-line);
+}
+.plx-new {
+  display: flex; gap: var(--pad2); align-items: center;
+  &[hidden] { display: none; }
+  & #plIndexNew { flex: 1; min-width: 0; font-size: var(--fs-title); }
+  & #cr-plCreate { gap: .25rem; height: 2rem; padding: 0 .9rem 0 .65rem; }
+  & #cr-plCreate i { font-size: 1.1rem; }
+}
 .plx-bulk {
-  position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
-  padding: .5rem; border-radius: 8px; background: var(--color-bg-t1);
-  & #plIndexCount { margin-right: auto; font-size: .85rem; }
+  display: flex; flex-wrap: wrap; gap: var(--pad2); align-items: center;
+  min-height: 2rem;
+  & #plIndexCount { margin-right: auto; font-size: var(--fs-title); color: var(--color-text); }
+  & .butt.small { height: 2rem; padding: 0 .9rem; }
   &[hidden] { display: none; }
 }
-@media (max-width: 480px) {
-  .plx-row { grid-template-columns: auto auto minmax(0, 1fr); }
-  .plx-actions { grid-column: 1 / -1; justify-content: flex-end; }
+
+/* Under 640px: the name gets the full width; its controls go on a line below */
+@media (max-width: 639px) {
+  #plIndexBox {
+    & .modalBox { width: 100vw; height: 100dvh; border-radius: 0; }
+    & .modalContent { padding: var(--pad2) var(--pad3) 0; }
+  }
+  .plx-head { grid-template-columns: 1.5rem 1.25rem minmax(0, 1fr); & .plx-head-fmt, & .plx-head-ico { display: none; } }
+  .plx-row {
+    grid-template-columns: 1.5rem 1.25rem minmax(0, 1fr) 2rem 2rem 2rem;
+    grid-template-areas: "handle check main main main more" ". fmt fmt star dj open";
+    row-gap: .3rem; padding-block: .5rem;
+    & .plx-handle { grid-area: handle; }
+    & .plx-check { grid-area: check; }
+    & .plx-main { grid-area: main; }
+    #plIndexList & .plx-format { grid-area: fmt; justify-self: start; width: 10.5rem; max-width: 100%; }
+    & .plx-star { grid-area: star; }
+    & .plx-dj { grid-area: dj; }
+    & .plx-open { grid-area: open; }
+    & .plx-more { grid-area: more; }
+  }
 }
 
 /* Text for screen readers only (#116) */
