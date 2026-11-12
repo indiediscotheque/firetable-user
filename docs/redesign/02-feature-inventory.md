@@ -2,6 +2,8 @@
 
 Every feature and function the site has today (November 2026), where it lives, and where the redesign puts it. **Nothing on this list may be lost.** Each step in [04-step-plan.md](04-step-plan.md) cites the rows it touches by id (`ST-03`, `CR-12`, ...). When a step ships, update the "Goes to" column with what actually shipped.
 
+**Round 4 (November 12, 2026):** Live's look is frozen and Discover goes first. Where a row's "Goes to" names a restyle in Live, [04-step-plan.md](04-step-plan.md) ("Round 4 changes to this phase") says what is left of that step.
+
 Columns:
 - **Who:** V visitor (not signed in), M member, D the DJ on deck, Mod mods and supermods, All everyone.
 - **Today:** element ids, files and functions. `ui.js` means `js/ui.js`, and so on.
@@ -22,15 +24,15 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | TB-05 | Mentions inbox (@), unread badge, push hint | M | `#inboxTrigger`, `#inboxBadge` → `#inboxPopover` (`#inboxList`, `#inboxClear`, `#inboxPush*`); `chat.js` `watchInbox`, `renderInbox`, `markInboxRead`; `mentions/<uid>` | 1.2 restyle; 3.6 also a Mentions tab beside Chat |
 | TB-06 | Profile and settings | M | `#loggedInUser` (avatar) → `#accountSettingsBox` | keep; phone: You tab |
 | TB-07 | Reconnecting notice | All | `#reconnecting` (`authReconnected` / `authDisconnected`) | keep, restyle 1.2 |
-| TB-08 | Discover / Live switch | All | `#modeTabs` (built by `discover.js` `build()`), `ft-mode` in storage | 2.2 becomes the nav's Home / Live room / Discover items; switch kept until phase 5 |
-| TB-09 | Search button (opens Discover search, `/` key) | All | `#dSearchOpen` (`discover.js`), `openSearch()` | 2.2 a real search field in the top bar |
+| TB-08 | Discover / Live switch | All | `#modeTabs` (built by `discover.js` `build()`), `ft-mode` in storage | keep on computers; on phones the bottom tab bar (4.1) |
+| TB-09 | Search button (opens Discover search, `/` key) | All | `#dSearchOpen` (`discover.js`), `openSearch()` | keep |
 
 ## ST · The stage (`#stage`, `#djStage`)
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
 | ST-01 | The video (YouTube) or artwork (SoundCloud) on the stage screen | All | `#screenBox` > `#screenFrame` > `#playerArea` (YT iframe, `player.js` `onYouTubeIframeAPIReady`), `#scScreen` (SoundCloud art + `glitch.js` p5 effect), `#screenover` | 3.2 full stage height, unchanged mechanics |
-| ST-02 | **DJs standing on stage in front of the screen** (the room's signature) | All | `#deck` (the playing DJ, spotlight), `#ondeck` (next DJs), `room.js` `tableChanged`, `spotlightStateChanged`, avatar art from `firetable.utilities.avatarURL` | 1.10 floor, 3.2 sizes: playing DJ big centre-front, next DJs small, as today |
+| ST-02 | **DJs standing on stage in front of the screen** (the room's signature) | All | `#deck` (the playing DJ, spotlight), `#ondeck` (next DJs), `room.js` `tableChanged`, `spotlightStateChanged`, avatar art from `firetable.utilities.avatarURL` | keep exactly (round 4: the stage's look is frozen) |
 | ST-03 | Hop on the decks (empty spot +) | M | spot "+" in `#ondeck` (`tableChanged`), `!addme` | 1.10 clearer empty spot; 1.11 "Your turn" bar |
 | ST-04 | DJ play counter / play limit on the name tag | All | `tableChanged`, `playLimitChanged` (`playlimit`) | keep; restyle 1.10 |
 | ST-05 | Screen control: synced, video, art, off | All | `#screenControl` (the "microwave" icon), `#screenControlTip`, `ui.js` `updateScreenBtn` / `applyScreenSetting`, `STORAGE.screenControl`; room-wide `thescreen` (`!screen`, `!screenup`, `!screendown`) | 1.3 a proper icon and a menu of the three choices |
@@ -173,7 +175,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| NV-01 | Phone tabs: Playlists, Recent, Fresh, Cards, Chat, People | All | `#minimodeoptions` (`#mm-playlists`, `#mm-history`, `#mm-discover`, `#mm-cards`, `#mmchat`, `#mmusrs`), `STORAGE.navMobile` | 4.2 bottom tab bar Home · Discover · Live · Library · You; Live keeps Chat · Recent · People · Cards |
+| NV-01 | Phone tabs: Playlists, Recent, Fresh, Cards, Chat, People | All | `#minimodeoptions` (`#mm-playlists`, `#mm-history`, `#mm-discover`, `#mm-cards`, `#mmchat`, `#mmusrs`), `STORAGE.navMobile` | 4.1 bottom tab bar Home · Discover · Live · Library · You; Live keeps Chat · Recent · People · Cards |
 | NV-02 | Tablet side tabs: Chat, People | All | `#sidepanel-tabs` (`#sp-chat`, `#sp-people`), `STORAGE.navSide` | keep |
 | NV-03 | View under the stage (Playlists, Recent, Fresh, Cards) | All | `firetable.ui.showView`, `syncNavState`, `STORAGE.navView`, `#mainGrid.view-*` | keep |
 | NV-04 | Addresses (`#live`, `#discover/...`) and back button | All | `discover.js` `route`, `writeAddress` | keep; 2.2 adds nothing new |
@@ -235,7 +237,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | DI-09 | Artist pages | All | `viewArtist` | 2.7 |
 | DI-10 | Theme nights and night pages | All | `viewNights`, `viewNight` | 2.7 |
 | DI-11 | Recent plays (last 100) | All | `recentTracks` | 2.7 the Live timeline component |
-| DI-12 | Search (artists, genres, DJs, theme nights, songs; YouTube for members) | All | `viewSearch`, `searchYouTube`, `#dQ` | 2.2 the top bar search |
+| DI-12 | Search (artists, genres, DJs, theme nights, songs; YouTube for members) | All | `viewSearch`, `searchYouTube`, `#dQ` | keep |
 | DI-13 | The Discover player: Now playing, up next, previous / next, reload, open, mute, Save | All | `nowPanel`, `play`, `step`, `togglePause`, `mediaSession`, `#dSide`, `#dMini` | 2.3 the one player |
 | DI-14 | Listen in (switch back to the room) | All | `listenIn`, `renderLiveLine` (`#dLive`) | 2.3 |
 | DI-15 | Visitor crate (kept in the browser; third save offers to keep it; becomes "My Discover crate" on join) | V | `crate()`, `saveToCrate`, `openKeepCrate`, `importCrate`, `ft-crate` | 2.4 crate card in the left column |
@@ -246,6 +248,10 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | DI-20 | Share menu (link, image, embed) | All | `openShareMenu`, `copyLink` | keep |
 | DI-21 | Library pages for search engines (`/music/…`) | All | `tools/plain-pages.mjs`, deploy step | keep; check every Discover step still renders in plain pages (smoke checks them) |
 | DI-22 | Found-via tracking for new accounts | V | `FOUND_KEY`, `users/<uid>/foundVia` | keep |
+| DI-23 | (new) On Air card: the room in Discover's right column while you're not in it | All | today: "Pick any song to play it here" | 2.1 |
+| DI-24 | (new) Found by, and Play it in the room, in the player | All / M | today: first and last plays in the Now playing panel; Save | 2.3 |
+| DI-25 | (new) New this week leads Home; Not played live yet, "Be the first" | All | today: New's "not played live yet" filter | 2.4, 2.6 |
+| DI-26 | (new) The room on the sound map | All | — | 2.7 (the trail needs the bot's genre on recent plays) |
 
 ## PH · Phone and app
 

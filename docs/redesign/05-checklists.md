@@ -72,6 +72,7 @@ Walk these by hand on every step that touches Live, at 1440 and 390 wide, as the
 | Risk | Where | What reduces it |
 |---|---|---|
 | Regulars lose muscle memory | Phase 3 | Phase 1 keeps regions; the new room is opt-in; Classic stays a season after the switch |
+| Live's look drifts | Any step | Round 4 froze it: no step recolours or restyles the stage, plates, buttons or panels; the screenshot harness (0.2) compares Live before and after every step |
 | A control disappears | Any step | Step 0.4's "nothing lost" smoke check; the inventory; the ten flows |
 | The stage loses its signature | 1.10, 3.2 | DJs on stage by default; floor; full-height video; screenshots with every avatar family |
 | YouTube quota runs out | Import, search | No automatic searches; bot-side YouTube Music matching (free); 1-unit checks |
