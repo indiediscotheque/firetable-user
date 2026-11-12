@@ -35,4 +35,4 @@ Keep this table current as steps ship (one line per step in [04-step-plan.md](04
 | 4 Phones | not started |
 | 5 Default and clean-up | not started |
 
-Already done before this plan started (November 2026): playlist formats (YouTube Music / YouTube videos / SoundCloud, in All Playlists; the bot's swap suggestions skip video and SoundCloud lists), and the hostbot's swap search no longer saves "no match" when YouTube Music's song catalog doesn't answer (`!ytmtest` diagnoses it).
+Already done before this plan started (November 2026): playlist formats (YouTube Music / YouTube videos / SoundCloud, in All Playlists; the bot's swap suggestions are audio tracks for YouTube Music and unset lists, the artist's videos for video lists, none for SoundCloud lists), and the hostbot's swap search looks songs up free first (the room's history, the year playlists, YouTube Music's search, people's playlists on YouTube, YouTube's search), with a paid search capped at `SWAP_API_UNITS` a day only for when the free searches don't answer (`!ytmtest` diagnoses what YouTube answers the bot).

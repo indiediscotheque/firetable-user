@@ -75,7 +75,7 @@ Walk these by hand on every step that touches Live, at 1440 and 390 wide, as the
 | A control disappears | Any step | Step 0.4's "nothing lost" smoke check; the inventory; the ten flows |
 | The stage loses its signature | 1.10, 3.2 | DJs on stage by default; floor; full-height video; screenshots with every avatar family |
 | YouTube quota runs out | Import, search | No automatic searches; bot-side YouTube Music matching (free); 1-unit checks |
-| YouTube Music's song catalog stops answering the bot | Swaps, import matching | `catalogGate` stops runs and saves nothing; `!ytmtest`; fall back to artist videos and manual search |
+| YouTube Music's song catalog stops answering the bot | Swaps, import matching | `catalogGate` stops YouTube Music searches and saves nothing for them; the free fallbacks (room history, year playlists, people's playlists on YouTube) carry on; `!ytmtest` |
 | CSS growth makes later steps fragile | All | Tokens first; scoped selectors; delete Classic CSS in 5.2 |
 | The big files get harder to change (`discover.js` 2,600 lines, `ui.js` 2,200, `playlist.js` 1,900) | Phases 1–3 | Add new code in small new functions or files (e.g. `js/crate.js` for the toolbar and menus), loaded in the right order, linted with their globals |
 | Element moves break handlers | 3.3, 3.4, 4.5 | Move nodes, never clone; a comment node marks home (the `chatIn` pattern); smoke checks the handlers after moving |

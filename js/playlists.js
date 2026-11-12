@@ -7,10 +7,11 @@
  *     order        {listID: n} your own order for the lists
  *     format       {listID: "ytm"|"video"|"sc"} what a list is kept to: YouTube
  *                  Music, YouTube videos or SoundCloud. Unset: any source. The
- *                  bot's nightly swap suggestions (YouTube Music audio tracks)
- *                  skip lists set to videos or SoundCloud (firetable-hostbot
- *                  lib/swaps.js); a SoundCloud list takes SoundCloud tracks
- *                  only, and the others YouTube tracks only.
+ *                  bot's nightly swap suggestions are YouTube Music audio
+ *                  tracks, the artist's videos for lists set to videos, and
+ *                  none for SoundCloud lists (firetable-hostbot lib/swaps.js);
+ *                  a SoundCloud list takes SoundCloud tracks only, and the
+ *                  others YouTube tracks only.
  * - firetable.ui.fillPlaylistSelect(): every playlist <select> is filled through here
  * - The overview dialog (#plIndexBox): rename, reorder, set the default, choose
  *   the list you DJ from, check for broken tracks and delete several at once.
@@ -59,9 +60,14 @@ firetable.utilities.defaultListName = function () {
 
 /** What a list can be kept to, and what each means for its tracks and swaps. */
 firetable.utilities.LIST_FORMATS = {
-  ytm: { name: "YouTube Music", help: "YouTube tracks only. Broken tracks get YouTube Music swaps." },
-  video: { name: "YouTube videos", help: "YouTube tracks only. No YouTube Music swaps for broken tracks." },
-  sc: { name: "SoundCloud", help: "SoundCloud tracks only. No YouTube Music swaps for broken tracks." }
+  ytm: { name: "YouTube Music", help: "YouTube tracks only. Broken tracks get YouTube Music audio tracks as swaps." },
+  video: { name: "YouTube videos", help: "YouTube tracks only. Broken tracks get the artist's own videos as swaps, never audio tracks." },
+  sc: { name: "SoundCloud", help: "SoundCloud tracks only. No swaps for broken tracks." }
+};
+
+/** Does the list on screen take videos (its swaps are music videos, not audio tracks)? */
+firetable.utilities.viewingVideoList = function () {
+  return firetable.utilities.listFormat(firetable.viewListID || $("#listpicker").val() || "0") === "video";
 };
 
 /** A list's format: "ytm", "video" or "sc", or "" when it takes any source. */
@@ -297,7 +303,7 @@ firetable.ui.renderPlaylistIndex = function () {
     // what the list is kept to (and whether its broken tracks get YouTube Music swaps)
     var fmt = firetable.utilities.listFormat(l.id);
     var $fmt = $('<select class="plx-format"></select>')
-      .attr({ "aria-label": "What " + l.name + " is kept to", title: fmt ? firetable.utilities.LIST_FORMATS[fmt].help : "Any source. Broken YouTube tracks get YouTube Music swaps." });
+      .attr({ "aria-label": "What " + l.name + " is kept to", title: fmt ? firetable.utilities.LIST_FORMATS[fmt].help : "Any source. Broken tracks get YouTube Music audio tracks as swaps." });
     $fmt.append($('<option value=""></option>').text("Any source"));
     Object.keys(firetable.utilities.LIST_FORMATS).forEach(function (k) {
       $fmt.append($("<option></option>").val(k).text(firetable.utilities.LIST_FORMATS[k].name));
@@ -480,7 +486,7 @@ firetable.ui.setupPlaylistIndex = function () {
       var change = {};
       change["format/" + id] = val || null;
       firetable.actions.savePlaylistPrefs(change);
-      this.title = val ? firetable.utilities.LIST_FORMATS[val].help : "Any source. Broken YouTube tracks get YouTube Music swaps.";
+      this.title = val ? firetable.utilities.LIST_FORMATS[val].help : "Any source. Broken tracks get YouTube Music audio tracks as swaps.";
       if (String(id) === String(firetable.viewListID || $("#listpicker").val())) firetable.ui.matchSearchSource(id);
       firetable.ui.toast(val ? "\u201c" + firetable.utilities.listName(id) + "\u201d: " + firetable.utilities.LIST_FORMATS[val].help : "\u201c" + firetable.utilities.listName(id) + "\u201d takes any source.", "notice");
     })

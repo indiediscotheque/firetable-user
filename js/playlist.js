@@ -1780,9 +1780,14 @@ firetable.actions.swapPrompt = function (key, anchorEl) {
   var $p = $(popoverEl);
   $p.find(".swapArt").css("background-image", "url(https://i.ytimg.com/vi/" + encodeURIComponent(sw.cid) + "/mqdefault.jpg)");
   $p.find(".swapName").text(label.name);
-  $p.find(".swapMeta").text(label.meta || "YouTube Music");
+  // a list kept to videos gets the artist's video; any other, the audio track
+  var video = firetable.utilities.viewingVideoList();
+  $p.find(".swapHead").text(video ? "Working copy on YouTube" : "Working copy on YouTube Music");
+  $p.find(".swapKind").html('<i class="material-symbols-outlined" aria-hidden="true">' + (video ? "live_tv" : "graphic_eq") + "</i> " +
+    (video ? "The artist's video" : "Audio track, not a video"));
+  $p.find(".swapMeta").text(label.meta || (video ? "YouTube" : "YouTube Music"));
   $p.find(".swapWas").text("Replaces: " + firetable.utilities.decodeEntities(track.name || "") + ". Your tags stay as they are.");
-  $p.find(".swapOpen").attr("href", "https://music.youtube.com/watch?v=" + encodeURIComponent(sw.cid));
+  $p.find(".swapOpen").attr("href", (video ? "https://www.youtube.com/watch?v=" : "https://music.youtube.com/watch?v=") + encodeURIComponent(sw.cid));
   firetable.ui.swapPreviewLabel();
   $(".pvbar.swapping").removeClass("swapping");
   $('.pvbar[data-key="' + key + '"]').addClass("swapping");
@@ -1808,7 +1813,7 @@ firetable.actions.swapOne = function (key, cid) {
   if (!ref || !sw) return;
   ftapi.actions.swapTrack(ref, key, cid).then(function (before) {
     if (!before) { firetable.ui.toast("That track changed meanwhile, so nothing was swapped.", "error"); return; }
-    firetable.ui.toast("Swapped in the YouTube Music audio track.", "success", {
+    firetable.ui.toast(firetable.utilities.viewingVideoList() ? "Swapped in the artist's video." : "Swapped in the YouTube Music audio track.", "success", {
       duration: 8000,
       action: { label: "Undo", fn: function () { ftapi.actions.unswapTrack(ref, key, before, sw.cid); } }
     });
@@ -1837,7 +1842,7 @@ firetable.actions.swapAll = function () {
     var n = done.length, missed = keys.length - n;
     firetable.ui.renderSwapBar(firetable.queue);
     if (!n) { firetable.ui.toast("Nothing was swapped; the list changed meanwhile.", "error"); return; }
-    firetable.ui.toast("Swapped " + n + (n === 1 ? " track" : " tracks") + " for YouTube Music audio." +
+    firetable.ui.toast("Swapped " + n + (n === 1 ? " track" : " tracks") + (firetable.utilities.viewingVideoList() ? " for the artists' videos." : " for YouTube Music audio.") +
       (missed ? " " + missed + " changed meanwhile and " + (missed === 1 ? "was" : "were") + " left alone." : ""), "success", {
       duration: 10000,
       action: { label: "Undo", fn: function () {
