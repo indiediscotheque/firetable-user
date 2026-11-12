@@ -16,6 +16,7 @@ import sys
 NOT_DEPLOYED = {
     ".htaccess", ".github", ".gitignore", "tools", "node_modules", "package.json",
     "package-lock.json", "eslint.config.mjs", "README.md", "CLAUDE.md", "config.js.example", "tests",
+    "docs",
 }
 # Server-only files the deploy never uploads but the site serves
 SERVER_ONLY = {"config.js"}

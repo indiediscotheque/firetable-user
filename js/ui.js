@@ -1722,6 +1722,13 @@ firetable.ui.setupMiscEvents = function () {
       img: (firetable.imgCache && firetable.imgCache[firetable.song.cid]) || '',
       url: firetable.song.url || ''
     });
+    // a list kept to one source takes only that source's tracks
+    var refusal = src ? firetable.utilities.formatRefusal(dest, src.type) : "";
+    if (refusal) {
+      firetable.ui.toast(refusal, "error");
+      $("#stealpicker").val("-1");
+      return;
+    }
     if (src) {
       var $sourceBtn = firetable.stealSourceBtn;
       if ($sourceBtn) {

@@ -69,6 +69,10 @@ firetable.actions.queueTrack = function (cid, name, type, tobottom, extra) {
   extra = extra || {};
   var info = { type: type, name: name, cid: cid, img: extra.img, url: extra.url };
 
+  // A list kept to one source takes only that source's tracks
+  var refusal = firetable.utilities.formatRefusal(firetable.viewListID || $("#listpicker").val() || "0", type);
+  if (refusal) { firetable.ui.toast(refusal, "error"); return; }
+
   // The song's + turns into a lasting check, and a toast offers Undo
   var listRef = ftapi.queueRef;
   var listName = firetable.utilities.listName(ftapi.selectedListThing);

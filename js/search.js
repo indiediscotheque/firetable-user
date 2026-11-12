@@ -73,6 +73,8 @@ firetable.ui.setupSearchEvents = function () {
     $srli.find('.addtolist').on('click', function () {
       var listid = $("#listpicker").val();
       var title = $srli.find('.listwords').text();
+      var refusal = firetable.utilities.formatRefusal(listid, mediaType);
+      if (refusal) { firetable.ui.toast(refusal, "error"); return; }
       ftapi.actions.addTrackToTop(ftapi.lookup.listRef(listid), { type: mediaType, name: title, cid: mediaCid, img: extra.img, url: extra.url },
         firetable.preview, function (changePV) { if (changePV) firetable.preview = changePV; });
       var $fb = $srli.find('.search-feedback');
@@ -199,6 +201,7 @@ firetable.ui.setupSearchEvents = function () {
   });
 
   // ── Search Source Toggle Buttons ──
+  // (a list kept to one source switches Find tracks to it: firetable.ui.matchSearchSource)
   $("#ytsearchSelect").on("click", function () {
     $("#scsearchSelect").removeClass("on").attr("aria-selected", "false");
     $(this).addClass("on").attr("aria-selected", "true");
@@ -321,4 +324,17 @@ firetable.ui.setupSearchEvents = function () {
       }
     }
   });
+};
+
+/**
+ * Point Find tracks at the source a list is kept to: SoundCloud for a
+ * SoundCloud list, YouTube for one kept to YouTube Music or videos. A list
+ * that takes any source leaves the choice as it is.
+ * @param {string} listID
+ */
+firetable.ui.matchSearchSource = function (listID) {
+  var f = firetable.utilities.listFormat(listID);
+  if (!f) return;
+  var want = f === "sc" ? "#scsearchSelect" : "#ytsearchSelect";
+  if (!$(want).hasClass("on")) $(want).trigger("click");
 };

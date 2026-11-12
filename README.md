@@ -85,6 +85,7 @@ Broken tracks get a one-tap fix when YouTube Music has a working copy. Every nig
 - Swapping keeps the track's place and tags, clears the flag, and saves where it came from (`swappedFrom`); the toast's **Undo** puts it back. Each track is its own small write, so a list edited meanwhile is never overwritten.
 - The playlist picker and All Playlists show how many swaps are ready; the bot's notice ("Show me") opens the list's broken tracks.
 - Clearing a flag (by hand, or when the checker finds the track plays again) clears its suggestion.
+- **What a list is kept to:** in All Playlists each list can be set to **YouTube Music**, **YouTube videos** or **SoundCloud** (or left at **Any source**), saved in `playlistPrefs/<uid>/format/<listID>` (`js/playlists.js`). A SoundCloud list takes SoundCloud tracks only and a YouTube Music or videos list YouTube tracks only: adding from search, Grab or a Recent row says so instead. Opening a list points Find tracks at its source. The bot skips lists set to YouTube videos or SoundCloud when it looks for swaps, so a list of videos never gets audio tracks suggested; YouTube Music and Any source lists get them. Needs the hostbot's current `firebase-rules.json`; with older rules the setting doesn't save.
 
 ## checks
 `npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every push and pull request, and before every deploy. None of these tooling files are deployed.

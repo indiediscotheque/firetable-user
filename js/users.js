@@ -298,6 +298,7 @@ firetable.actions.loggedIn = function (user) {
           localStorage.setItem(viewListStorageKey, val);
         } catch (e) {}
         firetable.actions.switchViewList(val);
+        firetable.ui.matchSearchSource(val);
       });
       $("#djlistpicker").change(function () {
         ftapi.actions.switchDjList($(this).val());
