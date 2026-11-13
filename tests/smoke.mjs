@@ -911,15 +911,28 @@ try {
       stage: Math.round(sr.width) === innerWidth && Math.round(sr.height) === innerHeight && sr.left === 0 && getComputedStyle(stage).opacity === "1",
       under: Number(getComputedStyle(stage).zIndex) < Number(getComputedStyle(el).zIndex), saved: localStorage.getItem("firetableFullView"),
       screen: Math.round(document.getElementById("screenBox").getBoundingClientRect().width) === innerWidth };
+    // like the stage's screen: down for Video (up while YouTube stalls), up for Audio
+    const box = document.getElementById("screenBox");
+    const stalled = document.body.classList.contains("yt-stalled");
+    box.style.transition = "none";
+    document.body.classList.remove("yt-stalled");
+    const ty = () => new DOMMatrix(getComputedStyle(box).transform).m42;
+    out.video.down = ty() === 0;
+    document.body.classList.add("yt-stalled");
+    out.video.upWhileStalled = ty() < 0;
+    document.body.classList.toggle("yt-stalled", stalled);
     el.querySelector('[data-fview="audio"]').click();
     await wait(100);
-    out.audio = !el.classList.contains("is-video") && !document.body.classList.contains("pv-full-video") && localStorage.getItem("firetableFullView") === "audio";
+    out.audio = !el.classList.contains("is-video") && !document.body.classList.contains("pv-full-video") && localStorage.getItem("firetableFullView") === "audio" && ty() < 0;
+    box.style.transition = "";
     // Listen in, from the side: the room, with a visitor's Join to fire (the stage's Fire stays out of sight)
     el.querySelector("#pv-fside .d-listen").click();
     await wait(300);
     out.room = { cls: el.className, src: document.getElementById("pv-fsrc").textContent, title: document.getElementById("pv-ftitle").textContent, song: firetable.song.title,
       joinFire: !!el.querySelector("#pv-fkeep .pb-joinfire"), fireHidden: !!document.getElementById("fire").closest("#pv-fstage") && document.getElementById("fire").offsetParent === null,
-      side: document.getElementById("pv-fside").textContent, seek: document.getElementById("pv-fseek").disabled, pick: !!el.querySelector("#pv-fside .d-mypick") };
+      side: document.getElementById("pv-fside").textContent, seek: document.getElementById("pv-fseek").disabled, pick: !!el.querySelector("#pv-fside .d-mypick"),
+      tone: getComputedStyle(document.getElementById("pv-fullbg")).getPropertyValue("--pb-art").trim(), roomColor: firetable.color,
+      name: el.querySelector(".pvf-roomtext b").textContent };
     // Escape closes it back into the bar, the page usable again
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await wait(700);
@@ -955,8 +968,10 @@ try {
     "a Discover song in full: previous, play, next, reload, seek, Save, Play it in the room, ⋮, and the beat (" + JSON.stringify(full.disc) + ")");
   check(/Up next|last song/.test(full.disc.side) && /Listen in/.test(full.disc.side) && /smoke tests/.test(full.disc.theme),
     "beside it: up next and the room, with Listen in; the room's theme at the top (" + JSON.stringify({ side: full.disc.side.slice(0, 120), theme: full.disc.theme }) + ")");
-  check(full.video.cls && full.video.body && full.video.stage && full.video.under && full.video.screen && full.video.saved === "video" && full.audio,
-    "Video fills the screen with the room's own player under the controls, and Audio puts the cover back; the choice is remembered (" + JSON.stringify(full.video) + ")");
+  check(full.video.cls && full.video.body && full.video.stage && full.video.under && full.video.screen && full.video.down && full.video.upWhileStalled && full.video.saved === "video" && full.audio,
+    "Video lowers the room's own screen behind the player, as the stage's does (up while YouTube stalls), and Audio raises it; the choice is remembered (" + JSON.stringify(full.video) + ")");
+  check(full.room.tone && full.room.tone === full.room.roomColor, "the background takes the room song's colour, the stage's (" + full.room.tone + " / " + full.room.roomColor + ")");
+  check(full.room.name === "Indie Discotheque", "the room is named as the site's logo has it (" + full.room.name + ")");
   check(/is-room/.test(full.room.cls) && /Live|On air/.test(full.room.src) && full.room.title === full.room.song && full.room.joinFire && full.room.fireHidden && full.room.seek && full.room.pick,
     "Listen in shows the room in full: a visitor gets Join to fire, not the stage's Fire, can't seek, and their pick waits (" + JSON.stringify(full.room) + ")");
   check(/On the decks/.test(full.room.side) && /dj1/.test(full.room.side) && /Join to DJ/.test(full.room.side) && /Live chat/.test(full.room.side),
@@ -965,6 +980,30 @@ try {
     "Escape closes it into the bar (the stage's buttons go back there, focus to the button that opened it); F opens it (" + JSON.stringify(full.closed) + ")");
   check(full.live.shown && full.live.label === "Full-screen player" && full.live.open && /is-room|is-quiet/.test(full.live.cls) && full.live.noSkipping && /Mute|Unmute|Start the sound/.test(full.live.main || "") && full.live.reload && full.live.back === "stageActions",
     "in Live, the stage's button opens it for the room: no skipping or seeking, mute and reload, and the stage gets its buttons back (" + JSON.stringify(full.live) + ")");
+
+  console.log("-- The full-screen player on a phone: one action, the transport and More");
+  const desk = dPage.viewportSize();
+  await dPage.setViewportSize({ width: 390, height: 844 });
+  const phoneFull = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    location.hash = "#discover";
+    await wait(300);
+    firetable.discover.openFull();
+    await wait(600);
+    const el = document.getElementById("pv-full");
+    const shown = () => [...el.querySelectorAll("button, a.butt")].filter((b) => b.offsetParent !== null && getComputedStyle(b).visibility !== "hidden" && !b.closest(".pvf-side, .pvf-drawer, .pvf-title, .pvf-src")).length;
+    const out = { before: shown() };
+    el.querySelector(".pvf-morebtn").click();
+    await wait(100);
+    out.after = shown();
+    out.expanded = el.querySelector(".pvf-morebtn").getAttribute("aria-expanded");
+    firetable.discover.closeFull();
+    await wait(600);
+    return out;
+  });
+  await dPage.setViewportSize(desk);
+  check(phoneFull.before <= 8 && phoneFull.after > phoneFull.before && phoneFull.expanded === "true",
+    "on a phone it's quiet: a few buttons, and More shows the rest (" + JSON.stringify(phoneFull) + ")");
 
   console.log("-- Discover: visitors read the chat in Live, and save songs to a crate");
   const peek = await dPage.evaluate(() => ({
