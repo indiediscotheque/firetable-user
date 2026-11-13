@@ -7,7 +7,7 @@
     font-style: normal;
     font-weight: 100 700;
     font-display: block;
-    src: url('../fonts/material-symbols-outlined.woff2?v=01.12.08') format('woff2'); /* keep ?v= in step with index.html */
+    src: url('../fonts/material-symbols-outlined.woff2?v=a25239669f') format('woff2'); /* keep ?v= in step with index.html */
 }
 
 /* ============================================
@@ -6821,3 +6821,212 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
 }
 .caseCardSpot.is-featured canvas { outline: 2px solid var(--color-accent); outline-offset: -1px; }
 .caseCardSpot .cardActions .cardFeature[aria-pressed="true"] { color: var(--color-accent); }
+
+/* ─── Your account: joining, logging in, the account menu and dialog ─────────
+   One way in from every page (the header's Join / Log in button opens
+   #joinBox), and one place for the account once you're in (the header avatar
+   opens #nav-accountMenu: Profile, Account and sign-in, Settings, Log out). */
+
+/* Dark with gold text: a panel's main action (no big gold fills in new work) */
+.butt.darkbutt {
+    color: var(--color-accent);
+    background: var(--color-bg-t3);
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+@media (hover: hover) {
+    .butt.darkbutt:not(:disabled):hover { background: #383838; }
+}
+
+/* The header's Join / Log in, for visitors once we know they're signed out */
+#nav-signin { display: none; }
+#mainGrid.login #nav-signin {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 2.25rem;
+    margin-left: var(--pad2);
+    padding: 0 0.75rem 0 0.5rem;
+    color: var(--color-accent);
+    font-size: var(--fs-title);
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--color-bg-t1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: none;
+    cursor: pointer;
+    transition: background-color 150ms ease-out, border-color 150ms ease-out;
+    & [class*="material-symbols-"] { font-size: 1.25rem; }
+}
+@media (hover: hover) {
+    #mainGrid.login #nav-signin:hover { background: var(--color-bg-t3); border-color: #444; }
+}
+@media only screen and (max-width: 379px) {
+    #mainGrid.login #nav-signin { padding: 0 0.625rem; margin-left: var(--pad1); }
+    #mainGrid.login #nav-signin [class*="material-symbols-"] { display: none; }
+}
+
+/* The sign-in dialog: the form, moved in from the page */
+#joinBox .modalBox { width: 26rem; max-width: min(26rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); }
+#joinBox .modalContent { display: block; overflow-y: auto; }
+body.ft-discover #joinBox #login,
+#joinBox #login {
+    display: block !important;
+    height: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+}
+#joinBox #welcomeInfo { display: none; }
+#joinBox #authBox,
+#joinBox #oauthBox { max-width: none; }
+#joinBox #resetscreen h3 { display: none; } /* the dialog's title says it */
+.d-joinnote { margin: 0 0 var(--pad3); color: var(--color-text-light); font-size: var(--fs-title); line-height: 1.45; }
+.d-joinnote:empty { display: none; }
+
+/* 44px fields and buttons in every sign-in form */
+.authForm .field input { height: 2.75rem; }
+.authForm .showPass { width: 2.75rem; height: 2.75rem; }
+#oauthBox .oauthBttn { min-height: 2.75rem; }
+#pickNameForm .butt { min-height: 2.75rem; padding-inline: var(--pad3); }
+
+/* The account menu, under the header avatar */
+#loggedInUser[aria-expanded="true"] .ft-avatar { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nav-acctBox { min-width: 15rem; max-width: min(20rem, calc(100vw - 1rem)); }
+.nav-acctHead {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: var(--pad1);
+    padding: var(--pad2) 0.75rem 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+}
+#nav-acctAvatar { width: 2.5rem; height: 2.5rem; flex: none; }
+.nav-acctWho {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    & b, & span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    & b { color: var(--color-text-light); font-size: var(--fs-title); }
+    & span { color: var(--color-text-muted); font-size: var(--fs-meta); }
+    & span[hidden] { display: none; }
+}
+.ft-menu .nav-acctItem[hidden] { display: none; }
+/* not .butt's "all": a transition on visibility leaves the first item
+   unfocusable for a moment as the menu appears */
+.ft-menu .nav-acctItem { transition: background-color 100ms ease-in-out, color 100ms ease-in-out; }
+.nav-acctSep { margin: var(--pad1) 0; border-top: 1px solid var(--color-border); }
+@media (pointer: coarse) {
+    .ft-menu .nav-acctItem { min-height: 2.75rem; }
+}
+
+/* The account dialog: Profile · Account · Settings (· Mod) */
+#accountSettingsBox .modalBox { width: 32rem; height: min(44rem, calc(100dvh - 2rem)); }
+#accountSettingsBox .modalContent { padding: var(--pad4); }
+#accountSettingsTabs { display: flex; align-items: stretch; }
+#accountSettingsTabs .tab { min-height: 2.75rem; }
+#accountSettingsTabs .tab:focus-visible { outline-offset: -2px; }
+#accountSettingsClose { align-self: center; margin-right: var(--pad2); }
+.ac-identity {
+    display: flex;
+    align-items: center;
+    gap: var(--pad3);
+    margin-bottom: var(--pad4);
+}
+.ac-identity #usernameAvatarPreview { width: 4rem; height: 4rem; flex: none; }
+.ac-who {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    & b { color: var(--color-text-light); font-size: 1.125rem; overflow-wrap: anywhere; }
+    & span { color: var(--color-text-muted); font-size: var(--fs-meta); }
+}
+.ac-section { margin: 0 0 var(--pad4); }
+.ac-section[hidden] { display: none; }
+.ac-label {
+    margin: 0 0 var(--pad2);
+    color: var(--color-text-muted);
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    & label { margin: 0; font: inherit; color: inherit; }
+}
+#accountSettingsBox .usernameRow { margin: 0 0 var(--pad2); }
+#accountSettingsBox .usernameRow #changeUsername,
+#accountSettingsBox #supercopSearch { height: 2.75rem; padding: 0 0.75rem; margin: 0; }
+#accountSettingsBox .usernameRow .butt { min-height: 2.75rem; padding: 0 var(--pad3); flex: none; }
+#accountSettingsBox .responseBox {
+    margin: var(--pad2) 0 0;
+    padding: var(--pad2) 0.75rem;
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    border-left: 3px solid var(--color-border);
+}
+#accountSettingsBox .responseBox[data-state="bad"] { color: #f2b8ae; background: color-mix(in srgb, var(--color-danger) 15%, transparent); border-left-color: var(--color-danger); }
+#accountSettingsBox .responseBox[data-state="good"] { color: #b5e8cf; background: color-mix(in srgb, var(--color-success) 15%, transparent); border-left-color: var(--color-success); }
+#accountSettingsBox .grabStatsBox { margin: 0; }
+#accountSettingsBox #avatarPickerSection select { width: 100%; height: 2.75rem; }
+
+/* Settings: a labelled list, one row per switch */
+#accountSettingsBox .settingline {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    min-height: 2.25rem;
+    margin: 0;
+}
+#accountSettingsBox .settingline > input[type="checkbox"] {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: var(--color-accent);
+}
+#accountSettingsBox .settingline > input[type="checkbox"] + label { flex: 1; margin: 0; cursor: pointer; }
+#accountSettingsBox .settingline.densityPicker { justify-content: space-between; }
+#accountSettingsBox .settingHint { margin: 0 0 var(--pad2); }
+#accountSettingsBox .getAppCard { margin-bottom: var(--pad4); }
+#accountSettingsBox .ac-version { min-height: 0; color: var(--color-text-muted); font-size: var(--fs-meta); }
+
+/* Account: who's signed in, password, email, log out */
+.ac-facts {
+    display: grid;
+    gap: 1px;
+    overflow: hidden;
+    background: var(--color-border);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+.ac-fact {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--pad3);
+    padding: 0.625rem 0.75rem;
+    background: var(--color-bg-s2);
+    font-size: var(--fs-title);
+    & span { flex: none; color: var(--color-text-muted); }
+    & b { min-width: 0; color: var(--color-text-light); font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+}
+#account-tab .authForm { gap: var(--pad3); }
+#account-tab .authForm .formMessage { max-width: none; }
+.ac-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--pad2) var(--pad3); }
+.ac-actions .butt { min-height: 2.75rem; padding: 0 var(--pad3); }
+.ac-actions .linkButton { font-size: 0.8125rem; }
+#account-tab .logoutButt { gap: var(--pad2); margin: 0; }
+#account-tab .logoutButt [class*="material-symbols-"] { font-size: 1.1rem; }
+#ac-providerNote { margin: 0 0 var(--pad4); }
+.ac-legal { margin: auto 0 0; padding-top: var(--pad2); color: var(--color-text-muted); font-size: var(--fs-meta); }
+
+/* Phones: the account dialog fills the screen, its tabs share the width */
+@media only screen and (max-width: 639px) {
+    #accountSettingsBox .modalBox { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+    #accountSettingsBox .modalContent { padding: var(--pad3); }
+    #accountSettingsTabs .tab { flex: 1 1 0; min-width: 0; padding: var(--pad2) var(--pad1); }
+    #accountSettingsClose { margin-right: var(--pad1); }
+    #joinBox .modalBox { max-height: calc(100dvh - 1rem); }
+}

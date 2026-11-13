@@ -1003,6 +1003,43 @@ ftapi.actions = {
       return errorCallback(error);
     });
   },
+  /**
+   * Who's signed in: their email and how they sign in.
+   * @returns {{email: string, providers: string[]}|null} providers: "password", "google.com", "apple.com"
+   */
+  accountInfo: function() {
+    var user = firebase.app("firetable").auth().currentUser;
+    if (!user) return null;
+    return {
+      email: user.email || "",
+      providers: (user.providerData || []).map(function(p) { return p && p.providerId; }).filter(Boolean)
+    };
+  },
+  /** Prove it's you again (changing a password or email needs a fresh sign-in). */
+  reauthenticate: function(password) {
+    var user = firebase.app("firetable").auth().currentUser;
+    if (!user || !user.email) return Promise.reject({ code: "auth/no-current-user" });
+    return user.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(user.email, password));
+  },
+  /**
+   * Change the password of an email account.
+   * @returns {Promise} rejects with a Firebase Auth error
+   */
+  changePassword: function(currentPassword, newPassword) {
+    return ftapi.actions.reauthenticate(currentPassword).then(function() {
+      return firebase.app("firetable").auth().currentUser.updatePassword(newPassword);
+    });
+  },
+  /**
+   * Change an email account's address: sends a link to the new address, and
+   * the address changes when it's opened.
+   * @returns {Promise} rejects with a Firebase Auth error
+   */
+  changeEmail: function(newEmail, password) {
+    return ftapi.actions.reauthenticate(password).then(function() {
+      return firebase.app("firetable").auth().currentUser.verifyBeforeUpdateEmail(newEmail);
+    });
+  },
   signUp: function(email, password, username, errorCallback) {
     var validateName = ftapi.utilities.validateUsername(username);
     if (!validateName.valid) {

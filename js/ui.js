@@ -6,7 +6,7 @@
  * - firetable.ui.LinkGrabber (drag-and-drop link detection)
  * - firetable.ui.toast / formMessage (in-app feedback instead of alert())
  * - firetable.actions.openStealPicker (shared "add to playlist" picker)
- * - firetable.ui.loginEventsInit / loginEventsDestroy / showAuth
+ * - firetable.ui.loginEventsInit / loginEventsDestroy / showAuth (users.js)
  * - firetable.ui.initSettings(): restore settings from localStorage
  * - firetable.ui.setupMiscEvents(): modals, sortable, volume, grab, settings toggles, etc.
  * - firetable.ui.init(): orchestrator that calls all setup*Events functions
@@ -1814,11 +1814,7 @@ firetable.ui.setupMiscEvents = function () {
   });
   // ── Modal tab switching ──
   $('#accountSettingsTabs').on('click', '.tab', function () {
-    var targetTab = $(this).attr('data-tab');
-    $('#accountSettingsTabs .tab').removeClass('on');
-    $(this).addClass('on');
-    $('#accountSettingsBox .tabPanel').removeClass('active');
-    $('#' + targetTab).addClass('active');
+    firetable.ui.openAccount($(this).attr('data-tab'));
   });
   $(".closeModal").on("click", function () {
     var dlg = $(this).closest("dialog")[0];
@@ -2082,6 +2078,7 @@ firetable.ui.init = function () {
   firetable.ui.setupPlaylistIndex();
   firetable.ui.setupPickName();
   firetable.ui.setupProviderSignIn();
+  firetable.ui.setupAccount();
   firetable.ui.setupUserEvents();
   firetable.ui.setupRoomEvents();
   firetable.ui.setupMiscEvents();

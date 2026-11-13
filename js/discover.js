@@ -2048,66 +2048,20 @@ firetable.discover = (function () {
   }
 
   /**
-   * Join or log in without leaving the page: the sign-in form (#login) moves
-   * into a dialog and goes back where it was when the dialog closes. In
-   * Live, where visitors already see the form, it just scrolls to it.
+   * Join or log in without leaving the page: the site's sign-in dialog
+   * (users.js openAuth), with a word about the visitor's crate.
    * @param {"create"|"login"} which
    */
-  var loginHome = null;
   function showSignIn(which) {
     var keep = document.getElementById("keepCrateBox");
     if (keep && keep.open) keep.close();
-    var login = document.getElementById("login");
-    if (!login || D.signedIn) return;
+    if (D.signedIn) return;
     lockedTab = "join"; // the form, whatever tab Live was showing
     lockedTabs();
-    firetable.ui.showAuth(which);
-    if (D.mode === "live" && login.offsetParent && !login.closest("#joinBox")) {
-      login.scrollIntoView({ behavior: "smooth", block: "start" });
-      setTimeout(function () { firetable.ui.showAuth(which, { focus: true }); }, 300);
-      return;
-    }
-    var dlg = joinBox();
     var n = crate().length;
-    dlg.querySelector("#joinTitle").textContent = which === "login" ? "Welcome back" : "Join " + (ftconfigs.roomName || "the room");
-    dlg.querySelector(".d-joinnote").textContent = n
+    firetable.ui.openAuth(which, { note: n
       ? "Your crate of " + firetable.utilities.pluralize(n, "song", "songs") + " comes with you. It becomes a playlist you can play for the room."
-      : "Members chat, save playlists, and take a turn on the decks.";
-    if (!login.closest("#joinBox")) {
-      loginHome = document.createComment("login");
-      login.parentNode.insertBefore(loginHome, login);
-      dlg.querySelector(".modalContent").appendChild(login);
-    }
-    if (!dlg.open) dlg.showModal();
-    firetable.ui.showAuth(which, { focus: true });
-  }
-  function joinBox() {
-    var dlg = document.getElementById("joinBox");
-    if (dlg) return dlg;
-    dlg = document.createElement("dialog");
-    dlg.id = "joinBox";
-    dlg.setAttribute("aria-labelledby", "joinTitle");
-    dlg.innerHTML = '<div class="modalBox"><div class="modalHeader"><h2 id="joinTitle"></h2>' +
-      '<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close">' + ms("close") + "</button></div>" +
-      '<div class="modalContent"><p class="d-joinnote"></p></div></div>';
-    document.body.appendChild(dlg);
-    dlg.addEventListener("click", function (e) {
-      if (e.target.closest(".closeModal") || e.target === dlg) dlg.close();
-    });
-    // the tabs say which form is open, so the title follows them
-    dlg.addEventListener("click", function (e) {
-      var b = e.target.closest("[data-auth]");
-      if (b) dlg.querySelector("#joinTitle").textContent = b.getAttribute("data-auth") === "create" ? "Join " + (ftconfigs.roomName || "the room") : "Welcome back";
-    });
-    dlg.addEventListener("close", putLoginBack);
-    return dlg;
-  }
-  function putLoginBack() {
-    if (!loginHome) return;
-    var login = document.getElementById("login");
-    if (login && login.closest("#joinBox") && loginHome.parentNode) loginHome.parentNode.insertBefore(login, loginHome);
-    if (loginHome.parentNode) loginHome.parentNode.removeChild(loginHome);
-    loginHome = null;
+      : null });
   }
 
   // ─── Every name is a door: Live's lists and stage, and the song sheet ───
@@ -2472,8 +2426,7 @@ firetable.discover = (function () {
     D.signedIn = on;
     document.body.classList.toggle("d-member", !!on);
     if (!on) { chatBack(); if (D.sideTab === "chat") D.sideTab = "now"; }
-    var join = document.getElementById("joinBox");
-    if (on && join && join.open) join.close();
+    if (on) firetable.ui.closeAuth();
     if (on) {
       firetable.saved.session = {};
       importCrate();

@@ -22,7 +22,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | TB-03 | Community links (Facebook, Discord, Reddit, Last.fm, SoundCloud) | All | `#socialTrigger` → `#socialPopover` (`.sociallogo` links from `ftconfigs`) | 1.2 tooltip + label; phone: You tab (4.5) |
 | TB-04 | About | All | `#roomInfo` → `about/` (or `ftconfigs.roomInfoUrl`) | 1.2; phone: You tab |
 | TB-05 | Mentions inbox (@), unread badge, push hint | M | `#inboxTrigger`, `#inboxBadge` → `#inboxPopover` (`#inboxList`, `#inboxClear`, `#inboxPush*`); `chat.js` `watchInbox`, `renderInbox`, `markInboxRead`; `mentions/<uid>` | 1.2 restyle; 3.6 also a Mentions tab beside Chat |
-| TB-06 | Profile and settings | M | `#loggedInUser` (avatar) → `#accountSettingsBox` | keep; phone: You tab |
+| TB-06 | Profile and settings | M | `#loggedInUser` (avatar) → `#nav-accountMenu` (Profile, Account and sign-in, Settings, Mod tools, Get the app, Log out) → `#accountSettingsBox` (`firetable.ui.openAccount`) | 2.5 shipped; phone: You tab |
 | TB-07 | Reconnecting notice | All | `#reconnecting` (`authReconnected` / `authDisconnected`) | keep, restyle 1.2 |
 | TB-08 | Discover / Live switch | All | `#modeTabs` (built by `discover.js` `build()`), `ft-mode` in storage | keep on computers; on phones the bottom tab bar (4.1) |
 | TB-09 | Search button (opens Discover search, `/` key) | All | `#dSearchOpen` (`discover.js`), `openSearch()` | keep |
@@ -185,17 +185,18 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
 | AU-01 | Welcome and room pulse for visitors | V | `#login` > `#welcomeInfo`, `#roomPulse` (`renderRoomPulse`) | 2.4 |
-| AU-02 | Create account (email, username, password, terms) | V | `#createscreen`, `#createAccountFormShell` | keep; 2.5 restyle |
-| AU-03 | Log in, show password, forgot password | V | `#logscreen`, `#resetscreen`, `.showPass` | keep |
+| AU-02 | Create account (email, username, password, terms) | V | `#createscreen`, `#createAccountFormShell`; from anywhere: `#nav-signin` → `#joinBox` (`openAuth`) | 2.5 shipped |
+| AU-03 | Log in, show password, forgot password | V | `#logscreen`, `#resetscreen`, `.showPass`; in `#joinBox` from the header | 2.5 shipped |
 | AU-04 | Google / Apple sign-in | V | `#oauthBox`, `setupProviderSignIn`, `ftconfigs.signInProviders` | keep |
 | AU-05 | Pick a username after Google sign-in | V | `#pickNameBox`, `setupPickName` | keep |
-| AU-06 | Join box over Discover (stay on the page) | V | `discover.js` `joinBox`, `showSignIn` | keep |
-| AU-07 | Change username | M | `#changeUsername`, `#usernameResponse`, `nameClaim` | keep |
+| AU-06 | Join box over the page (stay where you are) | V | `#joinBox` in `index.html`, `users.js` `openAuth` / `closeAuth`; `discover.js` `showSignIn` adds the crate note | 2.5 shipped: every page, Discover and Live |
+| AU-07 | Change username | M | `#ac-nameForm` (`#changeUsername`, `#ac-saveName`), `#usernameResponse`, `nameClaim` | keep (Profile tab) |
 | AU-08 | Avatar style (16 sets: Robohash robots, monsters, heads, cats; DiceBear sets) | M | `#avatarStylePicker`, `STORAGE.avatarStyle`, `users/<uid>/avatarStyle` | keep; every stage state checked with each family |
-| AU-09 | Log out | M | `#logOutButton` | keep |
+| AU-09 | Log out | M | `#logOutButton` (Account tab), `#nav-logout` (account menu) | 2.5 shipped |
 | AU-10 | Banned / suspended state | All | `userBanned`, `userUnbanned`, `banned/` | keep |
+| AU-11 | (new) Account: email and sign-in method, change password (or a reset link), change email (confirmed by a link) | M | `#account-tab`, `ftapi.actions.accountInfo` / `changePassword` / `changeEmail` | 2.5 |
 
-## SE · Settings (`#accountSettingsBox`, tabs Profile · Settings · Mod)
+## SE · Settings (`#accountSettingsBox`, tabs Profile · Account · Settings · Mod)
 
 | Id | Feature | Today | Goes to |
 |---|---|---|---|

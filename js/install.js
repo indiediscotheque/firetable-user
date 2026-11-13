@@ -52,6 +52,7 @@ firetable.install = {
     $("#installDone").prop("hidden", !app);
     $("#installNow").prop("hidden", app || !i.prompt);
     $("#getAppCard").prop("hidden", app);
+    $("#nav-acctApp").prop("hidden", app); // the account menu offers it too
     // the login screen suggests it on phones (or wherever the browser can install it)
     $("#welcomeGetApp").prop("hidden", app || !(i.isPhone() || i.prompt));
   },

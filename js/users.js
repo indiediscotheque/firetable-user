@@ -6,6 +6,8 @@
  * - Login form event binding/unbinding (loginEventsInit / loginEventsDestroy)
  * - Post-login UI setup (loggedIn: playlist picker, grab button, etc.)
  * - Logout + "show login screen" transition
+ * - The sign-in dialog (#joinBox): Join / Log in from anywhere (openAuth)
+ * - The account menu (header avatar) and Profile · Account · Settings
  * - User lookup by name → UID (uidLookup)
  * - Grab current song to a playlist
  * - Unban
@@ -65,12 +67,17 @@ firetable.ui.authErrorMessage = function (error) {
       return "Signing in with that service isn't set up for this web address yet.";
     case 'auth/network-request-failed':
       return "Couldn't reach the server. Check your connection and try again.";
+    case 'auth/requires-recent-login':
+      return "For your safety, log out and back in, then try again.";
+    case 'auth/no-current-user':
+      return "You're not signed in any more. Log in and try again.";
   }
   return "Something went wrong (" + (error.code || error.message || "unknown error") + "). Please try again.";
 };
 
 firetable.actions.logIn = function (email, password) {
   firetable.debug && console.log("login");
+  firetable.ui._authIntent = "login";
   firetable.ui.formMessage('#loginFormShell', '');
   ftapi.actions.logIn(email, password, function (error) {
     if (firetable.ui.authIdle) firetable.ui.authIdle();
@@ -98,6 +105,7 @@ firetable.ui.setupProviderSignIn = function () {
     var name = $(this).attr("data-provider");
     var $msg = $("#oauthBox .formMessage");
     $msg.text("");
+    firetable.ui._authIntent = "provider";
     ftapi.actions.logInWithProvider(name, function (error) {
       $msg.text(firetable.ui.authErrorMessage(error));
       firetable.debug && console.log("provider sign-in error:", error);
@@ -179,6 +187,7 @@ firetable.actions.logOut = function () {
     if (done) return;
     done = true;
     ftapi.actions.logOut();
+    firetable.ui.toast("You're logged out. See you soon.", "success");
   };
   forget.then(out, out);
   setTimeout(out, 2000);
@@ -193,6 +202,7 @@ firetable.actions.logOut = function () {
  */
 firetable.actions.signUp = function (email, password, username) {
   firetable.debug && console.log("signup");
+  firetable.ui._authIntent = "create";
   firetable.ui.formMessage('#createAccountFormShell', '');
   ftapi.actions.signUp(email, password, username, function (error) {
     if (firetable.ui.authIdle) firetable.ui.authIdle();
@@ -221,7 +231,9 @@ firetable.actions.showLoginScreen = function () {
 
   $("#loggedInName").hide();
   $("#logOutButton").hide().off();
+  firetable.ui.hideAccountMenu();
   $('#mainGrid').removeClass().addClass('login');
+  firetable.ui.labelSignIn();
   $("#grab").css("display", "none");
 
   if (firetable.loginForm && !$("#login").html()) {
@@ -239,6 +251,7 @@ firetable.actions.loggedIn = function (user) {
   firetable.debug && console.log("user signed in!");
 
   firetable.ui.rememberAuth();
+  firetable.ui.closeAuth();
 
   // Preserve login form HTML before removing
   if ($("#login").html()) {
@@ -327,6 +340,25 @@ firetable.actions.loggedIn = function (user) {
   firetable.nav.restore();
   firetable.nav.apply();
   $("#grab").css("display", "inline-block");
+  firetable.ui.greet();
+};
+
+/**
+ * Say hello once a sign-in this page asked for works (not on a return
+ * visit, where the person was already signed in).
+ */
+firetable.ui.greet = function () {
+  var intent = firetable.ui._authIntent;
+  firetable.ui._authIntent = null;
+  if (!intent) return;
+  setTimeout(function () {
+    if (!ftapi.uid) return;
+    var me = ftapi.users && ftapi.users[ftapi.uid];
+    var name = ftapi.pendingSignUpName || (me && me.username) || (ftapi.uname !== ftapi.uid ? ftapi.uname : "");
+    // a new Google / Apple account picks its name first, and is welcomed then
+    if (!name) return;
+    firetable.ui.toast(intent === "create" ? "Welcome to the room, " + name + "!" : "Welcome back, " + name + ".", "success");
+  }, 400);
 };
 
 // ─── User Lookup ─────────────────────────────────────────────────────────────
@@ -428,6 +460,7 @@ firetable.ui.showAuth = function (which, opts) {
   // Google/Apple work for both, so they stay above Create and Log in
   $("#authBox").attr("data-auth", which);
   $("#login .formMessage").text("").removeClass("is-success");
+  firetable.ui.titleAuth(which);
   if (which === "reset" && !$("#theAddress").val()) $("#theAddress").val($("#loginemail").val());
   if (opts.focus) setTimeout(function () { $(panes[which]).find("input").filter(":visible").first().trigger("focus"); }, 0);
 };
@@ -585,6 +618,280 @@ firetable.ui.loginEventsDestroy = function () {
 /** Remember that this device has an account, so the form opens on Log in. */
 firetable.ui.rememberAuth = function () {
   try { localStorage.setItem(AUTH_KNOWN_KEY, "1"); } catch (e) { /* private window */ }
+};
+
+// ─── Join or log in from anywhere (#joinBox) ────────────────────────────────
+// The sign-in form (#login) moves into the dialog while it's open and goes
+// back where it was when it closes, so there's one form and one set of
+// handlers. Every "Join" and "Log in" on the site opens it: the header's
+// button, Discover's crate and chat, Live's locked tabs.
+
+var authHome = null;  // a comment node marking #login's place in the page
+var authNote = null;  // a line for this opening (Discover: your crate comes with you)
+
+function putLoginBack() {
+  if (!authHome) return;
+  var login = document.getElementById("login");
+  if (login && login.closest("#joinBox") && authHome.parentNode) authHome.parentNode.insertBefore(login, authHome);
+  if (authHome.parentNode) authHome.parentNode.removeChild(authHome);
+  authHome = null;
+}
+
+/** The room's name, for "Join …". */
+function roomTitle() {
+  return (typeof ftconfigs !== "undefined" && (ftconfigs.roomNameShort || ftconfigs.roomName)) || "the room";
+}
+
+/**
+ * Open the sign-in form in a dialog, over whatever page is showing.
+ * @param {"create"|"login"|"reset"|"auto"} [which="auto"] auto: Log in on a
+ *   device that has signed in before, Create account otherwise
+ * @param {{note?: string}} [opts]
+ */
+firetable.ui.openAuth = function (which, opts) {
+  opts = opts || {};
+  var login = document.getElementById("login");
+  var dlg = document.getElementById("joinBox");
+  if (!login || ftapi.uid) return; // signed in: nothing to open
+  if (!which || which === "auto") which = firetable.ui.authDefault();
+  if (!dlg) { // no dialog (an old cached page): go to the form where it is
+    firetable.ui.showAuth(which);
+    login.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(function () { firetable.ui.showAuth(which, { focus: true }); }, 300);
+    return;
+  }
+  authNote = opts.note || null;
+  if (!login.closest("#joinBox")) {
+    authHome = document.createComment("login");
+    login.parentNode.insertBefore(authHome, login);
+    dlg.querySelector(".modalContent").appendChild(login);
+  }
+  if (!dlg.open) dlg.showModal();
+  firetable.ui.showAuth(which, { focus: true });
+};
+
+/** Close the sign-in dialog, with the form back in its place right away. */
+firetable.ui.closeAuth = function () {
+  putLoginBack();
+  var dlg = document.getElementById("joinBox");
+  if (dlg && dlg.open) dlg.close();
+};
+
+/** The dialog's title and note follow the form that's showing. */
+firetable.ui.titleAuth = function (which) {
+  var dlg = document.getElementById("joinBox");
+  if (!dlg) return;
+  $("#joinTitle").text(which === "create" ? "Join " + roomTitle() : which === "reset" ? "Reset your password" : "Welcome back");
+  $("#au-note").text(authNote || (which === "create"
+    ? "Members chat, save playlists, grab trading cards and take a turn on the decks."
+    : which === "login" ? "Log in to chat, play your playlists and take a turn on the decks." : ""));
+};
+
+/** The header's button says Log in to people who've signed in here before. */
+firetable.ui.labelSignIn = function () {
+  var known = firetable.ui.authDefault() === "login";
+  $("#nav-signinLabel").text(known ? "Log in" : "Join");
+  $("#nav-signin").attr({ "aria-label": known ? "Log in or join" : "Join or log in", title: known ? "Log in or create an account" : "Create an account or log in" });
+};
+
+// ─── Your account: the menu, and Profile · Account · Settings ──────────────
+
+/** Open the account dialog on a tab (profile-tab, account-tab, settings-tab, mod-tab). */
+firetable.ui.openAccount = function (tab) {
+  var dlg = document.getElementById("accountSettingsBox");
+  if (!dlg || !ftapi.uid) return;
+  tab = tab || "profile-tab";
+  var $tabs = $("#accountSettingsTabs .tab");
+  $tabs.removeClass("on").attr("aria-selected", "false").attr("tabindex", "-1");
+  $tabs.filter('[data-tab="' + tab + '"]').addClass("on").attr("aria-selected", "true").attr("tabindex", "0");
+  $("#accountSettingsBox .tabPanel").removeClass("active");
+  $("#" + tab).addClass("active");
+  firetable.ui.fillAccount();
+  if (firetable.ui.updateUsernamePreview) firetable.ui.updateUsernamePreview();
+  if (!dlg.open) dlg.showModal();
+};
+
+firetable.ui.hideAccountMenu = function () {
+  var menu = document.getElementById("nav-accountMenu");
+  try { if (menu && menu.matches(":popover-open")) menu.hidePopover(); } catch (e) { /* no popovers */ }
+};
+
+/** How someone signs in, in words. */
+function signInMethod(info) {
+  var p = (info && info.providers) || [];
+  var names = [];
+  if (p.indexOf("google.com") !== -1) names.push("Google");
+  if (p.indexOf("apple.com") !== -1) names.push("Apple");
+  if (p.indexOf("password") !== -1) names.push("Email and password");
+  return names.join(", ") || "Email and password";
+}
+
+/** Your name, email, sign-in and join date, wherever they show. */
+firetable.ui.fillAccount = function () {
+  if (!ftapi.uid) return;
+  var me = (ftapi.users && ftapi.users[ftapi.uid]) || {};
+  var name = me.username || (ftapi.uname !== ftapi.uid ? ftapi.uname : "") || "You";
+  var info = ftapi.actions.accountInfo ? ftapi.actions.accountInfo() : null;
+  var email = (info && info.email) || "";
+  var hasPassword = !info || info.providers.indexOf("password") !== -1;
+  var face = "url(" + firetable.utilities.avatarURL(ftapi.uid, name) + ")";
+  $("#nav-acctName, #ac-name").text(name);
+  $("#nav-acctEmail").text(email).prop("hidden", !email);
+  $("#nav-acctAvatar").css("background-image", face);
+  $("#ac-email").text(email || "Not shared");
+  $("#ac-passUser").val(email);
+  $("#ac-method").text(signInMethod(info));
+  $("#account-tab .ac-emailOnly").prop("hidden", !hasPassword);
+  $("#ac-providerNote").prop("hidden", hasPassword)
+    .text(hasPassword ? "" : "You sign in with " + signInMethod(info) + ", so your password and email are managed there.");
+  var askedFor = ftapi.uid;
+  if (firetable.ui._sinceFor !== askedFor) {
+    firetable.ui._sinceFor = askedFor;
+    $("#ac-since").text("");
+    ftapi.db().ref("users/" + askedFor + "/joined").once("value").then(function (snap) {
+      var when = snap.val();
+      if (ftapi.uid !== askedFor || !when) return;
+      $("#ac-since").text("Member since " + new Date(when).toLocaleDateString(undefined, { month: "long", year: "numeric" }));
+    }).catch(function () { /* older rules: no date */ });
+  }
+};
+
+/** The account menu, the account tab's forms, and the Account tab itself. */
+firetable.ui.setupAccount = function () {
+  // Every [data-auth-open] on the site opens the sign-in dialog
+  $(document).on("click", "[data-auth-open]", function (e) {
+    e.preventDefault();
+    firetable.ui.openAuth($(this).attr("data-auth-open"));
+  });
+  firetable.ui.labelSignIn();
+
+  var dlg = document.getElementById("joinBox");
+  if (dlg) {
+    dlg.addEventListener("close", function () { putLoginBack(); authNote = null; });
+  }
+
+  // ── The menu under the header avatar ──
+  var menu = document.getElementById("nav-accountMenu");
+  var btn = document.getElementById("loggedInUser");
+  if (menu && btn) {
+    menu.addEventListener("beforetoggle", function (e) {
+      if (e.newState !== "open") return;
+      if (!ftapi.uid) { e.preventDefault(); return; }
+      firetable.ui.fillAccount();
+      menu.style.visibility = "hidden"; // until it's placed under the avatar
+    });
+    menu.addEventListener("toggle", function (e) {
+      var open = e.newState === "open";
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (!open) return;
+      firetable.ui.positionPopover(btn, menu, document.getElementById("nav-accountArrow"), "bottom-end").then(function () {
+        var first = menu.querySelector('[role="menuitem"]:not([hidden])');
+        if (first) first.focus();
+      });
+    });
+    $(menu).on("keydown", function (e) {
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Home" && e.key !== "End") return;
+      e.preventDefault();
+      var items = $(menu).find('[role="menuitem"]:not([hidden])').get();
+      var i = items.indexOf(document.activeElement);
+      i = e.key === "Home" ? 0 : e.key === "End" ? items.length - 1 : i + (e.key === "ArrowDown" ? 1 : -1);
+      items[(i + items.length) % items.length].focus();
+    }).on("click", "[data-acct]", function () {
+      firetable.ui.hideAccountMenu();
+      firetable.ui.openAccount(this.getAttribute("data-acct"));
+    }).on("click", ".showInstallGuide", firetable.ui.hideAccountMenu);
+    $("#nav-logout").on("click", function () {
+      firetable.ui.hideAccountMenu();
+      firetable.actions.logOut();
+    });
+  }
+
+  // ── The account dialog's tabs: arrow keys move between them ──
+  $("#accountSettingsTabs").on("keydown", ".tab", function (e) {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault();
+    var tabs = $("#accountSettingsTabs .tab").filter(":visible").get();
+    var i = tabs.indexOf(this) + (e.key === "ArrowRight" ? 1 : -1);
+    var next = tabs[(i + tabs.length) % tabs.length];
+    firetable.ui.openAccount(next.getAttribute("data-tab"));
+    next.focus();
+  });
+
+  // ── Account tab: show password, change password, change email ──
+  var $acct = $("#account-tab");
+  $acct.on("click", ".showPass", function () {
+    var $in = $(this).siblings("input");
+    var show = $in.attr("type") === "password";
+    $in.attr("type", show ? "text" : "password");
+    $(this).text(show ? "visibility_off" : "visibility").attr({ "aria-pressed": String(show), "aria-label": show ? "Hide password" : "Show password" });
+  });
+  var busy = function ($b, label) { $b.prop("disabled", !!label).text(label || $b.attr("data-label")); };
+  var wrongPass = function (error) {
+    return error && /invalid-credential|invalid-login-credentials|wrong-password/.test(error.code || "")
+      ? "That password isn't right." : firetable.ui.authErrorMessage(error);
+  };
+
+  $("#ac-newPass").on("input", function () { firetable.ui.fieldNote(this); });
+  $("#ac-passForm").on("submit", function (e) {
+    e.preventDefault();
+    var cur = $("#ac-curPass").val(), next = $("#ac-newPass").val();
+    firetable.ui.formMessage("#ac-passForm", "");
+    if (!cur) { firetable.ui.formMessage("#ac-passForm", "Enter your current password."); return $("#ac-curPass").trigger("focus"); }
+    if (next.length < 6) { firetable.ui.fieldNote("#ac-newPass", "At least 6 characters.", "bad"); return $("#ac-newPass").trigger("focus"); }
+    if (next === cur) { firetable.ui.fieldNote("#ac-newPass", "That's the password you have now.", "bad"); return $("#ac-newPass").trigger("focus"); }
+    var $b = $("#ac-savePass");
+    busy($b, "Changing…");
+    ftapi.actions.changePassword(cur, next).then(function () {
+      busy($b);
+      $("#ac-curPass, #ac-newPass").val("").attr("type", "password");
+      firetable.ui.fieldNote("#ac-newPass");
+      firetable.ui.formMessage("#ac-passForm", "Your password is changed.", "success");
+    }, function (error) {
+      busy($b);
+      $("#ac-curPass").val("");
+      firetable.ui.formMessage("#ac-passForm", wrongPass(error));
+    });
+  });
+  $("#ac-sendReset").on("click", function () {
+    var info = ftapi.actions.accountInfo();
+    if (!info || !info.email) return;
+    firetable.ui.formMessage("#ac-passForm", "A reset link is on its way to " + info.email + ".", "success");
+    ftapi.actions.resetPassword(info.email, function (error) {
+      firetable.ui.formMessage("#ac-passForm", firetable.ui.authErrorMessage(error));
+    });
+  });
+
+  $("#ac-emailForm").on("submit", function (e) {
+    e.preventDefault();
+    var email = $("#ac-newEmail").val().trim(), pass = $("#ac-emailPass").val();
+    var info = ftapi.actions.accountInfo();
+    firetable.ui.formMessage("#ac-emailForm", "");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { firetable.ui.formMessage("#ac-emailForm", email ? "That doesn't look like an email address." : "Enter the new email."); return $("#ac-newEmail").trigger("focus"); }
+    if (info && info.email && email.toLowerCase() === info.email.toLowerCase()) { firetable.ui.formMessage("#ac-emailForm", "That's the email you have now."); return $("#ac-newEmail").trigger("focus"); }
+    if (!pass) { firetable.ui.formMessage("#ac-emailForm", "Enter your password."); return $("#ac-emailPass").trigger("focus"); }
+    var $b = $("#ac-saveEmail");
+    busy($b, "Sending…");
+    ftapi.actions.changeEmail(email, pass).then(function () {
+      busy($b);
+      $("#ac-newEmail, #ac-emailPass").val("");
+      firetable.ui.formMessage("#ac-emailForm", "Check " + email + " for a link. Your email changes when you open it.", "success");
+    }, function (error) {
+      busy($b);
+      $("#ac-emailPass").val("");
+      firetable.ui.formMessage("#ac-emailForm", wrongPass(error));
+    });
+  });
+
+  // Signed out: nothing of the last account stays in the forms or the menu
+  ftapi.events.on("loggedOut", function () {
+    firetable.ui._sinceFor = null;
+    $("#account-tab input").val("");
+    $("#account-tab .formMessage").text("").removeClass("is-success");
+    $("#nav-acctName, #nav-acctEmail, #ac-name, #ac-since, #ac-email, #usernameResponse").text("");
+    $("#nav-acctMod").prop("hidden", true);
+    var box = document.getElementById("accountSettingsBox");
+    if (box && box.open) box.close();
+  });
 };
 
 // ─── User Event Binding ──────────────────────────────────────────────────────
@@ -745,6 +1052,7 @@ firetable.ui.setupUserEvents = function () {
         $("#ftSuperCopButton").show();
       }
       $("#modTab").show();
+      $("#nav-acctMod").prop("hidden", false);
     }
     var count = okdata ? Object.keys(okdata).length : 0;
     $("#label1 .count").text(" (" + count + ")");
@@ -772,24 +1080,28 @@ firetable.ui.setupUserEvents = function () {
     clearTimeout(previewTimer);
     previewTimer = setTimeout(firetable.ui.updateUsernamePreview, 250);
   });
-  $("#changeUsername").on("keyup", function (e) {
-    if (e.which !== 13) return;
-    var newDjName = $(this).val();
-    $("#usernameResponse").html("");
-    if (newDjName) {
-      ftapi.actions.changeName(newDjName, function (error) {
-        if (error) {
-          $("#usernameResponse").text(error);
-        } else {
-          $("#usernameResponse").text("Great job! Your name is now " + newDjName);
-          $("#loggedInName").text(newDjName);
-          ftapi.uname = newDjName;
-          $("#loggedInUser .ft-avatar").css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, newDjName, null, null, true) + ")");
-          $("#changeUsername").val("");
-          firetable.ui.updateUsernamePreview();
-        }
-      });
-    }
+  $("#changeUsername").on("input", function () {
+    $("#usernameResponse").text("").removeAttr("data-state");
+  });
+  $("#ac-nameForm").on("submit", function (e) {
+    e.preventDefault();
+    var newDjName = $("#changeUsername").val().trim();
+    var $res = $("#usernameResponse").text("").removeAttr("data-state");
+    var say = function (text, state) { $res.text(text).attr("data-state", state); };
+    if (!newDjName) { say("Type the name you'd like.", "bad"); return $("#changeUsername").trigger("focus"); }
+    if (newDjName === ftapi.uname) return say("That's already your name.", "bad");
+    var $save = $("#ac-saveName").prop("disabled", true);
+    ftapi.actions.changeName(newDjName, function (error) {
+      $save.prop("disabled", false);
+      if (error) return say(/not available/i.test(error) ? newDjName + " is taken. Try another." : error, "bad");
+      say("Done. You're " + newDjName + " now.", "good");
+      $("#loggedInName").text(newDjName);
+      ftapi.uname = newDjName;
+      $("#loggedInUser .ft-avatar").css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, newDjName, null, null, true) + ")");
+      $("#changeUsername").val("");
+      firetable.ui.updateUsernamePreview();
+      firetable.ui.fillAccount();
+    });
   });
 
   // ── Supermod ban search ──
