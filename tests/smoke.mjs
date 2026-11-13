@@ -798,7 +798,8 @@ try {
     const after = { preview: firetable.preview, mode: document.body.classList.contains("ft-discover"), hash: location.hash, playing: firetable.discover.state().playing,
       bar: bar.offsetParent !== null && /is-discover/.test(bar.className), stageUp: document.body.classList.contains("pb-elsewhere"),
       tools: ["screenControl", "reloadtrack", "fullscreenBtn", "fire", "grab"].every((id) => document.getElementById(id).closest("#dMini")),
-      stageEmpty: getComputedStyle(document.getElementById("stageTopRight")).display === "none" && getComputedStyle(document.getElementById("stageActions")).display === "none" };
+      stageEmpty: getComputedStyle(document.getElementById("stageTopRight")).display === "none" && getComputedStyle(document.getElementById("stageActions")).display === "none",
+      avatar: Math.round((document.querySelector("#deck .avtr") || { getBoundingClientRect: () => ({ height: -1 }) }).getBoundingClientRect().height) };
     // Listen in, from the bar: the room
     document.querySelector("#pv-switch .d-listen").click();
     await new Promise((r) => setTimeout(r, 300));
@@ -813,6 +814,7 @@ try {
     "going to Live keeps the Discover song playing: the bar along the bottom says so, and the stage's screen stays up (" + JSON.stringify(playing.after) + ")");
   check(playing.after.tools && playing.after.stageEmpty, "the stage's screen, reload, full screen, Fire and Grab are in the bar; the stage is left to the DJs (" + JSON.stringify(playing.after) + ")");
   check(playing.after.listened, "Listen in, in the bar, takes them to the room (" + JSON.stringify(playing.after) + ")");
+  check(playing.after.avatar > 0 && playing.after.avatar <= 110, "the DJ on the stage is never drawn past its 110px picture (" + playing.after.avatar + "px)");
 
   console.log("-- Discover: the player bar says what it plays, Discover or the room, and switches between them");
   const bar = await dPage.evaluate(async () => {
@@ -843,6 +845,8 @@ try {
     out.live.preview = firetable.preview;
     out.live.state = firetable.discover.state().listening;
     out.live.roomKey = firetable.song.type + "_" + firetable.song.cid;
+    out.live.color = getComputedStyle(el()).getPropertyValue("--pb-art").trim();
+    out.live.stageColor = firetable.color;
     // a mod fixes the room song's tags: the bar and the full-screen player follow
     const was = { title: firetable.song.title, artist: firetable.song.artist };
     firetable.discover.openFull();
@@ -881,6 +885,7 @@ try {
   check(/is-paused/.test(bar.paused) !== /is-paused/.test(bar.disc.cls), "the big button pauses and plays a Discover song (" + bar.disc.cls + " → " + bar.paused + ")");
   check(/is-room/.test(bar.live.cls) && bar.live.preview === false && bar.live.state === true && !bar.live.fireHere && bar.live.joinFire && bar.live.tone === bar.live.roomKey && bar.live.seek && /d-mypick/.test(bar.live.other),
     "Listen in: the room plays, the bar takes the room song's colour, a visitor gets Join to fire (not the stage's Fire), and the pick waits one tap away (" + JSON.stringify(bar.live) + ")");
+  check(!!bar.live.color && bar.live.color === bar.live.stageColor, "playing the room, the bar takes the stage's own colour (" + bar.live.color + " / " + bar.live.stageColor + ")");
   check(bar.fixed.bar === "Fixed Title|Fixed Artist" && bar.fixed.panel === "Fixed Title",
     "fixed tags reach the bar and the full-screen player at once (" + JSON.stringify(bar.fixed) + ")");
   check(/is-onair/.test(bar.stopped.cls) && bar.stopped.preview === "discover" && bar.stopped.main === "Listen in to the room",
