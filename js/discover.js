@@ -1445,6 +1445,7 @@ firetable.discover = (function () {
     loadDetails(t).then(function (d) {
       var now = live ? liveTrack() : P.track;
       if (!now || String(now.cid) !== String(t.cid)) return;
+      d = Object.assign({}, d, liveFacts(t));
       var tags = (d.genres || []).slice(0, 2).map(function (g) { return '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>"; });
       if (t.rel) tags.push('<span class="d-tag d-numtag">' + esc(t.rel.slice(0, 4)) + "</span>");
       tags.push('<span class="d-tag">' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + "</span>");
@@ -1471,6 +1472,39 @@ firetable.discover = (function () {
       var histEl = document.getElementById("dHist");
       if (histEl) histEl.innerHTML = lines.map(function (l) { return "<p>" + l + "</p>"; }).join("");
     });
+  }
+
+  /**
+   * The bot's facts about the room's song (tagUpdate, rewritten when a mod
+   * fixes its tags): fresher than the history Discover reads, so they win.
+   */
+  function liveFacts(t) {
+    var u = firetable.tagUpdate;
+    var a = u && u.adamData;
+    if (!a || String(u.cid) !== String(t.cid)) return {};
+    var out = {};
+    if (a.playcount > 0) out.plays = a.playcount;
+    if (a.first_play) { out.first = a.first_play; out.firstDj = a.first_play_dj; }
+    if (a.last_play) { out.last = a.last_play; out.lastDj = a.last_play_dj; }
+    return out;
+  }
+
+  /** A mod fixed the room song's tags (room.js has already corrected firetable.song). */
+  function tagsFixed(data) {
+    var s = firetable.song;
+    if (!data || !s || String(s.cid) !== String(data.cid)) return;
+    delete details[s.type + "_" + s.cid]; // its history may now be another song's
+    var live = liveTrack();
+    // the same song playing from Discover takes the new tags too
+    if (live && P.track && String(P.track.cid) === String(live.cid) && Number(P.track.type || 1) === live.type) {
+      P.track.t = live.t;
+      P.track.a = live.a;
+      if (discoverActive()) mediaSession(P.track);
+    }
+    renderLiveLine();
+    if (D.mode !== "discover") return;
+    if (D.src === "live" && live) mediaSession(live, true);
+    if (D.sideTab === "now") renderSide(); else renderBar();
   }
 
   function chatList(msgs) {
@@ -3321,6 +3355,9 @@ firetable.discover = (function () {
         if (D.sideTab === "now" && !discoverActive()) renderSide();
         else renderBar();
       });
+      // a mod fixed the room song's tags: the bar, the live line and Now playing follow
+      // (after room.js, whose handler corrects firetable.song first)
+      ftapi.events.on("tagUpdate", function (data) { setTimeout(function () { tagsFixed(data); }, 0); });
       // the room's seats and line: the bar's and panels' "you're next", Hop on
       var seats = firetable.utilities.oncePerFrame(function () {
         if (D.mode !== "discover") return;
