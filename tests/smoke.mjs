@@ -783,6 +783,9 @@ try {
 
   console.log("-- Discover: playing a song uses the room's player, and keeps playing in Live");
   const playing = await dPage.evaluate(async () => {
+    // the test's videos aren't real: keep the player from skipping past them
+    const skip = firetable.discover.onFailed;
+    firetable.discover.onFailed = () => {};
     document.querySelector("#dBrowse .ft-cards .pvbar .d-play").click();
     await new Promise((r) => setTimeout(r, 300));
     const during = { preview: firetable.preview, state: firetable.discover.state(), title: document.getElementById("pv-title").textContent };
@@ -800,6 +803,7 @@ try {
     document.querySelector("#pv-switch .d-listen").click();
     await new Promise((r) => setTimeout(r, 300));
     after.listened = firetable.preview === false && /is-(live|onair)/.test(bar.className);
+    firetable.discover.onFailed = skip;
     return { during, chart, after };
   });
   check(playing.during.preview === "discover" && playing.during.state.playing === "newrel0001" && playing.during.title === "First Single",
