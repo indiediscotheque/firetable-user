@@ -38,7 +38,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | ST-05 | Screen control: synced, video, art, off | All | `#screenControl` (the "microwave" icon), `#screenControlTip`, `ui.js` `updateScreenBtn` / `applyScreenSetting`, `STORAGE.screenControl`; room-wide `thescreen` (`!screen`, `!screenup`, `!screendown`) | 1.3 a proper icon and a menu of the three choices |
 | ST-06 | Volume slider and mute | All | `#volplace` > `#slider`, `#volstatus`, `player.js` `initVolume`, `muteToggle`, `STORAGE.volume`, `STORAGE.mute` | keep; 1.3 restyle |
 | ST-07 | Reload audio | All | `#reloadtrack`, `player.js` `reloadtrack` | keep; 1.3 |
-| ST-08 | Full screen | All | `#fullscreenBtn` (hidden where unsupported) | keep |
+| ST-08 | Full screen | All | `#fullscreenBtn` (hidden where unsupported) | ✅ with Discover on, the button opens the full-screen player for the room (`#pv-full`, DI-27), which has the video and fills the screen itself; without Discover, today's stage full screen (`ui.js`, #155) |
 | ST-09 | Fire (🔥) | M | `#fire` → chat reaction `:fire:`; `chat.js` `sendReaction`, `processFireReactionMessage`, fire effect `fire.js` (PixiJS, lazy), `!hot` | 1.5 shows the count; same place (bottom-left of stage) |
 | ST-10 | Rain (🌧) reaction | M | `#cloud_with_rain` state, `:cloud_with_rain:`, `!storm` | keep wherever it is reachable today; 1.5 keep the state |
 | ST-11 | Grab (add the playing song to a playlist) | M | `#grab` → `#stealContain` / `#stealpicker` (`openStealPicker`, `fillStealPicker`), `recordGrab` (`grabs/<djid>`), `savedToast` with Undo | 1.6 split button: tap = last used playlist (Undo), ▾ = picker |
@@ -239,8 +239,8 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | DI-10 | Theme nights and night pages | All | `viewNights`, `viewNight` | 2.7 |
 | DI-11 | Recent plays (last 100) | All | `recentTracks` | 2.7 the Live timeline component |
 | DI-12 | Search (artists, genres, DJs, theme nights, songs; YouTube for members) | All | `viewSearch`, `searchYouTube`, `#dQ` | keep |
-| DI-13 | The Discover player: Now playing, up next, previous / next, reload, open, mute, Save | All | `nowPanel`, `play`, `step`, `togglePause`, `mediaSession`, `#dSide`, `#dMini` | ✅ 2.3: the player bar `#dMini` (`renderBar`, `mainButton`, `seek`, `setVolume`), details in Now playing (`nowPanel`) |
-| DI-14 | Listen in (switch back to the room) | All | `listenIn` (was also `renderLiveLine` / `#dLive`) | ✅ 2.3: the bar's ● Live / On air states, `listenIn`, `stopRoom`, the other source one tap away (`#pv-switch`). The live line above search was removed as a duplicate (owner's call, November 13, 2026); its chat count stays in visitors' On Air card chat peek |
+| DI-13 | The Discover player: Now playing, up next, previous / next, reload, open, mute, Save | All | `nowPanel`, `play`, `step`, `togglePause`, `mediaSession`, `#dSide`, `#dMini` | ✅ 2.3: the player bar `#dMini` (`renderBar`, `mainButton`, `seek`, `setVolume`); the song in full moved from the Now playing tab (removed) to the full-screen player (`renderFull`, `fullSide`, DI-27) |
+| DI-14 | Listen in (switch back to the room) | All | `listenIn` (was also `renderLiveLine` / `#dLive`) | ✅ 2.3: the bar's ● Live / On air states, `listenIn`, `stopRoom`, the other source one tap away (`#pv-switch`). The live line above search was removed as a duplicate (owner's call, November 13, 2026); its chat count stays in visitors' chat in the full-screen player |
 | DI-15 | Visitor crate (kept in the browser; third save offers to keep it; becomes "My Discover crate" on join) | V | `crate()`, `saveToCrate`, `openKeepCrate`, `importCrate`, `ft-crate` | 2.4 crate card in the left column |
 | DI-16 | Step inside (Live as visitors see it, locked tabs: Join, Playlists, Recent, Cards) | V | `lockedTabs`, `.d-stepin` | keep |
 | DI-17 | Members' playlist and chat in the right column | M | `playlistPanel`, `sideTabs`, `chatIn` / `chatBack` | ✅ 2.3: Playlists tab with switch, DJ from, filter, drag, Top / Bottom / Remove + Undo (`plAct`, `listReady`), Play / Shuffle, Hop on; Chat for visitors too |
@@ -249,8 +249,9 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | DI-20 | Share menu (link, image, embed) | All | `openShareMenu`, `copyLink` | keep |
 | DI-21 | Library pages for search engines (`/music/…`) | All | `tools/plain-pages.mjs`, deploy step | keep; check every Discover step still renders in plain pages (smoke checks them) |
 | DI-22 | Found-via tracking for new accounts | V | `FOUND_KEY`, `users/<uid>/foundVia` | keep |
-| DI-23 | (new) On Air card: the room in Discover's right column while you're not in it | All | today: "Pick any song to play it here" | ✅ 2.1: `#pv-onair` (`roomPanel`): the room's song, facts, decks, Listen in, Step inside, chat peek, Just played |
-| DI-24 | (new) Found by, and Play it in the room, in the player | All / M | today: first and last plays in the Now playing panel; Save | ✅ 2.3: Found by (`#pv-found`), Play it in the room (`#pv-toRoom`, `.pb-toroom`, `toRoom` / `undoToRoom`) |
+| DI-23 | (new) On Air card: the room in Discover's right column while you're not in it | All | today: "Pick any song to play it here" | ✅ 2.1: `#pv-onair` (`roomPanel`); since 2.3b the room in full is the full-screen player: the room's song and facts, decks, Listen in, the chat, Just played; the bar keeps On air / Listen in (`roomPanel` removed) |
+| DI-24 | (new) Found by, and Play it in the room, in the player | All / M | today: first and last plays in the Now playing panel; Save | ✅ 2.3: Play it in the room (`.pb-toroom`, `toRoom` / `undoToRoom`); since 2.3b Found by is in the full-screen player (`#pv-fhist`), with the note and Undo (`#pv-toRoomNote`) |
+| DI-27 | (new) The full-screen player: for a TV or a second screen, in Discover and Live, Audio or Video | All | — | ✅ 2.3b: `#pv-full` (`openFull`, `renderFull`, `closeFull`), from the bar (`#pv-queue`, `.pb-expand`, `#pv-art`), Live's `#fullscreenBtn` or F; `STORAGE.fullView` |
 | DI-25 | (new) New this week leads Home; Not played live yet, "Be the first" | All | today: New's "not played live yet" filter | 2.4, 2.6 |
 | DI-26 | (new) The room on the sound map | All | — | 2.7 (the trail needs the bot's genre on recent plays) |
 

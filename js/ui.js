@@ -1626,7 +1626,10 @@ firetable.ui.setupMiscEvents = function () {
   });
 
   // ── Full-screen video, with the room's info floating over it (#155) ──
+  // With Discover on, this button opens the full-screen player instead
+  // (js/discover.js), which has the video and fills the screen itself.
   (function () {
+    var discoverHasIt = function () { return !!(firetable.discover && firetable.discover.fullPlayer && firetable.discover.fullPlayer()); };
     var stage = document.getElementById('stage');
     var $btn = $('#fullscreenBtn');
     var request = stage.requestFullscreen || stage.webkitRequestFullscreen;
@@ -1641,11 +1644,13 @@ firetable.ui.setupMiscEvents = function () {
       if (current() === stage) idleTimer = setTimeout(function () { stage.classList.add('fs-idle'); }, 3000);
     };
     $btn.on('click', function () {
+      if (discoverHasIt()) return;
       if (current() === stage) exit.call(document);
       else request.call(stage);
     });
     $(document).on('fullscreenchange webkitfullscreenchange', function () {
       var on = current() === stage;
+      if (!on && discoverHasIt() && !$('#stage').hasClass('is-fullscreen')) return; // the full player's, not the stage's
       $('#stage').toggleClass('is-fullscreen', on);
       $btn.attr('aria-label', on ? 'Exit full screen' : 'Full screen').find('i').text(on ? 'fullscreen_exit' : 'fullscreen');
       $('#tip-fullscreenBtn').text(on ? 'Exit full screen' : 'Full screen');
