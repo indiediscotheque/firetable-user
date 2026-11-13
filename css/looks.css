@@ -3121,6 +3121,26 @@ input.ft-filter {
 .search-feedback.visible {
     opacity: 1;
 }
+
+/* What a YouTube result is: the artist's official video, their other video, or a YouTube Music audio track */
+.search-kind {
+    flex-shrink: 0;
+    font-size: var(--fs-meta);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    margin: 0 var(--pad1);
+}
+
+#searchResults .pvbar[data-kind="video"] .search-kind {
+    color: var(--color-accent);
+}
+
+@media (max-width: 480px) {
+    /* phones: the title keeps the room; only the official-video mark stays */
+    #searchResults .pvbar:not([data-kind="video"]) .search-kind {
+        display: none;
+    }
+}
 #mergeContain {
     overflow: visible;
     display: none;
