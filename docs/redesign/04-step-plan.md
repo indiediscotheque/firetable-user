@@ -287,6 +287,12 @@ Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the
 - **Check:** smoke: opens from the bar and Live's stage button over the whole page; Audio / Video (the stage fills the screen under it); Listen in from its side; a visitor's Join to fire; a member's Fire and Grab and the chat beside it; Escape closes the chat, then the player, and the stage's buttons and the chat go home.
 - **Undo:** revert.
 
+### 2.3c The player along the bottom of the whole site ✅ shipped (owner's request, November 13, 2026)
+- **Shipped:** the player bar (`#dMini`) moved out of Discover's page to the bottom of the whole site, under Live too. Going between Discover and Live no longer changes what you hear (`setMode` leaves the source alone): a Discover song keeps playing in Live, with the stage's screen up meanwhile (`body.pb-elsewhere`), and Listen in or a Discover pick switches. All of the stage's utilities moved into the bar (`placeStage`: `#fire`, `#grab`, `#songlink`, `#skipTrigger`, `#npModBtn`, `#screenControl`, `#reloadtrack`, `#fullscreenBtn`, re-parented, never copied); the stage keeps none and the DJs on it scale with the stage (`.avtr`, `.spot`, `.ondeck-slot` in container units). Every button (`.butt`, `.graybutt`, `.iconbutt`) and slider (jQuery UI's) got one flat, rounded, sentence-case look. In the full-screen player: the stage's screen button replaces Audio | Video (screen off is the song's own square artwork, turning over like the stage's; on lowers the video), the side has DJs (or Up next) and, for members, the room's own chat as tabs, and the level bars are gone (the songs play in YouTube's and SoundCloud's players, which the page can't hear). The chat is members-only across the site: visitors' chat peek (`#chatPeek`, CH-19) and Chat tab are gone. **Live's frozen look is lifted for this step at the owner's request** (buttons, the stage's utilities, the DJs' size).
+- **Rows:** ST-05, ST-06, ST-07, ST-08, ST-09, ST-11, ST-12, ST-13, CH-19, DI-13, DI-14, DI-27.
+- **Check:** smoke: a Discover song keeps playing in Live with the bar saying so and the stage's screen up; the stage's tools are in the bar; Listen in goes to the room; the screen button in the full player (on, off, stalled); square artwork, never `maxresdefault`; no level bars; visitors see no chat anywhere; a member's DJs / Chat tabs.
+- **Undo:** revert.
+
 ### 2.4 Home leads with new releases
 - **Goal:** the first thing anyone sees is this week's new music and who found it.
 - **Rows:** DI-01, DI-02, DI-15, DI-25 (new).

@@ -35,10 +35,10 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | ST-02 | **DJs standing on stage in front of the screen** (the room's signature) | All | `#deck` (the playing DJ, spotlight), `#ondeck` (next DJs), `room.js` `tableChanged`, `spotlightStateChanged`, avatar art from `firetable.utilities.avatarURL` | keep exactly (round 4: the stage's look is frozen) |
 | ST-03 | Hop on the decks (empty spot +) | M | spot "+" in `#ondeck` (`tableChanged`), `!addme` | 1.10 clearer empty spot; 1.11 "Your turn" bar |
 | ST-04 | DJ play counter / play limit on the name tag | All | `tableChanged`, `playLimitChanged` (`playlimit`) | keep; restyle 1.10 |
-| ST-05 | Screen control: synced, video, art, off | All | `#screenControl` (the "microwave" icon), `#screenControlTip`, `ui.js` `updateScreenBtn` / `applyScreenSetting`, `STORAGE.screenControl`; room-wide `thescreen` (`!screen`, `!screenup`, `!screendown`) | 1.3 a proper icon and a menu of the three choices |
-| ST-06 | Volume slider and mute | All | `#volplace` > `#slider`, `#volstatus`, `player.js` `initVolume`, `muteToggle`, `STORAGE.volume`, `STORAGE.mute` | keep; 1.3 restyle |
-| ST-07 | Reload audio | All | `#reloadtrack`, `player.js` `reloadtrack` | keep; 1.3 |
-| ST-08 | Full screen | All | `#fullscreenBtn` (hidden where unsupported) | ✅ with Discover on, the button opens the full-screen player for the room (`#pv-full`, DI-27), which has the video and fills the screen itself; without Discover, today's stage full screen (`ui.js`, #155) |
+| ST-05 | Screen control: synced, video, art, off | All | `#screenControl` (the "microwave" icon), `#screenControlTip`, `ui.js` `updateScreenBtn` / `applyScreenSetting`, `STORAGE.screenControl`; room-wide `thescreen` (`!screen`, `!screenup`, `!screendown`) | ✅ 2.3c: with Discover on, `#screenControl` lives in the player bar (Live) and in the full-screen player, whose screen off / on is this same setting |
+| ST-06 | Volume slider and mute | All | `#volplace` > `#slider`, `#volstatus`, `player.js` `initVolume`, `muteToggle`, `STORAGE.volume`, `STORAGE.mute` | ✅ 2.3c: with Discover on, the bar's volume and mute (`#pv-vol`, `.d-mute`, `setVolume` keeps `#slider` in step); the stage's `#volplace` / `#volstatus` stay in the hidden `#stageTopRight` |
+| ST-07 | Reload audio | All | `#reloadtrack`, `player.js` `reloadtrack` | ✅ 2.3c: `#reloadtrack` in the player bar while it plays the room |
+| ST-08 | Full screen | All | `#fullscreenBtn` (hidden where unsupported) | ✅ 2.3c: with Discover on, `#fullscreenBtn` is in the player bar and opens the full-screen player (`#pv-full`, DI-27), which has the video and fills the screen itself; without Discover, today's stage full screen (`ui.js`, #155) |
 | ST-09 | Fire (🔥) | M | `#fire` → chat reaction `:fire:`; `chat.js` `sendReaction`, `processFireReactionMessage`, fire effect `fire.js` (PixiJS, lazy), `!hot` | 1.5 shows the count; same place (bottom-left of stage) |
 | ST-10 | Rain (🌧) reaction | M | `#cloud_with_rain` state, `:cloud_with_rain:`, `!storm` | keep wherever it is reachable today; 1.5 keep the state |
 | ST-11 | Grab (add the playing song to a playlist) | M | `#grab` → `#stealContain` / `#stealpicker` (`openStealPicker`, `fillStealPicker`), `recordGrab` (`grabs/<djid>`), `savedToast` with Undo | 1.6 split button: tap = last used playlist (Undo), ▾ = picker |
@@ -114,7 +114,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | CH-16 | Desktop notification on @mention | M | `#desktopNotifyMentionsToggle` | keep |
 | CH-17 | Cards shared or gifted in chat, with a Grab button | M | `chat.js` `addGrabButton`, `claimGrab`, `watchGrab`, `.chat-grab-btn` | keep |
 | CH-18 | Private notices from the bot (your track can't play, swaps ready, "are you there?") | M | `notices/<uid>`, `watchNotices`, `showNextNotice` (toast) | keep |
-| CH-19 | Chat peek for visitors (read-only, Discover) | V | `discover/chat`, `#chatPeek` | keep; 2.4 |
+| CH-19 | Chat peek for visitors (read-only, Discover) | V | `discover/chat`, `#chatPeek` | ❌ retired in 2.3c (the owner's call, November 13, 2026: the chat is for members only); `#chatPeek` stays in the page, hidden |
 
 ## CR · Playlists, the crate (`#queuebox`)
 
@@ -251,7 +251,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | DI-22 | Found-via tracking for new accounts | V | `FOUND_KEY`, `users/<uid>/foundVia` | keep |
 | DI-23 | (new) On Air card: the room in Discover's right column while you're not in it | All | today: "Pick any song to play it here" | ✅ 2.1: `#pv-onair` (`roomPanel`); since 2.3b the room in full is the full-screen player: the room's song and facts, decks, Listen in, the chat, Just played; the bar keeps On air / Listen in (`roomPanel` removed) |
 | DI-24 | (new) Found by, and Play it in the room, in the player | All / M | today: first and last plays in the Now playing panel; Save | ✅ 2.3: Play it in the room (`.pb-toroom`, `toRoom` / `undoToRoom`); since 2.3b Found by is in the full-screen player (`#pv-fhist`), with the note and Undo (`#pv-toRoomNote`) |
-| DI-27 | (new) The full-screen player: for a TV or a second screen, in Discover and Live, Audio or Video | All | — | ✅ 2.3b: `#pv-full` (`openFull`, `renderFull`, `closeFull`), from the bar (`#pv-queue`, `.pb-expand`, `#pv-art`), Live's `#fullscreenBtn` or F; `STORAGE.fullView` |
+| DI-27 | (new) The full-screen player: for a TV or a second screen, in Discover and Live | All | — | ✅ 2.3b, 2.3c: `#pv-full` (`openFull`, `renderFull`, `closeFull`), from the bar (`#fullscreenBtn`, `.pb-expand`, `#pv-art`) or F; the stage's `#screenControl` moved in (screen off: the song's own artwork; on: the video); DJs / Chat tabs (`setFullTab`, members) |
 | DI-25 | (new) New this week leads Home; Not played live yet, "Be the first" | All | today: New's "not played live yet" filter | 2.4, 2.6 |
 | DI-26 | (new) The room on the sound map | All | — | 2.7 (the trail needs the bot's genre on recent plays) |
 
