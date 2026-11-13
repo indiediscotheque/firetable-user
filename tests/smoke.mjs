@@ -755,6 +755,7 @@ try {
   });
   await dPage.goto(SITE, { waitUntil: "load", timeout: 60000 });
   await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
+  await dPage.waitForFunction(() => /messages this hour/.test((document.getElementById("pv-onair") || {}).textContent || ""), null, { timeout: 5000 }).catch(() => {});
   const home = await dPage.evaluate(() => ({
     on: document.body.classList.contains("ft-discover"),
     tabs: [...document.querySelectorAll("#modeTabs .tab")].map((b) => b.textContent.trim() + (b.classList.contains("on") ? "*" : "")).join(),
@@ -762,11 +763,15 @@ try {
     chart: [...document.querySelectorAll("#dBrowse .ft-rows .hist-timestamp")].slice(0, 2).map((e) => e.textContent).join(),
     unplayed: [...document.querySelectorAll("#dBrowse .fresh-meta .histdj")].some((e) => e.textContent === "Not played live yet"),
     stageHidden: getComputedStyle(document.getElementById("stage")).opacity === "0",
-    live: document.getElementById("dLive").textContent
+    noLine: !document.getElementById("dLive"),
+    bar: document.getElementById("pv-src").textContent + "|" + document.querySelector("#dMini .pb-main").getAttribute("aria-label"),
+    card: (document.getElementById("pv-onair") || {}).textContent || ""
   }));
   check(home.on && home.tabs === "Discover*,Live" && home.cards === 3 && home.chart === "#1,#2" && home.unplayed && home.stageHidden,
     "a visitor lands on Discover: new releases, the week's chart, the stage out of sight (" + JSON.stringify(home) + ")");
-  check(/on deck/.test(home.live) && /here/.test(home.live) && /Listen in|Listening/.test(home.live), "the room in one line: the DJ, who is here, Listen in or Listening (" + home.live.trim() + ")");
+  check(/12 messages this hour/.test(home.card), "a visitor's On Air card says how busy the chat is");
+  check(home.noLine && /On air|Live/.test(home.bar) && /Listen in|Stop listening/.test(home.bar) && /here/.test(home.card),
+    "the room is in the bar (On air / Live, Listen in) and the On Air card (who is here), with no second room line above search (" + JSON.stringify({ bar: home.bar, line: !home.noLine }) + ")");
 
   console.log("-- Discover: playing a song uses the room's player, and Live takes it back");
   const playing = await dPage.evaluate(async () => {
@@ -814,12 +819,12 @@ try {
     out.live.preview = firetable.preview;
     out.live.state = firetable.discover.state().listening;
     out.live.roomKey = firetable.song.type + "_" + firetable.song.cid;
-    // a mod fixes the room song's tags: the bar, the live line and Now playing follow
+    // a mod fixes the room song's tags: the bar and Now playing follow
     const was = { title: firetable.song.title, artist: firetable.song.artist };
     await ftapi.db().ref("tagUpdate").set({ cid: firetable.song.cid, adamData: { track_name: "Fixed Title", artist: "Fixed Artist", playcount: 41 } });
     await wait(200);
     out.fixed = { bar: document.getElementById("pv-title").textContent + "|" + document.getElementById("pv-artist").textContent,
-      line: /Fixed Title/.test(document.getElementById("dLive").textContent), panel: (document.querySelector("#pv-onair .d-title") || {}).textContent };
+      panel: (document.querySelector("#pv-onair .d-title") || {}).textContent };
     await ftapi.db().ref("tagUpdate").set({ cid: firetable.song.cid, adamData: { track_name: was.title, artist: was.artist, playcount: 41 } });
     await wait(200);
     document.querySelector("#dMini .pb-main").click(); // stop listening
@@ -848,8 +853,8 @@ try {
   check(/is-paused/.test(bar.paused) !== /is-paused/.test(bar.disc.cls), "the big button pauses and plays a Discover song (" + bar.disc.cls + " → " + bar.paused + ")");
   check(/is-room/.test(bar.live.cls) && bar.live.preview === false && bar.live.state === true && !bar.live.fireHere && bar.live.joinFire && bar.live.tone === bar.live.roomKey && bar.live.seek && /d-mypick/.test(bar.live.other),
     "Listen in: the room plays, the bar takes the room song's colour, a visitor gets Join to fire (not the stage's Fire), and the pick waits one tap away (" + JSON.stringify(bar.live) + ")");
-  check(bar.fixed.bar === "Fixed Title|Fixed Artist" && bar.fixed.line && bar.fixed.panel === "Fixed Title",
-    "fixed tags reach the bar, the live line and the On Air card at once (" + JSON.stringify(bar.fixed) + ")");
+  check(bar.fixed.bar === "Fixed Title|Fixed Artist" && bar.fixed.panel === "Fixed Title",
+    "fixed tags reach the bar and the On Air card at once (" + JSON.stringify(bar.fixed) + ")");
   check(/is-onair/.test(bar.stopped.cls) && bar.stopped.preview === "discover" && bar.stopped.main === "Listen in to the room",
     "stop listening: the room goes quiet and the bar offers Listen in (" + JSON.stringify(bar.stopped) + ")");
   check(/is-discover/.test(bar.back.cls) && /^newrel000/.test(bar.back.playing || ""), "Back to it plays the pick again (or the next, if the test video can't play) (" + JSON.stringify(bar.back) + ")");
@@ -890,7 +895,6 @@ try {
     document.querySelector('.d-chip[data-cnew="1"]').click();
     out.newOnly = [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join() + "|" + [...document.querySelectorAll("#dBrowse .hist-timestamp")].map((e) => e.textContent).join();
     document.querySelector('.d-chip[data-cnew=""]').click();
-    out.live = document.getElementById("dLive").textContent;
     location.hash = "#discover/themes";
     await until(() => document.querySelector("#dBrowse .d-night"));
     out.nights = [...document.querySelectorAll("#dBrowse .d-night b")].map((e) => e.textContent).join();
@@ -915,7 +919,6 @@ try {
   });
   check(extras.fires === "4" && extras.wks === "3 wks,2 wks", "chart rows show fires (not counted) and weeks on the chart (" + extras.fires + " / " + extras.wks + ")");
   check(extras.newOnly === "First Single|#3", "New releases narrows the chart and keeps each song's place (" + extras.newOnly + ")");
-  check(/12 messages this hour/.test(extras.live), "the live line says how busy the chat is (" + extras.live + ")");
   check(extras.nights === "Italo Night" && extras.night === "Italo Night|3|#discover/themes/nT1", "theme nights, and a night's songs in order (" + extras.nights + " / " + extras.night + ")");
   check(extras.saved === "One,Two,Three", "Save all puts a whole list in the crate (" + extras.saved + ")");
   check(extras.savedLong === 100, "Save all saves every song on screen, not just the first 50 (" + extras.savedLong + " of 100)");

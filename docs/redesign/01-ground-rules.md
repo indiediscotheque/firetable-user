@@ -65,7 +65,7 @@ JS binds to element ids everywhere (`$("#grab")`, `document.getElementById("plIn
   - **Tablet, 640 to 1023px:** two columns, 3fr and 2fr. Stage, nav and view on the left; chat or people on the right, switched by `#sidepanel-tabs`.
   - **Desktop, 1024px and up:** three columns, `var(--col-left)` (24vw), `var(--col-mid)` (min(46vw, 56rem)) and the rest. People (with the header) on the left, then stage, nav and view, then chat.
   - **Login state:** `#mainGrid.login` swaps in `#login` (welcome, room pulse, join or log in tabs) and Fresh.
-- **Discover** (`js/discover.js`, `css/discover.css`) is a second page built into `#mainGrid` when `config.js` has `discover: true`: `#discoverPage` holds `#dRail` (live line, search, nav), `#dBrowse` (the view), `#dSide` (Now playing / Playlists or Crate / Chat) and `#dMini` (the phone mini player). `body.ft-discover` shows it; `#modeTabs` (Discover | Live) switches.
+- **Discover** (`js/discover.js`, `css/discover.css`) is a second page built into `#mainGrid` when `config.js` has `discover: true`: `#discoverPage` holds `#dRail` (search, nav), `#dBrowse` (the view), `#dSide` (Now playing / Playlists or Crate / Chat) and `#dMini` (the phone mini player). `body.ft-discover` shows it; `#modeTabs` (Discover | Live) switches.
 - Breakpoints in use: 480, 639/640, 760, 799/800, 1023/1024, 1370 (min-width), and `max-height: 400px` for landscape phones. Don't invent new ones. New layout work uses 640, 1024, 1440 and 1920 as its reference widths.
 
 ### Styles

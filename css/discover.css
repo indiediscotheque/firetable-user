@@ -62,21 +62,12 @@ body.ft-discover #discoverPage {
     min-height: 0;
 }
 
-/* ── The left column: the room in one line, then the views ── */
+/* ── The left column: search, then the views ── */
 #dRail {
     display: flex;
     flex-direction: column;
     min-height: 0;
 }
-.d-live {
-    display: flex;
-    align-items: center;
-    gap: var(--pad2);
-    padding: var(--pad2) var(--pad3);
-    border-bottom: 1px solid var(--color-border);
-    min-height: 3.5rem;
-}
-.d-live-art,
 .d-mini-art {
     flex: none;
     width: 2.5rem;
@@ -84,7 +75,6 @@ body.ft-discover #discoverPage {
     border-radius: var(--radius-sm);
     background: var(--color-bg-t2) center / cover no-repeat;
 }
-.d-live-text,
 .d-mini-text {
     flex: 1;
     min-width: 0;
@@ -93,7 +83,6 @@ body.ft-discover #discoverPage {
     gap: 0.1rem;
     text-align: left;
 }
-.d-live-text b,
 .d-mini-text b {
     color: var(--color-text-light);
     font-size: var(--fs-title);
@@ -102,8 +91,6 @@ body.ft-discover #discoverPage {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.d-live-chat i { font-size: 0.85rem; }
-.d-live-text span,
 .d-mini-text span {
     display: flex;
     align-items: center;
@@ -152,7 +139,7 @@ body.ft-discover #discoverPage {
 .d-ytsearch i { font-size: 1.15rem; }
 body:not(.ft-has-discover) #dSearchOpen { display: none; }
 @media only screen and (max-width: 639px) {
-    #dSearchOpen { display: none; } /* phones: the search box is right under the live line */
+    #dSearchOpen { display: none; } /* phones: the search box is at the top of the page */
 }
 
 #dNav {

@@ -6,10 +6,10 @@
  * members on Live, and each person's last choice is remembered.
  *
  * Discover is its own page with the site's own parts: the left column keeps
- * the header and theme, then one line about the room (the song, the DJ, how
- * many are here, Listen in) and the views; the middle shows the library on
- * the Fresh cards and Recent rows; the right column is a player (Now playing)
- * and your crate or playlists.
+ * the header and theme, then search and the views; the middle shows the
+ * library; the right column is Now playing (or the On Air card), playlists or
+ * the crate, and chat. The player is the bar along the bottom, which also
+ * carries the room (On air / Live, Listen in), so there's no separate room line.
  *
  * Views: Home, New, Charts, Genres, DJs, Years, Recent plays, and a page
  * for each genre, DJ, artist and year. The bot publishes the charts, new
@@ -1156,7 +1156,7 @@ firetable.discover = (function () {
     });
   }
 
-  // ─── The room, in one line ──────────────────────────────────────────────
+  // ─── The room ────────────────────────────────────────────────────────────
 
   function peopleHere() {
     var n = 0;
@@ -1165,26 +1165,6 @@ firetable.discover = (function () {
     }
     return n;
   }
-  function renderLiveLine() {
-    var el = document.getElementById("dLive");
-    if (!el) return;
-    var s = firetable.song;
-    var n = peopleHere();
-    var here = n ? " · " + n + " here" : "";
-    if (!s || !s.cid || s.cid == 0) {
-      el.innerHTML = '<span class="d-live-text"><b>The room is quiet</b><span>' + esc((n ? n + " here" : "Nobody on the decks")) + "</span></span>";
-      return;
-    }
-    el.innerHTML = '<span class="d-live-art" style="background-image:url(' + esc(firetable.imgCache && firetable.imgCache[s.cid] || artOf({ cid: s.cid, type: s.type, img: s.image })) + ')"></span>' +
-      '<span class="d-live-text"><b>' + esc(firetable.utilities.decodeEntities(s.title || "")) + "</b><span>" + '<i class="d-dot" aria-hidden="true"></i>' +
-      esc((s.djname ? s.djname + " on deck" : "Live") + here) + "</span>" +
-      (D.data.chat && D.data.chat.hour ? '<span class="d-live-chat">' + ms("forum") + esc(firetable.utilities.pluralize(D.data.chat.hour, "message", "messages") + " this hour") + "</span>" : "") +
-      "</span>" +
-      (D.src === "live" && !blocked()
-        ? '<span class="d-listening">' + ms("hearing") + " Listening</span>"
-        : '<button type="button" class="butt graybutt small d-listen">Listen in</button>');
-  }
-
   // ─── The right column ───────────────────────────────────────────────────
   // The player itself is the bar along the bottom (below). The right column
   // is for what goes with it: Now playing (the song in full: who found it,
@@ -1501,7 +1481,6 @@ firetable.discover = (function () {
       P.track.a = live.a;
       if (discoverActive()) mediaSession(P.track);
     }
-    renderLiveLine();
     if (D.mode !== "discover") return;
     if (D.src === "live" && live) mediaSession(live, true);
     if (D.sideTab === "now") renderSide(); else renderBar();
@@ -1923,7 +1902,6 @@ firetable.discover = (function () {
     mediaSession(t);
     refreshSide();
     renderBrowse();
-    renderLiveLine();
     if (!auto) announce("Playing " + t.t + (t.a ? " by " + t.a : "") + ", from " + (list.label || "Discover"));
   }
 
@@ -1970,7 +1948,6 @@ firetable.discover = (function () {
     if (s) mediaSession(s, true);
     renderSide();
     renderBrowse();
-    renderLiveLine();
     announce(s ? "Listening to the room live: " + s.t + (s.dj ? ", " + s.dj + " on deck" : "") : "The room is quiet");
   }
 
@@ -1983,7 +1960,6 @@ firetable.discover = (function () {
     if (firetable.scLoaded) firetable.scwidget.pause();
     mediaSession(null);
     renderSide();
-    renderLiveLine();
     announce("Stopped listening to the room");
   }
 
@@ -2407,7 +2383,6 @@ firetable.discover = (function () {
       renderAll();
       startTicking();
     }
-    renderLiveLine();
     writeAddress();
   }
 
@@ -2432,7 +2407,6 @@ firetable.discover = (function () {
     renderRail();
     renderBrowse();
     renderSide();
-    renderLiveLine();
   }
 
   // ─── Data ───────────────────────────────────────────────────────────────
@@ -2457,7 +2431,6 @@ firetable.discover = (function () {
     });
     db().ref("discover/chat").on("value", function (s) {
       D.data.chat = s.val();
-      renderLiveLine();
       // the chat to read: in the room's panel, and visitors' Chat tab
       if (D.mode === "discover" && !D.signedIn && (D.sideTab === "chat" || (D.sideTab === "now" && !discoverActive()))) renderSide();
       renderPeek();
@@ -3136,7 +3109,7 @@ firetable.discover = (function () {
     page.id = "discoverPage";
     page.setAttribute("role", "region");
     page.setAttribute("aria-label", "Discover");
-    page.innerHTML = '<div id="dRail"><div id="dLive" class="d-live" aria-live="polite"></div>' +
+    page.innerHTML = '<div id="dRail">' +
       '<form id="dSearch" role="search"><i class="material-symbols-outlined" aria-hidden="true">search</i>' +
       '<input type="search" id="dQ" placeholder="Search artists, songs, genres, DJs" aria-label="Search the library" autocomplete="off" enterkeyhint="search" /></form>' +
       '<nav id="dNav" aria-label="Discover">' +
@@ -3348,14 +3321,13 @@ firetable.discover = (function () {
       ftapi.events.on("loggedIn", function () { signedIn(true); });
       ftapi.events.on("loggedOut", function () { signedIn(false); });
       ftapi.events.on("newSong", function () {
-        renderLiveLine();
         if (D.mode !== "discover") return;
         yourTurn();
         if (D.src === "live" && liveTrack()) mediaSession(liveTrack(), true);
         if (D.sideTab === "now" && !discoverActive()) renderSide();
         else renderBar();
       });
-      // a mod fixed the room song's tags: the bar, the live line and Now playing follow
+      // a mod fixed the room song's tags: the bar and Now playing follow
       // (after room.js, whose handler corrects firetable.song first)
       ftapi.events.on("tagUpdate", function (data) { setTimeout(function () { tagsFixed(data); }, 0); });
       // the room's seats and line: the bar's and panels' "you're next", Hop on
@@ -3374,7 +3346,7 @@ firetable.discover = (function () {
       new MutationObserver(function () {
         if (blocked() === wasBlocked) return;
         wasBlocked = blocked();
-        if (D.mode === "discover") { renderBar(); renderLiveLine(); }
+        if (D.mode === "discover") renderBar();
       }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
       // the bar's height, for the phone's full player and the page's last row
       var barEl = document.getElementById("dMini");
@@ -3382,8 +3354,10 @@ firetable.discover = (function () {
         document.documentElement.style.setProperty("--pb-h", barEl.offsetHeight + "px");
       }).observe(barEl);
       ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () {
-        renderLiveLine();
-        if (D.mode === "discover" && /^(home|charts|recent)$/.test(D.view)) renderBrowse();
+        if (D.mode !== "discover") return;
+        // "N here": the bar, and the On Air card when it shows
+        if (D.sideTab === "now" && !discoverActive()) renderSide(); else renderBar();
+        if (/^(home|charts|recent)$/.test(D.view)) renderBrowse();
       }));
       ftapi.events.on("newHistory", firetable.utilities.oncePerFrame(function () {
         if (D.mode === "discover" && (D.view === "recent" || D.view === "home")) renderBrowse();
