@@ -51,7 +51,8 @@ var STORAGE = {
   lastfmSession:      "ftLastfmSession",
   navView:            "firetableNavView",
   navSide:            "firetableNavSide",
-  navMobile:          "firetableNavMobile"
+  navMobile:          "firetableNavMobile",
+  fullView:           "firetableFullView"      // the full-screen player: "audio" or "video"
 };
 
 // ─── External Service URLs ──────────────────────────────────────────────────
