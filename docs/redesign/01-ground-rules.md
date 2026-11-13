@@ -26,7 +26,7 @@ Read this at the start of every session. It's the difference between a redesign 
 - The design must not look "vibecoded": no gradient washes, no everything-is-a-pill, no generic icon sets, no blurred colour blobs. Use the site's own type (Inter, Roboto Mono for numbers and times) and its own icons (Material Symbols, as today).
 
 Added in round 4 (November 12, 2026):
-- **The stage belongs to Live.** Nothing in Discover is drawn like it: no small stage, no song-colour tint, no `:id:` watermark, no name plates.
+- **The stage belongs to Live.** Nothing in Discover is drawn like it: no small stage, no song-colour tint, no `:id:` watermark, no name plates. One exception (the owner, November 13, 2026): the player bar along the bottom takes the playing song's artwork colour for its edge, progress, label and a faint wash; the panels stay flat.
 - **A name plate means "DJing now".** Only the DJs on the stage stand on one. Everywhere else (Discover, the On Air card, chat, lists) a person is a circle avatar with the name beside it, as today.
 - **Discover is for finding new music.** New releases lead its Home.
 - **An On Air card** shows the room in Discover while the person isn't in the Live session.

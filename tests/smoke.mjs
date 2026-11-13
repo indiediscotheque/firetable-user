@@ -790,7 +790,7 @@ try {
     const snap = () => ({ cls: el().className, src: document.getElementById("pv-src").textContent, title: document.getElementById("pv-title").textContent,
       main: (document.querySelector("#dMini .pb-main") || {}).getAttribute("aria-label"), seek: document.getElementById("pv-seek").disabled,
       fireHere: !!document.querySelector("#dMini #fire") && document.getElementById("fire").offsetParent !== null,
-      joinFire: !!document.querySelector("#dMini .pb-joinfire"), other: (document.querySelector("#pv-switch .pb-other") || { className: "" }).className });
+      joinFire: !!document.querySelector("#dMini .pb-joinfire"), tone: el().getAttribute("data-tone-for"), other: (document.querySelector("#pv-switch .pb-other") || { className: "" }).className });
     const out = {};
     // the test's videos aren't real: keep the player from skipping past them
     const skip = firetable.discover.onFailed;
@@ -811,6 +811,15 @@ try {
     out.live = snap();
     out.live.preview = firetable.preview;
     out.live.state = firetable.discover.state().listening;
+    out.live.roomKey = firetable.song.type + "_" + firetable.song.cid;
+    // a mod fixes the room song's tags: the bar, the live line and Now playing follow
+    const was = { title: firetable.song.title, artist: firetable.song.artist };
+    await ftapi.db().ref("tagUpdate").set({ cid: firetable.song.cid, adamData: { track_name: "Fixed Title", artist: "Fixed Artist", playcount: 41 } });
+    await wait(200);
+    out.fixed = { bar: document.getElementById("pv-title").textContent + "|" + document.getElementById("pv-artist").textContent,
+      line: /Fixed Title/.test(document.getElementById("dLive").textContent), panel: (document.querySelector("#pv-onair .d-title") || {}).textContent };
+    await ftapi.db().ref("tagUpdate").set({ cid: firetable.song.cid, adamData: { track_name: was.title, artist: was.artist, playcount: 41 } });
+    await wait(200);
     document.querySelector("#dMini .pb-main").click(); // stop listening
     await wait(100);
     out.stopped = snap();
@@ -832,11 +841,13 @@ try {
   });
   check(/is-(live|onair)/.test(bar.room.cls) && /Live|On air/.test(bar.room.src) && bar.room.onair && bar.room.shown && bar.room.seek,
     "before a pick, the bar shows the room (Live or On air), can't seek it, and the panel shows the On Air card (" + JSON.stringify(bar.room) + ")");
-  check(/is-discover/.test(bar.disc.cls) && /Discover/.test(bar.disc.src) && bar.disc.title === "First Single" && /^(Pause|Play)$/.test(bar.disc.main) && !bar.disc.seek && !bar.disc.fireHere && /d-listen/.test(bar.disc.other),
-    "a pick: the bar says Discover and the list, can seek, and offers the room one tap away (" + JSON.stringify(bar.disc) + ")");
+  check(/is-discover/.test(bar.disc.cls) && /Discover/.test(bar.disc.src) && bar.disc.title === "First Single" && /^(Pause|Play)$/.test(bar.disc.main) && !bar.disc.seek && !bar.disc.fireHere && /d-listen/.test(bar.disc.other) && bar.disc.tone === "1_newrel0001",
+    "a pick: the bar says Discover and the list, takes its colour from that song's art, can seek, and offers the room one tap away (" + JSON.stringify(bar.disc) + ")");
   check(/is-paused/.test(bar.paused) !== /is-paused/.test(bar.disc.cls), "the big button pauses and plays a Discover song (" + bar.disc.cls + " → " + bar.paused + ")");
-  check(/is-room/.test(bar.live.cls) && bar.live.preview === false && bar.live.state === true && !bar.live.fireHere && bar.live.joinFire && bar.live.seek && /d-mypick/.test(bar.live.other),
-    "Listen in: the room plays, a visitor gets Join to fire (not the stage's Fire), and the pick waits one tap away (" + JSON.stringify(bar.live) + ")");
+  check(/is-room/.test(bar.live.cls) && bar.live.preview === false && bar.live.state === true && !bar.live.fireHere && bar.live.joinFire && bar.live.tone === bar.live.roomKey && bar.live.seek && /d-mypick/.test(bar.live.other),
+    "Listen in: the room plays, the bar takes the room song's colour, a visitor gets Join to fire (not the stage's Fire), and the pick waits one tap away (" + JSON.stringify(bar.live) + ")");
+  check(bar.fixed.bar === "Fixed Title|Fixed Artist" && bar.fixed.line && bar.fixed.panel === "Fixed Title",
+    "fixed tags reach the bar, the live line and the On Air card at once (" + JSON.stringify(bar.fixed) + ")");
   check(/is-onair/.test(bar.stopped.cls) && bar.stopped.preview === "discover" && bar.stopped.main === "Listen in to the room",
     "stop listening: the room goes quiet and the bar offers Listen in (" + JSON.stringify(bar.stopped) + ")");
   check(/is-discover/.test(bar.back.cls) && /^newrel000/.test(bar.back.playing || ""), "Back to it plays the pick again (or the next, if the test video can't play) (" + JSON.stringify(bar.back) + ")");

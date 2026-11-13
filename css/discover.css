@@ -1015,7 +1015,8 @@ body.ft-discover #dSide #actualChat {
    Link, Skip and Mod tools, moved here from the stage).
    ============================================ */
 .pb {
-    --pb-tone: var(--color-accent);
+    /* the playing song's artwork colour (renderBar sets --pb-art), else the accent */
+    --pb-tone: var(--pb-art, var(--color-accent));
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(16rem, 1.15fr) minmax(0, 1fr);
@@ -1027,10 +1028,15 @@ body.ft-discover #dSide #actualChat {
     background: var(--color-bg-s2);
     border-top: 1px solid var(--color-border);
     z-index: 41;
+    transition: background-color 0.4s ease-out, box-shadow 0.4s ease-out;
 }
-.pb.is-room { --pb-tone: var(--color-danger); }
-.pb.is-live { box-shadow: inset 0 2px 0 var(--color-danger); }
 .pb.is-onair, .pb.is-quiet { --pb-tone: var(--color-text-muted); }
+/* sounding: a thin edge and a faint wash in the artwork's colour */
+.pb.is-discover:not(.is-paused), .pb.is-live {
+    background-color: color-mix(in srgb, var(--pb-tone) 9%, var(--color-bg-s2));
+    box-shadow: inset 0 2px 0 var(--pb-tone);
+}
+@media (prefers-reduced-motion: reduce) { .pb { transition: none; } }
 .pb-host { display: contents; }
 .pb-host:empty { display: none; }
 
@@ -1073,7 +1079,7 @@ body.ft-discover #dSide #actualChat {
     flex: none;
     align-items: center;
     gap: 0.25rem;
-    color: var(--color-accent);
+    color: var(--pb-tone);
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1132,7 +1138,7 @@ body.ft-discover #dSide #actualChat {
 @media (hover: hover) {
     .pb .pb-main:not(:disabled):hover { background: #e6e6e6; transform: scale(1.04); }
 }
-.pb.is-live .pb-main { background: color-mix(in oklab, var(--color-danger) 18%, white); }
+.pb.is-discover:not(.is-paused) .pb-main, .pb.is-live .pb-main { background: color-mix(in oklab, var(--pb-tone) 14%, white); }
 .pb .pb-small { width: 2rem; height: 2rem; min-height: 2rem; }
 .pb .pb-small [class*="material-symbols-"] { font-size: 1.1rem; }
 .pb-time {
@@ -1150,7 +1156,7 @@ body.ft-discover #dSide #actualChat {
 .pb-at { text-align: right; }
 .pb-track { position: relative; flex: 1; display: flex; align-items: center; height: 1rem; }
 .pb-track .d-bar { flex: 1; height: 4px; }
-.pb-track .d-bar i { background: var(--pb-tone); transition: width 0.45s linear; }
+.pb-track .d-bar i { background: var(--pb-tone); transition: width 0.45s linear, background-color 0.4s ease-out; }
 .pb.is-paused .pb-track .d-bar i, .pb.is-onair .pb-track .d-bar i { background: var(--color-text-muted); }
 #pv-seek {
     position: absolute;
