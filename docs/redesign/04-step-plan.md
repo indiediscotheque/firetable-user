@@ -1,6 +1,6 @@
 # 04 · The steps
 
-Each step is one pull request. Do them in order within a phase. Phases 2 and 3 can overlap once phase 1 is done. Follow the per-step routine in [01-ground-rules.md](01-ground-rules.md) every time.
+Each step is one pull request. **Order since round 4 (November 12, 2026): Phase 0, Phase 2 (Discover), Phase 4 (phones), then Phase 1's Live steps one at a time, each with the owner's yes before it starts. Phase 3 is on hold.** Step numbers haven't changed, so the inventory's references still hold. Do the steps in order within a phase. Follow the per-step routine in [01-ground-rules.md](01-ground-rules.md) every time.
 
 Every step lists:
 - **Goal:** what changes for people.
@@ -19,7 +19,7 @@ Mark each step `✅ shipped in #PR` when it merges.
 ### 0.1 Design tokens
 - **Goal:** one set of colours, type sizes, spacing and radii, so later steps restyle by changing tokens instead of hunting hex values.
 - **Rows:** none visibly (OT-01, OT-05 later).
-- **Files and change:** `css/looks.css` `:root` (around line 100). Add the tokens from [03-target-design.md](03-target-design.md) ("Design tokens"): `--surface-0..4`, `--line-1..2`, `--text-1..4`, `--live`, `--ok`, `--fs-display`, `--fs-h2`, `--fs-h3`, `--fs-body`, `--fs-row`, `--fs-label`, `--space-1..8`, `--radius-row`, `--radius-btn`, `--radius-panel`, `--radius-dialog`, `--tap`, `--tap-stage`. **Define the old tokens in terms of the new ones where they mean the same** (`--color-text: var(--text-1)` and so on) but keep their current values for now: this step must not change a pixel. `css/discover.css` reads the same tokens (it already uses `--color-*`). `about/`, `privacy/` and `terms/` load `css/looks.css` and `css/fonts-local.css` too, so they get the tokens for free; screenshot them in 1.1.
+- **Files and change:** `css/looks.css` `:root` (around line 100). Add the tokens from [03-target-design.md](03-target-design.md) ("Design tokens"): `--surface-0..4`, `--line-1..2`, `--text-1..4`, `--live`, `--ok`, `--fs-display`, `--fs-h2`, `--fs-h3`, `--fs-body`, `--fs-row`, `--fs-label`, `--space-1..8`, `--radius-row`, `--radius-btn`, `--radius-panel`, `--radius-dialog`, `--tap`, `--tap-stage`. **Define the old tokens in terms of the new ones where they mean the same** (`--color-text: var(--text-1)` and so on) but keep their current values for now: this step must not change a pixel. **Round 4:** the colour tokens keep today's values for good (step 1.1 is dropped); only the type, spacing, radius and target-size tokens are new. `css/discover.css` reads the same tokens (it already uses `--color-*`). `about/`, `privacy/` and `terms/` load `css/looks.css` and `css/fonts-local.css` too, so they get the tokens for free; screenshot them in 1.1.
 - **Keep:** every current colour on screen (compare screenshots: identical).
 - **Check:** smoke unchanged. Screenshots identical at all four widths.
 - **Undo:** revert.
@@ -60,6 +60,15 @@ Mark each step `✅ shipped in #PR` when it merges.
 ## Phase 1 · Inside today's layout
 
 Nothing moves region. Regulars find everything where it was.
+
+**Round 4 changes to this phase.** It runs after Phases 2 and 4. Live's look is frozen ([01-ground-rules.md](01-ground-rules.md)), so each step below adds function in today's skin, and the owner says yes to each before it starts:
+- **1.1 is dropped.** Live keeps today's colours.
+- **1.2:** the 11px type floor only. The header isn't restyled.
+- **1.3:** clearer icons and labels, and the optional player view. The buttons keep today's look and size.
+- **1.5:** Fire's count only. No restyle of the stage's buttons.
+- **1.10:** the wording of each state ("Listen to the room", "The decks are open…") and the waitlist chip. No floor gradient; the name plate stays as it is.
+- **1.12 and 1.13** change how the people list and chat read, so show the owner before and after pictures first.
+- New buttons follow the round 4 rule: no big filled gold.
 
 ### 1.1 Apply the tokens
 - **Goal:** the new colours and surfaces everywhere: darker page, clearer panels, consistent borders.
@@ -247,46 +256,51 @@ Nothing moves region. Regulars find everything where it was.
 
 ---
 
-## Phase 2 · Discover in the shared frame
+## Phase 2 · Discover (round 4)
 
-Discover already is a separate page (`#discoverPage`). These steps give it the new header, left column and one player. Visitors see it first, so it's the best place to show the new look.
+Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the words are in [03-target-design.md](03-target-design.md), "Round 4: what's current". Discover keeps today's frame and column widths, uses today's colour variables, and nothing here touches Live. People are circle avatars; nothing in Discover is drawn like the stage; no big filled gold buttons.
 
-### 2.1 Discover's left column as the shared nav
-- **Rows:** DI-01 to DI-12, TB-08.
-- **Change:** `#dRail` (`#dLive`, `#dSearch`, `#dNav`) restyled into the left column of [03-target-design.md](03-target-design.md): Home, **Live room** (with the live line from `renderLiveLine` as its subtitle), a DISCOVER label over the views (`VIEWS` in `discover.js`), then for visitors the crate card (DI-15) and at the bottom a small live card (album art with the DJs' avatars over it and **Listen in**; never a second video player).
-- **Keep:** `setView`, routes, `renderRail`'s `aria-current`.
-- **Check:** smoke's Discover checks; plain pages (`/music/…`) still render the same middle column.
+### 2.1 The On Air card
+- **Goal:** the right column is never empty: until you play something, it shows the room.
+- **Rows:** DI-23 (new), DI-13, DI-14, CH-19, AU-01.
+- **Files and change:** `discover.js` `nowPanel` / `renderSide`: when nothing is playing from Discover and the person isn't listening in, draw `#pv-onair` where "Pick any song…" is today: "On air in the room · N here" (`peopleHere`), the room's cover, title and artist (`firetable.song`), "N plays · first …" (the `tagUpdate` facts the stage shows), the DJ on deck and the next DJ as circle avatars with names (`table`, `playdex`, `firetable.utilities.avatarURL`), a thin progress line, **Listen in** (`listenIn`) and **Step inside** (`setMode("live")`), the chat peek (`discover/chat`, as `renderPeek` draws it), and **Just played**: the last four of `recentTracks()`, tagged "First play" when that play was the song's first. Today's one line of help goes under it. While a Discover song plays, the room is the one row at the bottom of the player (2.3). The left column's live line stays.
+- **Keep:** no second video or audio player: the card is art and text. Hidden names (`nameHidden`). An empty room says "The room is quiet", as the live line does.
+- **Check:** smoke: a visitor on Discover Home sees `#pv-onair` with the seeded song and DJ; playing a song replaces it; stopping brings it back.
+- **Undo:** revert.
 
-### 2.2 The header search, and Live as a nav item
-- **Rows:** TB-08, TB-09, DI-12.
-- **Change:** `#dSearchOpen` (keep the id) becomes a search field in the top bar on desktop (an input that routes to `#discover/search/<words>` and focuses with `/`), the icon on phones. `#modeTabs` stays for one release but is hidden at 1024 and up, where the left column's Home / Live room items do the same (`setMode`).
-- **Check:** `/` focuses search from Live and Discover; the address and back button behave as today.
+### 2.2 Search and the switch stay where they are
+- **Dropped in round 4.** Round 3 moved search into a top bar and turned Discover | Live into nav items. On computers both stay as today (TB-08, TB-09, DI-12). On phones the switch becomes the tab bar (4.1).
 
-### 2.3 One player
-- **Rows:** DI-13, DI-14, DI-17.
-- **Change:** `#dSide`'s tabs become NOW PLAYING · UP NEXT · CHAT (members) and a two-way switch **From Discover | The room, live** (`listenIn` / the Discover play path). When playing from Discover, a card shows the room's song with **Rejoin**. When the member becomes next on the decks (`tableChanged` / spotlight), switch back to the room by itself, with a toast.
-- **Keep:** `firetable.preview = "discover"` mechanics; Media Session; no scrobbling from Discover.
-- **Check:** smoke: playing a Discover song then marking the member as next on deck returns to the room.
+### 2.3 The player
+- **Goal:** every song says who found it, and one button takes it to the room.
+- **Rows:** DI-13, DI-14, DI-17, DI-24 (new).
+- **Files and change:** `discover.js` `nowPanel`, top to bottom: "Playing from [list] · n of N" (`lists[P.list].label`, `P.i`); cover, title, artist, genre and year tags (`fillDetails`); progress and times; previous, play/pause, next, volume, open, ⋮. **Found by** (new `#pv-found`): the first DJ's circle avatar and name, "First played here [date]", "N plays · last [date] by [DJ]" (`loadDetails`), and "Rising: N plays in the last 4 weeks" when the song is in `lib("rising")`. **Play it in the room** (new `#pv-toRoom`): for a member it puts the song at the top of the playlist they DJ from (`users/<uid>/selectedList`, the `addTrackToTop` path, `formatRefusal` respected), with a toast and Undo, and the toast offers **Hop on** (`!addme`) when a spot is open and they aren't on the decks; for a visitor it reads "Join to play it in the room" and opens `joinBox`. **Save** as a split button (last used playlist; ▾ picks; the crate for visitors). **Up next** with "N left". At the bottom, the room in one row: cover, "The room: [song]", the DJ and count (a member on the waitlist sees their place), **Listen in** or **Rejoin**. When a member becomes next on the decks (`tableChanged` / spotlight), switch back to the room by itself, with a toast.
+- **Keep:** `firetable.preview = "discover"` mechanics; Media Session; no scrobbling from Discover; members' Playlists and Chat tabs.
+- **Check:** smoke as a member: `#pv-toRoom` puts the playing song first in the DJ list and Undo takes it out; as a visitor it opens the join box; marking the member next on deck returns to the room.
+- **Undo:** revert.
 
-### 2.4 Discover Home for a first visit
-- **Rows:** DI-01, DI-15, AU-01, CH-19.
-- **Change:** one dismissable line at the top for visitors (stored in `localStorage`); New this month as a 7-wide grid (fewer at narrow widths) with "first played by [DJ] · [date]" under each (from the new-releases data); the Room chart block with the period switch and tied ranks; Rising; Genres as tiles with one distinct cover each (pick covers no other tile uses).
-- **Check:** screenshots as a visitor at all widths.
+### 2.4 Home leads with new releases
+- **Goal:** the first thing anyone sees is this week's new music and who found it.
+- **Rows:** DI-01, DI-02, DI-15, DI-25 (new).
+- **Files and change:** `discover.js` `viewHome`. First, **New this week**: the `discover/new` tracks whose `rel` is on or after the last Friday (today's "New this month" block instead when there are fewer than six). The lead is the most played of them, newest first on ties: cover, title, artist, genre tag, length, "Found by [avatar] [DJ] · [date] · N plays", **Play the week's N** (`play` on that list), **Save all** (`saveAll`). Under it the next six covers and "All N from this week" (`#discover/new`). Then **Not played live yet**: the first four tracks with no plays, each tagged "Be the first", with its release date and Save; "All N" opens New on that filter. Then Room chart, the six most-played DJs as circle avatars with names and play counts (`lib("djs")`, "All DJs"), Rising, and today's Theme nights, Genres, On this day and Recent plays as they are. No intro text.
+- **Keep:** each block stays a playable list (`setList`); plain pages (`/music/…`) unaffected.
+- **Check:** screenshots as a visitor at all widths; smoke: a seeded unplayed release shows "Be the first"; the lead plays.
+- **Undo:** revert.
 
 ### 2.5 Joining and logging in
 - **Rows:** AU-01 to AU-06.
-- **Change:** restyle `#login`, `#authBox`, `#oauthBox`, the join box in Discover, `#pickNameBox` with the tokens; one column, 44px fields, the existing copy.
+- **Change:** tidy `#login`, `#authBox`, `#oauthBox`, the join box in Discover and `#pickNameBox`: one column, 44px fields, the existing copy, today's colours.
 - **Check:** smoke's existing auth flow checks.
 
 ### 2.6 New and Charts controls
 - **Rows:** DI-02, DI-03, DI-20.
-- **Change:** New's three chips become one drop-down; Charts' period stays a segmented control (four items fit), genre and new-only become two drop-downs, actions **Play the chart**, **Save as playlist**, **Share**. Columns: rank (=), move, cover, song, genre, first here (avatar · DJ · date), weeks, plays; **peak** only once the bot publishes it.
+- **Change:** New: one **Show** menu (This week, Last 90 days, Not played live yet) instead of chips; four covers across at 1440, three at 1024, two on phones; under each cover who played it first and when, or "Nobody has played it yet" with the "Be the first" tag; Save and ⋮ show on hover and focus, and always on touch. Charts: the period stays a segmented control, genre and new-only become two drop-downs, actions **Play the chart**, **Save as playlist**, **Share**; columns rank (=), move, cover, song, genre, first here (avatar · DJ · date), weeks, plays; **peak** only once the bot publishes it.
 - **Check:** smoke's chart checks; the chart image and embed unchanged.
 
-### 2.7 Library pages
-- **Rows:** DI-04 to DI-11.
-- **Change:** the fixes from the review: the overview strip (their sound, similar DJs, recent sets / by year, who plays it, next door) above long lists; top 10 with "Show all"; fact chips in heroes; DJ pages default to "Brought here first"; "Their sound" as a stacked bar plus the top five genres; recent sets merged by night and clickable; Years with covers and "released in"; numbers through `n()` everywhere; genre map label collisions; a fallback cover for missing art (a generated colour block with the artist's initials, not the `:id:` logo).
-- **Check:** screenshots of each page type; plain pages.
+### 2.7 Library pages and the sound map
+- **Rows:** DI-04 to DI-11, DI-26 (new).
+- **Change:** round 3's fixes: the overview strip above long lists; top 10 with "Show all"; fact chips in heroes; DJ pages default to "Brought here first"; "Their sound" as a stacked bar plus the top five genres; recent sets merged by night and clickable; Years with covers and "released in"; numbers through `n()`; map label collisions; a fallback cover for missing art (a colour block with the artist's initials). DJs: larger circle avatars. **The sound map:** the genre of the room's song gets a red dot (`globalTracks` → `globalSongs/<id>/genres[0]`, the lookup `loadDetails` does); the genres of tonight's earlier plays get small rings, which needs the genre on recent plays (**bot first:** `g` on each row the hostbot's `lib/discover.js` publishes; until then only the room's dot shows); the genre you're hearing gets a gold outline; a legend under the map says what each means. Clicking a genre shows its card under the map (name, description, counts, next door, **[Genre] radio** through `playRadio`, **Open**) and doesn't leave the page.
+- **Check:** screenshots of each page type; plain pages; smoke: with a seeded song and genre, that genre's label carries the room mark.
 
 ### 2.8 One song menu everywhere
 - **Rows:** DI-19, CR-04, NP-08.
@@ -296,7 +310,7 @@ Discover already is a separate page (`#discoverPage`). These steps give it the n
 
 ## Phase 3 · The new room, opt-in (`body.ft-room-v2`)
 
-Everything here is CSS and element moves scoped to `.ft-room-v2`, so Classic is untouched.
+**On hold since round 4.** The owner wants Live to stay as it looks and is laid out today, so none of this is built unless they ask for it. Kept for reference. Everything here is CSS and element moves scoped to `.ft-room-v2`, so Classic is untouched.
 
 ### 3.1 The left column: nav over the room
 - **Rows:** PE-01, DJ-03, NV-03.
@@ -326,11 +340,11 @@ Everything here is CSS and element moves scoped to `.ft-room-v2`, so Classic is 
 
 ## Phase 4 · Phones
 
-First, **find out how many visits come from phones.** The site has no analytics; use the server's access logs (DreamHost) or ask in the room. If phones are a small share, phase 4 can wait.
+Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what people know from other apps, and it leaves the screen for content. Visitors get it at once (they have no habits here); members get it behind "Try the new room" (0.3) until the owner switches the default (5.1), because it changes how regulars move around Live on a phone.
 
 ### 4.1 Bottom tab bar
 - **Rows:** NV-01.
-- **Change:** under 640px with v2 on, new `#nav-tabs` (Home · Discover · Live · Library · You) replaces `#minimodeoptions` (kept in the DOM; its handlers still run): Home and Discover route to Discover; Live shows the stage with Chat · Recent · People · Cards; Library shows Playlists full screen; You opens Settings as a page.
+- **Change:** under 640px (visitors always; members with "Try the new room" on), new `#nav-tabs` (Home · Discover · Live · Library · You) replaces `#modeTabs` (Discover | Live), Discover's sideways row of view tabs and `#minimodeoptions` (all kept in the DOM; their handlers still run). **Home** is Discover Home: logo, theme, search, the room in one row with Listen in, New this week, Not played live yet, the chart. **Discover** is search and the list of views. **Live** shows the stage with Chat · Recent · People · Cards. **Library** shows Playlists full screen (for visitors: the crate, and what joining opens). **You** opens Settings as a page, with community, about and install (for visitors: join or log in).
 
 ### 4.2 Live on a phone
 - **Rows:** ST-*, NP-*, CH-*.
@@ -353,6 +367,8 @@ First, **find out how many visits come from phones.** The site has no analytics;
 ---
 
 ## Phase 5 · Default and clean-up
+
+Since round 4 the only thing behind the switch is the phone tab bar for members (and Phase 3's layout, if it is ever taken up).
 
 ### 5.1 Make the new room the default
 - Set `newRoom: "default"` in `config.js` on the server (no deploy needed). Settings shows "Use the classic room" for anyone who wants it back.

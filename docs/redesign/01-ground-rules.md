@@ -6,7 +6,7 @@ Read this at the start of every session. It's the difference between a redesign 
 
 1. **Build on what exists.** Restyle, relabel and rearrange the existing elements. Don't rewrite a module to change how it looks. A step that needs a rewrite is too big: split it.
 2. **No feature is dropped.** [02-feature-inventory.md](02-feature-inventory.md) lists every one. Each step names the inventory rows it touches and proves they still work.
-3. **Regulars first.** The people who DJ here every night have years of muscle memory. Phase 1 keeps every region where it is. Anything that moves a region ships behind "Try the new room" (Phase 3) until the owner switches the default.
+3. **Regulars first.** The people who DJ here every night have years of muscle memory. Phase 1 keeps every region where it is. Anything that moves a region ships behind "Try the new room" until the owner switches the default. **Live's look is frozen too (round 4):** the stage, its colours, the name plates, the raised buttons, the fader and the `:id:` mark stay as they are. No step recolours or restyles Live.
 4. **The DJs stand on the stage**, in front of the video or artwork, anchored to the stage floor. It's the room's signature. Hiding avatars is an option, never the default.
 5. **Playlist (crate) management is a first-class part of Live**, not something you leave the room for.
 6. **The `:id:` logo stays as it is** (`img/idlogo2.png`, `#roomlogo`).
@@ -24,6 +24,14 @@ Read this at the start of every session. It's the difference between a redesign 
 - The desktop crate and the phone crate share one interface.
 - Apple Music import is out. Spotify import waits for the owner's Spotify developer key.
 - The design must not look "vibecoded": no gradient washes, no everything-is-a-pill, no generic icon sets, no blurred colour blobs. Use the site's own type (Inter, Roboto Mono for numbers and times) and its own icons (Material Symbols, as today).
+
+Added in round 4 (November 12, 2026):
+- **The stage belongs to Live.** Nothing in Discover is drawn like it: no small stage, no song-colour tint, no `:id:` watermark, no name plates.
+- **A name plate means "DJing now".** Only the DJs on the stage stand on one. Everywhere else (Discover, the On Air card, chat, lists) a person is a circle avatar with the name beside it, as today.
+- **Discover is for finding new music.** New releases lead its Home.
+- **An On Air card** shows the room in Discover while the person isn't in the Live session.
+- **No big filled gold buttons** in new work. Gold fill is for small marks (the THEME badge, a selected tab's underline, progress). A panel's main action is a dark button with gold text; play/pause is the one light button. Existing buttons in Live aren't restyled.
+- **Phones get a bottom tab bar** (Home · Discover · Live · Library · You), so the screen is content, not buttons.
 
 ## The codebase you're working in
 

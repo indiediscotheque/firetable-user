@@ -7,8 +7,27 @@ What we're building towards. It comes from three rounds of mockups (the canvas "
 - **Round 1** unified Discover and Live into one app with a player bar, but took the DJs off the stage and didn't show the crate. Rejected: the DJs on stage are the room's signature, and crate management is central.
 - **Round 2** put the DJs back and the crate in a permanent side panel, with everything mapped. The review scored it 5/10: the stage shrank (the video about 38% smaller), avatars looked like they were "peeking out from behind a window", 14 regions competed at 1920 wide, gold meant eight things, and the playlist page left the room.
 - **Round 3** refines **today's room** instead of replacing it: the stage keeps its full height with the DJs standing in front, the crate stays under the stage (Playlists · Recent · Fresh · Cards), people stay on the left and chat on the right. Discover gets the same frame and one player. Phones get a bottom tab bar. That's what this plan builds, in the order of [04-step-plan.md](04-step-plan.md).
+- **Round 4** (November 12, 2026) keeps Live exactly as it looks today and spends the design on Discover and phones. The owner turned down a small stage, song-colour tints and name plates in Discover ("heavy and off balance"; people looked like they were all DJing), and the big filled gold buttons. Round 3's Live layout is on hold; its crate tools, menus and import stand.
+
+## Round 4: what's current
+
+Boards `R4 · …` on the canvas's "Round 4" page. Where this section and a later one disagree, this section wins.
+
+- **Live:** no change to its layout, colours or controls. Phase 1's steps add function inside it, in today's skin.
+- **Colours:** today's variables (`--color-bg` `#181818`, `--color-bg-s2` `#111`, `--color-bg-t1` `#222`, `--color-border`, `--color-accent`). Panels in Discover are flat `--color-bg-t1`. No gradients, no tint from the song's cover.
+- **People:** circle avatars with the name beside them. Name plates only on the stage.
+- **Buttons:** today's raised `.butt` shape. A panel's main action is dark with gold text; play/pause is light; other buttons grey. No wide solid-gold buttons.
+- **Discover's frame (computers):** today's three columns at today's widths. The left column is unchanged: logo, theme, Discover | Live, the live line with Listen in, search, the views.
+- **Home:** leads with **New this week** (releases since Friday): the lead song's cover (208px at 1440), title, artist, genre and length, "Found by [avatar] Chris · Nov 6 · 1 play so far", **Play the week's 18**, **Save all**; the next six covers; "All 18 from this week". Then **Not played live yet** (four covers tagged "Be the first", release date, Save), Room chart, the six most-played DJs as circle avatars with play counts, Rising, then today's Theme nights, Genres, On this day and Recent plays. No intro text.
+- **The On Air card (right column, while you're not in the room and nothing of yours is playing):** "On air in the room · N here", the room's cover, song, artist, "190 plays · first Mar 15, 2012", "matt on deck · Chris next" with circle avatars, a thin progress line, **Listen in**, **Step inside**, the chat peek, and **Just played** (four rows, "First play" tags). Art and text only, never a second player.
+- **The player (right column, playing from Discover):** "Playing from New · this week · 12 of 18", cover, title, artist, genre and year, progress, previous / play-pause / next, volume, open, ⋮. **Found by**: the first DJ's avatar, "First played here Nov 8", "1 play so far" (older songs: "38 plays · last Nov 9 by scytheria", and "Rising: 7 plays in the last 4 weeks"). **Play it in the room** (members: to the top of the playlist they DJ from, and "Hop on" when a spot is open; visitors: "Join to play it in the room"), **Save** as a split button, Up next with "6 left", and at the bottom the room in one row with **Rejoin** or **Listen in**.
+- **New:** one **Show** menu (This week, Last 90 days, Not played live yet), four covers across at 1440, each with who played it first and when, or "Nobody has played it yet" and "Be the first".
+- **Genres, the sound map:** the genre the room is in has a red dot, the genres it passed through tonight have small rings, the genre you're hearing has a gold outline, with a legend under the map. Clicking a genre shows its card under the map (name, description, counts, next door, its radio, Open).
+- **Phones:** a bottom tab bar, **Home · Discover · Live · Library · You**. Home: logo, theme, search, the room in one row with Listen in, then New this week, Not played live yet, the chart. Discover: search and the views. Live: the room. Library: playlists. You: profile, settings, mentions, community, about, install, log out. The player opens full screen from the mini player: cover, song, progress, three transport buttons, Found by, Save, Play it in the room, the room row. On phones the tab bar replaces the Discover | Live switch and the sideways row of view tabs.
 
 ## Design tokens
+
+**Round 4: the colour table below is not applied.** Colours stay today's (see above). The type, spacing, radius and target-size tokens stand.
 
 Add these to `:root` in `css/looks.css` in step 0.1, **mapped onto the existing variables** (the old names keep working). The values are the starting point; tune them on real screens.
 
@@ -60,6 +79,8 @@ Self-hosted only (`font-src 'self'`): **Inter** for everything, **Roboto Mono** 
 Material Symbols Outlined, as today, in the subset font (see [01-ground-rules.md](01-ground-rules.md) for rebuilding it). Filled for "on" states (`material-symbols-filled`). Icons the plan introduces: `tune`, `checklist`, `open_in_full`, `close_fullscreen`, `person_off`, `vertical_align_top`, `vertical_align_bottom`, `find_replace`, `sell`, `graphic_eq`, `library_add`, `inventory_2`, `ios_share`, `equalizer`, `article`, `music_note`, `radio`, `home`, `explore`, `library_music`. Check each against the current subset before using it; some may already be there.
 
 ## The Live room, desktop (1920 and 1440)
+
+**On hold since round 4.** Live keeps today's layout and look. Of this section, only what Phase 1 still lists is built (the Your turn bar, the crate toolbar and rows, Fire's count, slim song lines in chat).
 
 Board `R3 · Live room · 1920`. Same regions as today at 1024px and up:
 
@@ -124,6 +145,8 @@ Board `R3 · The small pick menus`. Every menu is a popover (today's pattern) of
 
 ## Every stage state
 
+**Round 4:** the wording of each state and the waitlist chip stand. The floor gradient and the light name plate are dropped: the stage is drawn as today.
+
 Board `R3 · Every stage state`. Each must be built and checked:
 1. **A visitor's first second:** the room visible behind a dark veil with "▶ Listen to the room" and one line ("jarvis is playing Me & Youphoria · 7 people here"). Replaces `#tapToPlay`'s words, same element.
 2. **Nobody on the decks:** the `:id:` backdrop (today's `#stageBackdrop`), one big dashed + and "The decks are open. Hop on and the room plays from your ★ playlist. 3 people are listening."
@@ -143,6 +166,8 @@ Boards `R3 · Import 1` and `Import 2`, and the phone pair.
 
 ## Discover in the same frame
 
+**Superseded by "Round 4: what's current" above,** except Charts (period control, two drop-downs, Play the chart, Save as playlist, Share, tied ranks) and the return to the room when your turn comes.
+
 Boards `R3 · Discover home` and `R3 · Charts`.
 - The **same header and left column** as Live: Home is selected; a "Your crate" card for visitors (3 songs saved, kept in this browser, becomes your first playlist when you join); a small **live stage card** at the bottom (the video with the DJs standing in it, "Me & Youphoria · Röyksopp · jarvis", **Listen in**).
 - **Home for a first visit:** one dismissable line ("A room of real DJs playing alt dance, nu-disco and synth, live, since 2016. Everything they've played is here to dig through: 98 DJs, every year since 2006, charts every week." + "See the room"), New this month (7 × 2 covers, each with who first played it and when), Room chart (Week / Month / Year / All time segmented; tied songs share a rank shown as "=1", with a note), Rising, Genres as small tiles with one distinct cover each.
@@ -150,6 +175,8 @@ Boards `R3 · Discover home` and `R3 · Charts`.
 - **One player** (the right column): tabs NOW PLAYING · UP NEXT · CHAT, and a two-way switch **From Discover | The room, live**. Playing from Discover mutes the room; a card shows what the room is playing with **Rejoin**; when your turn on the decks comes, the room comes back by itself. Up next, previous, play/pause, next, Grab (split), Link, volume.
 
 ## Phones
+
+**Round 4:** the tab bar and the You tab stand and move up the order (Phase 4 runs after Phase 2). Home and the player are as in "Round 4: what's current". Live and Library on a phone below are still the plan, behind "Try the new room" for members.
 
 Boards `R3 · Phone · …`. Bottom tab bar: **Home · Discover · Live · Library · You** (44px targets, 11px labels). A mini player sits above it, showing the room or what you're playing from Discover.
 - **Live:** header (logo, theme pill, @ with badge); the stage **full width at 16:9** (390 × 219) with the playing DJ standing in front and the next DJs small at the right; a ⋮ on the stage for video/art, avatars, full screen and reload; the song row (title, "Röyksopp · 22 plays · 1:24 / 4:50", **Fire** with count, **Grab**, **⋯**); a "You're next · Closer to the Ground" row (bus button, opens Library); tabs CHAT · RECENT · PEOPLE · CARDS; about 320px of chat; the composer. Fresh moves to the Discover tab.
