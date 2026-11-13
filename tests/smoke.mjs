@@ -706,7 +706,10 @@ try {
       night: { nT1: { theme: "Italo Night", from: now - 2 * DAY, to: now - 2 * DAY + 3600000, n: 3, djs: ["dj1"], rows: [
         { type: 1, cid: "night00001", a: "Italo", t: "One", dj: "dj1", djid: "dj1", w: now - 2 * DAY, f: 2 },
         { type: 1, cid: "night00002", a: "Italo", t: "Two", dj: "dj1", djid: "dj1", w: now - 2 * DAY + 1800000 },
-        { type: 1, cid: "night00003", a: "Italo", t: "Three", dj: "dj1", djid: "dj1", w: now - 2 * DAY + 3600000 }] } }
+        { type: 1, cid: "night00003", a: "Italo", t: "Three", dj: "dj1", djid: "dj1", w: now - 2 * DAY + 3600000 }] },
+        // not in the index: only Save all's whole-list check opens it
+        nT2: { theme: "Long Night", from: now - 3 * DAY, to: now - 3 * DAY + 3600000, n: 100, djs: ["dj1"],
+          rows: Array.from({ length: 100 }, (_, i) => ({ type: 1, cid: "long" + String(i).padStart(7, "0"), a: "Long", t: "Song " + (i + 1), dj: "dj1", djid: "dj1", w: now - 3 * DAY + i * 60000 })) } }
     },
     chartIds: { week: { "2026-W45": true } },
     ytm: { "nu-disco": "PLsmokeNuDisco" },
@@ -814,6 +817,11 @@ try {
     out.source = [...document.querySelectorAll("#dTags .d-tag")].map((e) => e.textContent).includes("YouTube");
     out.reload = !!document.querySelector("#dSide .d-reload");
     localStorage.setItem("ft-crate", "[]");
+    location.hash = "#discover/themes/nT2";
+    await until(() => document.querySelectorAll("#dBrowse .ft-rows .pvbar").length === 100);
+    document.querySelector("#dBrowse .d-saveall").click();
+    out.savedLong = JSON.parse(localStorage.getItem("ft-crate") || "[]").length;
+    localStorage.setItem("ft-crate", "[]");
     return out;
   });
   check(extras.fires === "4" && extras.wks === "3 wks,2 wks", "chart rows show fires (not counted) and weeks on the chart (" + extras.fires + " / " + extras.wks + ")");
@@ -821,6 +829,7 @@ try {
   check(/12 messages this hour/.test(extras.live), "the live line says how busy the chat is (" + extras.live + ")");
   check(extras.nights === "Italo Night" && extras.night === "Italo Night|3|#discover/themes/nT1", "theme nights, and a night's songs in order (" + extras.nights + " / " + extras.night + ")");
   check(extras.saved === "One,Two,Three", "Save all puts a whole list in the crate (" + extras.saved + ")");
+  check(extras.savedLong === 100, "Save all saves every song on screen, not just the first 50 (" + extras.savedLong + " of 100)");
   check(extras.playing === "night:night00001" && extras.source && extras.reload, "Play the night; the player names the source and can reload (" + JSON.stringify(extras) + ")");
 
   console.log("-- Discover: share a chart as a link, an image or an embed");

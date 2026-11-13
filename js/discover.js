@@ -1029,7 +1029,7 @@ firetable.discover = (function () {
   function saveAll(listName) {
     var list = lists[listName];
     if (!list || !list.tracks.length) return;
-    var tracks = list.tracks.slice(0, 50);
+    var tracks = list.tracks.slice();
     if (!D.signedIn) {
       var c = crate();
       var have = {};
