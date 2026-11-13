@@ -1823,9 +1823,20 @@ firetable.discover = (function () {
    * play a list, and the room is one tap away.
    */
   var turnNoted = null, songNoted = null;
+  /**
+   * Is the room's song still playing, with time left to hear it? The room keeps
+   * the last song until the bot starts the next one, so a page that catches up
+   * in that gap (woken from sleep, reloaded, just signed in) sees a song that
+   * has already ended.
+   */
+  function stillOn(s) {
+    var elapsed = (ftapi.now() - Number(s.started || 0)) / 1000;
+    var dur = Number(s.duration || 0);
+    return elapsed >= 0 && (dur > 0 ? elapsed < dur - 10 : elapsed < 60);
+  }
   function yourTurn() {
     var s = firetable.song;
-    if (!D.signedIn || !ftapi.uid || !s || !s.cid || s.cid == 0) return;
+    if (!D.signedIn || !ftapi.uid || !s || !s.cid || s.cid == 0 || !stillOn(s)) return;
     if (s.djid === ftapi.uid) {
       if ((D.src === "live" && !blocked()) || songNoted === s.started) return;
       songNoted = s.started;
