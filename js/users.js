@@ -339,7 +339,7 @@ firetable.actions.loggedIn = function (user) {
   firetable.nav._cardsShown = false; // fresh login → reload the card collection
   firetable.nav.restore();
   firetable.nav.apply();
-  $("#grab").css("display", "inline-block");
+  $("#grab").css("display", ""); // back to the stylesheet's (the player decides where it shows)
   firetable.ui.greet();
 };
 

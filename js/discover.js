@@ -30,7 +30,7 @@
  * Visitors save songs to a crate kept in this browser. The third save offers
  * to keep it; when they join, it becomes a playlist ("My Discover crate"),
  * their DJ playlist if they have none yet. "Step inside" shows Live as
- * visitors see it today, with the chat to read (discover/chat).
+ * visitors see it today (the chat is for members only).
  *
  * Addresses: #discover, #discover/new, #discover/charts,
  * #discover/charts/<week|month|year|all>/<id>, #discover/genres[/<slug>],
@@ -72,7 +72,7 @@ firetable.discover = (function () {
     djSort: "plays",     // plays | firsts | fires | since | name
     djFind: "",
     homeMore: {},
-    data: { new: null, charts: {}, chartIds: {}, chat: null },
+    data: { new: null, charts: {}, chartIds: {} },
     listening: false,
     signedIn: false
   };
@@ -1206,7 +1206,8 @@ firetable.discover = (function () {
     var listLabel = D.signedIn ? "Playlists" : "Crate" + (crate().length ? " (" + crate().length + ")" : "");
     var tab = function (id, label) { return '<button type="button" role="tab" class="tab' + (D.sideTab === id ? " on" : "") + '" data-sidetab="' + id + '" aria-selected="' + (D.sideTab === id) + '">' + label + "</button>"; };
     var unread = D.signedIn && D.unread ? ' <span class="d-unread" aria-label="' + D.unread + ' new">' + (D.unread > 99 ? "99+" : D.unread) + "</span>" : "";
-    return '<div class="tabs d-sidetabs" role="tablist" aria-label="With the player">' + tab("list", esc(listLabel)) + tab("chat", "Chat" + unread) +
+    // the chat is for members only
+    return '<div class="tabs d-sidetabs" role="tablist" aria-label="With the player">' + tab("list", esc(listLabel)) + (D.signedIn ? tab("chat", "Chat" + unread) : "") +
       '<button type="button" class="butt graybutt iconbutt d-sheetclose" title="Close" aria-label="Close">' + ms("expand_more") + "</button></div>";
   }
 
@@ -1238,7 +1239,7 @@ firetable.discover = (function () {
   function renderSide() {
     var el = document.getElementById("dSide");
     if (!el) return;
-    if (D.sideTab !== "list" && D.sideTab !== "chat") D.sideTab = "list";
+    if (D.sideTab !== "list" && !(D.sideTab === "chat" && D.signedIn)) D.sideTab = "list";
     // the chat's tab: only its tabs change, so the chat keeps its place
     if (D.sideTab === "chat" && D.signedIn && (el.querySelector(".d-chathost #actualChat") || F.chatOpen)) {
       var bar = el.querySelector(".d-sidetabs");
@@ -1257,7 +1258,7 @@ firetable.discover = (function () {
       renderBar();
       return;
     }
-    var body = D.sideTab === "chat" ? chatPanel() : D.signedIn ? playlistPanel() : cratePanel();
+    var body = D.signedIn ? playlistPanel() : cratePanel();
     el.innerHTML = '<div class="d-sidebody" data-tab="' + D.sideTab + '">' + sideTabs() + body + "</div>";
     if (scroll) el.querySelector(".d-sidebody").scrollTop = scroll;
     if (D.sideTab === "list" && D.signedIn) listReady(filterFocused);
@@ -1349,25 +1350,12 @@ firetable.discover = (function () {
     }).join("") + "</div>";
   }
 
-  function chatPeekBlock(n) {
-    var chat = D.data.chat || {};
-    return '<div class="d-upnext"><div class="d-label">' + ms("forum") + "<span>Live chat" + esc(chat.hour ? " · " + firetable.utilities.pluralize(chat.hour, "message", "messages") + " this hour" : "") + "</span></div>" +
-      chatList((chat.msgs || []).slice(-n)) + "</div>";
-  }
-
-  // Chat for visitors: the room's chat to read, and the way in
-  function chatPanel() {
-    return '<div class="d-panel">' + chatPeekBlock(14) +
-      '<p class="d-fact">You\'re reading the room\'s chat. Join to say hi, fire songs and take a turn on the decks.</p>' + joinButtons() + "</div>";
-  }
-
   /** The history's facts about a song, in the full player: tags, plays, who found it first. */
   function fillDetails(t, live) {
     if (!t) return;
     loadDetails(t).then(function (d) {
       var now = fullTrack();
       if (!F.open || !now || String(now.cid) !== String(t.cid)) return;
-      if (d.bpm && !live) beat(d.bpm);
       d = Object.assign({}, d, liveFacts(t));
       var tags = (d.genres || []).slice(0, 2).map(function (g) { return '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>"; });
       if (t.rel) tags.push('<span class="d-tag d-numtag">' + esc(t.rel.slice(0, 4)) + "</span>");
@@ -1425,18 +1413,8 @@ firetable.discover = (function () {
       if (discoverActive()) mediaSession(P.track);
     }
     renderFull(true);
-    if (D.mode !== "discover") return;
     if (D.src === "live" && live) mediaSession(live, true);
     renderBar();
-  }
-
-  function chatList(msgs) {
-    if (!msgs.length) return '<p class="d-fact">The chat is quiet right now.</p>';
-    return '<div class="d-chat">' + msgs.map(function (m) {
-      var who = m.n ? { uid: m.uid || uidOf(m.n), name: m.n } : null;
-      return '<div class="d-chatline">' + (who ? robot(who) : '<span class="ft-avatar pv-dj-avatar d-nobody" aria-hidden="true"></span>') +
-        "<span><b>" + esc(who ? who.name : "a member") + "</b>" + esc(m.txt) + "</span></div>";
-    }).join("") + "</div>";
   }
 
   // ─── Crate (visitors) ───────────────────────────────────────────────────
@@ -1946,7 +1924,7 @@ firetable.discover = (function () {
 
   function step(by) {
     var list = lists[P.list];
-    if (!list || D.mode !== "discover") return;
+    if (!list) return;
     // back, a few seconds in: the start of this song (as every player does)
     if (by < 0 && P.at > 3 && discoverActive()) return seek(0);
     var i = P.i + by;
@@ -2008,9 +1986,7 @@ firetable.discover = (function () {
     P.timer = setInterval(tick, 500);
     tick();
   }
-  function stopTicking() { clearInterval(P.timer); P.timer = null; }
   function tick() {
-    if (D.mode !== "discover" && !F.open) return;
     // the stage's own mute (or a key) may have changed it meanwhile
     if (F.open && firetable.utilities.getEffectiveVolume() !== lastVolume) { renderVolume(); renderFull(); }
     if (discoverActive()) {
@@ -2069,14 +2045,28 @@ firetable.discover = (function () {
 
   var STAGE_BUTTONS = [["fire", "tip-fire", "pv-livekeep"], ["grab", "tip-grab", "pv-livekeep"], ["songlink", "tip-songlink", "pv-liveacts"],
     ["skipTrigger", "tip-skipTrigger", "pv-liveacts"], ["npModBtn", "tip-npModBtn", "pv-liveacts"]];
-  // Where the stage's buttons are: on the stage (Live), in the bar (Discover)
-  // or in the full-screen player while it's open (either side).
+  // The stage's own utilities: its screen (synced, on, off), reload and full
+  // screen. With the player along the bottom they live in it too, in Discover
+  // and Live, and the stage is left to the DJs. The screen goes into the
+  // full-screen player while it's open (its Video is the stage's screen down).
+  var STAGE_TOOLS = [["screenControl", "screenControlTip", "pv-tools", "pv-fscreen"], ["reloadtrack", "tip-reloadtrack", "pv-tools", null],
+    ["fullscreenBtn", "tip-fullscreenBtn", "pv-tools", null]];
+  // Where the stage's buttons are: in the bar along the bottom, or in the
+  // full-screen player while it's open. The stage keeps none.
   var stageAt = "stage";
   function placeStage() {
-    var want = F.open ? "full" : D.mode === "discover" ? "bar" : "stage";
+    var want = F.open ? "full" : "bar";
     if (want === stageAt) return;
-    var host = function (b) { return document.getElementById(want === "full" ? "pv-fstage" : want === "bar" ? b[2] : "stageActions"); };
+    var host = function (b) { return document.getElementById(want === "full" ? "pv-fstage" : b[2]); };
     if (!STAGE_BUTTONS.every(function (b) { return document.getElementById(b[0]) && host(b); })) return;
+    STAGE_TOOLS.forEach(function (b) {
+      var el = document.getElementById(b[0]);
+      var h = document.getElementById(want === "full" && b[3] ? b[3] : b[2]);
+      if (!el || !h || el.parentNode === h) return;
+      h.appendChild(el);
+      var tip = document.getElementById(b[1]);
+      if (tip) h.appendChild(tip);
+    });
     // a menu open on a button that moves would point at nothing
     ["npModMenu", "skipPopover", "flagPopover", "tagEditorPopover"].forEach(function (id) {
       var p = document.getElementById(id);
@@ -2174,7 +2164,6 @@ firetable.discover = (function () {
   function renderBar() {
     var el = document.getElementById("dMini");
     if (!el) return;
-    if (D.mode !== "discover") return;
     placeStage();
     var kind = barKind();
     var s = liveTrack();
@@ -2185,6 +2174,9 @@ firetable.discover = (function () {
     el.className = "pb is-" + kind + (live ? " is-room" : "") + (P.paused && (kind === "discover" || kind === "pick") ? " is-paused" : "") + (blocked() ? " is-blocked" : "") + (D.signedIn ? " is-member" : "");
     el.setAttribute("aria-label", live ? "Player: the room, live" : kind === "quiet" ? "Player" : "Player: Discover");
     if (kind !== lastKind) { lastKind = kind; document.body.setAttribute("data-pb", kind); }
+    // in Live while you hear a Discover song (or nothing), the stage's screen stays up:
+    // the room's players are carrying your song, not the room's video
+    document.body.classList.toggle("pb-elsewhere", discoverActive() || D.src === "off");
 
     // where it's from
     var src = document.getElementById("pv-src");
@@ -2255,7 +2247,7 @@ firetable.discover = (function () {
         '<button type="button" class="butt graybutt iconbutt d-more" title="More" aria-label="More about this song" aria-haspopup="menu">' + ms("more_vert") + "</button>";
     } else {
       acts.removeAttribute("data-list");
-      acts.innerHTML = live ? '<button type="button" class="butt graybutt small d-stepin pb-stepin" title="Go to the room: the stage, the DJs, everyone">' + ms("login") + "<span>Step inside</span></button>" : "";
+      acts.innerHTML = live && D.mode === "discover" ? '<button type="button" class="butt graybutt small d-stepin pb-stepin" title="Go to the room: the stage, the DJs, everyone">' + ms("login") + "<span>Step inside</span></button>" : "";
     }
 
     // the other source, one tap away
@@ -2275,30 +2267,27 @@ firetable.discover = (function () {
 
   // ─── The full-screen player ─────────────────────────────────────────────
   // Made to be left on: a TV, a projector, a second monitor. The bar opens it
-  // (its cover, the ⤢ button, or F) and in Live the stage's full-screen
-  // button does; it grows out of the bar (or the stage) and shrinks back into
-  // it. Its background is the song's colour (the room's, as the stage has it;
-  // a Discover song's, read from its cover), changing with every song. Audio
-  // and Video are the stage's screen up and down: the same view either way,
-  // with the song's video lowered behind it like the stage's screen (the
-  // room's own player, moved into place by CSS: an iframe that's moved in
-  // the page reloads). Beside the song, what's going on: up next in Discover; the
-  // decks, what just played and the chat in the room. Everyone has what their
-  // role allows: the stage's Fire, Grab, Link, Skip and Mod tools move in for
-  // the room's song (as they do into the bar), members can hop on or step
-  // down, and visitors get Save to the crate and Join. The theme, the :id:
-  // mark and the clock stay on screen; the controls fade out when nobody's
-  // touching anything, and the screen is kept awake while it's open.
+  // (its cover, its full-screen button, or F), in Discover and Live alike; it
+  // grows out of the bar and shrinks back into it, and plays what the bar
+  // plays. Its background is the song's colour (the room's, as the stage has
+  // it; a Discover song's, read from its cover), changing with every song.
+  // The stage's own screen button moves in: screen off shows the song's own
+  // artwork, screen on lowers the video behind the same view, like the stage
+  // (the room's own player, moved into place by CSS: an iframe that's moved
+  // in the page reloads). Beside the song: up next in Discover, the decks and
+  // what just played in the room, and for members a tab with the room's own
+  // chat. Everyone has what their role allows: the stage's Fire, Grab, Link,
+  // Skip and Mod tools move in from the bar, members can hop on or step down,
+  // and visitors get Save to the crate and Join. The theme, the :id: mark and
+  // the clock stay on screen; the controls rest when nobody's touching
+  // anything, and the screen is kept awake while it's open.
 
-  var F = { open: false, closing: null, view: "audio", chatOpen: false, idle: null, from: null, chat: [], unread: 0, bpm: 0, shown: null, art: null, bgLayer: 0, lock: null };
-  var EQ_BARS = 36;
+  var F = { open: false, closing: null, tab: "deck", chatOpen: false, idle: null, from: null, unread: 0, shown: null, art: null, bgLayer: 0, lock: null };
 
   function fullEl() { return document.getElementById("pv-full"); }
-  /** What the full player shows: as the bar in Discover; the room in Live. */
+  /** What the full player shows: what the bar shows, what you hear. */
   function fullKind() {
-    if (D.mode === "discover") return barKind();
-    if (!liveTrack()) return "quiet";
-    return blocked() ? "onair" : "live";
+    return barKind(); // what you hear, in Discover and in Live alike
   }
   function fullTrack() {
     var k = fullKind();
@@ -2306,30 +2295,18 @@ firetable.discover = (function () {
   }
   function canVideo(t) { return !!t && Number(t.type || 1) === MEDIA_YOUTUBE && !firetable.disableMediaPlayback; }
 
-  /** The cover at its biggest: YouTube's full-size frame when the video has one, SoundCloud's 500px art. */
-  var bigArts = {};
-  function bigArt(t, done) {
-    var small = artOf(t);
-    var k = t.type + "_" + t.cid;
-    if (k in bigArts) return done(bigArts[k] || small);
-    var want = Number(t.type || 1) === MEDIA_YOUTUBE ? "https://i.ytimg.com/vi/" + encodeURIComponent(t.cid) + "/maxresdefault.jpg"
-      : /-large\.(jpg|png)/.test(small) ? small.replace(/-large\.(jpg|png)/, "-t500x500.$1") : null;
-    if (!want) { bigArts[k] = null; return done(small); }
-    done(small); // the small one at once, the big one when it's here
-    var img = new Image();
-    img.onload = function () { bigArts[k] = img.naturalWidth > 200 ? want : null; if (bigArts[k]) done(want); }; // YouTube answers a missing size with a 120px grey frame
-    img.onerror = function () { bigArts[k] = null; };
-    img.src = want;
+  /**
+   * The song's own artwork, as the stage's now playing shows it: the image the
+   * room (or the library) has for the song, SoundCloud's at 500px. Never a
+   * video frame blown up.
+   */
+  function songArt(t) {
+    var art = artOf(t);
+    return /-large\.(jpg|png)/.test(art) ? art.replace(/-large\.(jpg|png)/, "-t500x500.$1") : art;
   }
 
   function fullHtml() {
     var name = esc((document.getElementById("roomlogo") || {}).title || "Indie Discotheque");
-    var bars = "";
-    for (var i = 0; i < EQ_BARS; i++) {
-      // a fixed shape: tall in the middle, uneven like a real spectrum
-      var h = 0.35 + 0.6 * Math.abs(Math.sin(i * 1.7 + 0.4)) * (1 - Math.abs(i - EQ_BARS / 2) / EQ_BARS);
-      bars += '<i style="--h:' + h.toFixed(2) + ";--d:" + (-((i * 7) % 11) / 11).toFixed(2) + '"></i>';
-    }
     var iconBtn = function (id, icon, label, extra) {
       return '<button type="button" id="' + id + '" class="butt graybutt iconbutt pvf-iconbtn" title="' + label + '" aria-label="' + label + '"' + (extra || "") + ">" + ms(icon) + "</button>";
     };
@@ -2337,22 +2314,21 @@ firetable.discover = (function () {
       '<div class="pvf-brand"><span class="pvf-logo" role="img" aria-label="' + name + '"></span>' +
       '<span class="pvf-roomtext"><b>' + name + '</b><span id="pv-ftheme"></span></span></div>' +
       '<div class="pvf-tools">' +
-      '<div class="pvf-views" role="group" aria-label="Show">' +
-      '<button type="button" class="pvf-view" data-fview="audio" aria-pressed="true" title="Audio: the screen up, the cover and the beat (V)">' + ms("graphic_eq") + "<span>Audio</span></button>" +
-      '<button type="button" class="pvf-view" data-fview="video" aria-pressed="false" title="Video: the screen down, the song\'s video (V)">' + ms("smart_display") + "<span>Video</span></button></div>" +
-      iconBtn("pv-fchat", "forum", "Chat", ' aria-pressed="false"') +
+      // the stage's own screen button (placeStage moves it in): screen on, off or synced
+      '<span class="pb-host" id="pv-fscreen"></span>' +
       iconBtn("pv-ffs", "fullscreen", "Fill the screen", " hidden") +
       iconBtn("pv-fclose", "close_fullscreen", "Close the player (Esc)") +
       "</div></header>" +
       '<div class="pvf-body">' +
       '<section class="pvf-now" aria-labelledby="pv-ftitle">' +
       '<div class="pvf-visual"><div class="pvf-art" id="pv-fart"><span class="pvf-cover"></span></div>' +
-      '<div class="pvf-eq" id="pv-feq" aria-hidden="true">' + bars + "</div></div>" +
+      "</div>" +
       '<div class="pvf-text"><div class="pvf-src" id="pv-fsrc"></div>' +
       '<h2 class="pvf-title" id="pv-ftitle"></h2><p class="pvf-artist" id="pv-fartist"></p>' +
       '<div class="d-tags pvf-tags" id="pv-ftags"></div><div class="d-hist pvf-hist" id="pv-fhist"></div></div>' +
       "</section>" +
-      '<aside class="pvf-side" id="pv-fside" aria-label="What\'s going on"></aside>' +
+      '<aside class="pvf-side" id="pv-fside" aria-label="What\'s going on"><div class="tabs pvf-tabs" id="pv-ftabs" role="tablist" aria-label="Beside the song"></div>' +
+      '<div class="pvf-sidebody" id="pv-fsidebody"></div></aside>' +
       "</div>" +
       '<footer class="pvf-bar">' +
       '<div class="pvf-time"><span id="pv-fat" class="pb-at"></span><span class="pb-track pvf-track"><span class="d-bar"><i id="pv-fbar"></i></span>' +
@@ -2365,10 +2341,7 @@ firetable.discover = (function () {
       '<input type="range" id="pv-fvol" min="0" max="100" step="5" value="50" aria-label="Volume" /></div></div>' +
       // phones: the rest of the controls wait behind this
       '<button type="button" class="butt graybutt iconbutt pvf-morebtn" title="More controls" aria-label="More controls" aria-expanded="false">' + ms("more_horiz") + "</button>" +
-      "</div></footer>" +
-      '<div class="pvf-drawer" id="pv-fdrawer" role="region" aria-label="Chat" hidden><div class="pvf-drawerhead"><b>Chat</b>' +
-      '<button type="button" class="butt graybutt iconbutt pvf-drawerclose" title="Close the chat" aria-label="Close the chat">' + ms("close") + "</button></div>" +
-      '<div class="pvf-drawerbody" id="pv-fdrawerbody"></div></div>';
+      "</div></footer>";
   }
   function buildFull() {
     if (fullEl()) return;
@@ -2389,10 +2362,6 @@ firetable.discover = (function () {
     bg.innerHTML = '<i class="pvf-bgart"></i><i class="pvf-bgart"></i>';
     document.body.appendChild(bg);
     document.body.appendChild(el);
-    try {
-      var v = localStorage.getItem(STORAGE.fullView);
-      F.view = v === "video" || v === "audio" ? v : null; // none chosen: as the stage's screen is
-    } catch (e) { /* private window */ }
     window.addEventListener("resize", firetable.utilities.oncePerFrame(placeScreen));
     ["pointermove", "pointerdown", "keydown", "wheel", "touchstart"].forEach(function (ev) { el.addEventListener(ev, wake, { passive: true }); });
     var fs = document.getElementById("pv-ffs");
@@ -2408,6 +2377,16 @@ firetable.discover = (function () {
     return pill && text && !pill.classList.contains("no-theme") ? text.textContent.trim() : "";
   }
 
+  /** The side's tabs, for members: the DJs (or what's up next) and the room's chat. */
+  function fullTabs(kind) {
+    if (!D.signedIn) return ""; // the chat is for members: visitors see the DJs (or up next) only
+    var disc = kind === "discover" || kind === "pick";
+    var tab = function (id, label) {
+      return '<button type="button" role="tab" class="tab' + (F.tab === id ? " on" : "") + '" data-ftab="' + id + '" aria-selected="' + (F.tab === id) + '">' + label + "</button>";
+    };
+    var unread = F.unread && F.tab !== "chat" ? ' <span class="d-unread" aria-label="' + F.unread + ' new">' + (F.unread > 99 ? "99+" : F.unread) + "</span>" : "";
+    return tab("deck", disc ? "Up next" : "DJs") + tab("chat", "Chat" + unread);
+  }
   /** The side: what goes with what's playing. */
   function fullSide(kind) {
     if (kind === "discover" || kind === "pick") {
@@ -2424,7 +2403,7 @@ firetable.discover = (function () {
       h = '<div class="d-decks"><div class="d-label">' + ms("headphones") + "<span>On the decks</span></div>" +
         '<p class="d-fact">Nobody is on the decks right now. ' + (D.signedIn ? '<button type="button" class="linkButton d-joinwait">Hop on</button> and start it.' : '<button type="button" class="linkButton d-createaccount">Join</button> to be the one who starts it.') + "</p></div>";
     }
-    h += justPlayed() + fullChatBlock();
+    h += justPlayed();
     if (P.track && !(s && String(s.cid) === String(P.track.cid))) {
       h += '<div class="d-roomrow"><span class="d-mini-art" style="background-image:url(' + esc(artOf(P.track)) + ')"></span>' +
         '<span class="d-mini-text"><b>' + ms("explore") + "Your pick</b><span>" + esc(P.track.t) + "</span></span>" +
@@ -2442,25 +2421,12 @@ firetable.discover = (function () {
       '<span class="d-mini-text"><b><i class="d-dot" aria-hidden="true"></i> In the room: ' + esc(s.t) + "</b><span>" + esc((s.dj ? s.dj + " on deck" : "Live") + " · " + n + " here" + (line ? " · " + line : "")) + "</span></span>" +
       '<button type="button" class="butt graybutt small d-listen">Listen in</button></div>';
   }
-  /** The chat, a few lines of it: members see the room's own, visitors the public peek. */
-  function fullChatBlock() {
-    var peek = D.data.chat || {};
-    var msgs = D.signedIn ? F.chat.slice(-6) : (peek.msgs || []).slice(-6);
-    var busy = !D.signedIn && peek.hour ? " · " + firetable.utilities.pluralize(peek.hour, "message", "messages") + " this hour" : "";
-    return '<div class="d-upnext pvf-chat"><div class="d-label">' + ms("forum") + "<span>Live chat" + esc(busy) + "</span></div>" + chatList(msgs) +
-      '<button type="button" class="linkButton pvf-openchat">' + (D.signedIn ? "Open the chat" : "Join to chat") + "</button></div>";
-  }
-  /** A message in the room's chat, kept for the full player's few lines. */
+  /** A message in the room's chat while the player shows the other tab: counted on Chat. */
   function chatHeard(c) {
-    if (!c || c.hidden || !c.txt) return;
-    var u = ftapi.users && ftapi.users[c.id];
-    var name = (u && u.username) || c.name || "";
-    F.chat.push({ uid: c.id, n: name, txt: firetable.utilities.decodeEntities(firetable.ui.strip(String(c.txt))).slice(0, 240) });
-    if (F.chat.length > 20) F.chat.splice(0, F.chat.length - 20);
-    if (!F.open) return;
-    if (!F.chatOpen && c.id !== ftapi.uid) { F.unread++; renderFullTools(); }
-    var box = document.querySelector("#pv-fside .pvf-chat");
-    if (box) box.outerHTML = fullChatBlock();
+    if (!F.open || !D.signedIn || F.tab === "chat" || !c || c.hidden || c.id === ftapi.uid) return;
+    F.unread++;
+    var tabs = document.getElementById("pv-ftabs");
+    if (tabs) tabs.innerHTML = fullTabs(fullKind());
   }
 
   /** Keep focus on the same control when a part of the player is drawn again. */
@@ -2483,20 +2449,6 @@ firetable.discover = (function () {
   function renderFullTools() {
     var el = fullEl();
     if (!el) return;
-    var t = fullTrack();
-    var video = fullView() === "video" && canVideo(t);
-    el.querySelectorAll("[data-fview]").forEach(function (b) {
-      var v = b.getAttribute("data-fview");
-      b.setAttribute("aria-pressed", String(v === "video" ? video : !video));
-      b.disabled = v === "video" && !canVideo(t);
-      b.title = v === "video" ? (t && !canVideo(t) ? (firetable.disableMediaPlayback ? "Media is turned off in Settings" : "SoundCloud songs have no video") : "Video: the screen down, the song's video (V)") : "Audio: the screen up, the cover and the beat (V)";
-    });
-    var c = document.getElementById("pv-fchat");
-    if (c) {
-      c.setAttribute("aria-pressed", String(F.chatOpen));
-      c.innerHTML = ms("forum") + (F.unread && !F.chatOpen ? '<span class="d-unread">' + (F.unread > 99 ? "99+" : F.unread) + "</span>" : "");
-      c.setAttribute("aria-label", F.unread && !F.chatOpen ? "Chat, " + F.unread + " new" : "Chat");
-    }
     var theme = themeText();
     var th = document.getElementById("pv-ftheme");
     if (th) th.innerHTML = theme ? ms("palette") + "<span>" + esc(theme) + "</span>" : esc(peopleHere() ? firetable.utilities.pluralize(peopleHere(), "person", "people") + " here" : "");
@@ -2517,22 +2469,18 @@ firetable.discover = (function () {
     var disc = kind === "discover" || kind === "pick";
     var s = liveTrack();
     var key = t ? t.type + "_" + t.cid + (room ? "_room" : "") : kind;
-    var video = fullView() === "video" && canVideo(t);
+    // the stage's screen down: the video behind (a Discover song's own, or the room's screen)
+    var video = fullView() === "video" && (room ? !!t : canVideo(t));
     var vol = firetable.utilities.getEffectiveVolume();
     var sounding = disc ? discoverActive() && !P.paused : kind === "live" && vol > 0;
     ["discover", "pick", "live", "onair", "quiet"].forEach(function (k) { el.classList.toggle("is-" + k, k === kind); });
     el.classList.toggle("is-room", room);
     el.classList.toggle("is-member", !!D.signedIn);
-    el.classList.toggle("in-live", D.mode !== "discover");
     el.classList.toggle("is-video", video);
     el.classList.toggle("is-sounding", sounding);
     el.classList.toggle("is-paused", disc && P.paused);
-    el.classList.toggle("has-drawer", F.chatOpen);
+    el.classList.toggle("on-chat", F.chatOpen);
     document.body.classList.toggle("pv-full-video", video);
-    // the beat: the room's tempo (room.js keeps --beat), or this song's from its details
-    var bpm = room ? (document.body.classList.contains("has-beat") ? 1 : 0) : F.bpm;
-    el.classList.toggle("has-beat", !!bpm);
-    if (!room && F.bpm) el.style.setProperty("--fp-beat", (60 / F.bpm).toFixed(4) + "s"); else el.style.removeProperty("--fp-beat");
     applyFullTone(t, room);
     placeScreen();
 
@@ -2558,7 +2506,6 @@ firetable.discover = (function () {
     redraw(titleEl, title);
     redraw(artistEl, t ? artistLinks(t.a) : esc(D.mode === "discover" ? "New, Charts, Genres: everything the room has played" : "When someone hops on the decks, their song shows here."));
     if (key !== F.shown || details) {
-      if (key !== F.shown) { F.bpm = 0; el.style.removeProperty("--fp-beat"); }
       F.shown = key;
       document.getElementById("pv-ftags").innerHTML = "";
       document.getElementById("pv-fhist").innerHTML = t ? "<p>" + ms("hourglass_empty") + "Looking it up…</p>" : "";
@@ -2583,20 +2530,17 @@ firetable.discover = (function () {
         '<button type="button" class="butt graybutt iconbutt pb-savelive' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "In your crate" : "Save to your crate") + '" aria-label="' + esc(saved ? "In your crate" : "Save to your crate") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "</button>";
     }
     if (D.mode === "discover") acts += '<button type="button" class="butt graybutt iconbutt pvf-list" title="' + (D.signedIn ? "Playlists" : "Your crate") + '" aria-label="' + (D.signedIn ? "Playlists" : "Your crate") + '">' + ms("queue_music") + "</button>";
-    acts += '<button type="button" class="butt graybutt iconbutt pvf-chatbtn" title="Chat" aria-label="Chat">' + ms("forum") + "</button>"; // phones: the top's Chat, among the extras
     var factsEl = document.getElementById("pv-facts");
     if (disc) { factsEl.setAttribute("data-list", P.list || ""); factsEl.setAttribute("data-i", String(P.i)); } else factsEl.removeAttribute("data-list");
     redraw(document.getElementById("pv-fkeep"), keep);
     redraw(factsEl, acts);
 
+    // as the bar's: the same in Discover and Live, since it plays what you hear
     var mainIcon, mainLabel;
-    if (D.mode === "discover") {
-      if (disc) { mainIcon = P.paused || kind === "pick" ? "play_arrow" : "pause"; mainLabel = mainIcon === "pause" ? "Pause" : "Play"; }
-      else if (kind === "live") { mainIcon = "stop"; mainLabel = "Stop listening to the room"; }
-      else if (kind === "onair") { mainIcon = "play_arrow"; mainLabel = "Listen in to the room"; }
-      else { mainIcon = "play_arrow"; mainLabel = "Play"; }
-    } else if (kind === "onair") { mainIcon = "play_arrow"; mainLabel = "Start the sound"; }
-    else { mainIcon = vol === 0 ? "volume_off" : "volume_up"; mainLabel = vol === 0 ? "Unmute the room" : "Mute the room"; }
+    if (disc) { mainIcon = P.paused || kind === "pick" ? "play_arrow" : "pause"; mainLabel = mainIcon === "pause" ? "Pause" : "Play"; }
+    else if (kind === "live") { mainIcon = "stop"; mainLabel = "Stop listening to the room"; }
+    else if (kind === "onair") { mainIcon = "play_arrow"; mainLabel = "Listen in to the room"; }
+    else { mainIcon = "play_arrow"; mainLabel = "Play"; }
     var total = lists[P.list] ? lists[P.list].tracks.length : 0;
     tr = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous (Shift + ←)" aria-label="Previous"' + (P.i <= 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
       '<button type="button" class="butt iconbutt pvf-main d-big" title="' + mainLabel + ' (Space)" aria-label="' + mainLabel + '"' + (kind === "quiet" ? " disabled" : "") + ">" + ms(mainIcon, true) + "</button>" +
@@ -2609,43 +2553,62 @@ firetable.discover = (function () {
     seekEl.setAttribute("aria-label", disc ? "Seek" : "The room's song so far (it plays live)");
     if (kind === "quiet") paint(0, 0);
 
-    // the side
-    var side = document.getElementById("pv-fside");
-    var scroll = side.scrollTop;
-    redraw(side, fullSide(kind));
-    side.scrollTop = scroll;
+    // the side: the DJs (or up next) and, for members, the room's own chat on its tab
+    if (!D.signedIn && F.tab === "chat") F.tab = "deck";
+    var tabsEl = document.getElementById("pv-ftabs");
+    var body = document.getElementById("pv-fsidebody");
+    tabsEl.hidden = !D.signedIn;
+    redraw(tabsEl, fullTabs(kind));
+    if (F.tab === "chat") {
+      if (!body.querySelector("#actualChat")) { body.innerHTML = ""; chatIn(body); }
+      F.chatOpen = true;
+    } else {
+      if (F.chatOpen) { F.chatOpen = false; chatBack(); if (D.mode === "discover" && D.sideTab === "chat" && D.signedIn) renderSide(); }
+      var scroll = body.scrollTop;
+      redraw(body, fullSide(kind));
+      body.scrollTop = scroll;
+    }
+    el.classList.toggle("on-chat", F.chatOpen);
     renderFullTools();
     renderVolume();
     firetable.ui.markSaved();
     tick();
   }
 
-  /** The cover, big, and the backdrop behind everything: the same art, crossfaded on a new song. */
+  /** The song's own artwork, big (it turns over to the next song's, as the stage's does), and the backdrop behind everything. */
   function setFullArt(t) {
     var el = fullEl();
+    var art = el.querySelector(".pvf-art");
     var cover = el.querySelector(".pvf-cover");
     var layers = document.querySelectorAll("#pv-fullbg .pvf-bgart");
-    var shown = t;
-    el.classList.toggle("is-wide", !!t && Number(t.type || 1) === MEDIA_YOUTUBE);
     if (!t) {
       cover.style.backgroundImage = "";
+      F.art = null;
       layers.forEach(function (l) { l.classList.remove("on"); });
       return;
     }
-    bigArt(t, function (src) {
-      if (fullTrack() !== shown && (!fullTrack() || String(fullTrack().cid) !== String(shown.cid))) return; // a newer song meanwhile
-      var url = "url(" + JSON.stringify(src) + ")";
-      cover.style.backgroundImage = url;
-      if (F.art === src) return;
-      F.art = src;
-      F.bgLayer = 1 - F.bgLayer;
-      layers[F.bgLayer].style.backgroundImage = url;
-      layers[F.bgLayer].classList.add("on");
-      layers[1 - F.bgLayer].classList.remove("on");
-    });
+    var src = songArt(t);
+    if (F.art === src) return;
+    var first = !F.art;
+    F.art = src;
+    var url = "url(" + JSON.stringify(src) + ")";
+    var swap = function () { cover.style.backgroundImage = url; };
+    var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (first || reduce || !art.animate || !art.offsetParent) swap();
+    else {
+      art.animate([{ transform: "perspective(900px) rotateY(0)" }, { transform: "perspective(900px) rotateY(90deg)" }], { duration: 260, easing: "ease-in" })
+        .finished.then(function () {
+          swap();
+          art.animate([{ transform: "perspective(900px) rotateY(-90deg)" }, { transform: "perspective(900px) rotateY(0)" }], { duration: 340, easing: "cubic-bezier(.2,.8,.2,1)" });
+        }, swap);
+    }
+    F.bgLayer = 1 - F.bgLayer;
+    layers[F.bgLayer].style.backgroundImage = url;
+    layers[F.bgLayer].classList.add("on");
+    layers[1 - F.bgLayer].classList.remove("on");
   }
   /**
-   * The song's colour: the background, the beat, the progress and the labels.
+   * The song's colour: the background, the progress and the labels.
    * The room's song has the colour the bot gives it (the stage's, firetable.color);
    * a Discover song the one read from its cover, as the bar takes it.
    */
@@ -2668,9 +2631,9 @@ firetable.discover = (function () {
     var done = function (tone) { if (el.getAttribute("data-tone-for") === k) set(tone); };
     if (key in tones) done(tones[key]); else toneOf(t).then(done);
   }
-  /** Audio or Video: the person's choice, else whatever the stage's screen shows now. */
+  /** The stage's screen: down (the video) or up (the artwork). One setting for the stage and the player. */
   function fullView() {
-    return F.view || (document.body.classList.contains("screen") ? "video" : "audio");
+    return document.body.classList.contains("screen") ? "video" : "audio";
   }
   /**
    * On a phone the video goes where the cover is (the screen is as wide as
@@ -2682,35 +2645,25 @@ firetable.discover = (function () {
     var r = art && art.getBoundingClientRect();
     if (r && r.width) document.documentElement.style.setProperty("--pvf-art-top", Math.round(r.top) + "px");
   }
-  /** A Discover song's tempo, from its details. */
-  function beat(bpm) {
-    bpm = Number(bpm);
-    if (!(bpm >= 40 && bpm <= 250) || F.bpm === bpm) return;
-    F.bpm = bpm;
-    renderFull();
-  }
 
   /** The big button: what stopping or starting means here. */
-  function fullMain() {
-    if (D.mode === "discover") return mainButton();
-    if (!liveTrack()) return;
-    if (blocked() && firetable.media && firetable.media.tapToPlay) firetable.media.tapToPlay();
-    else firetable.actions.muteToggle();
-    renderVolume();
-    renderFull();
-  }
+  function fullMain() { return mainButton(); }
 
+  /** V: the screen on or off, as the stage's screen button sets it (and for the stage too). */
   function setFullView(view) {
-    F.view = view === "video" ? "video" : "audio";
-    try { localStorage.setItem(STORAGE.fullView, F.view); } catch (e) { /* private window */ }
+    var val = view === "video" ? "on" : "off";
+    try { localStorage[STORAGE.screenControl] = val; } catch (e) { /* private window */ }
+    firetable.screenControl = val;
+    firetable.ui.applyScreenSetting();
+    firetable.ui.updateScreenBtn(val);
     renderFull();
-    announce(F.view === "video" ? "Showing the video" : "Showing the cover");
+    announce(val === "on" ? "Screen on: the video" : "Screen off: the artwork");
   }
 
   /** The rectangle the player grows out of, and shrinks back into. */
   function originRect(from) {
     var bar = document.getElementById("dMini");
-    if (D.mode === "discover" && bar && bar.offsetParent) return bar.getBoundingClientRect();
+    if (bar && bar.offsetParent) return bar.getBoundingClientRect();
     var stage = document.getElementById("djStage");
     if (from && from.id === "fullscreenBtn" && stage && stage.offsetParent) return stage.getBoundingClientRect();
     if (from && from.isConnected && from.getBoundingClientRect) {
@@ -2737,14 +2690,14 @@ firetable.discover = (function () {
       // the bar's cover flies up into the big one
       var small = document.querySelector("#pv-art .pb-cover");
       var big = el.querySelector(".pvf-art");
-      if (D.mode === "discover" && small && small.offsetParent && big && big.offsetParent) {
+      if (small && small.offsetParent && big && big.offsetParent) {
         var s = small.getBoundingClientRect(), b = big.getBoundingClientRect();
         if (b.width && b.height) {
           big.animate([{ transformOrigin: "0 0", transform: "translate(" + (s.left - b.left) + "px," + (s.top - b.top) + "px) scale(" + (s.width / b.width) + "," + (s.height / b.height) + ")" },
             { transformOrigin: "0 0", transform: "none" }], { duration: 520, easing: "cubic-bezier(.2,.8,.2,1)" });
         }
       }
-      el.querySelectorAll(".pvf-top, .pvf-text, .pvf-eq, .pvf-side, .pvf-bar").forEach(function (part, i) {
+      el.querySelectorAll(".pvf-top, .pvf-text, .pvf-side, .pvf-bar").forEach(function (part, i) {
         part.animate([{ opacity: 0, transform: "translateY(" + (i === 0 ? -12 : 16) + "px)" }, { opacity: 1, transform: "none" }],
           { duration: 420, delay: 120 + i * 50, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" });
       });
@@ -2759,6 +2712,7 @@ firetable.discover = (function () {
     F.closing = null;
     F.from = from || document.activeElement;
     F.unread = 0;
+    if (!D.signedIn) F.tab = "deck";
     ensureData();
     closeMenu();
     document.body.classList.remove("d-sheet-open");
@@ -2767,8 +2721,8 @@ firetable.discover = (function () {
     document.getElementById("pv-fullbg").hidden = false;
     document.body.classList.remove("pv-full-closing");
     document.body.classList.add("pv-full-on");
-    var grid = document.getElementById("mainGrid");
-    if (grid) grid.inert = true; // the page underneath waits; the player is the page now
+    // the page and the bar wait underneath: the player is the page now
+    ["mainGrid", "dMini"].forEach(function (id) { var x = document.getElementById(id); if (x) x.inert = true; });
     renderFull(true);
     startTicking();
     renderFsButton();
@@ -2783,16 +2737,17 @@ firetable.discover = (function () {
   function closeFull() {
     if (!F.open) return;
     var el = fullEl();
-    closeFullChat();
+    if (F.chatOpen) { F.chatOpen = false; chatBack(); } // the chat goes home; its tab is there next time
+    el.classList.remove("on-chat");
     closeMenu();
     if (document.fullscreenElement === document.documentElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
     F.open = false;
     clearTimeout(F.idle);
     keepScreenOn(false);
-    var grid = document.getElementById("mainGrid");
-    if (grid) grid.inert = false;
+    ["mainGrid", "dMini"].forEach(function (id) { var x = document.getElementById(id); if (x) x.inert = false; });
     placeStage();
-    if (D.mode === "discover") { renderBar(); renderSide(); } else stopTicking();
+    renderBar();
+    if (D.mode === "discover") renderSide();
     var to = originRect(F.from);
     document.body.classList.add("pv-full-closing"); // the video fades as the player shrinks
     var closing = F.closing = animateFull(false, to).then(function () {
@@ -2802,7 +2757,7 @@ firetable.discover = (function () {
       document.body.classList.remove("pv-full-on", "pv-full-video", "pv-full-closing");
       window.dispatchEvent(new Event("resize")); // the stage measures itself again
     });
-    var back = F.from && F.from.isConnected && F.from.offsetParent ? F.from : document.getElementById(D.mode === "discover" ? "pv-queue" : "fullscreenBtn");
+    var back = F.from && F.from.isConnected && F.from.offsetParent ? F.from : document.getElementById("fullscreenBtn");
     if (back && back.focus) back.focus({ preventScroll: true });
   }
 
@@ -2840,35 +2795,18 @@ firetable.discover = (function () {
     }).catch(function () { /* not allowed here; the screen may sleep */ });
   }
 
-  /** The room's chat beside the player: members get the chat itself, visitors the one to read. */
-  function openFullChat() {
-    var drawer = document.getElementById("pv-fdrawer");
-    var body = document.getElementById("pv-fdrawerbody");
-    if (!drawer || F.chatOpen) return;
-    F.chatOpen = true;
-    F.unread = 0;
-    drawer.hidden = false;
-    if (D.signedIn) {
-      body.innerHTML = "";
-      chatIn(body);
+  /** The side's tab: DJs (or up next), or the room's own chat (members). */
+  function setFullTab(tab) {
+    F.tab = tab === "chat" && D.signedIn ? "chat" : "deck";
+    if (F.tab === "chat") F.unread = 0;
+    renderFull();
+    if (F.tab === "chat") {
       var box = document.getElementById("newchat");
       if (box && matchMedia("(pointer: fine)").matches) box.focus({ preventScroll: true });
-    } else {
-      body.innerHTML = chatPanel();
+      if (firetable.utilities.scrollToBottom) firetable.utilities.scrollToBottom();
     }
-    renderFull();
   }
-  function closeFullChat() {
-    var drawer = document.getElementById("pv-fdrawer");
-    if (!drawer || !F.chatOpen) return;
-    F.chatOpen = false;
-    drawer.hidden = true;
-    chatBack();
-    // the chat's tab in Discover takes it back
-    if (D.mode === "discover" && D.sideTab === "chat" && D.signedIn) renderSide();
-    renderFull();
-    wake();
-  }
+  function closeFullChat() { if (F.tab === "chat") setFullTab("deck"); }
 
   // ─── Mode and addresses ─────────────────────────────────────────────────
 
@@ -2916,26 +2854,22 @@ firetable.discover = (function () {
       b.setAttribute("aria-selected", on);
     });
     if (opts.remember) store.set(MODE_KEY, mode);
+    // Going between Discover and Live never changes what you hear: the bar says
+    // which it is, Listen in takes you to the room, a song in Discover away from it.
+    if (!D.src) setSrc("live"); // the room plays until something is picked
     if (mode === "live") {
       if (!F.chatOpen) chatBack();
       if (D.sideTab === "chat") D.sideTab = "list";
-      if (changed) {
-        // the stage is the player in Live: Discover's song stops, the room plays
-        if (P.track) P.paused = true;
-        setSrc("live");
-        release();
-      }
-      placeStage();
-      if (!F.open) stopTicking(); // the full player keeps its clock
       document.body.classList.remove("d-sheet-open");
-      window.dispatchEvent(new Event("resize")); // the stage measures itself again
+      if (changed) window.dispatchEvent(new Event("resize")); // the stage measures itself again
+      renderBar();
     } else {
       if (!D.signedIn && !store.get(FOUND_KEY, null)) store.set(FOUND_KEY, (addressFor().replace(/^#/, "") || "discover").slice(0, 200));
-      if (!D.src) setSrc("live"); // the room plays on until something is picked
       ensureData();
       renderAll();
-      startTicking();
     }
+    placeStage();
+    startTicking();
     renderFull(true);
     writeAddress();
   }
@@ -2983,13 +2917,8 @@ firetable.discover = (function () {
     ["month", "year"].forEach(function (p) {
       db().ref("discover/chartIds/" + p).once("value").then(function (s) { D.data.chartIds[p] = s.val() || {}; if (D.view === "charts") renderBrowse(); }, quiet);
     });
-    db().ref("discover/chat").on("value", function (s) {
-      D.data.chat = s.val();
-      // the chat to read: in the room's panel, and visitors' Chat tab
-      if (D.mode === "discover" && !D.signedIn && D.sideTab === "chat") renderSide();
-      if (!D.signedIn) renderFull();
-      renderPeek();
-    }, quiet);
+    // (the bot's public chat peek, discover/chat, isn't read: the chat is for members only)
+    renderPeek();
   }
   function quiet(err) { firetable.debug && console.log("[discover] not readable yet:", err && err.message); }
 
@@ -3075,17 +3004,11 @@ firetable.discover = (function () {
 
   // ─── Visitors' Live: the chat to read ───────────────────────────────────
 
+  /** The chat is for members only (the owner's call, November 2026): no chat to read for visitors. */
   function renderPeek() {
     lockedTabs();
     var el = document.getElementById("chatPeek");
-    if (!el) return;
-    if (D.signedIn) { el.hidden = true; return; }
-    var chat = D.data.chat || {};
-    el.hidden = false;
-    el.innerHTML = '<div class="d-head"><h2>Live chat</h2><span class="d-fact">' +
-      esc(chat.hour ? firetable.utilities.pluralize(chat.hour, "message", "messages") + " this hour" : "") + "</span></div>" +
-      chatList((chat.msgs || []).slice(-8)) +
-      '<div class="d-peekjoin"><span>You\'re reading the live chat. Join to say hi.</span><button type="button" class="butt d-createaccount">Join the Chat</button></div>';
+    if (el) el.hidden = true;
   }
 
   // ─── Events ─────────────────────────────────────────────────────────────
@@ -3106,12 +3029,8 @@ firetable.discover = (function () {
     if ((b = t.closest("#fullscreenBtn")) && D.on) return F.open ? closeFull() : openFull(b);
     if (F.open && t.closest("#pv-full a[href^='#discover']")) closeFull(); // an artist, genre or DJ page: show it
     if ((b = t.closest(".pvf-main"))) return fullMain();
-    if ((b = t.closest("[data-fview]"))) return setFullView(b.getAttribute("data-fview"));
+    if ((b = t.closest("[data-ftab]"))) return setFullTab(b.getAttribute("data-ftab"));
     if ((b = t.closest("#pv-fclose"))) return closeFull();
-    if ((b = t.closest("#pv-fchat"))) return F.chatOpen ? closeFullChat() : openFullChat();
-    if ((b = t.closest(".pvf-drawerclose"))) return closeFullChat();
-    if ((b = t.closest(".pvf-openchat"))) return D.signedIn ? openFullChat() : showSignIn("create");
-    if ((b = t.closest(".pvf-chatbtn"))) return F.chatOpen ? closeFullChat() : openFullChat();
     if ((b = t.closest(".pvf-morebtn"))) {
       var more = fullEl().classList.toggle("show-more");
       b.setAttribute("aria-expanded", String(more));
@@ -3138,7 +3057,7 @@ firetable.discover = (function () {
     if ((b = t.closest("[data-sidetab]"))) { D.sideTab = b.getAttribute("data-sidetab"); if (D.sideTab === "chat") D.unread = 0; return renderSide(); }
     // the player bar
     if ((b = t.closest(".pb-main"))) return mainButton();
-    if ((b = t.closest("#pv-queue, .pb-expand"))) return openFull(b);
+    if ((b = t.closest(".pb-expand"))) return openFull(b);
     if ((b = t.closest(".d-toroom-undo"))) return undoToRoom();
     if ((b = t.closest(".d-toroom"))) {
       var room = P.track;
@@ -3694,8 +3613,13 @@ firetable.discover = (function () {
       '<nav id="dNav" aria-label="Discover">' +
       VIEWS.map(function (v) { return '<button type="button" class="d-nav" data-view="' + v.id + '">' + ms(v.icon) + "<span>" + esc(v.label) + "</span></button>"; }).join("") +
       '<button type="button" class="d-nav d-chatnav">' + ms("forum") + "<span>Chat</span></button>" +
-      '</nav></div><div id="dBrowse" class="scroll-view"></div><aside id="dSide" aria-label="Now playing, playlists and chat"></aside>' + barHtml();
-    document.getElementById("mainGrid").appendChild(page);
+      '</nav></div><div id="dBrowse" class="scroll-view"></div><aside id="dSide" aria-label="Playlists and chat"></aside>';
+    var grid = document.getElementById("mainGrid");
+    grid.appendChild(page);
+    // the player along the bottom of the whole site, under Discover and Live alike
+    var oldBar = document.getElementById("dMini");
+    if (oldBar) oldBar.parentNode.removeChild(oldBar);
+    grid.insertAdjacentHTML("afterend", barHtml());
     if (filledHtml) {
       document.getElementById("dBrowse").innerHTML = filledHtml;
       D.prerendered = true;
@@ -3726,7 +3650,8 @@ firetable.discover = (function () {
       '<div class="pb-switch" id="pv-switch"></div>' +
       '<div class="pb-vol"><button type="button" class="butt graybutt iconbutt d-mute" aria-label="Mute">' + ms("volume_up") + "</button>" +
       '<input type="range" id="pv-vol" min="0" max="100" step="5" value="50" aria-label="Volume" /></div>' +
-      '<button type="button" id="pv-queue" class="butt graybutt iconbutt" title="Full-screen player (F)" aria-label="Open the full-screen player" aria-haspopup="dialog">' + ms("open_in_full") + "</button>" +
+      // the stage's screen, reload and full screen (placeStage moves them in)
+      '<div class="pb-tools"><span class="pb-host" id="pv-tools"></span></div>' +
       '<button type="button" class="butt graybutt iconbutt pb-expand" title="Open the player" aria-label="Open the full-screen player" aria-haspopup="dialog">' + ms("expand_less") + "</button></div>" +
       '<span id="pv-announce" class="sr-only" aria-live="polite"></span></div>';
   }
@@ -3752,13 +3677,13 @@ firetable.discover = (function () {
     }
     firetable.ui.toast("That song can't play here. Skipping it.");
     // unless they've gone to Live or Listen in meanwhile
-    setTimeout(function () { if (firetable.preview === "discover" && D.mode === "discover") step(1); }, 800);
+    setTimeout(function () { if (firetable.preview === "discover" && discoverActive()) step(1); }, 800);
   }
 
   function signedIn(on) {
     D.signedIn = on;
     document.body.classList.toggle("d-member", !!on);
-    if (!on) { closeFullChat(); chatBack(); if (D.sideTab === "chat") D.sideTab = "list"; F.chat = []; }
+    if (!on) { closeFullChat(); chatBack(); if (D.sideTab === "chat") D.sideTab = "list"; }
     if (on) firetable.ui.closeAuth();
     if (on) {
       firetable.saved.session = {};
@@ -3858,22 +3783,23 @@ firetable.discover = (function () {
         var typing = /^(input|textarea|select|button|a)$/i.test(e.target.tagName || "") || e.target.isContentEditable || (e.target.closest && e.target.closest("[role=button], dialog"));
         var inText = /^(input|textarea|select)$/i.test(e.target.tagName || "") || e.target.isContentEditable;
         var plainKey = !e.ctrlKey && !e.metaKey && !e.altKey;
-        // the full-screen player: F opens and closes it, V switches Audio and Video, Escape leaves (the chat first)
-        if (F.open && e.key === "Escape" && !menuWasOpen && !document.querySelector("dialog[open]") && !$("#stealContain").is(":visible")) {
+        // the full-screen player: F opens and closes it, V turns the screen on or off, Escape leaves
+        if (F.open && e.key === "Escape" && !menuWasOpen && !document.querySelector("dialog[open]") && !$("#stealContain").is(":visible") &&
+          !(e.target.closest && e.target.closest("#actualChat"))) {
           var pop = null;
           try { pop = document.querySelector(".ft-popover:popover-open"); } catch (x) { /* no popovers */ }
-          if (!pop) { e.preventDefault(); if (F.chatOpen) closeFullChat(); else closeFull(); return; }
+          if (!pop) { e.preventDefault(); closeFull(); return; }
         }
         if (D.on && plainKey && !inText && (e.key === "f" || e.key === "F") && !document.querySelector("dialog[open]")) { e.preventDefault(); if (F.open) closeFull(); else openFull(document.activeElement); return; }
         if (F.open && plainKey && !inText && (e.key === "v" || e.key === "V")) { e.preventDefault(); setFullView(fullView() === "video" ? "audio" : "video"); return; }
         if (F.open && e.key === " " && !typing && fullKind() !== "quiet") { e.preventDefault(); fullMain(); return; }
-        if (e.key === " " && D.mode === "discover" && !typing && barKind() !== "quiet") {
+        if (e.key === " " && !typing && barKind() !== "quiet") {
           e.preventDefault();
           mainButton();
           return;
         }
         // Shift + arrows: next / previous in Discover's list
-        if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft") && D.mode === "discover" && discoverActive() && !/^(input|textarea|select)$/i.test(e.target.tagName || "")) {
+        if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft") && discoverActive() && !/^(input|textarea|select)$/i.test(e.target.tagName || "")) {
           e.preventDefault();
           step(e.key === "ArrowRight" ? 1 : -1);
           return;
@@ -3925,7 +3851,6 @@ firetable.discover = (function () {
       ftapi.events.on("loggedOut", function () { signedIn(false); });
       ftapi.events.on("newSong", function () {
         renderFull(true);
-        if (D.mode !== "discover") return;
         yourTurn();
         if (D.src === "live" && liveTrack()) mediaSession(liveTrack(), true);
         renderBar();
@@ -3936,18 +3861,19 @@ firetable.discover = (function () {
       // the room's seats and line: the bar's and panels' "you're next", Hop on
       var seats = firetable.utilities.oncePerFrame(function () {
         renderFull();
-        if (D.mode !== "discover") return;
         var line = document.getElementById("pv-deckline");
         if (line) line.innerHTML = deckLine(viewList() === djList(), queueTracks().length);
         renderBar();
       });
       ["tableChanged", "waitlistChanged", "spotlightStateChanged"].forEach(function (ev) { ftapi.events.on(ev, seats); });
       // the browser holding the room's sound back (or letting it go) changes what the bar says
-      var wasBlocked = blocked();
+      // (and the stage's screen going up or down changes the full player's view)
+      var wasBlocked = blocked(), wasScreen = fullView();
       new MutationObserver(function () {
-        if (blocked() === wasBlocked) return;
+        if (blocked() === wasBlocked && fullView() === wasScreen) return;
         wasBlocked = blocked();
-        if (D.mode === "discover") renderBar();
+        wasScreen = fullView();
+        renderBar();
         renderFull();
       }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
       // the bar's height, for the phone's full player and the page's last row
@@ -3957,9 +3883,8 @@ firetable.discover = (function () {
       }).observe(barEl);
       ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () {
         renderFull(); // "N here"
-        if (D.mode !== "discover") return;
         renderBar();
-        if (/^(home|charts|recent)$/.test(D.view)) renderBrowse();
+        if (D.mode === "discover" && /^(home|charts|recent)$/.test(D.view)) renderBrowse();
       }));
       ftapi.events.on("newHistory", firetable.utilities.oncePerFrame(function () {
         if (D.mode === "discover" && (D.view === "recent" || D.view === "home")) renderBrowse();
@@ -3973,7 +3898,7 @@ firetable.discover = (function () {
       ftapi.events.on("chatHistoryLoaded", function () { chatLoaded = true; });
       ftapi.events.on("newChat", function (c) {
         chatHeard(c);
-        if (F.chatOpen) return; // read in the full player's chat
+        if (F.chatOpen) return; // read in the full player's chat tab
         if (!chatLoaded || !D.signedIn || D.mode !== "discover" || D.sideTab === "chat" || (c && c.id === ftapi.uid)) return;
         D.unread = (D.unread || 0) + 1;
         var bar = document.querySelector("#dSide .d-sidetabs");
@@ -4008,6 +3933,6 @@ firetable.discover = (function () {
     /** For tests: act as signed in or out without a real sign-in. */
     testSignedIn: signedIn,
     /** For tests: what's on screen. */
-    state: function () { return { mode: D.mode, view: D.view, listening: D.listening, playing: P.track && P.track.cid, list: P.list, i: P.i, full: F.open, fullView: fullView(), fullChat: F.chatOpen }; }
+    state: function () { return { mode: D.mode, view: D.view, listening: D.listening, playing: P.track && P.track.cid, list: P.list, i: P.i, full: F.open, fullView: fullView(), fullChat: F.chatOpen, fullTab: F.tab }; }
   };
 })();

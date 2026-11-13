@@ -998,11 +998,10 @@ body.ft-discover #dSide #actualChat {
         grid-template-columns: subgrid;
         height: 100%;
     }
-    body.ft-discover #discoverPage { grid-template-rows: minmax(0, 1fr) auto; }
+    body.ft-discover #discoverPage { grid-template-rows: minmax(0, 1fr); }
     #dRail { grid-row: 1; padding-top: var(--topbar-h, 10rem); border-right: 1px solid var(--color-border); }
     #dBrowse { grid-row: 1; grid-column: 2; }
     #dSide { grid-row: 1; grid-column: 3; }
-    #dMini { grid-row: 2; grid-column: 1 / -1; }
 }
 
 
@@ -1119,7 +1118,7 @@ body.ft-discover #dSide #actualChat {
     background-color: var(--color-accent);
     box-shadow: 0 0 0.75rem color-mix(in srgb, var(--color-accent) 55%, transparent), var(--shadow-drop);
 }
-.pb #songlink svg { width: 1.1rem; height: 1.1rem; }
+.pb #songlink svg { width: 1.4rem; height: 1.4rem; }
 /* the room's buttons only while the bar shows the room; Fire and Grab need an account */
 .pb:not(.is-room) :is(#pv-livekeep, #pv-liveacts) { display: none; }
 .pb:not(.is-member) #pv-livekeep { display: none; }
@@ -1229,6 +1228,35 @@ body.ft-discover #dSide #actualChat {
 #pv-vol:focus-visible, #pv-fvol:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
 .pb .pb-expand { display: none; }
 .pb-line { display: none; }
+/* the stage's screen, reload and full screen, moved in from the stage (placeStage) */
+.pb-tools { display: flex; align-items: center; gap: var(--pad1); }
+.pb-tools .ft-tip { position: fixed; }
+.pb:not(.is-room) #reloadtrack { display: none; }      /* a Discover song has its own reload */
+body.ft-discover .pb #screenControl { display: none; }  /* the stage's screen: Live's, and the full player's */
+#reloadtrack.on i, #reloadtrack.working i { animation: pb-spin 1s linear infinite; }
+@keyframes pb-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #reloadtrack.on i, #reloadtrack.working i { animation: none; } }
+
+/* ── The player in Live: the stage is left to the DJs ──
+   Its screen, reload, full screen, Fire, Grab, Link, Skip and Mod tools are in
+   the bar (and its volume is the bar's). While you hear a Discover song (or
+   nothing), the stage's screen stays up: the room's players carry your song. */
+body.ft-has-discover #stageTopRight,
+body.ft-has-discover #stageActions { display: none; }
+body.ft-has-discover.pb-elsewhere:not(.pv-full-on) #mainGrid #screenBox { transform: translateY(-101%); }
+body.ft-has-discover.pb-elsewhere:not(.pv-full-on) #mainGrid #stageBackdrop { display: block; }
+/* the DJs, with the stage to themselves, stand taller: sized to the stage, not fixed */
+body.ft-has-discover #djStage .spot { max-width: clamp(10rem, 24cqw, 16rem); }
+body.ft-has-discover #djStage .avtr { height: clamp(6rem, min(24cqw, var(--stage-max-height) * 0.5), 12.5rem); }
+body.ft-has-discover #djStage .ondeck-slot { width: clamp(2.5rem, 4.5cqw, 3.5rem); height: clamp(2.5rem, 4.5cqw, 3.5rem); }
+
+/* the player's own buttons: quiet circles that light up on hover, the big play the one solid button */
+:is(.pb, .pvf) .graybutt.iconbutt { background: transparent; }
+@media (hover: hover) {
+    :is(.pb, .pvf) .graybutt.iconbutt:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); }
+}
+:is(.pb, .pvf) .graybutt.iconbutt.is-saved,
+:is(.pb, .pvf) .graybutt.iconbutt.on { background: color-mix(in srgb, var(--pb-tone) 16%, transparent); }
 
 /* 1024 to 1439: the other source shrinks to its cover and dot, Step inside to its icon */
 @media only screen and (max-width: 1439px) {
@@ -1434,8 +1462,8 @@ body.ft-discover #dSide #actualChat {
    The full-screen player (#pv-full)
    For a TV, a projector or a second monitor: the song in full over the
    whole screen, with what's going on beside it. It grows out of the bar (or
-   Live's stage). Audio: the cover, large, on its own colours, and a beat that
-   follows the song's tempo. Video: the room's own player fills the screen
+   Live's stage). Screen off: the song's own artwork, large, on its own colour.
+   Screen on: the room's own player fills the screen
    behind the same words and controls (the stage is moved into place by the
    rules at the end; the iframe itself never moves). The controls rest after
    a few seconds without a touch; the :id: mark, the song and the room stay.
@@ -1531,37 +1559,11 @@ body.pv-full-on { overflow: hidden; }
 #pv-ftheme span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #pv-ftheme i { color: var(--pb-tone); font-size: 1.15em; }
 .pvf-tools { display: flex; flex: none; align-items: center; gap: var(--pad2); }
-.pvf-views {
-    display: flex;
-    padding: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-md);
-    background: rgba(0, 0, 0, 0.35);
-}
-.pvf-view {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    height: 2.25rem;
-    padding: 0 0.85rem;
-    border: 0;
-    border-radius: calc(var(--radius-md) - 2px);
-    background: none;
-    color: var(--color-text-subtle);
-    font: 600 var(--fs-title) var(--font-family);
-    cursor: pointer;
-}
-.pvf-view i { font-size: 1.2rem; }
-.pvf-view[aria-pressed="true"] { background: rgba(255, 255, 255, 0.12); color: var(--color-text-light); box-shadow: inset 0 -2px 0 var(--pb-tone); }
-.pvf-view:disabled { opacity: 0.4; cursor: default; }
-.pvf-view:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-@media (hover: hover) {
-    .pvf-view:not(:disabled):not([aria-pressed="true"]):hover { color: var(--color-text-light); background: rgba(255, 255, 255, 0.06); }
-}
+/* the stage's own screen button, moved in: on is the video, off the artwork */
+#pv-fscreen #screenControl.on { color: var(--pb-tone); }
 .pvf .iconbutt { position: relative; width: 2.75rem; height: 2.75rem; min-height: 2.75rem; }
 .pvf .iconbutt [class*="material-symbols-"] { font-size: 1.4rem; }
 .pvf .pvf-iconbtn[aria-pressed="true"] { color: var(--pb-tone); }
-#pv-fchat .d-unread { position: absolute; top: -0.3rem; right: -0.3rem; margin: 0; }
 
 /* ── middle: the song, and what's going on beside it ── */
 .pvf-body {
@@ -1578,30 +1580,25 @@ body.pv-full-on { overflow: hidden; }
     min-width: 0;
     min-height: 0;
 }
-/* the cover and the beat take the room the words leave, as big as fits (a size container) */
+/* the cover takes the room the words leave, as big as fits (a size container) */
 .pvf-visual {
-    --eq-h: clamp(1.75rem, 5.5vh, 4rem);
-    --eq-gap: clamp(0.35rem, 1vh, 0.75rem);
     container-type: size;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    gap: var(--eq-gap);
     min-height: 0;
 }
-.pvf-art, .pvf-eq { --art-w: min(100cqw, (100cqh - var(--eq-h) - var(--eq-gap)) * 16 / 9, 60rem); }
-.pvf:not(.is-wide) :is(.pvf-art, .pvf-eq) { --art-w: min(100cqw, 100cqh - var(--eq-h) - var(--eq-gap), 34rem); }
+.pvf-art { --art-w: min(100cqw, 100cqh, 36rem); }
 .pvf-art {
     position: relative;
     flex: none;
     width: var(--art-w);
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 1;
     border-radius: var(--radius-md);
     overflow: hidden;
     background: rgba(255, 255, 255, 0.04);
     box-shadow: 0 1.5rem 4rem -1rem rgba(0, 0, 0, 0.85);
 }
-.pvf:not(.is-wide) .pvf-art { aspect-ratio: 1; }
 .pvf-cover {
     position: absolute;
     inset: 0;
@@ -1610,46 +1607,6 @@ body.pv-full-on { overflow: hidden; }
 }
 .pvf.is-quiet .pvf-cover { background: url(../img/idlogo2.png) center / 45% auto no-repeat; opacity: 0.35; }
 .pvf.is-paused .pvf-cover, .pvf.is-onair .pvf-cover { filter: saturate(0.55) brightness(0.75); }
-
-/* the beat: bars in the song's colour, in time with its tempo when it's known */
-.pvf-eq {
-    display: flex;
-    flex: none;
-    align-items: flex-end;
-    gap: clamp(2px, 0.25vw, 5px);
-    width: var(--art-w);
-    height: var(--eq-h);
-}
-.pvf-eq i {
-    flex: 1;
-    height: 100%;
-    border-radius: 2px 2px 0 0;
-    background: var(--pb-tone);
-    opacity: 0.85;
-    transform-origin: 50% 100%;
-    transform: scaleY(calc(var(--h) * 0.12));
-    transition: transform 0.8s ease, background-color 1.2s ease;
-}
-.pvf.is-sounding .pvf-eq i {
-    animation: pvf-eq 0.9s ease-in-out infinite alternate;
-    animation-delay: calc(0.9s * var(--d));
-}
-/* one rise and fall per beat; the room's lines up with the song's start */
-.pvf.is-sounding.has-beat.is-room .pvf-eq i {
-    animation-duration: calc(var(--beat, 0.5s) / 2);
-    animation-delay: calc(var(--beat-phase, 0s) + var(--beat, 0.5s) * var(--d) * 0.3);
-}
-.pvf.is-sounding.has-beat:not(.is-room) .pvf-eq i {
-    animation-duration: calc(var(--fp-beat, 0.5s) / 2);
-    animation-delay: calc(var(--fp-beat, 0.5s) * var(--d) * 0.3);
-}
-@keyframes pvf-eq {
-    from { transform: scaleY(calc(var(--h) * 0.22)); }
-    to { transform: scaleY(var(--h)); }
-}
-@media (prefers-reduced-motion: reduce) {
-    .pvf.is-sounding .pvf-eq i { animation: none; transform: scaleY(calc(var(--h) * 0.6)); }
-}
 
 .pvf-text { display: flex; flex-direction: column; gap: clamp(0.35rem, 1vh, 0.75rem); min-width: 0; max-width: 64rem; }
 .pvf-src {
@@ -1779,44 +1736,20 @@ body.pv-full-on { overflow: hidden; }
     background-color: var(--color-accent);
     box-shadow: 0 0 0.75rem color-mix(in srgb, var(--color-accent) 55%, transparent), var(--shadow-drop);
 }
-.pvf #songlink svg { width: 1.25rem; height: 1.25rem; }
+.pvf #songlink svg { width: 1.6rem; height: 1.6rem; }
 .pvf:not(.is-room) #pv-fstage, .pvf:not(.is-member) #pv-fstage { display: none; }
 .pvf .pb-vol { display: flex; align-items: center; gap: var(--pad1); }
-.pvf.in-live .pb-vol .d-mute { display: none; } /* in Live the big button mutes the room */
 #pv-fvol { width: clamp(5rem, 7vw, 8rem); }
 
-/* the chat, beside the song */
-.pvf-drawer {
-    grid-row: 2;
-    grid-column: 1;
-    justify-self: end;
-    z-index: 2;
-    display: flex;
-    flex-direction: column;
-    width: min(28rem, calc(100% - 2 * var(--pvf-pad)));
-    min-height: 0;
-    margin: clamp(1rem, 3.5vh, 3rem) var(--pvf-pad);
-    overflow: hidden;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-s1);
-    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.6);
-    animation: pvf-drawer 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.pvf-drawer[hidden] { display: none; }
-@keyframes pvf-drawer { from { opacity: 0; transform: translateX(1.5rem); } }
-@media (prefers-reduced-motion: reduce) { .pvf-drawer { animation: none; } }
-.pvf-drawerhead {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--pad1) var(--pad2) var(--pad1) var(--pad3);
-    border-bottom: 1px solid var(--color-border);
-    color: var(--color-text-light);
-}
-.pvf-drawerbody { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
-.pvf-drawerbody #actualChat { display: flex; flex: 1; min-width: 0; min-height: 0; }
-.pvf.has-drawer .pvf-side { visibility: hidden; }
+/* the side's tabs (members): the DJs or up next, and the room's own chat */
+.pvf-tabs { flex: none; gap: 0; margin: calc(-1 * clamp(0.75rem, 1.4vw, 1.5rem)) calc(-1 * clamp(0.75rem, 1.4vw, 1.5rem)) 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.pvf-tabs[hidden] { display: none; }
+.pvf-tabs .tab { flex: 1; }
+.pvf-tabs .tab.on { box-shadow: inset 0 -2px 0 var(--pb-tone); }
+.pvf-sidebody { display: flex; flex-direction: column; gap: var(--pad3); min-height: 0; }
+.pvf.on-chat .pvf-side { align-self: stretch; height: 100%; }
+.pvf.on-chat .pvf-sidebody { flex: 1; margin: 0 calc(-1 * clamp(0.75rem, 1.4vw, 1.5rem)) calc(-1 * clamp(0.75rem, 1.4vw, 1.5rem)); }
+.pvf-sidebody #actualChat { display: flex; flex: 1; min-width: 0; min-height: 0; background: rgba(0, 0, 0, 0.2); }
 
 /* resting: the controls fade, the song and the room stay */
 .pvf.is-idle { cursor: none; }
@@ -1827,7 +1760,7 @@ body.pv-full-on { overflow: hidden; }
 /* ── Audio and Video: the stage's screen up and down ──
    Nothing else moves. Video lowers the room's own screen behind the words, as
    the stage's screen comes down behind the DJs; Audio raises it again, and the
-   cover and the beat come back. While YouTube stalls the screen stays up, as
+   artwork comes back. While YouTube stalls the screen stays up, as
    on the stage. */
 .pvf-visual { transition: opacity 0.8s ease, visibility 0s linear 0s; }
 body:not(.yt-stalled) .pvf.is-video .pvf-visual { opacity: 0; visibility: hidden; transition: opacity 0.6s ease, visibility 0s linear 0.6s; }
@@ -1890,8 +1823,7 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     .pvf-body { display: flex; flex-direction: column; overflow-y: auto; }
     .pvf-now { display: flex; flex: none; flex-direction: column; }
     .pvf-visual { flex: none; justify-content: flex-start; container-type: inline-size; }
-    .pvf-art, .pvf-eq { --art-w: min(100cqw, 40vh * 16 / 9); }
-    .pvf:not(.is-wide) :is(.pvf-art, .pvf-eq) { --art-w: min(100cqw, 40vh); }
+    .pvf-art { --art-w: min(100cqw, 42vh); }
     .pvf-side { flex: none; align-self: stretch; max-height: none; overflow: visible; }
     .pvf.is-video .pvf-body { overflow: hidden; }
     .pvf.is-video .pvf-side { visibility: hidden; }
@@ -1908,27 +1840,23 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     .pvf-transport { grid-area: transport; }
     .pvf-keep { grid-area: keep; }
     .pvf-right { grid-area: right; }
-    .pvf-drawer { grid-row: 2 / 4; margin: 0; width: 100%; border-radius: 0; border-width: 1px 0 0; }
+    .pvf.on-chat .pvf-side { height: 70vh; }
 }
 /* ── Phones: quiet. The mark, the view and close at the top; the cover, the
-   song and the beat; the time; then one action, the transport and "more".
+   song; the time; then one action, the transport and "more".
    Everything else each person can do waits behind "more", one tap away. ── */
-.pvf-morebtn, .pvf-chatbtn { display: none; }
+.pvf-morebtn { display: none; }
 @media only screen and (max-width: 639px) {
     .pvf { --pvf-pad: 1.25rem; }
     .pvf-top { flex-wrap: wrap; row-gap: var(--pad1); }
     .pvf-brand { display: contents; }
     .pvf-roomtext { order: 2; flex: 1 0 100%; }
-    .pvf-roomtext b, #pv-fchat, #pv-ffs { display: none; }
+    .pvf-roomtext b, #pv-ffs { display: none; }
     .pvf-logo { width: 3.25rem; }
-    .pvf-views { padding: 2px; border: 0; background: rgba(0, 0, 0, 0.25); }
-    .pvf-view { height: 2rem; padding: 0 0.6rem; }
-    .pvf-view span { display: none; }
     .pvf-tools { gap: var(--pad2); }
     .pvf-tools .iconbutt { background: none; border: 0; box-shadow: none; }
     .pvf .iconbutt { width: var(--tap-min); height: var(--tap-min); min-height: var(--tap-min); }
     .pvf-art { border-radius: var(--radius-sm); }
-    .pvf-visual { --eq-h: 1.5rem; }
     .pvf-title { font-size: 1.75rem; }
     .pvf-artist { font-size: 1.1rem; }
     .pvf-tags { display: none; }
@@ -1948,11 +1876,10 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     .pvf:not(.show-more) :is(.pvf-keep .pb-host > :not(:first-child), #pv-facts > *, .pvf-transport .pb-small) { display: none; }
     /* more: a row of the rest above the transport */
     .pvf.show-more .pvf-ctrls::before { content: ""; order: 1; flex: 0 0 100%; height: 0; }
-    .pvf.show-more .pvf-chatbtn { display: inline-flex; }
     .pvf.show-more .pvf-ctrls .iconbutt:not(.pvf-main):not(.pvf-morebtn) { animation: pvf-more 0.22s ease-out both; }
 }
 @keyframes pvf-more { from { opacity: 0; transform: translateY(0.4rem); } }
 /* short screens (a phone on its side): the cover gives way to the words */
 @media only screen and (max-height: 400px) {
-    .pvf-eq { display: none; }
+    .pvf-visual { display: none; }
 }
