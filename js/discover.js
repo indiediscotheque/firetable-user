@@ -1812,27 +1812,32 @@ firetable.discover = (function () {
     var d = deckState();
     if (d.on || d.waiting) return;
     ftapi.actions.sendBotCommand("!addme");
-    firetable.ui.toast(d.open ? "You're hopping on the decks. Stay here: when your song starts, Discover hands you back to the room."
-      : "You're in line for the decks. When your song starts, Discover hands you back to the room.", "success", { duration: 6000 });
+    firetable.ui.toast(d.open ? "You're hopping on the decks. Keep digging: Discover tells you when your song starts."
+      : "You're in line for the decks. Keep digging: Discover tells you when your song starts.", "success", { duration: 6000 });
   }
 
-  /** When your song comes up, Discover hands you back to the room; one song before, it says so. */
-  var turnNoted = null;
+  /**
+   * Your turn on the decks, while you're in Discover: a toast one song before
+   * and another when your song starts, each with Listen in. Discover never
+   * switches what you hear by itself: members DJ from here while they dig or
+   * play a list, and the room is one tap away.
+   */
+  var turnNoted = null, songNoted = null;
   function yourTurn() {
     var s = firetable.song;
     if (!D.signedIn || !ftapi.uid || !s || !s.cid || s.cid == 0) return;
     if (s.djid === ftapi.uid) {
-      if (D.src === "live" && !blocked()) return;
-      listenIn();
-      firetable.ui.toast("Your song is on in the room, so Discover handed you back to it.", "notice", {
-        duration: 7000, action: { label: "Step inside", fn: function () { setMode("live", { remember: true }); } }
+      if ((D.src === "live" && !blocked()) || songNoted === s.started) return;
+      songNoted = s.started;
+      firetable.ui.toast("Your song is on in the room.", "notice", {
+        duration: 8000, action: { label: "Listen in", fn: listenIn }
       });
       return;
     }
     var order = deckList();
     if (order.length > 1 && order[1].id === ftapi.uid && discoverActive() && turnNoted !== s.started) {
       turnNoted = s.started;
-      firetable.ui.toast("You're up next on the decks. When your song starts, Discover hands you back to the room.", "notice", {
+      firetable.ui.toast("You're up next on the decks. Your Discover pick keeps playing.", "notice", {
         duration: 7000, action: { label: "Listen in", fn: listenIn }
       });
     }
