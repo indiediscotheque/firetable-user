@@ -177,6 +177,10 @@ firetable.ui.toast = function (msg, type, opts) {
   opts = opts || {};
   clearTimeout(firetable.ui._toastTimer);
   clearTimeout(firetable.ui._toastHideTimer);
+  // Which toast this is: a background tab runs the fade-in frame only once
+  // it's seen again, by which time this toast may have had its time or been
+  // replaced. It mustn't show up late then (or, without popovers, stay up).
+  var seq = firetable.ui._toastSeq = (firetable.ui._toastSeq || 0) + 1;
   // A toast that replaces one still showing hands on its "gone" callback, so
   // queued notices carry on once this one has gone too.
   var prevHide = firetable.ui._toastOnHide;
@@ -194,7 +198,9 @@ firetable.ui.toast = function (msg, type, opts) {
     btn.textContent = opts.action.label;
     btn.addEventListener('click', function () {
       opts.action.fn();
-      firetable.ui._toastTimer && clearTimeout(firetable.ui._toastTimer);
+      if (seq !== firetable.ui._toastSeq) return; // the action put up a toast of its own
+      clearTimeout(firetable.ui._toastTimer);
+      firetable.ui._toastTimer = null;
       el.classList.remove('show');
       firetable.ui._toastHideTimer = setTimeout(hideToast, 220);
     });
@@ -204,7 +210,9 @@ firetable.ui.toast = function (msg, type, opts) {
   try {
     if (el.showPopover && !el.matches(':popover-open')) el.showPopover();
   } catch (e) { /* popover unsupported: plain fixed element */ }
-  requestAnimationFrame(function () { el.classList.add('show'); });
+  requestAnimationFrame(function () {
+    if (seq === firetable.ui._toastSeq && firetable.ui._toastTimer) el.classList.add('show');
+  });
   function hideToast() {
     try {
       if (el.hidePopover && el.matches(':popover-open')) el.hidePopover();
@@ -214,6 +222,7 @@ firetable.ui.toast = function (msg, type, opts) {
     if (done) done();
   }
   firetable.ui._toastTimer = setTimeout(function () {
+    firetable.ui._toastTimer = null;
     el.classList.remove('show');
     firetable.ui._toastHideTimer = setTimeout(hideToast, 220);
   }, opts.duration || (type === 'error' ? 5000 : 3500));
