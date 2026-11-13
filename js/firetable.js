@@ -752,6 +752,7 @@ ftapi.actions = {
       if (cur === null) return null; // not loaded yet (asked again with the real value), or gone
       var sw = cur.swap;
       if (String(cur.cid) !== String(cid) || !sw || !sw.cid || sw.dismissed) return; // changed: leave it
+      if (firetable.utilities.swapFits && ref.parent && !firetable.utilities.swapFits(sw, ref.key === "list" ? ref.parent.key : "0")) return; // not for this list's format
       before = JSON.parse(JSON.stringify(cur));
       var next = {};
       Object.keys(cur).forEach(function(k) {
@@ -1272,7 +1273,7 @@ ftapi.lookup = {
       return snap.val() || {};
     });
     return Promise.all([ftapi.utilities.shallowKeys(path), flagged]).then(function(res) {
-      var s = firetable.utilities.listStats(res[1]);
+      var s = firetable.utilities.listStats(res[1], listID);
       return { n: Object.keys(res[0]).length, broken: s.broken, swaps: s.swaps };
     });
   },
