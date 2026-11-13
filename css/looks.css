@@ -924,6 +924,8 @@ button.track-warning {
 }
 #roomlogo,
 #topbarUtils { flex-shrink: 0; }
+#topbar > .flexpacer { flex: 0 0 0; } /* the theme slot takes the free space */
+#topbarUtils { margin-left: auto; }
 
 .ftlogo {
     margin-right: 0.5rem;
@@ -3477,7 +3479,9 @@ a.importLinkCheck {
    ============================================ */
 #themeSlot {
     display: flex;
-    flex: 0 1 auto;
+    /* A zero basis keeps the icons on the logo's row: a long theme shortens
+       (ellipsis) instead of pushing them onto a half-empty row of their own. */
+    flex: 1 1 0;
     min-width: 0;
 }
 
