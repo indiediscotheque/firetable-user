@@ -752,15 +752,24 @@ ftapi.actions = {
       if (cur === null) return null; // not loaded yet (asked again with the real value), or gone
       var sw = cur.swap;
       if (String(cur.cid) !== String(cid) || !sw || !sw.cid || sw.dismissed) return; // changed: leave it
+      if (firetable.utilities.swapFits && ref.parent && !firetable.utilities.swapFits(sw, ref.key === "list" ? ref.parent.key : "0")) return; // not for this list's format
       before = JSON.parse(JSON.stringify(cur));
       var next = {};
       Object.keys(cur).forEach(function(k) {
         // what described the old upload goes (art, link, length, flag)
         if (!/^(?:flagged|swap|swappedFrom|img|url|duration|length|dur|time|seconds|msecs|ms|type|cid)$/.test(k)) next[k] = cur[k];
       });
-      next.type = MEDIA_YOUTUBE;
-      next.cid = sw.cid;
-      next.url = "https://www.youtube.com/watch?v=" + sw.cid;
+      if (sw.kind === "soundcloud") {
+        // a SoundCloud upload: its numeric id, page and artwork
+        next.type = MEDIA_SOUNDCLOUD;
+        next.cid = Number(sw.cid);
+        if (/^https:\/\/soundcloud\.com\//.test(sw.url || "")) next.url = sw.url;
+        if (/^https:\/\//.test(sw.img || "")) next.img = sw.img;
+      } else {
+        next.type = MEDIA_YOUTUBE;
+        next.cid = sw.cid;
+        next.url = "https://www.youtube.com/watch?v=" + sw.cid;
+      }
       if (sw.dur) next.duration = sw.dur;
       next.swappedFrom = { type: cur.type, cid: cur.cid, date: ftapi.now() };
       return next;
@@ -1272,7 +1281,7 @@ ftapi.lookup = {
       return snap.val() || {};
     });
     return Promise.all([ftapi.utilities.shallowKeys(path), flagged]).then(function(res) {
-      var s = firetable.utilities.listStats(res[1]);
+      var s = firetable.utilities.listStats(res[1], listID);
       return { n: Object.keys(res[0]).length, broken: s.broken, swaps: s.swaps };
     });
   },

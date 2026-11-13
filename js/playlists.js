@@ -223,7 +223,7 @@ firetable.ui.fillPlaylistSelect = function ($sel, allPlaylists, lead, idPrefix) 
   $sel.empty();
   (lead || []).forEach(function (o) { $sel.append($("<option></option>").val(o.value).text(o.text)); });
   firetable.utilities.sortedLists(allPlaylists).forEach(function (l) {
-    if (l.list && !l.builtIn) firetable.listCounts[String(l.id)] = firetable.utilities.listStats(l.list);
+    if (l.list && !l.builtIn) firetable.listCounts[String(l.id)] = firetable.utilities.listStats(l.list, l.id);
     var $o = $("<option></option>").val(l.id).attr("data-name", l.name).text(firetable.utilities.listLabel(l.id, l.name));
     if (idPrefix && l.id !== "0") $o.attr("id", idPrefix + l.id);
     $sel.append($o);
@@ -253,13 +253,13 @@ firetable.ui.relabelList = function (listID, name) {
 firetable.plIndex = { lists: [], selected: {} };
 
 /** Track count, how many are flagged, and how many of those have a swap ready. */
-firetable.utilities.listStats = function (tracks) {
+firetable.utilities.listStats = function (tracks, listID) {
   var n = 0, broken = 0, swaps = 0;
   Object.keys(tracks || {}).forEach(function (k) {
     if (!tracks[k]) return;
     n++;
     if (tracks[k].flagged) broken++;
-    if (firetable.utilities.activeSwap(tracks[k])) swaps++;
+    if (firetable.utilities.activeSwap(tracks[k], listID)) swaps++;
   });
   return { n: n, broken: broken, swaps: swaps };
 };
@@ -296,7 +296,7 @@ firetable.ui.renderPlaylistIndex = function () {
   var $list = $("#plIndexList").empty();
   lists.forEach(function (l) {
     var tracks = l.builtIn ? firetable.plIndex.defaultTracks : l.list;
-    var s = firetable.utilities.listStats(tracks);
+    var s = firetable.utilities.listStats(tracks, l.id);
     firetable.ui.setListCount(l.id, s);
     var isDefault = firetable.utilities.isDefaultList(l.id), isDj = l.id === djList;
     var $row = $('<li class="plx-row" role="listitem"></li>').attr("data-id", l.id)
@@ -522,7 +522,12 @@ firetable.ui.setupPlaylistIndex = function () {
       firetable.actions.savePlaylistPrefs(change);
       this.title = val ? firetable.utilities.LIST_FORMATS[val].help : "Any source. Broken tracks get YouTube Music audio tracks as swaps.";
       $(this).toggleClass("is-set", !!val);
-      if (String(id) === String(firetable.viewListID || $("#listpicker").val())) firetable.ui.matchSearchSource(id);
+      var onScreen = String(id) === String(firetable.viewListID || $("#listpicker").val());
+      if (onScreen) firetable.ui.matchSearchSource(id);
+      // suggestions that don't fit the new format go (the bot finds ones that do)
+      firetable.actions.clearMisfitSwaps(id).then(function () {
+        if (onScreen && firetable.queue) firetable.ui.renderSwapBar(firetable.queue);
+      }, function () {});
       firetable.ui.toast(val ? "\u201c" + firetable.utilities.listName(id) + "\u201d: " + firetable.utilities.LIST_FORMATS[val].help : "\u201c" + firetable.utilities.listName(id) + "\u201d takes any source.", "notice");
     })
     .on("click", ".plx-dj", function () {

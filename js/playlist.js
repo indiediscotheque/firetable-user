@@ -760,7 +760,7 @@ function buildQueueItemHTML(key, track, isPreview) {
   var swap = firetable.utilities.activeSwap(track);
   var swapHtml = '';
   if (swap) {
-    var swapTitle = firetable.utilities.htmlEscape('Swap for ' + swap.artist + ' - ' + swap.title + ' (YouTube Music audio)');
+    var swapTitle = firetable.utilities.htmlEscape('Swap for ' + swap.artist + ' - ' + swap.title + ' (' + firetable.utilities.swapWhat(swap) + ')');
     swapHtml = '<button type="button" class="material-symbols-outlined row-icon swapsong" title="' + swapTitle + '" aria-label="' + swapTitle + '" aria-haspopup="dialog">swap_horiz</button>';
   }
 
@@ -796,8 +796,8 @@ function buildQueueItemHTML(key, track, isPreview) {
  */
 /** Track count (and flagged count) in the playlist picker, after the name (#210, #226). */
 firetable.ui.renderListCount = function (tracks, listID) {
-  var s = firetable.utilities.listStats(tracks);
   if (listID == null) listID = firetable.viewListID || $("#listpicker").val() || "0";
+  var s = firetable.utilities.listStats(tracks, listID);
   firetable.liveCountID = String(listID);
   firetable.ui.setListCount(listID, s);
   var label = s.n.toLocaleString() + (s.n === 1 ? " track" : " tracks") + (s.broken ? ", " + s.broken.toLocaleString() + " flagged" : "") +
@@ -1734,15 +1734,77 @@ firetable.ui.setupBrokenCheck = function () {
 // "not this one") and a bar over the list with "Swap all". Swapping keeps the
 // track's place and tags; Undo puts it back.
 
-/** The bot's suggestion for a track, if there's one to offer. */
-firetable.utilities.activeSwap = function (track) {
-  var sw = track && track.flagged && track.swap;
-  return sw && sw.cid && !sw.dismissed ? sw : null;
+/** What a suggestion is: "audio" (a YouTube Music audio track), "video" or "soundcloud". */
+firetable.utilities.swapKind = function (sw) {
+  return sw && (sw.kind === "video" || sw.kind === "soundcloud") ? sw.kind : "audio";
+};
+
+/**
+ * Does a suggestion fit the list's format? A list kept to SoundCloud takes
+ * SoundCloud tracks; one kept to videos the artist's videos; any other list
+ * YouTube Music audio tracks. The bot saves which a suggestion is (`kind`);
+ * one saved before that is taken as an audio track (all of them were) until
+ * the bot checks it. A suggestion for a track that only didn't fit the list's
+ * format (`why: "format"`) needs the list to still have a format.
+ * @param {Object} sw - the track's swap
+ * @param {string} [listID] - the list it's in (default: the list on screen)
+ */
+firetable.utilities.swapFits = function (sw, listID) {
+  if (!sw) return false;
+  var f = firetable.utilities.listFormat(listID == null ? (firetable.viewListID || "0") : listID);
+  if (sw.why === "format" && !f) return false;
+  var want = f === "sc" ? "soundcloud" : f === "video" ? "video" : "audio";
+  return firetable.utilities.swapKind(sw) === want;
+};
+
+/**
+ * The bot's suggestion for a track, if there's one to offer in that list
+ * (default: the list on screen): for a broken (flagged) track, or one that
+ * plays but doesn't fit the list's format (a video in a YouTube Music list,
+ * a promoter's upload where the artist's official video exists, a YouTube
+ * track in a SoundCloud list, ...).
+ */
+firetable.utilities.activeSwap = function (track, listID) {
+  var sw = track && track.swap;
+  if (!sw || !sw.cid || sw.dismissed || !(track.flagged || sw.why === "format")) return null;
+  return firetable.utilities.swapFits(sw, listID) ? sw : null;
+};
+
+/** What a suggestion is called, for buttons and toasts. */
+firetable.utilities.swapWhat = function (sw) {
+  var k = firetable.utilities.swapKind(sw);
+  return k === "video" ? "the artist's video" : k === "soundcloud" ? "the SoundCloud upload" : "the YouTube Music audio track";
 };
 
 /** Keys of the tracks in a list with a swap to offer, in list order. */
-firetable.utilities.swapKeys = function (tracks) {
-  return Object.keys(tracks || {}).filter(function (k) { return firetable.utilities.activeSwap(tracks[k]); });
+firetable.utilities.swapKeys = function (tracks, listID) {
+  return Object.keys(tracks || {}).filter(function (k) { return firetable.utilities.activeSwap(tracks[k], listID); });
+};
+
+/**
+ * Clear the suggestions in a list that don't fit its format (after the
+ * format changes): the flagged tracks only, each its own small write that
+ * leaves a track changed meanwhile alone. The bot finds ones that fit.
+ * @returns {Promise<number>} how many were cleared
+ */
+firetable.actions.clearMisfitSwaps = function (listID) {
+  if (!ftapi.uid) return Promise.resolve(0);
+  var ref = ftapi.lookup.listRef(listID);
+  // the whole list: suggestions for tracks that only didn't fit the format sit on unflagged tracks too
+  return ref.once("value").then(function (snap) {
+    var keys = [];
+    snap.forEach(function (c) {
+      var sw = c.val() && c.val().swap;
+      if (sw && sw.cid && !sw.dismissed && !firetable.utilities.swapFits(sw, listID)) keys.push(c.key);
+    });
+    return Promise.all(keys.map(function (k) {
+      return ref.child(k + "/swap").transaction(function (cur) {
+        if (cur === null) return null;
+        if (!cur.cid || cur.dismissed || firetable.utilities.swapFits(cur, listID)) return; // changed meanwhile
+        return null;
+      }).then(function (r) { return r.committed ? 1 : 0; }, function () { return 0; });
+    })).then(function (done) { return done.reduce(function (a, b) { return a + b; }, 0); });
+  });
 };
 
 /** "Artist - Title" of a suggestion, and its album and length. */
@@ -1758,9 +1820,15 @@ firetable.ui.renderSwapBar = function (tracks) {
   if (!$bar.length) return;
   $bar.prop("hidden", !n);
   if (!n) return;
-  $("#swapBarText").text(n === 1
-    ? "1 broken track has a working copy on YouTube Music."
-    : n.toLocaleString() + " broken tracks have a working copy on YouTube Music.");
+  var f = firetable.utilities.listFormat(firetable.viewListID || "0");
+  var where = f === "video" ? "the artist's video on YouTube" : f === "sc" ? "a copy on SoundCloud" : "a working copy on YouTube Music";
+  var keys = firetable.utilities.swapKeys(tracks);
+  var broken = keys.filter(function (k) { return tracks[k].flagged; }).length;
+  // broken tracks, and tracks that play but don't fit the list's format
+  var who = broken === n ? (n === 1 ? "1 broken track has " : n.toLocaleString() + " broken tracks have ")
+    : !broken ? (n === 1 ? "1 track not in this list's format has " : n.toLocaleString() + " tracks not in this list's format have ")
+    : n.toLocaleString() + " tracks (broken, or not in this list's format) have ";
+  $("#swapBarText").text(who + where + ".");
   $("#swapAllBtn").text(n === 1 ? "Swap it" : "Swap all " + n.toLocaleString()).prop("disabled", false);
 };
 
@@ -1775,19 +1843,26 @@ firetable.actions.swapPrompt = function (key, anchorEl) {
     popoverEl.hidePopover();
     if (same) return;
   }
-  firetable.swapping = { key: key, cid: String(track.cid), swapCid: sw.cid, name: track.name };
+  var kind = firetable.utilities.swapKind(sw);
+  var sc = kind === "soundcloud";
+  firetable.swapping = { key: key, cid: String(track.cid), swapCid: sw.cid, name: track.name, sc: sc };
   var label = firetable.utilities.swapLabel(sw);
   var $p = $(popoverEl);
-  $p.find(".swapArt").css("background-image", "url(https://i.ytimg.com/vi/" + encodeURIComponent(sw.cid) + "/mqdefault.jpg)");
+  var art = sc ? (/^https:\/\//.test(sw.img || "") ? sw.img : "") : "https://i.ytimg.com/vi/" + encodeURIComponent(sw.cid) + "/mqdefault.jpg";
+  $p.find(".swapArt").css("background-image", art ? "url(" + art + ")" : "none");
   $p.find(".swapName").text(label.name);
-  // a list kept to videos gets the artist's video; any other, the audio track
-  var video = firetable.utilities.viewingVideoList();
-  $p.find(".swapHead").text(video ? "Working copy on YouTube" : "Working copy on YouTube Music");
-  $p.find(".swapKind").html('<i class="material-symbols-outlined" aria-hidden="true">' + (video ? "live_tv" : "graphic_eq") + "</i> " +
-    (video ? "The artist's video" : "Audio track, not a video"));
-  $p.find(".swapMeta").text(label.meta || (video ? "YouTube" : "YouTube Music"));
-  $p.find(".swapWas").text("Replaces: " + firetable.utilities.decodeEntities(track.name || "") + ". Your tags stay as they are.");
-  $p.find(".swapOpen").attr("href", (video ? "https://www.youtube.com/watch?v=" : "https://music.youtube.com/watch?v=") + encodeURIComponent(sw.cid));
+  // what the list is kept to decides what's suggested: the artist's video,
+  // a SoundCloud upload, or (any other list) the YouTube Music audio track
+  var video = kind === "video";
+  var fixes = sw.why === "format" && !track.flagged;
+  $p.find(".swapHead").text((fixes ? (video ? "Official video on YouTube" : "Fits this list") : "Working copy") + " on " + (sc ? "SoundCloud" : video ? "YouTube" : "YouTube Music"));
+  $p.find(".swapKind").html('<i class="material-symbols-outlined" aria-hidden="true">' + (sc ? "cloud" : video ? "live_tv" : "graphic_eq") + "</i> " +
+    (sc ? "SoundCloud upload" : video ? "The artist's video" : "Audio track, not a video"));
+  $p.find(".swapMeta").text(label.meta || (sc ? "SoundCloud" : video ? "YouTube" : "YouTube Music"));
+  $p.find(".swapWas").text("Replaces: " + firetable.utilities.decodeEntities(track.name || "") + (fixes ? " (it plays, but isn't what this list is kept to)" : "") + ". Your tags stay as they are.");
+  var open = sc ? (/^https:\/\/soundcloud\.com\//.test(sw.url || "") ? sw.url : "https://soundcloud.com/")
+    : (video ? "https://www.youtube.com/watch?v=" : "https://music.youtube.com/watch?v=") + encodeURIComponent(sw.cid);
+  $p.find(".swapOpen").attr("href", open);
   firetable.ui.swapPreviewLabel();
   $(".pvbar.swapping").removeClass("swapping");
   $('.pvbar[data-key="' + key + '"]').addClass("swapping");
@@ -1799,9 +1874,14 @@ firetable.actions.swapPrompt = function (key, anchorEl) {
   });
 };
 
+/** The preview key and source of the suggestion on screen. */
+var swapPreviewOf = function (s) {
+  return { key: (s.sc ? "sccid" : "ytcid") + s.swapCid, type: s.sc ? MEDIA_SOUNDCLOUD : MEDIA_YOUTUBE };
+};
+
 firetable.ui.swapPreviewLabel = function () {
   var s = firetable.swapping;
-  var on = !!(s && firetable.preview === "ytcid" + s.swapCid);
+  var on = !!(s && firetable.preview === swapPreviewOf(s).key);
   $("#swapPopover .swapPreview").attr("aria-pressed", on ? "true" : "false")
     .html('<i class="material-symbols-outlined" aria-hidden="true">' + (on ? "stop" : "play_arrow") + "</i> " + (on ? "Stop" : "Preview"));
 };
@@ -1813,7 +1893,7 @@ firetable.actions.swapOne = function (key, cid) {
   if (!ref || !sw) return;
   ftapi.actions.swapTrack(ref, key, cid).then(function (before) {
     if (!before) { firetable.ui.toast("That track changed meanwhile, so nothing was swapped.", "error"); return; }
-    firetable.ui.toast(firetable.utilities.viewingVideoList() ? "Swapped in the artist's video." : "Swapped in the YouTube Music audio track.", "success", {
+    firetable.ui.toast("Swapped in " + firetable.utilities.swapWhat(sw) + ".", "success", {
       duration: 8000,
       action: { label: "Undo", fn: function () { ftapi.actions.unswapTrack(ref, key, before, sw.cid); } }
     });
@@ -1842,7 +1922,8 @@ firetable.actions.swapAll = function () {
     var n = done.length, missed = keys.length - n;
     firetable.ui.renderSwapBar(firetable.queue);
     if (!n) { firetable.ui.toast("Nothing was swapped; the list changed meanwhile.", "error"); return; }
-    firetable.ui.toast("Swapped " + n + (n === 1 ? " track" : " tracks") + (firetable.utilities.viewingVideoList() ? " for the artists' videos." : " for YouTube Music audio.") +
+    var lf = firetable.utilities.listFormat(firetable.viewListID || "0");
+    firetable.ui.toast("Swapped " + n + (n === 1 ? " track" : " tracks") + (lf === "video" ? " for the artists' videos." : lf === "sc" ? " for SoundCloud uploads." : " for YouTube Music audio.") +
       (missed ? " " + missed + " changed meanwhile and " + (missed === 1 ? "was" : "were") + " left alone." : ""), "success", {
       duration: 10000,
       action: { label: "Undo", fn: function () {
@@ -1859,7 +1940,7 @@ firetable.ui.setupSwaps = function () {
   if (!popoverEl) return;
   var stopPreview = function () {
     var s = firetable.swapping;
-    if (s && firetable.preview === "ytcid" + s.swapCid) firetable.actions.pview("ytcid" + s.swapCid, true, MEDIA_YOUTUBE);
+    if (s && firetable.preview === swapPreviewOf(s).key) firetable.actions.pview(swapPreviewOf(s).key, true, swapPreviewOf(s).type);
   };
   $(popoverEl)
     .on("click", ".swapConfirm", function () {
@@ -1871,7 +1952,7 @@ firetable.ui.setupSwaps = function () {
     .on("click", ".swapPreview", function () {
       var s = firetable.swapping;
       if (!s) return;
-      firetable.actions.pview("ytcid" + s.swapCid, true, MEDIA_YOUTUBE);
+      firetable.actions.pview(swapPreviewOf(s).key, true, swapPreviewOf(s).type);
       firetable.ui.swapPreviewLabel();
     })
     .on("click", ".swapDismiss", function () {
