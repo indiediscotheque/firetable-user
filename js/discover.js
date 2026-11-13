@@ -1643,7 +1643,6 @@ firetable.discover = (function () {
     var opts = Array.prototype.map.call(document.querySelectorAll("#listpicker option"), function (o) {
       return '<option value="' + esc(o.value) + '"' + (o.value === listID ? " selected" : "") + ">" + esc(o.textContent) + (o.value === djList() ? " · DJ" : "") + "</option>";
     }).join("") || '<option value="0">Default Playlist</option>';
-    var broken = tracks.filter(function (t) { return t.flagged; }).length;
     var shown = D.plAll ? tracks : tracks.slice(0, PL_SHOWN);
     var rows = shown.map(function (t, i) {
       var isNew = firetable.saved.session[firetable.saved.key(t.type, t.cid)];
@@ -1659,8 +1658,6 @@ firetable.discover = (function () {
     return '<div class="d-panel d-listpanel">' +
       '<div class="pl-head"><label class="sr-only" for="pv-listpick">Playlist</label><select id="pv-listpick" class="pl-pick">' + opts + "</select>" +
       '<button type="button" class="butt graybutt iconbutt pl-dj' + (isDj ? " on" : "") + '" aria-pressed="' + isDj + '" title="' + (isDj ? "You DJ from this playlist" : "DJ from this playlist") + '" aria-label="' + (isDj ? "You DJ from this playlist" : "DJ from this playlist") + '">' + ms("headphones", isDj) + "</button></div>" +
-      '<div class="d-listhead"><span>' + esc(firetable.utilities.pluralize(tracks.length, "song", "songs")) + (broken ? " · " + broken + " broken" : "") + "</span>" +
-      (isDj ? '<span class="d-dj">' + ms("headphones") + " You DJ from this</span>" : '<button type="button" class="linkButton pl-dj">DJ from this</button>') + "</div>" +
       (tracks.length ? '<div class="pl-tools"><input type="search" id="pv-plfilter" class="pl-filter" placeholder="Filter this playlist" aria-label="Filter this playlist" autocomplete="off" value="' + esc(D.plFilter || "") + '" />' +
         '<button type="button" class="butt darkbutt small d-playall" data-list="playlist" title="Play it here, from the top">' + ms("play_arrow", true) + "<span>Play</span></button>" +
         '<button type="button" class="butt graybutt iconbutt small pl-shuffle" data-list="playlist" title="Shuffle play (the playlist keeps its order)" aria-label="Shuffle play">' + ms("shuffle") + "</button></div>" +

@@ -862,8 +862,6 @@ section .d-chips a.d-chip {
 .d-listhead { display: flex; align-items: baseline; gap: var(--pad2); flex-wrap: wrap; }
 .d-listhead b { color: var(--color-text-light); font-size: 1.05rem; }
 .d-listhead span { color: var(--color-text-muted); font-size: var(--fs-meta); }
-.d-listhead .d-dj { margin-left: auto; display: inline-flex; gap: 0.25rem; color: var(--color-accent); font-weight: 600; }
-.d-listhead .d-dj i { font-size: 1rem; }
 .d-join { display: flex; flex-direction: column; gap: var(--pad2); margin-top: var(--pad2); }
 .d-join .d-google {
     display: flex;
