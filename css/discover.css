@@ -1245,10 +1245,10 @@ body.ft-has-discover #stageTopRight,
 body.ft-has-discover #stageActions { display: none; }
 body.ft-has-discover.pb-elsewhere:not(.pv-full-on) #mainGrid #screenBox { transform: translateY(-101%); }
 body.ft-has-discover.pb-elsewhere:not(.pv-full-on) #mainGrid #stageBackdrop { display: block; }
-/* the DJs, with the stage to themselves, stand taller: sized to the stage, not fixed */
-body.ft-has-discover #djStage .spot { max-width: clamp(10rem, 24cqw, 16rem); }
-body.ft-has-discover #djStage .avtr { height: clamp(6rem, min(24cqw, var(--stage-max-height) * 0.5), 12.5rem); }
-body.ft-has-discover #djStage .ondeck-slot { width: clamp(2.5rem, 4.5cqw, 3.5rem); height: clamp(2.5rem, 4.5cqw, 3.5rem); }
+/* the DJs, with the stage to themselves, stand as tall as their picture allows:
+   sized to the stage, but never past the 110px image the stage asks for (bigger is blurry) */
+body.ft-has-discover #djStage .spot { max-width: clamp(10rem, 20cqw, 12rem); }
+body.ft-has-discover #djStage .avtr { height: min(110px, max(5rem, min(24cqw, var(--stage-max-height) * 0.5))); }
 
 /* the player's own buttons: quiet circles that light up on hover, the big play the one solid button */
 :is(.pb, .pvf) .graybutt.iconbutt { background: transparent; }
@@ -1673,7 +1673,7 @@ body.pv-full-on { overflow: hidden; }
 .pvf-side .d-label { color: var(--color-text-subtle); }
 .pvf-side .d-roomrow { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.08); }
 .pvf-side .d-mini-art { width: clamp(2.5rem, 2.8vw, 3.25rem); height: clamp(2.5rem, 2.8vw, 3.25rem); }
-.pvf-side .d-deckdj .ft-avatar, .pvf-side .d-openspot { width: clamp(2rem, 2.4vw, 2.75rem); height: clamp(2rem, 2.4vw, 2.75rem); }
+.pvf-side .d-deckdj .ft-avatar, .pvf-side .d-openspot { width: 40px; height: 40px; } /* the 40px picture, at its own size */
 .pvf-side .d-deckrow { flex-direction: column; }
 .pvf-side .d-deckdj.is-on { padding: var(--pad1) var(--pad2); margin-inline: calc(-1 * var(--pad2)); border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.06); box-shadow: inset 3px 0 0 var(--pb-tone); }
 .pvf-side .d-fact { margin: 0; color: var(--color-text-subtle); font-size: var(--fs-meta); }

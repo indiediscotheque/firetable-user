@@ -2147,16 +2147,26 @@ firetable.discover = (function () {
     }
     return [h, s * 100, l * 100];
   }
-  function applyTone(t) {
+  /** The stage's colour for the room's song (the bot's, set by colorsChanged), or null. */
+  function stageColor() {
+    var c = firetable.color;
+    return c && /^#[0-9a-f]{3,8}$/i.test(c) ? c : null;
+  }
+  /**
+   * The bar's colour: while it plays the room, the stage's own colour, so the
+   * bar and the stage always match; a Discover song's is read from its cover.
+   */
+  function applyTone(t, room) {
     var el = document.getElementById("dMini");
     if (!el) return;
-    if (!t) { el.style.removeProperty("--pb-art"); return; }
+    if (!t) { el.style.removeProperty("--pb-art"); el.removeAttribute("data-tone-for"); return; }
     var k = t.type + "_" + t.cid;
     var set = function (tone) {
       if (el.getAttribute("data-tone-for") !== k) return; // the song changed meanwhile
       if (tone) el.style.setProperty("--pb-art", tone); else el.style.removeProperty("--pb-art");
     };
     el.setAttribute("data-tone-for", k);
+    if (room && stageColor()) return set(stageColor());
     if (k in tones) set(tones[k]); else toneOf(t).then(set);
   }
 
@@ -2170,7 +2180,7 @@ firetable.discover = (function () {
     var t = kind === "discover" || kind === "pick" ? P.track : s;
     var list = lists[P.list];
     var live = kind === "live" || kind === "onair";
-    applyTone(t);
+    applyTone(t, live);
     el.className = "pb is-" + kind + (live ? " is-room" : "") + (P.paused && (kind === "discover" || kind === "pick") ? " is-paused" : "") + (blocked() ? " is-blocked" : "") + (D.signedIn ? " is-member" : "");
     el.setAttribute("aria-label", live ? "Player: the room, live" : kind === "quiet" ? "Player" : "Player: Discover");
     if (kind !== lastKind) { lastKind = kind; document.body.setAttribute("data-pb", kind); }
@@ -2621,7 +2631,7 @@ firetable.discover = (function () {
         if (tone) x.style.setProperty("--pb-art", tone); else x.style.removeProperty("--pb-art");
       });
     };
-    var roomColor = room && firetable.color && /^#[0-9a-f]{3,8}$/i.test(firetable.color) ? firetable.color : null;
+    var roomColor = room ? stageColor() : null;
     var k = !t ? "" : t.type + "_" + t.cid + (roomColor ? "|" + roomColor : "");
     if (el.getAttribute("data-tone-for") === k) return;
     el.setAttribute("data-tone-for", k);
@@ -3893,7 +3903,8 @@ firetable.discover = (function () {
       // the room's tempo (room.js sets --beat first) and theme, for the full player
       ftapi.events.on("songBpm", function () { setTimeout(function () { renderFull(); }, 0); });
       ftapi.events.on("newTheme", function () { setTimeout(renderFullTools, 0); });
-      ftapi.events.on("colorsChanged", function () { setTimeout(function () { renderFull(); }, 0); });
+      // the stage's colour changed (each song, set by room.js first): the bar and the full player follow
+      ftapi.events.on("colorsChanged", function () { setTimeout(function () { renderBar(); renderFull(); }, 0); });
       var chatLoaded = false;
       ftapi.events.on("chatHistoryLoaded", function () { chatLoaded = true; });
       ftapi.events.on("newChat", function (c) {
