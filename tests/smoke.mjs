@@ -764,7 +764,7 @@ try {
   }));
   check(home.on && home.tabs === "Discover*,Live" && home.cards === 3 && home.chart === "#1,#2" && home.unplayed && home.stageHidden,
     "a visitor lands on Discover: new releases, the week's chart, the stage out of sight (" + JSON.stringify(home) + ")");
-  check(/on deck/.test(home.live) && /here/.test(home.live) && /Listen in/.test(home.live), "the room in one line: the DJ, who is here, Listen in (" + home.live.trim() + ")");
+  check(/on deck/.test(home.live) && /here/.test(home.live) && /Listen in|Listening/.test(home.live), "the room in one line: the DJ, who is here, Listen in or Listening (" + home.live.trim() + ")");
 
   console.log("-- Discover: playing a song uses the room's player, and Live takes it back");
   const playing = await dPage.evaluate(async () => {
@@ -782,6 +782,66 @@ try {
     "a song plays in Discover's player (" + JSON.stringify(playing.during) + ")");
   check(playing.chart.rows === 3 && playing.chart.mv === "▲2,new", "the chart shows movement (" + JSON.stringify(playing.chart) + ")");
   check(playing.after === false && !playing.mode && playing.hash === "#live", "Live gives the player back to the room (" + JSON.stringify({ after: playing.after, hash: playing.hash }) + ")");
+
+  console.log("-- Discover: the player bar says what it plays, Discover or the room, and switches between them");
+  const bar = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const el = () => document.getElementById("dMini");
+    const snap = () => ({ cls: el().className, src: document.getElementById("pv-src").textContent, title: document.getElementById("pv-title").textContent,
+      main: (document.querySelector("#dMini .pb-main") || {}).getAttribute("aria-label"), seek: document.getElementById("pv-seek").disabled,
+      fireHere: !!document.querySelector("#dMini #fire") && document.getElementById("fire").offsetParent !== null,
+      joinFire: !!document.querySelector("#dMini .pb-joinfire"), other: (document.querySelector("#pv-switch .pb-other") || { className: "" }).className });
+    const out = {};
+    // the test's videos aren't real: keep the player from skipping past them
+    const skip = firetable.discover.onFailed;
+    firetable.discover.onFailed = () => {};
+    location.hash = "#discover";
+    await wait(400);
+    out.room = snap();
+    out.room.onair = !!document.querySelector("#dSide #pv-onair");
+    out.room.shown = el().offsetParent !== null && el().getBoundingClientRect().bottom <= innerHeight + 1;
+    document.querySelector("#dBrowse .ft-cards .pvbar .d-play").click();
+    await wait(300);
+    out.disc = snap();
+    document.querySelector("#dMini .pb-main").click();
+    await wait(100);
+    out.paused = snap().cls;
+    document.querySelector("#pv-switch .d-listen").click();
+    await wait(300);
+    out.live = snap();
+    out.live.preview = firetable.preview;
+    out.live.state = firetable.discover.state().listening;
+    document.querySelector("#dMini .pb-main").click(); // stop listening
+    await wait(100);
+    out.stopped = snap();
+    out.stopped.preview = firetable.preview;
+    document.querySelector("#pv-switch .d-mypick").click();
+    await wait(300);
+    out.back = snap();
+    out.back.playing = firetable.discover.state().playing;
+    document.querySelector("#dMini .pb-toroom").click();
+    await wait(200);
+    const dlg = document.getElementById("joinBox");
+    out.join = !!(dlg && dlg.open);
+    if (dlg && dlg.open) { dlg.close(); for (let i = 0; i < 40 && document.getElementById("login").parentElement.id !== "mainGrid"; i++) await wait(50); }
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await wait(300);
+    out.fireHome = document.getElementById("fire").parentElement.id;
+    firetable.discover.onFailed = skip;
+    return out;
+  });
+  check(/is-(live|onair)/.test(bar.room.cls) && /Live|On air/.test(bar.room.src) && bar.room.onair && bar.room.shown && bar.room.seek,
+    "before a pick, the bar shows the room (Live or On air), can't seek it, and the panel shows the On Air card (" + JSON.stringify(bar.room) + ")");
+  check(/is-discover/.test(bar.disc.cls) && /Discover/.test(bar.disc.src) && bar.disc.title === "First Single" && /^(Pause|Play)$/.test(bar.disc.main) && !bar.disc.seek && !bar.disc.fireHere && /d-listen/.test(bar.disc.other),
+    "a pick: the bar says Discover and the list, can seek, and offers the room one tap away (" + JSON.stringify(bar.disc) + ")");
+  check(/is-paused/.test(bar.paused) !== /is-paused/.test(bar.disc.cls), "the big button pauses and plays a Discover song (" + bar.disc.cls + " → " + bar.paused + ")");
+  check(/is-room/.test(bar.live.cls) && bar.live.preview === false && bar.live.state === true && !bar.live.fireHere && bar.live.joinFire && bar.live.seek && /d-mypick/.test(bar.live.other),
+    "Listen in: the room plays, a visitor gets Join to fire (not the stage's Fire), and the pick waits one tap away (" + JSON.stringify(bar.live) + ")");
+  check(/is-onair/.test(bar.stopped.cls) && bar.stopped.preview === "discover" && bar.stopped.main === "Listen in to the room",
+    "stop listening: the room goes quiet and the bar offers Listen in (" + JSON.stringify(bar.stopped) + ")");
+  check(/is-discover/.test(bar.back.cls) && /^newrel000/.test(bar.back.playing || ""), "Back to it plays the pick again (or the next, if the test video can't play) (" + JSON.stringify(bar.back) + ")");
+  check(bar.join, "a visitor's Play it in the room opens the join dialog");
+  check(bar.fireHome === "stageActions", "Live puts the stage's buttons back on the stage (" + bar.fireHome + ")");
 
   console.log("-- Discover: visitors read the chat in Live, and save songs to a crate");
   const peek = await dPage.evaluate(() => ({
@@ -831,7 +891,7 @@ try {
     await wait(200);
     out.playing = firetable.discover.state().list + ":" + firetable.discover.state().playing;
     out.source = [...document.querySelectorAll("#dTags .d-tag")].map((e) => e.textContent).includes("YouTube");
-    out.reload = !!document.querySelector("#dSide .d-reload");
+    out.reload = !!document.querySelector("#dMini .d-reload");
     localStorage.setItem("ft-crate", "[]");
     location.hash = "#discover/themes/nT2";
     await until(() => document.querySelectorAll("#dBrowse .ft-rows .pvbar").length === 100);
@@ -1024,7 +1084,7 @@ try {
     out.newHere = [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join();
     document.querySelector("#dBrowse .d-radio").click();
     await wait(200);
-    out.radio = firetable.discover.state().list + "|" + (document.querySelector("#dSide .d-from") || {}).textContent;
+    out.radio = firetable.discover.state().list + "|" + (document.getElementById("pv-src") || {}).textContent;
     location.hash = "#discover/djs/dj1";
     await until(() => document.querySelector("#dBrowse .d-taste"));
     out.userCardLink = firetable.discover.djPage("dj1", "dj1");
@@ -1148,6 +1208,67 @@ try {
   check(chatHere.moved && chatHere.visible, "the room's chat, with its message box, opens in Discover's panel (" + JSON.stringify(chatHere) + ")");
   check(chatHere.backOnNow && chatHere.unread === "1" && chatHere.cleared, "on another tab, new messages from others are counted, and cleared on Chat (" + JSON.stringify(chatHere) + ")");
   check(chatHere.live.home && !chatHere.live.here, "Live gets its chat back (" + JSON.stringify(chatHere.live) + ")");
+
+  console.log("-- Discover: members play a song in the room, and manage the playlist beside the player");
+  await put("/queues/smoke", { "-a1": { type: 1, cid: "plA000001", name: "Ay - One" }, "-a2": { type: 1, cid: "plB000002", name: "Bee - Two" }, "-a3": { type: 1, cid: "plC000003", name: "Cee - Three" } });
+  const member = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
+    const out = {};
+    const skip = firetable.discover.onFailed;
+    firetable.discover.onFailed = () => {};
+    location.hash = "#discover";
+    await wait(300);
+    // as signing in does: the list on screen, bound live
+    ftapi.queueRef = ftapi.lookup.listRef("0");
+    ftapi.queueBind = ftapi.queueRef.on("value", (snap) => { ftapi.queue = snap.val() || {}; ftapi.events.emit("playlistChanged", ftapi.queue, "0"); });
+    document.querySelector('#dSide [data-sidetab="list"]').click();
+    await until(() => document.querySelectorAll("#pv-plrows > li").length === 3);
+    const titles = () => [...document.querySelectorAll("#pv-plrows > li .d-mini-text b")].map((b) => b.childNodes[0].textContent.trim()).join();
+    out.rows = titles();
+    out.next = !!document.querySelector("#pv-plrows > li .pl-next");
+    const f = document.getElementById("pv-plfilter");
+    f.value = "bee";
+    f.dispatchEvent(new Event("input", { bubbles: true }));
+    out.filtered = [...document.querySelectorAll("#pv-plrows > li")].filter((li) => !li.hidden).length;
+    f.value = "";
+    f.dispatchEvent(new Event("input", { bubbles: true }));
+    document.querySelectorAll("#pv-plrows > li")[2].querySelector(".pl-top").click();
+    await until(() => titles().startsWith("Three"));
+    out.topped = titles();
+    document.querySelectorAll("#pv-plrows > li")[0].querySelector(".d-mini-row").click();
+    await wait(200);
+    out.playingRow = !!document.querySelector("#pv-plrows > li.is-playing") && /Your|Default/.test(document.getElementById("pv-src").textContent);
+    // a Discover song, to the top of the DJ playlist
+    location.hash = "#discover/new";
+    await wait(300);
+    document.querySelector("#dBrowse .pvbar .d-play").click();
+    await wait(200);
+    document.querySelector("#dMini .pb-toroom").click();
+    await until(() => Object.values(ftapi.queue || {}).some((t) => t.cid === firetable.discover.state().playing));
+    const keys = Object.keys(ftapi.queue).sort(ftapi.utilities.compareKeys);
+    out.first = ftapi.queue[keys[0]].cid === firetable.discover.state().playing && ftapi.queue[keys[0]].from === "discover";
+    out.done = await until(() => document.querySelector("#dMini .pb-toroom.is-done"));
+    out.done = !!out.done;
+    document.querySelector('#dSide [data-sidetab="now"]').click();
+    await wait(100);
+    out.note = (document.getElementById("pv-toRoomNote") || {}).textContent;
+    document.querySelector("#dSide .d-toroom-undo").click();
+    await until(() => !Object.values(ftapi.queue || {}).some((t) => t.cid === firetable.discover.state().playing));
+    out.undone = Object.keys(ftapi.queue).length === 3;
+    // a member listening in has the stage's Fire in the bar
+    document.querySelector("#pv-switch .d-listen").click();
+    await wait(200);
+    out.fire = document.getElementById("fire").closest("#dMini") && document.getElementById("fire").offsetParent !== null;
+    firetable.discover.onFailed = skip;
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await wait(200);
+    return out;
+  });
+  check(member.rows === "One,Two,Three" && member.next && member.filtered === 1, "the Playlists tab lists the DJ playlist with Next, and filters it (" + JSON.stringify(member) + ")");
+  check(member.topped === "Three,One,Two" && member.playingRow, "Top moves a song up; a row plays in the bar, marked in the list (" + JSON.stringify(member) + ")");
+  check(member.first && member.done && /First in/.test(member.note || "") && member.undone && member.fire,
+    "Play it in the room puts the song first in the DJ playlist, says so, and Undo takes it out; listening in, Fire is in the bar (" + JSON.stringify(member) + ")");
 
   console.log("-- Your account: the avatar's menu, Profile · Account · Settings, and log out");
   const acct = await dPage.evaluate(async () => {
