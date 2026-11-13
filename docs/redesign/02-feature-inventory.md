@@ -239,18 +239,18 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | DI-10 | Theme nights and night pages | All | `viewNights`, `viewNight` | 2.7 |
 | DI-11 | Recent plays (last 100) | All | `recentTracks` | 2.7 the Live timeline component |
 | DI-12 | Search (artists, genres, DJs, theme nights, songs; YouTube for members) | All | `viewSearch`, `searchYouTube`, `#dQ` | keep |
-| DI-13 | The Discover player: Now playing, up next, previous / next, reload, open, mute, Save | All | `nowPanel`, `play`, `step`, `togglePause`, `mediaSession`, `#dSide`, `#dMini` | 2.3 the one player |
-| DI-14 | Listen in (switch back to the room) | All | `listenIn`, `renderLiveLine` (`#dLive`) | 2.3 |
+| DI-13 | The Discover player: Now playing, up next, previous / next, reload, open, mute, Save | All | `nowPanel`, `play`, `step`, `togglePause`, `mediaSession`, `#dSide`, `#dMini` | ✅ 2.3: the player bar `#dMini` (`renderBar`, `mainButton`, `seek`, `setVolume`), details in Now playing (`nowPanel`) |
+| DI-14 | Listen in (switch back to the room) | All | `listenIn`, `renderLiveLine` (`#dLive`) | ✅ 2.3: the bar's ● Live / On air states, `listenIn`, `stopRoom`, the other source one tap away (`#pv-switch`) |
 | DI-15 | Visitor crate (kept in the browser; third save offers to keep it; becomes "My Discover crate" on join) | V | `crate()`, `saveToCrate`, `openKeepCrate`, `importCrate`, `ft-crate` | 2.4 crate card in the left column |
 | DI-16 | Step inside (Live as visitors see it, locked tabs: Join, Playlists, Recent, Cards) | V | `lockedTabs`, `.d-stepin` | keep |
-| DI-17 | Members' playlist and chat in the right column | M | `playlistPanel`, `sideTabs`, `chatIn` / `chatBack` | 2.3 |
+| DI-17 | Members' playlist and chat in the right column | M | `playlistPanel`, `sideTabs`, `chatIn` / `chatBack` | ✅ 2.3: Playlists tab with switch, DJ from, filter, drag, Top / Bottom / Remove + Undo (`plAct`, `listReady`), Play / Shuffle, Hop on; Chat for visitors too |
 | DI-18 | Play a whole list (play the year, their favourites, genre radio), Save all | All | `playAllButton`, `saveAllButton` | keep |
 | DI-19 | Song ⋮ menu (Save, add to playlist, open, share) | All | `openMenu`, `menuAct` | 2.8 same items as Live's song menu |
 | DI-20 | Share menu (link, image, embed) | All | `openShareMenu`, `copyLink` | keep |
 | DI-21 | Library pages for search engines (`/music/…`) | All | `tools/plain-pages.mjs`, deploy step | keep; check every Discover step still renders in plain pages (smoke checks them) |
 | DI-22 | Found-via tracking for new accounts | V | `FOUND_KEY`, `users/<uid>/foundVia` | keep |
-| DI-23 | (new) On Air card: the room in Discover's right column while you're not in it | All | today: "Pick any song to play it here" | 2.1 |
-| DI-24 | (new) Found by, and Play it in the room, in the player | All / M | today: first and last plays in the Now playing panel; Save | 2.3 |
+| DI-23 | (new) On Air card: the room in Discover's right column while you're not in it | All | today: "Pick any song to play it here" | ✅ 2.1: `#pv-onair` (`roomPanel`): the room's song, facts, decks, Listen in, Step inside, chat peek, Just played |
+| DI-24 | (new) Found by, and Play it in the room, in the player | All / M | today: first and last plays in the Now playing panel; Save | ✅ 2.3: Found by (`#pv-found`), Play it in the room (`#pv-toRoom`, `.pb-toroom`, `toRoom` / `undoToRoom`) |
 | DI-25 | (new) New this week leads Home; Not played live yet, "Be the first" | All | today: New's "not played live yet" filter | 2.4, 2.6 |
 | DI-26 | (new) The room on the sound map | All | — | 2.7 (the trail needs the bot's genre on recent plays) |
 

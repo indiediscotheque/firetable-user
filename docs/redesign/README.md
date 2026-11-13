@@ -32,7 +32,7 @@ Keep this table current as steps ship (one line per step in [04-step-plan.md](04
 |---|---|
 | 0 Foundations | not started |
 | 1 Inside today's layout | not started |
-| 2 Discover (round 4) | 2.5 shipped (joining, logging in, the account menu and Account tab) |
+| 2 Discover (round 4) | 2.5 shipped (joining, logging in, the account menu and Account tab); 2.1 and 2.3 shipped (the player bar along the bottom, the On Air card, and the right column for Now playing, Playlists and Chat) |
 | 3 The new room | on hold |
 | 4 Phones | not started |
 | 5 Default and clean-up | not started |

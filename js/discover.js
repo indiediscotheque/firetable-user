@@ -1180,12 +1180,17 @@ firetable.discover = (function () {
       esc((s.djname ? s.djname + " on deck" : "Live") + here) + "</span>" +
       (D.data.chat && D.data.chat.hour ? '<span class="d-live-chat">' + ms("forum") + esc(firetable.utilities.pluralize(D.data.chat.hour, "message", "messages") + " this hour") + "</span>" : "") +
       "</span>" +
-      (D.listening
+      (D.src === "live" && !blocked()
         ? '<span class="d-listening">' + ms("hearing") + " Listening</span>"
         : '<button type="button" class="butt graybutt small d-listen">Listen in</button>');
   }
 
   // ─── The right column ───────────────────────────────────────────────────
+  // The player itself is the bar along the bottom (below). The right column
+  // is for what goes with it: Now playing (the song in full: who found it,
+  // its history, what's up next; or the room, when that's what you hear),
+  // Playlists (members: switch, filter, reorder, play; visitors: the crate)
+  // and Chat (members: the room's own chat; visitors: the chat to read).
 
   var details = {}; // "type_cid" -> {plays, first, firstDj, last, lastDj, genres, bpm}
 
@@ -1218,9 +1223,9 @@ firetable.discover = (function () {
   function sideTabs() {
     var listLabel = D.signedIn ? "Playlists" : "Crate" + (crate().length ? " (" + crate().length + ")" : "");
     var tab = function (id, label) { return '<button type="button" role="tab" class="tab' + (D.sideTab === id ? " on" : "") + '" data-sidetab="' + id + '" aria-selected="' + (D.sideTab === id) + '">' + label + "</button>"; };
-    return '<div class="tabs d-sidetabs" role="tablist">' + tab("now", "Now playing") + tab("list", esc(listLabel)) +
-      (D.signedIn ? tab("chat", "Chat" + (D.unread ? ' <span class="d-unread" aria-label="' + D.unread + ' new">' + (D.unread > 99 ? "99+" : D.unread) + "</span>" : "")) : "") +
-      '<button type="button" class="butt graybutt iconbutt d-sheetclose" title="Close" aria-label="Close">' + ms("close") + "</button></div>";
+    var unread = D.signedIn && D.unread ? ' <span class="d-unread" aria-label="' + D.unread + ' new">' + (D.unread > 99 ? "99+" : D.unread) + "</span>" : "";
+    return '<div class="tabs d-sidetabs" role="tablist" aria-label="With the player">' + tab("now", "Now playing") + tab("list", esc(listLabel)) + tab("chat", "Chat" + unread) +
+      '<button type="button" class="butt graybutt iconbutt d-sheetclose" title="Close" aria-label="Close">' + ms("expand_more") + "</button></div>";
   }
 
   // ─── Live chat, for members in Discover ─────────────────────────────────
@@ -1251,80 +1256,195 @@ firetable.discover = (function () {
   function renderSide() {
     var el = document.getElementById("dSide");
     if (!el) return;
-    if (D.sideTab === "chat" && !(D.signedIn && D.mode === "discover")) D.sideTab = "now";
+    if (D.sideTab === "chat" && D.mode !== "discover") D.sideTab = "now";
     // the chat's tab: only its tabs change, so the chat keeps its place
-    if (D.sideTab === "chat" && el.querySelector(".d-chathost #actualChat")) {
+    if (D.sideTab === "chat" && D.signedIn && el.querySelector(".d-chathost #actualChat")) {
       var bar = el.querySelector(".d-sidetabs");
       if (bar) bar.outerHTML = sideTabs();
-      renderMini();
+      renderBar();
       return;
     }
+    var old = el.querySelector(".d-sidebody");
+    var scroll = old && old.getAttribute("data-tab") === D.sideTab ? old.scrollTop : 0;
+    var filterFocused = document.activeElement && document.activeElement.id === "pv-plfilter";
     chatBack();
-    var h = sideTabs();
-    if (D.sideTab === "chat") {
+    if (D.sideTab === "chat" && D.signedIn) {
       D.unread = 0;
-      el.innerHTML = '<div class="d-sidebody d-sidechat">' + sideTabs() + '<div class="d-chathost"></div></div>';
+      el.innerHTML = '<div class="d-sidebody d-sidechat" data-tab="chat">' + sideTabs() + '<div class="d-chathost"></div></div>';
       chatIn(el.querySelector(".d-chathost"));
-      renderMini();
+      renderBar();
       return;
     }
-    if (D.sideTab === "list") h += D.signedIn ? playlistPanel() : cratePanel();
-    else h += D.listening ? listeningPanel() : nowPanel();
-    el.innerHTML = '<div class="d-sidebody">' + h + "</div>";
-    if (D.sideTab === "now" && !D.listening && P.track) fillDetails(P.track);
-    renderMini();
+    var body;
+    if (D.sideTab === "chat") body = chatPanel();
+    else if (D.sideTab === "list") body = D.signedIn ? playlistPanel() : cratePanel();
+    else body = discoverActive() ? nowPanel() : roomPanel();
+    el.innerHTML = '<div class="d-sidebody" data-tab="' + D.sideTab + '">' + sideTabs() + body + "</div>";
+    if (scroll) el.querySelector(".d-sidebody").scrollTop = scroll;
+    if (D.sideTab === "now") fillDetails(discoverActive() ? P.track : liveTrack(), !discoverActive());
+    if (D.sideTab === "list" && D.signedIn) listReady(filterFocused);
+    renderBar();
     firetable.ui.markSaved();
   }
 
-  function nowPanel() {
-    var t = P.track;
-    if (!t) {
-      return '<div class="d-panel d-panel-empty"><p>Pick any song to play it here, start to finish.</p>' +
-        '<p class="d-fact">Or <button type="button" class="linkButton d-listen">listen in</button> to the room.</p></div>';
-    }
-    var list = lists[P.list];
-    var pos = list ? " · " + (P.i + 1) + " of " + list.tracks.length : "";
-    var saved = firetable.saved.where(t.type, t.cid);
-    return '<div class="d-panel">' +
-      '<div class="d-from">' + ms("queue_music") + "<span>Playing from " + esc((list && list.label) || "Discover") + esc(pos) + "</span></div>" +
-      '<div class="d-cover" style="background-image:url(' + esc(artOf(t)) + ')"></div>' +
-      '<div class="d-now"><span class="d-title">' + esc(t.t) + '</span><span class="d-artist">' + artistLinks(t.a) + "</span></div>" +
-      '<div class="d-tags" id="dTags"></div>' +
-      '<div class="d-hist" id="dHist"></div>' +
-      progress() +
-      '<div class="d-ctrls">' +
-      '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous" aria-label="Previous">' + ms("skip_previous", true) + "</button>" +
-      '<button type="button" class="butt iconbutt d-toggle d-big" title="' + (P.paused ? "Play" : "Pause") + '" aria-label="' + (P.paused ? "Play" : "Pause") + '">' + ms(P.paused ? "play_arrow" : "pause", true) + "</button>" +
-      '<button type="button" class="butt graybutt iconbutt d-next" title="Next" aria-label="Next">' + ms("skip_next", true) + "</button>" +
-      '<span class="d-gap"></span>' +
-      '<button type="button" class="butt graybutt iconbutt d-reload" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>" +
-      (linkOf(t) ? '<a class="butt graybutt iconbutt" target="_blank" rel="noopener" href="' + esc(linkOf(t)) + '" title="Open the song" aria-label="Open the song">' + ms("open_in_new") + "</a>" : "") +
-      '<button type="button" class="butt graybutt iconbutt d-mute" title="Mute" aria-label="Mute">' + ms(firetable.utilities.getEffectiveVolume() ? "volume_up" : "volume_off") + "</button>" +
-      "</div>" +
-      '<div class="d-save"><button type="button" class="butt small d-savebtn' + (saved ? " is-saved" : "") + '">' + (saved ? "Saved" : "Save") + "</button><span>" +
-      esc(saved ? "in " + saved : D.signedIn ? "to a playlist" : "to your crate, kept in this browser") + "</span></div>" +
-      upNext() + "</div>";
+  /** After play, pause or next: the list keeps its scroll and filter, only the marks move. */
+  function refreshSide() {
+    if (D.sideTab === "list") markPlaying();
+    else if (D.sideTab !== "chat") renderSide();
+    renderBar();
+  }
+  function markPlaying() {
+    document.querySelectorAll("#dSide .pl-row[data-list], #dSide .d-listrow[data-list]").forEach(function (r) {
+      var on = isPlaying(r.getAttribute("data-list"), Number(r.getAttribute("data-i")));
+      r.classList.toggle("is-playing", on);
+      var b = r.querySelector(".d-mini-row");
+      if (b) b.setAttribute("aria-current", on ? "true" : "false");
+    });
   }
 
-  function progress() {
-    return '<div class="d-prog"><span id="dAt">0:00</span><span class="d-bar"><i id="dBar"></i></span><span id="dLen">' + esc(P.len ? clock(P.len) : "") + "</span></div>";
+  // Now playing: a song from Discover, in full
+  function nowPanel() {
+    var t = P.track;
+    var list = lists[P.list];
+    var pos = list && list.tracks.length > 1 ? " · " + (P.i + 1) + " of " + list.tracks.length : "";
+    var saved = firetable.saved.where(t.type, t.cid);
+    return '<div class="d-panel d-nowpanel" data-list="' + esc(P.list) + '" data-i="' + P.i + '">' +
+      '<div class="d-from">' + ms("queue_music") + "<span>Playing from " + esc((list && list.label) || "Discover") + esc(pos) + "</span></div>" +
+      '<div class="d-cover" style="background-image:url(' + esc(artOf(t)) + ')"></div>' +
+      '<div class="d-now"><span class="d-title d-sheetlink" role="button" tabindex="0" data-src="discover">' + esc(t.t) + '</span><span class="d-artist">' + artistLinks(t.a) + "</span></div>" +
+      '<div class="d-tags" id="dTags"></div>' +
+      '<section class="d-found" id="pv-found" aria-labelledby="pv-foundLabel"><div class="d-label" id="pv-foundLabel">' + ms("headphones") + "<span>Found by</span></div>" +
+      '<div class="d-hist" id="dHist"><p>' + ms("hourglass_empty") + "Looking it up…</p></div></section>" +
+      '<div class="d-acts">' + toRoomButton(t) +
+      '<button type="button" class="butt graybutt d-savebtn' + (saved ? " is-saved" : "") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "<span>" + (saved ? "Saved" : "Save") + "</span></button>" +
+      '<button type="button" class="butt graybutt iconbutt d-more" title="More" aria-label="More about this song" aria-haspopup="menu">' + ms("more_vert") + "</button></div>" +
+      '<p class="d-fact" id="pv-toRoomNote">' + toRoomNote(t, saved) + "</p>" +
+      upNext() + roomRow() + "</div>";
+  }
+
+  function toRoomButton(t) {
+    if (!D.signedIn) return '<button type="button" id="pv-toRoom" class="butt darkbutt d-toroom">' + ms("queue_play_next") + "<span>Join to play it in the room</span></button>";
+    var done = P.inRoom && String(P.inRoom.cid) === String(t.cid);
+    return '<button type="button" id="pv-toRoom" class="butt darkbutt d-toroom' + (done ? " is-done" : "") + '" title="Put it first in the playlist you DJ from"' + (done ? ' aria-pressed="true"' : "") + ">" +
+      ms(done ? "check" : "queue_play_next") + "<span>" + (done ? "Next when you DJ" : "Play it in the room") + "</span></button>";
+  }
+  function toRoomNote(t, saved) {
+    if (!D.signedIn) return esc(saved ? "In your crate. " : "") + "Join and your songs play for the room when it's your turn on the decks.";
+    if (P.inRoom && String(P.inRoom.cid) === String(t.cid)) {
+      var d = deckState();
+      return esc("First in " + firetable.utilities.listName(P.inRoom.list) + ". ") +
+        (d.on ? "You're on the decks: it's your next song." : d.waiting ? "You're #" + d.place + " in line for the decks." : '<button type="button" class="linkButton d-joinwait">' + (d.open ? "Hop on the decks" : "Join the waitlist") + "</button> to play it.") +
+        ' <button type="button" class="linkButton d-toroom-undo">Undo</button>';
+    }
+    return esc(saved ? "Saved in " + saved + ". " : "") + "Play it in the room puts it first in your DJ playlist, " + esc(firetable.utilities.listName(djList())) + ".";
   }
 
   function upNext() {
     var list = lists[P.list];
     if (!list) return "";
-    var next = list.tracks.slice(P.i + 1, P.i + 4);
-    if (!next.length) return "";
-    return '<div class="d-upnext"><div class="d-label">' + ms("queue_music") + "<span>Up next · " + esc(firetable.utilities.pluralize(list.tracks.length - P.i - 1, "song", "songs") + " left") + "</span></div>" +
-      next.map(function (t, k) {
-        return '<button type="button" class="d-mini-row" data-list="' + esc(P.list) + '" data-i="' + (P.i + 1 + k) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
-          '<span class="d-mini-text"><b>' + esc(t.t) + "</b><span>" + esc(t.a) + "</span></span></button>";
-      }).join("") + "</div>";
+    var left = list.tracks.length - P.i - 1;
+    var head = '<div class="d-label">' + ms("queue_music") + "<span>Up next" + (left > 0 ? " · " + esc(left + " left") : "") + "</span></div>";
+    if (left <= 0) return '<div class="d-upnext">' + head + '<p class="d-fact">That\'s the last song in ' + esc(list.label) + ".</p></div>";
+    var shown = list.tracks.slice(P.i + 1, P.i + 31);
+    return '<div class="d-upnext">' + head + shown.map(function (t, k) {
+      return '<button type="button" class="d-mini-row" data-list="' + esc(P.list) + '" data-i="' + (P.i + 1 + k) + '" aria-label="Play ' + esc(t.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
+        '<span class="d-mini-text"><b>' + esc(t.t) + "</b><span>" + esc(t.a) + "</span></span></button>";
+    }).join("") + (left > 30 ? '<p class="d-fact">and ' + esc(firetable.utilities.pluralize(left - 30, "more song", "more songs")) + "</p>" : "") + "</div>";
   }
 
-  function fillDetails(t) {
+  /** The room in one row, under a Discover song: what's on, and Listen in. */
+  function roomRow() {
+    var s = liveTrack();
+    if (!s) return '<div class="d-roomrow is-quiet"><i class="d-dot is-off" aria-hidden="true"></i><span class="d-mini-text"><b>The room is quiet</b><span>' + esc(peopleHere() ? peopleHere() + " here" : "Nobody on the decks") + "</span></span></div>";
+    var line = myLine();
+    return '<div class="d-roomrow"><span class="d-mini-art" style="background-image:url(' + esc(artOf(s)) + ')"></span>' +
+      '<span class="d-mini-text"><b><i class="d-dot" aria-hidden="true"></i> The room: ' + esc(s.t) + "</b><span>" + esc((s.dj ? s.dj + " on deck" : "Live") + " · " + peopleHere() + " here" + (line ? " · " + line : "")) + "</span></span>" +
+      '<button type="button" class="butt graybutt small d-listen">Listen in</button></div>';
+  }
+
+  // The room: On Air while you're browsing, Live while you're listening
+  function roomPanel() {
+    var s = liveTrack();
+    var n = peopleHere();
+    var hearing = D.src === "live" && !blocked();
+    var pick = P.track ? '<button type="button" class="butt graybutt d-mypick">' + ms("arrow_back") + "<span>Back to " + esc(P.track.t) + "</span></button>" : "";
+    var help = P.track ? "" : '<p class="d-fact">Play any song in Discover and it plays here, start to finish. The room carries on without you.</p>';
+    if (!s) {
+      return '<div class="d-panel d-onair is-quiet" id="pv-onair"><div class="d-from"><i class="d-dot is-off" aria-hidden="true"></i><span>The room is quiet' + esc(n ? " · " + n + " here" : "") + "</span></div>" +
+        '<p class="d-fact">Nobody is on the decks right now.' + (D.signedIn ? "" : " Join to be the one who starts it.") + "</p>" +
+        '<div class="d-acts">' + (D.signedIn ? '<button type="button" class="butt darkbutt d-joinwait">' + ms("queue_music") + "<span>Hop on the decks</span></button>" : "") + pick + "</div>" +
+        justPlayed() + help + "</div>";
+    }
+    return '<div class="d-panel d-onair' + (hearing ? " is-hearing" : "") + '" id="pv-onair">' +
+      '<div class="d-from d-livefrom"><span class="d-livebadge' + (hearing ? "" : " is-off") + '">' + (hearing ? "Live" : "On air") + "</span><span>" + (hearing ? "You're listening to the room" : "In the room now") + esc(n ? " · " + n + " here" : "") + "</span></div>" +
+      '<div class="d-cover" style="background-image:url(' + esc(artOf(s)) + ')"></div>' +
+      '<div class="d-now"><span class="d-title d-sheetlink" role="button" tabindex="0" data-src="live">' + esc(s.t) + '</span><span class="d-artist">' + artistLinks(s.a) + "</span></div>" +
+      '<div class="d-tags" id="dTags"></div>' +
+      '<div class="d-hist" id="dHist"></div>' +
+      decks() +
+      '<div class="d-acts">' + (hearing ? "" : '<button type="button" class="butt darkbutt d-listen">' + ms("headphones") + "<span>Listen in</span></button>") +
+      '<button type="button" class="butt graybutt d-stepin">' + ms("login") + "<span>Step inside</span></button>" + pick + "</div>" +
+      (D.signedIn ? "" : chatPeekBlock(4)) +
+      justPlayed() + help + "</div>";
+  }
+
+  /** Who's on the decks: the DJ playing, then the order after them. */
+  function deckList() {
+    var table = firetable.tableData;
+    var out = [];
+    for (var k in table || {}) {
+      if (Object.prototype.hasOwnProperty.call(table, k) && table[k] && table[k].id) out.push({ id: table[k].id, name: table[k].name });
+    }
+    var s = firetable.song;
+    var at = -1;
+    for (var i = 0; i < out.length; i++) if (s && out[i].id === s.djid) at = i;
+    if (at < 0) at = Math.min(Math.max(0, Number(firetable.playdex) || 0), Math.max(0, out.length - 1));
+    return out.slice(at).concat(out.slice(0, at));
+  }
+  function decks() {
+    var list = deckList();
+    var d = deckState();
+    if (!list.length) return "";
+    return '<div class="d-decks"><div class="d-label">' + ms("headphones") + "<span>On the decks</span></div><div class=\"d-deckrow\">" +
+      list.map(function (x, k) {
+        var who = djShown(x.id, x.name);
+        return '<span class="d-deckdj' + (k === 0 ? " is-on" : "") + (x.id === ftapi.uid ? " is-me" : "") + '">' + (who ? robotLink(who) : '<span class="ft-avatar pv-dj-avatar d-noface" aria-hidden="true"></span>') +
+          "<span><b>" + esc(who ? who.name : "a DJ") + "</b><small>" + (k === 0 ? "playing" : k === 1 ? "next" : "#" + (k + 1)) + "</small></span></span>";
+      }).join("") +
+      (d.open ? '<span class="d-deckdj is-open"><span class="d-openspot" aria-hidden="true">' + ms("add") + "</span><span><b>Open spot</b><small>" + (D.signedIn && !d.on && !d.waiting ? '<button type="button" class="linkButton d-joinwait">Hop on</button>' : "anyone can DJ") + "</small></span></span>" : "") +
+      "</div>" + (myLine() ? '<p class="d-fact">' + esc(myLine()) + "</p>" : "") + "</div>";
+  }
+
+  function justPlayed() {
+    var s = firetable.song;
+    var rt = recentTracks().filter(function (t) { return !(s && String(t.cid) === String(s.cid) && t.when >= (s.started || 0) - 5000); }).slice(0, 4);
+    if (!rt.length) return "";
+    setList("room-recent", "Just played in the room", rt);
+    return '<div class="d-upnext d-justplayed"><div class="d-label">' + ms("history") + "<span>Just played</span></div>" + rt.map(function (t, i) {
+      var who = t.dj ? djShown(t.djid, t.dj) : null;
+      return '<div class="d-listrow" data-list="room-recent" data-i="' + i + '"><button type="button" class="d-mini-row" data-list="room-recent" data-i="' + i + '" aria-label="Play ' + esc(t.t) + ' in Discover"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
+        '<span class="d-mini-text"><b>' + esc(t.t) + "</b><span>" + esc(t.a + (who ? " · " + who.name : "")) + "</span></span></button></div>";
+    }).join("") + "</div>";
+  }
+
+  function chatPeekBlock(n) {
+    var chat = D.data.chat || {};
+    return '<div class="d-upnext"><div class="d-label">' + ms("forum") + "<span>Live chat" + esc(chat.hour ? " · " + firetable.utilities.pluralize(chat.hour, "message", "messages") + " this hour" : "") + "</span></div>" +
+      chatList((chat.msgs || []).slice(-n)) + "</div>";
+  }
+
+  // Chat for visitors: the room's chat to read, and the way in
+  function chatPanel() {
+    return '<div class="d-panel">' + chatPeekBlock(14) +
+      '<p class="d-fact">You\'re reading the room\'s chat. Join to say hi, fire songs and take a turn on the decks.</p>' + joinButtons() + "</div>";
+  }
+
+  /** The history's facts about a song: tags, plays, who found it first. */
+  function fillDetails(t, live) {
+    if (!t) return;
     loadDetails(t).then(function (d) {
-      if (!P.track || P.track.cid !== t.cid) return;
+      var now = live ? liveTrack() : P.track;
+      if (!now || String(now.cid) !== String(t.cid)) return;
       var tags = (d.genres || []).slice(0, 2).map(function (g) { return '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>"; });
       if (t.rel) tags.push('<span class="d-tag d-numtag">' + esc(t.rel.slice(0, 4)) + "</span>");
       tags.push('<span class="d-tag">' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + "</span>");
@@ -1337,33 +1457,20 @@ firetable.discover = (function () {
       var firstAt = d.first || t.first;
       var firstName = d.first ? d.firstDj : t.dj;
       var firstUid = d.first ? null : t.djid;
-      if (plays) lines.push("<b>" + esc(firetable.utilities.pluralize(plays, "play", "plays")) + "</b> in the room");
       var first = firstAt ? djShown(firstUid, firstName) : null;
-      if (firstAt) lines.push((first ? robotLink(first) : "") + "<span>first played " + esc(firetable.utilities.shortDate(firstAt)) + (first ? " by " + nameLink(first) : "") + "</span>");
-      if (d.last && d.last !== firstAt) {
-        var last = djShown(null, d.lastDj);
-        lines.push("<span>last played " + esc(firetable.utilities.shortDate(d.last)) + (last ? " by " + nameLink(last) : "") + "</span>");
+      if (firstAt) lines.push((first ? robotLink(first) : "") + "<span>" + (first ? nameLink(first) + " first played it here " : "First played here ") + esc(firetable.utilities.shortDate(firstAt)) + "</span>");
+      if (plays) {
+        var last = d.last && d.last !== firstAt ? djShown(null, d.lastDj) : null;
+        lines.push("<span><b>" + esc(firetable.utilities.pluralize(plays, "play", "plays")) + "</b>" + (plays === 1 ? " so far" : "") +
+          (d.last && d.last !== firstAt ? " · last " + esc(firetable.utilities.shortDate(d.last)) + (last ? " by " + nameLink(last) : "") : "") + "</span>");
       }
-      if (!firstAt && !plays) lines.push("Nobody has played this live yet. It could be you.");
+      if (d.versions > 1) lines.push("<span>" + esc(d.versions) + " versions of this song have played here</span>");
+      var rising = ((lib("rising") || {}).rows || []).filter(function (r) { return String(r.cid) === String(t.cid); })[0];
+      if (rising) lines.push('<span class="d-rising">▲ Rising: ' + esc(firetable.utilities.pluralize(rising.recent, "play", "plays")) + " in the last 4 weeks</span>");
+      if (!firstAt && !plays) lines.push(live ? "<span>Its first play here: you're hearing it now.</span>" : '<span class="d-tag d-befirst">Be the first</span><span>Nobody has played this live yet.</span>');
       var histEl = document.getElementById("dHist");
       if (histEl) histEl.innerHTML = lines.map(function (l) { return "<p>" + l + "</p>"; }).join("");
     });
-  }
-
-  function listeningPanel() {
-    var s = firetable.song;
-    var chat = (D.data.chat && D.data.chat.msgs) || [];
-    var title = s ? firetable.utilities.decodeEntities(s.title || "") : "";
-    var artist = s ? firetable.utilities.decodeEntities(s.artist || "") : "";
-    return '<div class="d-panel">' +
-      '<div class="d-from"><i class="d-dot" aria-hidden="true"></i><span>Live · listening in</span></div>' +
-      (s ? '<div class="d-cover" style="background-image:url(' + esc(firetable.imgCache && firetable.imgCache[s.cid] || artOf({ cid: s.cid, type: s.type, img: s.image })) + ')"></div>' +
-        '<div class="d-now"><span class="d-title">' + esc(title) + '</span><span class="d-artist">' + esc(artist) + "</span></div>" +
-        '<div class="d-hist"><p>' + esc((s.djname ? s.djname + " on deck" : "Live") + " · " + peopleHere() + " here") + "</p></div>" : "") +
-      '<div class="d-ctrls"><button type="button" class="butt graybutt iconbutt d-mute" title="Mute" aria-label="Mute">' + ms(firetable.utilities.getEffectiveVolume() ? "volume_up" : "volume_off") + "</button>" +
-      '<span class="d-gap"></span>' + (P.track ? '<button type="button" class="butt graybutt small d-mypick">' + ms("arrow_back") + " My pick</button>" : "") + "</div>" +
-      '<div class="d-upnext"><div class="d-label">' + ms("forum") + "<span>Live chat</span></div>" + chatList(chat.slice(-6)) +
-      '<button type="button" class="butt d-stepin">Step inside</button><p class="d-fact d-center">See the stage, the DJs and everyone in the room.</p></div></div>';
   }
 
   function chatList(msgs) {
@@ -1410,15 +1517,21 @@ firetable.discover = (function () {
 
   function cratePanel() {
     var c = crate();
-    var rows = c.map(function (t, i) {
-      return '<div class="d-listrow"><button type="button" class="d-mini-row" data-list="crate" data-i="' + i + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
-        '<span class="d-mini-text"><b>' + esc(t.t) + "</b><span>" + esc(t.a) + "</span></span></button>" +
-        '<button type="button" class="butt graybutt iconbutt d-unsave" data-i="' + i + '" title="Remove" aria-label="Remove ' + esc(t.t) + ' from your crate">' + ms("close") + "</button></div>";
-    }).join("");
     setList("crate", "Your crate", c);
-    return '<div class="d-panel">' +
-      (c.length ? '<p class="d-fact">' + esc(firetable.utilities.pluralize(c.length, "song", "songs")) + " · kept in this browser</p>" + rows
-        : '<p class="d-fact">Tap ' + ms("playlist_add") + " on any song to save it here. No account needed.</p>") +
+    var rows = c.map(function (t, i) {
+      return '<li class="d-listrow pl-row' + (isPlaying("crate", i) ? " is-playing" : "") + '" data-list="crate" data-i="' + i + '"><span class="d-n">' + (i + 1) + "</span>" +
+        '<button type="button" class="d-mini-row" data-list="crate" data-i="' + i + '" aria-label="Play ' + esc(t.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
+        '<span class="d-mini-text"><b>' + esc(t.t) + "</b><span>" + esc(t.a) + "</span></span></button>" +
+        '<span class="pl-acts">' +
+        (i ? '<button type="button" class="row-icon material-symbols-outlined pl-cratetop" data-i="' + i + '" title="Move to the top" aria-label="Move ' + esc(t.t) + ' to the top">vertical_align_top</button>' : "") +
+        '<button type="button" class="row-icon material-symbols-outlined d-unsave" data-i="' + i + '" title="Remove" aria-label="Remove ' + esc(t.t) + ' from your crate">close</button></span></li>';
+    }).join("");
+    return '<div class="d-panel d-listpanel">' +
+      (c.length ? '<div class="d-listhead"><b>Your crate</b><span>' + esc(firetable.utilities.pluralize(c.length, "song", "songs")) + " · kept in this browser</span></div>" +
+        '<div class="pl-tools"><button type="button" class="butt darkbutt small d-playall" data-list="crate">' + ms("play_arrow", true) + "<span>Play</span></button>" +
+        '<button type="button" class="butt graybutt small pl-shuffle" data-list="crate">' + ms("shuffle") + "<span>Shuffle</span></button></div>" +
+        '<ol class="pl-rows">' + rows + "</ol>"
+        : '<p class="d-fact">Tap ' + ms("playlist_add") + " on any song, or Save in the player, to keep it here. No account needed.</p>") +
       '<p class="d-fact">Join and this crate becomes your first playlist, ready to play for the room.</p>' +
       joinButtons() + "</div>";
   }
@@ -1486,40 +1599,250 @@ firetable.discover = (function () {
   }
 
   // ─── Playlists (members) ────────────────────────────────────────────────
+  // The playlist open in Live's Playlists (one list on screen across the
+  // site): switch lists, pick the one you DJ from, filter, drag to reorder,
+  // Top / Bottom / Remove with Undo, and play it here. Everything goes
+  // through the same ftapi actions Live uses.
 
-  function playlistPanel() {
+  var PL_SHOWN = 300;
+  function djList() {
+    var v = $("#djlistpicker").val();
+    var me = ftapi.users && ftapi.users[ftapi.uid];
+    return String(v || (me && me.selectedList) || "0");
+  }
+  function viewList() { return String(firetable.viewListID || $("#listpicker").val() || "0"); }
+  function queueTracks() {
     var queue = ftapi.queue || {};
-    var keys = Object.keys(queue);
-    var tracks = keys.map(function (k) {
+    return Object.keys(queue).sort(ftapi.utilities.compareKeys).map(function (k) {
       var q = queue[k] || {};
       var parts = String(q.name || "").split(" - ");
       var a = parts.length > 1 ? parts.shift() : "";
-      return { type: q.type || 1, cid: q.cid, a: a, t: parts.join(" - ") || q.name, img: q.img, url: q.url, flagged: !!q.flagged };
+      return { key: k, type: q.type || 1, cid: q.cid, a: a, t: parts.join(" - ") || q.name, img: q.img, url: q.url, flagged: !!q.flagged };
     }).filter(function (t) { return t.cid != null; });
-    var listID = ftapi.selectedListThing;
+  }
+
+  function playlistPanel() {
+    var listID = viewList();
     var name = firetable.utilities.listName(listID);
+    var tracks = queueTracks();
+    var isDj = listID === djList();
     setList("playlist", name, tracks);
-    var rows = tracks.slice(0, 100).map(function (t, i) {
+    var opts = Array.prototype.map.call(document.querySelectorAll("#listpicker option"), function (o) {
+      return '<option value="' + esc(o.value) + '"' + (o.value === listID ? " selected" : "") + ">" + esc(o.textContent) + (o.value === djList() ? " · DJ" : "") + "</option>";
+    }).join("") || '<option value="0">Default Playlist</option>';
+    var broken = tracks.filter(function (t) { return t.flagged; }).length;
+    var shown = D.plAll ? tracks : tracks.slice(0, PL_SHOWN);
+    var rows = shown.map(function (t, i) {
       var isNew = firetable.saved.session[firetable.saved.key(t.type, t.cid)];
-      return '<div class="d-listrow' + (isNew ? " d-added" : "") + (t.flagged ? " d-flagged" : "") + '"><span class="d-n">' + (i + 1) + "</span>" +
-        '<button type="button" class="d-mini-row" data-list="playlist" data-i="' + i + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
-        '<span class="d-mini-text"><b>' + esc(t.t) + "</b><span>" + esc(t.a) + "</span></span></button></div>";
+      return '<li class="pl-row d-listrow' + (isNew ? " d-added" : "") + (t.flagged ? " d-flagged" : "") + (isPlaying("playlist", i) ? " is-playing" : "") + '" data-key="' + esc(t.key) + '" data-cid="' + esc(t.cid) + '" data-list="playlist" data-i="' + i + '">' +
+        '<span class="pl-grip material-symbols-outlined" aria-hidden="true" title="Drag to reorder">drag_indicator</span><span class="d-n">' + (i + 1) + "</span>" +
+        '<button type="button" class="d-mini-row" data-list="playlist" data-i="' + i + '" aria-label="Play ' + esc(t.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
+        '<span class="d-mini-text"><b>' + esc(t.t) + (i === 0 && isDj ? ' <span class="d-tag pl-next">Next</span>' : "") + (t.flagged ? ' <span class="d-tag pl-broken" title="This song can\'t play">⚠ Broken</span>' : "") + "</b><span>" + esc(t.a) + "</span></span></button>" +
+        '<span class="pl-acts">' +
+        (i ? '<button type="button" class="row-icon material-symbols-outlined pl-top" title="Move to the top" aria-label="Move ' + esc(t.t) + ' to the top">vertical_align_top</button>' : "") +
+        (i < tracks.length - 1 ? '<button type="button" class="row-icon material-symbols-outlined pl-bottom" title="Send to the bottom" aria-label="Send ' + esc(t.t) + ' to the bottom">vertical_align_bottom</button>' : "") +
+        '<button type="button" class="row-icon material-symbols-outlined pl-del" title="Remove" aria-label="Remove ' + esc(t.t) + ' from ' + esc(name) + '">delete</button></span></li>';
     }).join("");
-    return '<div class="d-panel">' +
-      '<div class="d-listhead"><b>' + esc(name) + "</b><span>" + esc(firetable.utilities.pluralize(tracks.length, "song", "songs")) + "</span>" +
-      '<span class="d-dj">' + ms("headphones") + " Your DJ playlist</span></div>" +
-      (tracks.length ? '<p class="d-label d-plain">Plays next when you DJ</p>' + rows : '<p class="d-fact">Empty. Save songs here with ' + ms("playlist_add") + ".</p>") +
-      (tracks.length > 100 ? '<p class="d-fact">The first 100 of ' + tracks.length + ". The rest are in Live, under Playlists.</p>" : "") +
-      (ftapi.keepAwake && ftapi.keepAwake.wanted ? "" : tracks.length ? '<button type="button" class="butt d-joinwait">' + ms("queue_music") + "<span>Play it for the room</span></button>" +
-        '<p class="d-fact d-center">Joins the waitlist. You take the decks in Live.</p>' : "") +
-      '<p class="d-fact">Songs you saved this visit are marked. Manage every playlist in Live, under Playlists.</p></div>';
+    return '<div class="d-panel d-listpanel">' +
+      '<div class="pl-head"><label class="sr-only" for="pv-listpick">Playlist</label><select id="pv-listpick" class="pl-pick">' + opts + "</select>" +
+      '<button type="button" class="butt graybutt iconbutt pl-dj' + (isDj ? " on" : "") + '" aria-pressed="' + isDj + '" title="' + (isDj ? "You DJ from this playlist" : "DJ from this playlist") + '" aria-label="' + (isDj ? "You DJ from this playlist" : "DJ from this playlist") + '">' + ms("headphones", isDj) + "</button></div>" +
+      '<div class="d-listhead"><span>' + esc(firetable.utilities.pluralize(tracks.length, "song", "songs")) + (broken ? " · " + broken + " broken" : "") + "</span>" +
+      (isDj ? '<span class="d-dj">' + ms("headphones") + " You DJ from this</span>" : '<button type="button" class="linkButton pl-dj">DJ from this</button>') + "</div>" +
+      (tracks.length ? '<div class="pl-tools"><input type="search" id="pv-plfilter" class="pl-filter" placeholder="Filter this playlist" aria-label="Filter this playlist" autocomplete="off" value="' + esc(D.plFilter || "") + '" />' +
+        '<button type="button" class="butt darkbutt small d-playall" data-list="playlist" title="Play it here, from the top">' + ms("play_arrow", true) + "<span>Play</span></button>" +
+        '<button type="button" class="butt graybutt iconbutt small pl-shuffle" data-list="playlist" title="Shuffle play (the playlist keeps its order)" aria-label="Shuffle play">' + ms("shuffle") + "</button></div>" +
+        '<ol class="pl-rows" id="pv-plrows" aria-label="' + esc(name) + '">' + rows + "</ol>" +
+        '<p class="d-fact pl-nomatch" hidden>No songs in this playlist match.</p>' +
+        (tracks.length > shown.length ? '<button type="button" class="linkButton pl-all">Show all ' + esc(tracks.length) + " songs</button>" : "")
+        : '<p class="d-fact">Empty. Save songs here with ' + ms("playlist_add") + ", or Play it in the room from the player.</p>") +
+      '<div class="pl-deck" id="pv-deckline">' + deckLine(isDj, tracks.length) + "</div>" +
+      '<p class="d-fact">Drag ' + ms("drag_indicator") + " to reorder. Songs saved this visit are marked. Every playlist tool is in Live, under Playlists.</p></div>";
+  }
+
+  /** Under the DJ playlist: where you stand on the decks. */
+  function deckLine(isDj, n) {
+    var d = deckState();
+    if (!isDj) return '<p class="d-fact">The room plays from ' + esc(firetable.utilities.listName(djList())) + " when you DJ.</p>";
+    if (d.on) return '<p class="d-fact">' + ms("headphones") + " You're on the decks. The room plays from the top of this list.</p>";
+    if (d.waiting) return '<p class="d-fact">' + ms("queue_music") + " You're #" + esc(d.place) + " in line for the decks.</p>";
+    if (!n) return "";
+    return '<button type="button" class="butt darkbutt d-joinwait">' + ms("queue_music") + "<span>" + (d.open ? "Hop on the decks" : "Join the waitlist") + "</span></button>" +
+      '<p class="d-fact d-center">' + (d.open ? "A spot is open. The room plays this list, from the top." : "You'll take the decks when a spot opens.") + "</p>";
+  }
+
+  /** Filter, drag and the list's buttons, once it's on screen. */
+  function listReady(refocus) {
+    var input = document.getElementById("pv-plfilter");
+    if (input) {
+      applyFilter();
+      if (refocus) { input.focus(); var v = input.value; input.setSelectionRange(v.length, v.length); }
+    }
+    var $rows = $("#pv-plrows");
+    if (!$rows.length || !$.fn.sortable) return;
+    $rows.sortable({
+      handle: ".pl-grip",
+      axis: "y",
+      items: "> li",
+      tolerance: "pointer",
+      delay: matchMedia("(pointer: coarse)").matches ? 250 : 0,
+      disabled: !!D.plFilter,
+      update: function () {
+        var keys = $rows.children("li").map(function () { return this.getAttribute("data-key"); }).get();
+        ftapi.actions.reorderList(keys);
+        firetable.ui.toast("Order saved", "success");
+      }
+    });
+  }
+  function applyFilter() {
+    var q = fold(String(D.plFilter || "").trim());
+    var rows = document.querySelectorAll("#pv-plrows > li");
+    var shown = 0;
+    rows.forEach(function (r) {
+      var hit = !q || fold(r.textContent).indexOf(q) !== -1;
+      r.hidden = !hit;
+      if (hit) shown++;
+    });
+    var none = document.querySelector("#dSide .pl-nomatch");
+    if (none) none.hidden = !(q && !shown);
+    var $rows = $("#pv-plrows");
+    if ($rows.length && $rows.sortable("instance")) $rows.sortable("option", "disabled", !!q);
+  }
+
+  function rowTrack(btn) {
+    var li = btn.closest(".pl-row[data-key]");
+    if (!li) return null;
+    var key = li.getAttribute("data-key");
+    var q = (ftapi.queue || {})[key];
+    return q ? { key: key, cid: li.getAttribute("data-cid"), track: q } : null;
+  }
+  function plAct(kind, btn) {
+    var r = rowTrack(btn);
+    if (!r) return;
+    var label = firetable.utilities.decodeEntities(String(r.track.name || "That song"));
+    if (kind === "top") return ftapi.actions.moveTrackToTop(r.key, null, null, null, r.cid);
+    if (kind === "bottom") return ftapi.actions.moveTrackToBottom(r.key, null, r.cid);
+    var ref = ftapi.queueRef;
+    var name = firetable.utilities.listName(viewList());
+    ftapi.actions.deleteTrack(r.key, function (err) {
+      if (err) return firetable.ui.toast("Couldn't remove it. Try again.", "error");
+      firetable.saved.unmark(r.track.type, r.track.cid);
+      firetable.ui.toast("Removed " + label + " from " + name, "notice", {
+        action: { label: "Undo", fn: function () {
+          ref.child(r.key).set(r.track).then(function () { firetable.ui.toast("Put back in " + name, "success"); },
+            function () { firetable.ui.toast("Couldn't put it back. Find it in Recent or search.", "error"); });
+        } }
+      });
+    });
+  }
+
+  // ─── The room, as Discover plays alongside it ───────────────────────────
+
+  function blocked() { return document.body.classList.contains("media-blocked"); }
+  /** The room's song in Discover's shape, or null when the room is quiet. */
+  function liveTrack() {
+    var s = firetable.song;
+    if (!s || !s.cid || s.cid == 0) return null;
+    return { type: Number(s.type || 1), cid: s.cid, a: firetable.utilities.decodeEntities(s.artist || ""), t: firetable.utilities.decodeEntities(s.title || ""),
+      img: (firetable.imgCache && firetable.imgCache[s.cid]) || s.image, url: s.url, dj: s.djname, djid: s.djid, started: s.started, dur: s.duration, now: true };
+  }
+  function has(list) { return ftapi.keepAwake && ftapi.keepAwake.has ? ftapi.keepAwake.has(list) : false; }
+  /** Where the member stands: on the decks, in line (and where), and whether a spot is open. */
+  function deckState() {
+    var table = firetable.tableData || {};
+    var seats = Object.keys(table).filter(function (k) { return table[k] && table[k].id; }).length;
+    var place = 0;
+    var wl = firetable.waitlistData || {};
+    Object.keys(wl).forEach(function (k, i) { if (wl[k] && wl[k].id === ftapi.uid) place = i + 1; });
+    return { on: !!ftapi.uid && has(table), waiting: !!place, place: place, open: seats < DECK_SPOTS };
+  }
+  function myLine() {
+    if (!D.signedIn) return "";
+    var d = deckState();
+    if (d.on) {
+      var order = deckList();
+      for (var i = 0; i < order.length; i++) if (order[i].id === ftapi.uid) return i === 0 ? "your song is on" : i === 1 ? "you're next" : "you're #" + (i + 1) + " on the decks";
+      return "you're on the decks";
+    }
+    return d.waiting ? "you're #" + d.place + " in line" : "";
+  }
+
+  function toRoom(t) {
+    if (!t) return;
+    if (!D.signedIn) return showSignIn("create");
+    var dest = djList();
+    var type = Number(t.type || 1);
+    var refusal = firetable.utilities.formatRefusal(dest, type);
+    if (refusal) return firetable.ui.toast(refusal, "error");
+    var ref = ftapi.lookup.listRef(dest);
+    var name = firetable.utilities.listName(dest);
+    var info = { type: type, name: (t.a ? t.a + " - " : "") + t.t, cid: t.cid, img: t.img || artOf(t), url: firetable.utilities.soundCloudPageUrl(t.url || ""), from: "discover" };
+    ftapi.actions.addTrackToTop(ref, info, null, null, function (err, key) {
+      if (err) return firetable.ui.toast("Couldn't add it to " + name + ". Try again.", "error");
+      if (t.djid) firetable.actions.recordGrab(t.djid, type, t.cid);
+      firetable.saved.mark(type, t.cid, name);
+      P.inRoom = { cid: t.cid, type: type, key: key, ref: ref, list: dest };
+      var d = deckState();
+      var msg = d.on ? "First in " + name + ": your next song on the decks." : d.waiting ? "First in " + name + ". It plays when your turn comes." : "First in " + name + ". It plays the next time you DJ.";
+      firetable.ui.toast(msg, "success", { duration: 6000, action: d.on || d.waiting ? { label: "Undo", fn: undoToRoom } : { label: d.open ? "Hop on" : "Join the waitlist", fn: hopOn } });
+      refreshSide();
+      renderSide();
+    });
+  }
+  function undoToRoom() {
+    var r = P.inRoom;
+    if (!r) return;
+    P.inRoom = null;
+    r.ref.child(r.key).remove().then(function () {
+      firetable.saved.unmark(r.type, r.cid);
+      firetable.ui.toast("Taken back out of " + firetable.utilities.listName(r.list));
+      renderSide();
+    }, function () { firetable.ui.toast("Couldn't take it out. It's still first in " + firetable.utilities.listName(r.list) + ".", "error"); });
+  }
+  function hopOn() {
+    var d = deckState();
+    if (d.on || d.waiting) return;
+    ftapi.actions.sendBotCommand("!addme");
+    firetable.ui.toast(d.open ? "You're hopping on the decks. Stay here: when your song starts, Discover hands you back to the room."
+      : "You're in line for the decks. When your song starts, Discover hands you back to the room.", "success", { duration: 6000 });
+  }
+
+  /** When your song comes up, Discover hands you back to the room; one song before, it says so. */
+  var turnNoted = null;
+  function yourTurn() {
+    var s = firetable.song;
+    if (!D.signedIn || !ftapi.uid || !s || !s.cid || s.cid == 0) return;
+    if (s.djid === ftapi.uid) {
+      if (D.src === "live" && !blocked()) return;
+      listenIn();
+      firetable.ui.toast("Your song is on in the room, so Discover handed you back to it.", "notice", {
+        duration: 7000, action: { label: "Step inside", fn: function () { setMode("live", { remember: true }); } }
+      });
+      return;
+    }
+    var order = deckList();
+    if (order.length > 1 && order[1].id === ftapi.uid && discoverActive() && turnNoted !== s.started) {
+      turnNoted = s.started;
+      firetable.ui.toast("You're up next on the decks. When your song starts, Discover hands you back to the room.", "notice", {
+        duration: 7000, action: { label: "Listen in", fn: listenIn }
+      });
+    }
   }
 
   // ─── The player ─────────────────────────────────────────────────────────
+  // One player for Discover, along the bottom like any music app's. It plays
+  // either a song from Discover (through the room's own players, with the
+  // room silent meanwhile) or the room itself, live: the bar says which in
+  // words, colour and controls, and the other is always one tap away.
+  //   D.src "discover": a Discover song (playing or paused)
+  //         "live":     the room, as it plays (the stage's buttons come along)
+  //         "off":      the room stopped by you; nothing sounds
 
-  var P = { track: null, list: null, i: 0, paused: false, len: 0, at: 0, timer: null };
+  var P = { track: null, list: null, i: 0, paused: false, len: 0, at: 0, timer: null, inRoom: null };
+  var DECK_SPOTS = 4;
 
-  function isPlaying(list, i) { return !!(P.track && !D.listening && P.list === list && P.i === i); }
+  function setSrc(src) { D.src = src; D.listening = src === "live"; }
+  function discoverActive() { return !!(P.track && D.src === "discover"); }
+  function isPlaying(list, i) { return discoverActive() && P.list === list && P.i === i; }
   function isSounding(list, i) { return isPlaying(list, i) && !P.paused; }
 
   function clock(sec) {
@@ -1544,7 +1867,8 @@ firetable.discover = (function () {
     var t = list && list.tracks[i];
     if (!t) return;
     cancelPreview();
-    D.listening = false;
+    if (!auto) failures = 0; // someone chose this one: count failures from here
+    setSrc("discover");
     P.track = t; P.list = listName; P.i = i; P.paused = false; P.len = t.dur || 0; P.at = startAt || 0;
     firetable.preview = "discover";
     firetable.previewType = Number(t.type || 1);
@@ -1563,30 +1887,37 @@ firetable.discover = (function () {
     }
     startTicking();
     mediaSession(t);
-    if (!auto) D.sideTab = "now";
-    renderSide();
+    refreshSide();
     renderBrowse();
     renderLiveLine();
+    if (!auto) announce("Playing " + t.t + (t.a ? " by " + t.a : "") + ", from " + (list.label || "Discover"));
   }
 
-  /** The phone's lock screen, headphones and media keys control Discover's player. */
-  function mediaSession(t) {
+  /** The phone's lock screen, headphones and media keys follow what the bar plays. */
+  function mediaSession(t, live) {
     var session = navigator.mediaSession;
     if (!session || typeof MediaMetadata !== "function") return;
     try {
-      session.metadata = t ? new MediaMetadata({ title: t.t || "", artist: t.a || "", album: (ftconfigs.roomName || "") + " · Discover", artwork: [{ src: artOf(t), sizes: "320x180", type: "image/jpeg" }] }) : null;
+      session.metadata = t ? new MediaMetadata({ title: t.t || "", artist: t.a || "", album: (ftconfigs.roomName || "") + (live ? " · Live" : " · Discover"), artwork: [{ src: artOf(t), sizes: "320x180", type: "image/jpeg" }] }) : null;
       var on = function (action, fn) { try { session.setActionHandler(action, fn); } catch (e) { /* not on this browser */ } };
-      on("play", t ? function () { if (P.paused) togglePause(); } : null);
-      on("pause", t ? function () { if (!P.paused) togglePause(); } : null);
-      on("nexttrack", t ? function () { step(1); } : null);
-      on("previoustrack", t ? function () { step(-1); } : null);
+      if (live) {
+        on("play", t ? listenIn : null);
+        on("pause", t ? stopRoom : null);
+        on("nexttrack", null);
+        on("previoustrack", null);
+      } else {
+        on("play", t ? function () { if (P.paused) togglePause(); } : null);
+        on("pause", t ? function () { if (!P.paused) togglePause(); } : null);
+        on("nexttrack", t ? function () { step(1); } : null);
+        on("previoustrack", t ? function () { step(-1); } : null);
+      }
+      session.playbackState = !t ? "none" : live ? "playing" : P.paused ? "paused" : "playing";
     } catch (e) { /* a browser without it */ }
   }
 
   /** Give the players back to the room (Live, Listen in). */
   function release() {
     mediaSession(null);
-    stopTicking();
     if (firetable.preview !== "discover") return;
     firetable.preview = false;
     firetable.previewType = null;
@@ -1595,48 +1926,124 @@ firetable.discover = (function () {
     firetable.utilities.resumeCurrentSong();
   }
 
+  function listenIn() {
+    if (discoverActive()) P.paused = true; // your pick waits where it was
+    setSrc("live");
+    release();
+    // a tap is a gesture: if the browser held the room's audio back, start it now
+    if (blocked() && firetable.media && firetable.media.tapToPlay) firetable.media.tapToPlay();
+    var s = liveTrack();
+    if (s) mediaSession(s, true);
+    renderSide();
+    renderBrowse();
+    renderLiveLine();
+    announce(s ? "Listening to the room live: " + s.t + (s.dj ? ", " + s.dj + " on deck" : "") : "The room is quiet");
+  }
+
+  /** Stop hearing the room without leaving Discover (live can't be paused, only left). */
+  function stopRoom() {
+    setSrc("off");
+    firetable.preview = "discover"; // the room's players stay quiet, as for a Discover song
+    firetable.previewType = null;
+    if (firetable.ytLoaded) player.stopVideo();
+    if (firetable.scLoaded) firetable.scwidget.pause();
+    mediaSession(null);
+    renderSide();
+    renderLiveLine();
+    announce("Stopped listening to the room");
+  }
+
   function togglePause() {
     if (!P.track) return;
-    if (firetable.preview !== "discover") return play(P.list, P.i, P.at);
+    if (!discoverActive() || firetable.preview !== "discover") return play(P.list, P.i, P.at);
     P.paused = !P.paused;
     if (Number(P.track.type || 1) === MEDIA_YOUTUBE) {
       if (firetable.ytLoaded) { if (P.paused) player.pauseVideo(); else player.playVideo(); }
     } else if (firetable.scLoaded) {
       if (P.paused) firetable.scwidget.pause(); else firetable.scwidget.play();
     }
-    renderSide();
+    try { navigator.mediaSession.playbackState = P.paused ? "paused" : "playing"; } catch (e) { /* none */ }
+    refreshSide();
     renderBrowse();
+  }
+
+  /** The bar's big button: whatever stopping or starting means for what it shows. */
+  function mainButton() {
+    if (discoverActive()) return togglePause();
+    var s = liveTrack();
+    if (s && D.src === "live" && !blocked()) return stopRoom();
+    if (s) return listenIn();
+    if (P.track) return play(P.list, P.i, P.at);
   }
 
   function step(by) {
     var list = lists[P.list];
     if (!list || D.mode !== "discover") return;
+    // back, a few seconds in: the start of this song (as every player does)
+    if (by < 0 && P.at > 3 && discoverActive()) return seek(0);
     var i = P.i + by;
     if (i < 0 || i >= list.tracks.length) {
       if (by > 0) { // the end of the list
         P.paused = true;
-        stopTicking();
-        renderSide();
+        refreshSide();
         renderBrowse();
+        announce("That's the end of " + list.label);
       }
       return;
     }
     play(P.list, i, 0, true);
+    announce("Next: " + P.track.t + (P.track.a ? " by " + P.track.a : ""));
+  }
+
+  function seek(sec) {
+    if (!discoverActive() || firetable.preview !== "discover") return;
+    sec = Math.max(0, Math.min(P.len || sec, sec));
+    P.at = sec;
+    if (Number(P.track.type || 1) === MEDIA_YOUTUBE) { if (firetable.ytLoaded && player.seekTo) player.seekTo(sec, true); }
+    else if (firetable.scLoaded) firetable.scwidget.seekTo(sec * 1000);
+    paint(sec, P.len);
+  }
+
+  function setVolume(v) {
+    v = Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+    firetable.utilities.setPlayersVolume(v);
+    localStorage[STORAGE.volume] = v;
+    if (localStorage[STORAGE.mute] && localStorage[STORAGE.mute] !== "false") localStorage[STORAGE.mute] = false; // moving it un-mutes
+    else if (v === 0) firetable.actions.muteToggle(true);
+    var $slider = $("#slider");
+    if ($slider.hasClass("ui-slider")) $slider.slider("value", v);
+    firetable.ui.renderMuteButton();
+    renderVolume();
+  }
+  function renderVolume() {
+    var v = firetable.utilities.getEffectiveVolume();
+    var range = document.getElementById("pv-vol");
+    if (range && document.activeElement !== range) range.value = v;
+    if (range) { range.style.setProperty("--pct", v + "%"); range.setAttribute("aria-valuetext", v ? v + "%" : "Muted"); }
+    var b = document.querySelector("#dMini .d-mute");
+    if (b) {
+      var icon = v === 0 ? "volume_off" : v < 50 ? "volume_down" : "volume_up";
+      b.innerHTML = ms(icon);
+      b.setAttribute("aria-label", v === 0 ? "Unmute" : "Mute");
+      b.setAttribute("title", v === 0 ? "Unmute" : "Mute");
+      b.setAttribute("aria-pressed", String(v === 0));
+    }
   }
 
   function startTicking() {
-    stopTicking();
-    P.timer = setInterval(function () {
-      if (firetable.preview !== "discover" || !P.track) return;
+    if (P.timer) return;
+    P.timer = setInterval(tick, 500);
+    tick();
+  }
+  function stopTicking() { clearInterval(P.timer); P.timer = null; }
+  function tick() {
+    if (D.mode !== "discover") return;
+    if (discoverActive()) {
+      if (firetable.preview !== "discover") return;
       var done = function (at, len) {
-        if (typeof at === "number") P.at = at;
+        if (typeof at === "number" && !isNaN(at)) P.at = at;
         if (len) P.len = len;
-        var a = document.getElementById("dAt"), l = document.getElementById("dLen"), b = document.getElementById("dBar");
-        if (a) a.textContent = clock(P.at);
-        if (l && P.len) l.textContent = clock(P.len);
-        if (b) b.style.width = (P.len ? Math.min(100, (P.at / P.len) * 100) : 0) + "%";
-        var mb = document.getElementById("dMiniBar");
-        if (mb) mb.style.width = (P.len ? Math.min(100, (P.at / P.len) * 100) : 0) + "%";
+        paint(P.at, P.len);
       };
       if (Number(P.track.type || 1) === MEDIA_YOUTUBE) {
         if (firetable.ytLoaded && player.getCurrentTime) done(player.getCurrentTime(), player.getDuration && player.getDuration());
@@ -1645,29 +2052,187 @@ firetable.discover = (function () {
           firetable.scwidget.getDuration(function (len) { done(pos / 1000, len / 1000); });
         });
       }
-    }, 500);
+      return;
+    }
+    var s = firetable.song;
+    if (s && s.cid && s.cid != 0) paint(Math.max(0, (ftapi.now() - s.started) / 1000), s.duration || 0);
+    else paint(0, 0);
   }
-  function stopTicking() { clearInterval(P.timer); P.timer = null; }
+  function paint(at, len) {
+    var pct = len ? Math.min(100, (at / len) * 100) : 0;
+    var a = document.getElementById("dAt"), l = document.getElementById("dLen"), b = document.getElementById("dBar"), mb = document.getElementById("dMiniBar");
+    var range = document.getElementById("pv-seek");
+    if (D.seeking) return;
+    if (a) a.textContent = len || at ? clock(at) : "";
+    if (l) l.textContent = len ? clock(len) : "";
+    if (b) b.style.width = pct + "%";
+    if (mb) mb.style.width = pct + "%";
+    if (range) {
+      range.max = Math.max(1, Math.round(len || 1));
+      range.value = Math.round(at);
+      range.setAttribute("aria-valuetext", clock(at) + " of " + clock(len));
+    }
+  }
 
-  // ─── The phone's player bar ─────────────────────────────────────────────
+  /** Spoken once for screen readers when what's playing changes. */
+  function announce(text) {
+    var el = document.getElementById("pv-announce");
+    if (!el) return;
+    el.textContent = "";
+    setTimeout(function () { el.textContent = text; }, 50);
+  }
 
-  function renderMini() {
+  // ─── The bar ────────────────────────────────────────────────────────────
+  // Built once (build()); renderBar fills in what changes. The stage's own
+  // Fire, Grab, Link, Skip and Mod tools buttons move into the bar while
+  // you're in Discover, so the room's song can be fired, grabbed, skipped
+  // and fixed from here exactly as each person's role allows (body.is-mod,
+  // body.is-current-dj and signed in decide, as on the stage), and go back
+  // to the stage for Live.
+
+  var STAGE_BUTTONS = [["fire", "tip-fire", "pv-livekeep"], ["grab", "tip-grab", "pv-livekeep"], ["songlink", "tip-songlink", "pv-liveacts"],
+    ["skipTrigger", "tip-skipTrigger", "pv-liveacts"], ["npModBtn", "tip-npModBtn", "pv-liveacts"]];
+  var stageMoved = false;
+  function stageIn() {
+    if (stageMoved) return;
+    var ok = STAGE_BUTTONS.every(function (b) { return document.getElementById(b[0]) && document.getElementById(b[2]); });
+    if (!ok) return;
+    STAGE_BUTTONS.forEach(function (b) {
+      var host = document.getElementById(b[2]);
+      host.appendChild(document.getElementById(b[0]));
+      var tip = document.getElementById(b[1]);
+      if (tip) host.appendChild(tip);
+    });
+    stageMoved = true;
+  }
+  function stageBack() {
+    if (!stageMoved) return;
+    var home = document.getElementById("stageActions");
+    if (!home) return;
+    ["npModMenu", "skipPopover", "flagPopover", "tagEditorPopover"].forEach(function (id) {
+      var p = document.getElementById(id);
+      try { if (p && p.matches(":popover-open")) p.hidePopover(); } catch (e) { /* none */ }
+    });
+    $("#stealContain").hide();
+    STAGE_BUTTONS.forEach(function (b) {
+      home.appendChild(document.getElementById(b[0]));
+      var tip = document.getElementById(b[1]);
+      if (tip) home.appendChild(tip);
+    });
+    stageMoved = false;
+  }
+
+  function barKind() {
+    if (discoverActive()) return "discover";
+    if (liveTrack()) return D.src === "live" && !blocked() ? "live" : "onair";
+    return P.track ? "pick" : "quiet";
+  }
+
+  var lastKind = null;
+  function renderBar() {
     var el = document.getElementById("dMini");
     if (!el) return;
-    var t = D.listening ? null : P.track;
-    var s = firetable.song;
-    if (!t && !(D.listening && s)) { el.hidden = true; return; }
-    el.hidden = false;
-    var title = t ? t.t : firetable.utilities.decodeEntities(s.title || "");
-    var artist = t ? t.a : (s.djname ? s.djname + " on deck" : "Live");
-    var art = t ? artOf(t) : (firetable.imgCache && firetable.imgCache[s.cid]) || artOf({ cid: s.cid, type: s.type, img: s.image });
-    el.innerHTML = '<button type="button" class="d-mini-open" aria-label="Open the player"><span class="d-mini-art" style="background-image:url(' + esc(art) + ')"></span>' +
-      '<span class="d-mini-text"><b>' + esc(title) + "</b><span>" + esc(artist) + "</span></span></button>" +
-      (t ? (D.signedIn ? "" : '<button type="button" class="butt graybutt iconbutt d-savebtn" aria-label="Save">' + ms(firetable.saved.where(t.type, t.cid) ? "playlist_add_check" : "playlist_add") + "</button>") +
-        '<button type="button" class="butt graybutt iconbutt d-toggle" aria-label="' + (P.paused ? "Play" : "Pause") + '">' + ms(P.paused ? "play_arrow" : "pause", true) + "</button>" +
-        '<button type="button" class="butt graybutt iconbutt d-next" aria-label="Next">' + ms("skip_next", true) + "</button>" : "") +
-      '<span class="d-minibar"><i id="dMiniBar"></i></span>';
+    if (D.mode !== "discover") return;
+    stageIn();
+    var kind = barKind();
+    var s = liveTrack();
+    var t = kind === "discover" || kind === "pick" ? P.track : s;
+    var list = lists[P.list];
+    var live = kind === "live" || kind === "onair";
+    el.className = "pb is-" + kind + (live ? " is-room" : "") + (P.paused && (kind === "discover" || kind === "pick") ? " is-paused" : "") + (blocked() ? " is-blocked" : "") + (D.signedIn ? " is-member" : "");
+    el.setAttribute("aria-label", live ? "Player: the room, live" : kind === "quiet" ? "Player" : "Player: Discover");
+    if (kind !== lastKind) { lastKind = kind; document.body.setAttribute("data-pb", kind); }
+
+    // where it's from
+    var src = document.getElementById("pv-src");
+    var n = peopleHere();
+    if (kind === "discover" || kind === "pick") {
+      var pos = list && list.tracks.length > 1 ? " · " + (P.i + 1) + " of " + list.tracks.length : "";
+      src.innerHTML = '<span class="pb-kind">' + ms("explore") + "Discover</span><span>" + esc(((list && list.label) || "Discover") + pos) + "</span>";
+    } else if (kind === "live") {
+      src.innerHTML = '<span class="pb-kind pb-livekind"><i class="d-dot" aria-hidden="true"></i>Live</span><span>' + esc((s.dj ? s.dj + " on deck" : "The room") + (n ? " · " + n + " here" : "")) + "</span>";
+    } else if (kind === "onair") {
+      src.innerHTML = '<span class="pb-kind pb-livekind is-off"><i class="d-dot" aria-hidden="true"></i>On air</span><span>' +
+        esc(blocked() ? "Your browser held the room's sound back. Press play" : "Not listening · press play to listen in") + "</span>";
+    } else {
+      src.innerHTML = '<span class="pb-kind is-off">' + ms("music_off") + "Nothing playing</span><span>" + esc(n ? n + " here · " : "") + "The room is quiet</span>";
+    }
+
+    // the song
+    var art = document.getElementById("pv-art");
+    art.querySelector(".pb-cover").style.backgroundImage = t ? "url(" + JSON.stringify(artOf(t)) + ")" : "";
+    var face = art.querySelector(".pb-face");
+    var dj = live && s && s.dj ? djShown(s.djid, s.dj) : null;
+    face.innerHTML = dj ? robot(dj, "40x40") : "";
+    art.setAttribute("aria-label", t ? "Open the player: " + t.t : "Open the player");
+    document.getElementById("pv-title").innerHTML = t ? '<span class="d-sheetlink" role="button" tabindex="0" data-src="' + (live ? "live" : "discover") + '" title="About this song">' + esc(t.t) + "</span>" :
+      "<span>" + (kind === "quiet" ? "Pick any song to play it here" : "") + "</span>";
+    document.getElementById("pv-artist").innerHTML = t ? artistLinks(t.a) : '<span>New, Charts, Genres: everything the room has played</span>';
+
+    // keep it: Save for a Discover song; the stage's Fire and Grab for the room's (members),
+    // Save to the crate and Join to fire for visitors
+    var keep = document.getElementById("pv-dkeep");
+    var saved = t ? firetable.saved.where(t.type, t.cid) : "";
+    if (kind === "discover" || kind === "pick") {
+      keep.innerHTML = '<button type="button" class="butt graybutt iconbutt d-savebtn pb-save' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "Saved in " + saved + ". Save again" : D.signedIn ? "Save to a playlist" : "Save to your crate") + '" aria-label="' + esc(saved ? "Saved in " + saved : "Save") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "</button>";
+    } else if (live && !D.signedIn) {
+      keep.innerHTML = '<button type="button" class="butt graybutt iconbutt pb-joinfire" title="Join to fire this song" aria-label="Join to fire this song">' + ms("mode_heat") + "</button>" +
+        '<button type="button" class="butt graybutt iconbutt pb-savelive' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "In your crate" : "Save to your crate") + '" aria-label="' + esc(saved ? "In your crate" : "Save to your crate") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "</button>";
+    } else keep.innerHTML = "";
+
+    // transport
+    var tr = document.getElementById("pv-transport");
+    var idx = P.i, total = list ? list.tracks.length : 0;
+    var mainLabel, mainIcon;
+    if (kind === "discover" || kind === "pick") { mainIcon = P.paused || kind === "pick" ? "play_arrow" : "pause"; mainLabel = mainIcon === "pause" ? "Pause" : "Play"; }
+    else if (kind === "live") { mainIcon = "stop"; mainLabel = "Stop listening to the room"; }
+    else if (kind === "onair") { mainIcon = "play_arrow"; mainLabel = "Listen in to the room"; }
+    else { mainIcon = "play_arrow"; mainLabel = "Play"; }
+    var disc = kind === "discover" || kind === "pick";
+    tr.innerHTML = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous" aria-label="Previous"' + (idx <= 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
+      '<button type="button" class="butt iconbutt pb-main d-big" title="' + mainLabel + '" aria-label="' + mainLabel + '"' + (kind === "quiet" ? " disabled" : "") + ">" + ms(mainIcon, true) + "</button>" +
+      (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next" aria-label="Next"' + (idx >= total - 1 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" +
+        '<button type="button" class="butt graybutt iconbutt d-reload pb-small" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>" : "");
+
+    // progress: a Discover song can be moved through; the room can't
+    var seekEl = document.getElementById("pv-seek");
+    seekEl.disabled = !disc;
+    seekEl.setAttribute("aria-label", disc ? "Seek" : "The room's song so far (it plays live)");
+    if (!disc && kind !== "live" && kind !== "onair") paint(0, 0);
+
+    // side actions
+    var acts = document.getElementById("pv-dacts");
+    if (disc && t) {
+      acts.setAttribute("data-list", P.list || "");
+      acts.setAttribute("data-i", String(P.i));
+      var done = P.inRoom && String(P.inRoom.cid) === String(t.cid);
+      var url = linkOf(t);
+      acts.innerHTML = '<button type="button" class="butt graybutt iconbutt d-toroom pb-toroom' + (done ? " is-done" : "") + '" title="' + esc(!D.signedIn ? "Join to play it in the room" : done ? "First in your DJ playlist" : "Play it in the room") + '" aria-label="' + esc(!D.signedIn ? "Join to play it in the room" : done ? "First in your DJ playlist" : "Play it in the room") + '">' + ms(done ? "check" : "queue_play_next") + "</button>" +
+        (url ? '<a class="butt graybutt iconbutt pb-open" target="_blank" rel="noopener" href="' + esc(url) + '" title="Open on ' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + '" aria-label="Open on ' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + '">' + ms("open_in_new") + "</a>" : "") +
+        '<button type="button" class="butt graybutt iconbutt d-more" title="More" aria-label="More about this song" aria-haspopup="menu">' + ms("more_vert") + "</button>";
+    } else {
+      acts.removeAttribute("data-list");
+      acts.innerHTML = live ? '<button type="button" class="butt graybutt small d-stepin pb-stepin" title="Go to the room: the stage, the DJs, everyone">' + ms("login") + "<span>Step inside</span></button>" : "";
+    }
+
+    // the other source, one tap away
+    var sw = document.getElementById("pv-switch");
+    if (disc && s) {
+      sw.innerHTML = '<button type="button" class="pb-other d-listen" title="Listen in to the room: ' + esc(s.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(s)) + ')"></span>' +
+        '<span class="d-mini-text"><b><i class="d-dot" aria-hidden="true"></i>The room</b><span>' + esc(s.t) + "</span></span><span class=\"pb-otherdo\">Listen in</span></button>";
+    } else if (!disc && P.track) {
+      sw.innerHTML = '<button type="button" class="pb-other d-mypick" title="Back to ' + esc(P.track.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(P.track)) + ')"></span>' +
+        '<span class="d-mini-text"><b>' + ms("explore") + "Your pick</b><span>" + esc(P.track.t) + "</span></span><span class=\"pb-otherdo\">Back to it</span></button>";
+    } else sw.innerHTML = "";
+
+    var q = document.getElementById("pv-queue");
+    var on = D.sideTab === "now";
+    q.classList.toggle("on", on);
+    q.setAttribute("aria-pressed", String(on));
+    renderVolume();
+    tick();
   }
+
 
   // ─── Mode and addresses ─────────────────────────────────────────────────
 
@@ -1718,12 +2283,22 @@ firetable.discover = (function () {
     if (mode === "live") {
       chatBack();
       if (D.sideTab === "chat") D.sideTab = "now";
-      if (changed) { release(); D.listening = false; }
+      if (changed) {
+        // the stage is the player in Live: Discover's song stops, the room plays
+        if (P.track) P.paused = true;
+        setSrc("live");
+        release();
+      }
+      stageBack();
+      stopTicking();
+      document.body.classList.remove("d-sheet-open");
       window.dispatchEvent(new Event("resize")); // the stage measures itself again
     } else {
       if (!D.signedIn && !store.get(FOUND_KEY, null)) store.set(FOUND_KEY, (addressFor().replace(/^#/, "") || "discover").slice(0, 200));
+      if (!D.src) setSrc("live"); // the room plays on until something is picked
       ensureData();
       renderAll();
+      startTicking();
     }
     renderLiveLine();
     writeAddress();
@@ -1776,7 +2351,8 @@ firetable.discover = (function () {
     db().ref("discover/chat").on("value", function (s) {
       D.data.chat = s.val();
       renderLiveLine();
-      if (D.listening) renderSide();
+      // the chat to read: in the room's panel, and visitors' Chat tab
+      if (D.mode === "discover" && !D.signedIn && (D.sideTab === "chat" || (D.sideTab === "now" && !discoverActive()))) renderSide();
       renderPeek();
     }, quiet);
   }
@@ -1886,8 +2462,33 @@ firetable.discover = (function () {
     if ((b = t.closest("#dNav [data-view]"))) return setView(b.getAttribute("data-view"));
     if ((b = t.closest(".d-listen"))) return listenIn();
     if ((b = t.closest(".d-stepin"))) return setMode("live", { remember: true });
-    if ((b = t.closest(".d-mypick"))) { D.listening = false; return play(P.list, P.i, P.at); }
+    if ((b = t.closest(".d-mypick"))) return P.track && play(P.list, P.i, P.at);
     if ((b = t.closest("[data-sidetab]"))) { D.sideTab = b.getAttribute("data-sidetab"); if (D.sideTab === "chat") D.unread = 0; return renderSide(); }
+    // the player bar
+    if ((b = t.closest(".pb-main"))) return mainButton();
+    if ((b = t.closest("#pv-queue"))) return toggleQueue();
+    if ((b = t.closest(".pb-expand"))) { document.body.classList.toggle("d-sheet-open"); return renderBar(); }
+    if ((b = t.closest(".d-toroom-undo"))) return undoToRoom();
+    if ((b = t.closest(".d-toroom"))) {
+      var room = P.track;
+      if (D.signedIn && P.inRoom && room && String(P.inRoom.cid) === String(room.cid)) return firetable.ui.toast("It's already first in " + firetable.utilities.listName(P.inRoom.list) + ".", "notice", { action: { label: "Undo", fn: undoToRoom } });
+      return toRoom(room);
+    }
+    if ((b = t.closest(".pb-joinfire"))) return showSignIn("create");
+    if ((b = t.closest(".pb-savelive"))) return liveTrack() && save(liveTrack(), b);
+    // the playlist panel
+    if ((b = t.closest(".pl-dj"))) return djFrom(viewList());
+    if ((b = t.closest(".pl-top"))) return plAct("top", b);
+    if ((b = t.closest(".pl-bottom"))) return plAct("bottom", b);
+    if ((b = t.closest(".pl-del"))) return plAct("delete", b);
+    if ((b = t.closest(".pl-all"))) { D.plAll = true; return renderSide(); }
+    if ((b = t.closest(".pl-shuffle"))) return shufflePlay(b.getAttribute("data-list"));
+    if ((b = t.closest(".pl-cratetop"))) {
+      var cr = crate();
+      var moved = cr.splice(Number(b.getAttribute("data-i")), 1);
+      setCrate(moved.concat(cr));
+      return renderSide();
+    }
     if ((b = t.closest("#dLocked [data-locked]"))) { lockedTab = b.getAttribute("data-locked"); return lockedTabs(); }
     if ((b = t.closest(".d-chatnav"))) { D.sideTab = "chat"; D.unread = 0; renderSide(); document.body.classList.add("d-sheet-open"); return; }
     if ((b = t.closest(".d-chip[data-new]"))) { D.newFilter = b.getAttribute("data-new"); return renderBrowse(); }
@@ -1915,7 +2516,7 @@ firetable.discover = (function () {
       return;
     }
     if ((b = t.closest(".d-card[data-card]"))) return firetable.actions.viewLargerCard && firetable.actions.viewLargerCard("dj" + b.getAttribute("data-card"));
-    if ((b = t.closest(".d-joinwait"))) { ftapi.actions.sendBotCommand("!addme"); firetable.ui.toast("You're on the waitlist. The decks are in Live.", "success"); return setMode("live", { remember: true }); }
+    if ((b = t.closest(".d-joinwait"))) return hopOn();
     if ((b = t.closest(".d-radio"))) return playRadio(b.getAttribute("data-slug"));
     if ((b = t.closest(".d-more"))) { e.stopPropagation(); return openMenu(b); }
     if ((b = t.closest("#dMenu [data-share]"))) { e.preventDefault(); var how = b.getAttribute("data-share"); closeMenu(true); return how === "link" ? copyLink() : how === "image" ? chartImage() : embedDialog(); }
@@ -1934,7 +2535,7 @@ firetable.discover = (function () {
     if ((b = t.closest(".d-reload"))) return P.track && play(P.list, P.i, Math.max(0, P.at - 2), true);
     if ((b = t.closest(".d-next"))) return step(1);
     if ((b = t.closest(".d-prev"))) return step(-1);
-    if ((b = t.closest(".d-mute"))) { firetable.actions.muteToggle(); return setTimeout(renderSide, 50); }
+    if ((b = t.closest(".d-mute"))) { firetable.actions.muteToggle(); return renderVolume(); }
     if ((b = t.closest(".d-savebtn"))) return P.track && save(P.track, b);
     if ((b = t.closest(".d-unsave"))) {
       var c = crate();
@@ -1946,8 +2547,8 @@ firetable.discover = (function () {
       return ftapi.actions.logInWithProvider("google", function (error) { firetable.ui.toast(firetable.ui.authErrorMessage(error), "error"); });
     }
     if ((b = t.closest(".d-createaccount, .d-login"))) return showSignIn(b.classList.contains("d-login") ? "login" : "create");
-    if ((b = t.closest(".d-mini-open"))) { document.body.classList.toggle("d-sheet-open"); return; }
-    if (t.closest(".d-sheetclose")) { document.body.classList.remove("d-sheet-open"); return; }
+    if ((b = t.closest(".d-mini-open"))) { if (!document.body.classList.contains("d-sheet-open")) D.sideTab = "now"; document.body.classList.toggle("d-sheet-open"); renderSide(); return; }
+    if (t.closest(".d-sheetclose")) { document.body.classList.remove("d-sheet-open"); return renderBar(); }
     if ((b = t.closest(".d-mini-row[data-list]"))) return play(b.getAttribute("data-list"), Number(b.getAttribute("data-i")));
     var rowEl = t.closest("#dBrowse .pvbar[data-list], #dLockedPane .pvbar[data-list]");
     if (rowEl) {
@@ -1962,6 +2563,43 @@ firetable.discover = (function () {
       if (t.closest(".tracklink-btn")) return;
       if (t.closest(".d-play, .pv-art")) return isPlaying(list, i) ? togglePause() : play(list, i);
     }
+  }
+
+  /** The bar's queue button: Now playing in the right column (computers), or the full player (phones). */
+  function toggleQueue() {
+    var narrow = matchMedia("(max-width: 1023px)").matches;
+    if (narrow) {
+      var open = !(document.body.classList.contains("d-sheet-open") && D.sideTab === "now");
+      D.sideTab = "now";
+      document.body.classList.toggle("d-sheet-open", open);
+    } else if (D.sideTab === "now") {
+      D.sideTab = D.lastSideTab && D.lastSideTab !== "now" ? D.lastSideTab : "list";
+    } else {
+      D.lastSideTab = D.sideTab;
+      D.sideTab = "now";
+    }
+    renderSide();
+  }
+
+  /** Make a playlist the one the room plays from when you DJ (as All Playlists does). */
+  function djFrom(id) {
+    if (!D.signedIn || djList() === id) return;
+    ftapi.actions.switchDjList(id);
+    $("#djlistpicker").val(id);
+    if (ftapi.users && ftapi.users[ftapi.uid]) ftapi.users[ftapi.uid].selectedList = id;
+    if (firetable.ui.renderPlaylistIndex) firetable.ui.renderPlaylistIndex();
+    firetable.ui.toast("You DJ from " + firetable.utilities.listName(id) + " now", "success");
+    renderSide();
+  }
+
+  /** Play a list in a shuffled order, here only: the list itself keeps its order. */
+  function shufflePlay(name) {
+    var list = lists[name];
+    if (!list || !list.tracks.length) return;
+    var all = list.tracks.slice();
+    for (var i = all.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var x = all[i]; all[i] = all[j]; all[j] = x; }
+    setList("shuffle", list.label + " · shuffled", all);
+    play("shuffle", 0);
   }
 
   /** A genre's radio: its favorites, new finds and deep cuts, shuffled. */
@@ -2018,6 +2656,8 @@ firetable.discover = (function () {
     };
     var h = "";
     var url = linkOf(t);
+    h += item("queue_play_next", D.signedIn ? "Play it in the room" : "Join to play it in the room", 'href="#" data-act="toroom"');
+    h += item("info", "About this song", 'href="#" data-act="sheet"');
     if (url) h += item("open_in_new", Number(t.type || 1) === MEDIA_YOUTUBE ? "Open on YouTube" : "Open the song", 'href="' + esc(url) + '" target="_blank" rel="noopener"');
     artistsOf(t.a).slice(0, 3).forEach(function (a) { h += item("person", "Go to " + esc(a), 'href="#discover/artist/' + esc(artistSlug(a)) + '"'); });
     if (t.g) h += item("category", "More " + esc(t.g), 'href="#discover/genres/' + esc(genreSlug(t.g)) + '"');
@@ -2049,6 +2689,8 @@ firetable.discover = (function () {
     var act = b.getAttribute("data-act");
     var t = menuTrack;
     closeMenu(true);
+    if (act === "toroom" && t) return toRoom(t);
+    if (act === "sheet" && t) return openSheet(t);
     if (act === "copy" && t) {
       var url = linkOf(t);
       var done = function () { firetable.ui.toast("Link copied", "success"); };
@@ -2060,16 +2702,6 @@ firetable.discover = (function () {
   function save(t, btn) {
     if (!D.signedIn) return saveToCrate(t);
     firetable.actions.openStealPicker($(btn), { cid: t.cid, type: Number(t.type || 1), title: (t.a ? t.a + " - " : "") + t.t, img: t.img || artOf(t), url: t.url || "", djid: t.djid || "", from: "discover" }, "left");
-  }
-
-  function listenIn() {
-    if (firetable.preview === "discover") P.paused = false;
-    D.listening = true;
-    D.sideTab = "now";
-    release();
-    renderSide();
-    renderBrowse();
-    renderLiveLine();
   }
 
   /**
@@ -2124,17 +2756,15 @@ firetable.discover = (function () {
 
   /** A song from a title someone tapped: in Discover's lists, Live's rows or the stage. */
   function songFrom(el) {
+    var src = el.getAttribute && el.getAttribute("data-src");
+    if (src === "discover") return P.track;
+    if (src === "live") return liveTrack();
     var rowEl = el.closest("[data-list]");
     if (rowEl && rowEl.closest("#dBrowse")) {
       var l = lists[rowEl.getAttribute("data-list")];
       return l && l.tracks[Number(rowEl.getAttribute("data-i"))];
     }
-    if (el.id === "track") {
-      var s = firetable.song;
-      if (!s || !s.cid) return null;
-      return { type: Number(s.type || 1), cid: s.cid, a: firetable.utilities.decodeEntities(s.artist || ""), t: firetable.utilities.decodeEntities(s.title || ""),
-        img: (firetable.imgCache && firetable.imgCache[s.cid]) || s.image, url: s.url, dj: s.djname, djid: s.djid, now: true };
-    }
+    if (el.id === "track") return liveTrack();
     var bar = el.closest(".pvbar");
     if (!bar || !bar.getAttribute("data-cid")) return null;
     var avatar = (bar.closest(".hist-entry") || bar).querySelector(".pv-dj-avatar");
@@ -2405,7 +3035,7 @@ firetable.discover = (function () {
       '<nav id="dNav" aria-label="Discover">' +
       VIEWS.map(function (v) { return '<button type="button" class="d-nav" data-view="' + v.id + '">' + ms(v.icon) + "<span>" + esc(v.label) + "</span></button>"; }).join("") +
       '<button type="button" class="d-nav d-chatnav">' + ms("forum") + "<span>Chat</span></button>" +
-      '</nav></div><div id="dBrowse" class="scroll-view"></div><aside id="dSide" aria-label="Player"></aside><div id="dMini" hidden></div>';
+      '</nav></div><div id="dBrowse" class="scroll-view"></div><aside id="dSide" aria-label="Now playing, playlists and chat"></aside>' + barHtml();
     document.getElementById("mainGrid").appendChild(page);
     if (filledHtml) {
       document.getElementById("dBrowse").innerHTML = filledHtml;
@@ -2422,9 +3052,29 @@ firetable.discover = (function () {
     }
   }
 
+  /** The player bar's frame: renderBar fills it in. */
+  function barHtml() {
+    return '<div id="dMini" class="pb is-quiet" role="region" aria-label="Player">' +
+      '<span class="pb-line" aria-hidden="true"><i id="dMiniBar"></i></span>' +
+      '<div class="pb-now">' +
+      '<button type="button" id="pv-art" class="pb-art d-mini-open" aria-label="Open the player"><span class="pb-cover"></span><span class="pb-face"></span></button>' +
+      '<div class="pb-text"><span class="pb-src" id="pv-src"></span><span class="pb-title" id="pv-title"></span><span class="pb-artist" id="pv-artist"></span></div>' +
+      '<div class="pb-keep"><span class="pb-host" id="pv-livekeep"></span><span class="pb-host" id="pv-dkeep"></span></div></div>' +
+      '<div class="pb-mid"><div class="pb-transport" id="pv-transport"></div>' +
+      '<div class="pb-time"><span id="dAt" class="pb-at"></span><span class="pb-track"><span class="d-bar"><i id="dBar"></i></span>' +
+      '<input type="range" id="pv-seek" min="0" max="1" step="1" value="0" aria-label="Seek" /></span><span id="dLen" class="pb-len"></span></div></div>' +
+      '<div class="pb-side"><div class="pb-acts"><span class="pb-host" id="pv-liveacts"></span><span class="pb-host" id="pv-dacts"></span></div>' +
+      '<div class="pb-switch" id="pv-switch"></div>' +
+      '<div class="pb-vol"><button type="button" class="butt graybutt iconbutt d-mute" aria-label="Mute">' + ms("volume_up") + "</button>" +
+      '<input type="range" id="pv-vol" min="0" max="100" step="5" value="50" aria-label="Volume" /></div>' +
+      '<button type="button" id="pv-queue" class="butt graybutt iconbutt" title="Now playing and up next" aria-label="Now playing and up next" aria-pressed="false">' + ms("queue_music") + "</button>" +
+      '<button type="button" class="butt graybutt iconbutt pb-expand" title="Open the player" aria-label="Open the player">' + ms("expand_less") + "</button></div>" +
+      '<span id="pv-announce" class="sr-only" aria-live="polite"></span></div>';
+  }
+
   // the room's player says a Discover song ended or couldn't play
   function onEnded() {
-    if (firetable.preview !== "discover") return;
+    if (firetable.preview !== "discover" || !discoverActive()) return;
     failures = 0;
     step(1);
   }
@@ -2432,13 +3082,12 @@ firetable.discover = (function () {
   // so stop instead of running through the whole list
   var failures = 0;
   function onFailed() {
-    if (firetable.preview !== "discover") return;
+    if (firetable.preview !== "discover" || !discoverActive()) return;
     failures++;
     if (failures >= 3) {
       failures = 0;
       P.paused = true;
-      stopTicking();
-      renderSide();
+      refreshSide();
       firetable.ui.toast("These songs won't play in this browser right now. A blocker or the network may be stopping YouTube.", "error");
       return;
     }
@@ -2472,7 +3121,7 @@ firetable.discover = (function () {
     var r = route();
     var mode = (r && r.mode) || store.get(MODE_KEY, null) || (on ? "live" : "discover");
     if (r && r.view) applyRoute(r);
-    D.listening = false;
+    if (!on) P.inRoom = null;
     setMode(mode);
     renderSide();
     renderPeek();
@@ -2521,6 +3170,9 @@ firetable.discover = (function () {
           }, 200);
           return;
         }
+        if (e.target.id === "pv-plfilter") { D.plFilter = e.target.value; return applyFilter(); }
+        if (e.target.id === "pv-vol") return setVolume(e.target.value);
+        if (e.target.id === "pv-seek") { D.seeking = true; var at = document.getElementById("dAt"); if (at) at.textContent = clock(Number(e.target.value)); return; }
         if (e.target.id !== "dDjFind") return;
         D.djFind = e.target.value;
         var all = libData.djs || {};
@@ -2531,9 +3183,16 @@ firetable.discover = (function () {
         if (e.key === "Escape") closeMenu(true);
         if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("d-sheetlink")) { e.preventDefault(); openSheet(songFrom(e.target)); return; }
         // space, outside a text box or button: play / pause Discover's song
-        if (e.key === " " && D.mode === "discover" && P.track && !D.listening && !/^(input|textarea|select|button|a)$/i.test(e.target.tagName || "") && !e.target.isContentEditable && !(e.target.closest && e.target.closest("[role=button], dialog"))) {
+        var typing = /^(input|textarea|select|button|a)$/i.test(e.target.tagName || "") || e.target.isContentEditable || (e.target.closest && e.target.closest("[role=button], dialog"));
+        if (e.key === " " && D.mode === "discover" && !typing && barKind() !== "quiet") {
           e.preventDefault();
-          togglePause();
+          mainButton();
+          return;
+        }
+        // Shift + arrows: next / previous in Discover's list
+        if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft") && D.mode === "discover" && discoverActive() && !/^(input|textarea|select)$/i.test(e.target.tagName || "")) {
+          e.preventDefault();
+          step(e.key === "ArrowRight" ? 1 : -1);
           return;
         }
         // Escape closes the phone panel (menus and dialogs handle their own first)
@@ -2545,6 +3204,14 @@ firetable.discover = (function () {
         if (e.key === "/" && !/^(input|textarea|select)$/i.test((e.target.tagName || "")) && !e.target.isContentEditable) {
           e.preventDefault();
           openSearch();
+        }
+      });
+      document.addEventListener("change", function (e) {
+        if (e.target.id === "pv-seek") { D.seeking = false; return seek(Number(e.target.value)); }
+        if (e.target.id === "pv-listpick") {
+          D.plFilter = ""; D.plAll = false;
+          // the same switch as Live's Playlists picker: one list on screen across the site
+          $("#listpicker").val(e.target.value).trigger("change");
         }
       });
       document.addEventListener("submit", function (e) {
@@ -2575,8 +3242,35 @@ firetable.discover = (function () {
       ftapi.events.on("loggedOut", function () { signedIn(false); });
       ftapi.events.on("newSong", function () {
         renderLiveLine();
-        if (D.listening) renderSide();
+        if (D.mode !== "discover") return;
+        yourTurn();
+        if (D.src === "live" && liveTrack()) mediaSession(liveTrack(), true);
+        if (D.sideTab === "now" && !discoverActive()) renderSide();
+        else renderBar();
       });
+      // the room's seats and line: the bar's and panels' "you're next", Hop on
+      var seats = firetable.utilities.oncePerFrame(function () {
+        if (D.mode !== "discover") return;
+        if (D.sideTab === "now") renderSide();
+        else {
+          var line = document.getElementById("pv-deckline");
+          if (line) line.innerHTML = deckLine(viewList() === djList(), queueTracks().length);
+          renderBar();
+        }
+      });
+      ["tableChanged", "waitlistChanged", "spotlightStateChanged"].forEach(function (ev) { ftapi.events.on(ev, seats); });
+      // the browser holding the room's sound back (or letting it go) changes what the bar says
+      var wasBlocked = blocked();
+      new MutationObserver(function () {
+        if (blocked() === wasBlocked) return;
+        wasBlocked = blocked();
+        if (D.mode === "discover") { renderBar(); renderLiveLine(); }
+      }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+      // the bar's height, for the phone's full player and the page's last row
+      var barEl = document.getElementById("dMini");
+      if (barEl && window.ResizeObserver) new ResizeObserver(function () {
+        document.documentElement.style.setProperty("--pb-h", barEl.offsetHeight + "px");
+      }).observe(barEl);
       ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () {
         renderLiveLine();
         if (D.mode === "discover" && /^(home|charts|recent)$/.test(D.view)) renderBrowse();
@@ -2595,9 +3289,9 @@ firetable.discover = (function () {
         if (nav) nav.textContent = D.unread > 99 ? "99+" : D.unread;
         else if (document.querySelector(".d-chatnav")) document.querySelector(".d-chatnav").insertAdjacentHTML("beforeend", '<span class="d-unread">' + D.unread + "</span>");
       });
-      ftapi.events.on("playlistChanged", function () {
+      ftapi.events.on("playlistChanged", firetable.utilities.oncePerFrame(function () {
         if (D.mode === "discover" && D.signedIn && D.sideTab === "list") renderSide();
-      });
+      }));
       // before sign-in is known: visitors' default, so the page isn't empty
       var r = route();
       if (r) applyRoute(r);
