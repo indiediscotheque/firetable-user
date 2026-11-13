@@ -2128,6 +2128,78 @@ firetable.discover = (function () {
     return P.track ? "pick" : "quiet";
   }
 
+  // ─── The bar's colour: the playing song's artwork ───────────────────────
+  // A small copy of the cover is read once per song (YouTube's and
+  // SoundCloud's art allow it, as the chart image already relies on): the
+  // most vivid colour family in it, made light enough to read on the dark
+  // bar. Grey or unreadable art keeps the room's accent.
+  var tones = {}; // "type_cid" -> "#rrggbb" or null
+  function toneOf(t) {
+    var k = t.type + "_" + t.cid;
+    if (k in tones) return Promise.resolve(tones[k]);
+    return new Promise(function (ok) {
+      var img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = function () {
+        var tone = null;
+        try {
+          var c = document.createElement("canvas");
+          c.width = c.height = 24;
+          var g = c.getContext("2d", { willReadFrequently: true });
+          g.drawImage(img, 0, 0, 24, 24);
+          tone = pickTone(g.getImageData(0, 0, 24, 24).data);
+        } catch (e) { tone = null; } // art that can't be read: the accent
+        tones[k] = tone;
+        ok(tone);
+      };
+      img.onerror = function () { tones[k] = null; ok(null); };
+      img.src = artOf(t);
+    });
+  }
+  /** The cover's most vivid hue family, averaged, lifted to read on the bar. */
+  function pickTone(px) {
+    var bins = [];
+    var total = 0;
+    for (var i = 0; i < px.length; i += 4) {
+      if (px[i + 3] < 200) continue;
+      var r = px[i] / 255, gr = px[i + 1] / 255, b = px[i + 2] / 255;
+      var max = Math.max(r, gr, b), min = Math.min(r, gr, b), l = (max + min) / 2, d = max - min;
+      if (l < 0.12 || l > 0.92 || d < 0.08) continue; // black, white and grey say nothing
+      var s = d / (1 - Math.abs(2 * l - 1));
+      var h = max === r ? ((gr - b) / d + 6) % 6 : max === gr ? (b - r) / d + 2 : (r - gr) / d + 4;
+      var w = s * (1 - Math.abs(l - 0.5));
+      var bin = bins[Math.floor(h * 2) % 12] || (bins[Math.floor(h * 2) % 12] = { w: 0, r: 0, g: 0, b: 0 });
+      bin.w += w; bin.r += px[i] * w; bin.g += px[i + 1] * w; bin.b += px[i + 2] * w;
+      total += w;
+    }
+    var best = null;
+    bins.forEach(function (x) { if (x && (!best || x.w > best.w)) best = x; });
+    if (!best || total < 6) return null;
+    var hsl = toHsl(best.r / best.w, best.g / best.w, best.b / best.w);
+    return "hsl(" + Math.round(hsl[0]) + " " + Math.round(Math.min(85, Math.max(40, hsl[1]))) + "% " + Math.round(Math.min(70, Math.max(58, hsl[2]))) + "%)";
+  }
+  function toHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min, h = 0, s = 0;
+    if (d) {
+      s = d / (1 - Math.abs(2 * l - 1));
+      h = 60 * (max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4);
+    }
+    return [h, s * 100, l * 100];
+  }
+  function applyTone(t) {
+    var el = document.getElementById("dMini");
+    if (!el) return;
+    if (!t) { el.style.removeProperty("--pb-art"); return; }
+    var k = t.type + "_" + t.cid;
+    var set = function (tone) {
+      if (el.getAttribute("data-tone-for") !== k) return; // the song changed meanwhile
+      if (tone) el.style.setProperty("--pb-art", tone); else el.style.removeProperty("--pb-art");
+    };
+    el.setAttribute("data-tone-for", k);
+    if (k in tones) set(tones[k]); else toneOf(t).then(set);
+  }
+
   var lastKind = null;
   function renderBar() {
     var el = document.getElementById("dMini");
@@ -2139,6 +2211,7 @@ firetable.discover = (function () {
     var t = kind === "discover" || kind === "pick" ? P.track : s;
     var list = lists[P.list];
     var live = kind === "live" || kind === "onair";
+    applyTone(t);
     el.className = "pb is-" + kind + (live ? " is-room" : "") + (P.paused && (kind === "discover" || kind === "pick") ? " is-paused" : "") + (blocked() ? " is-blocked" : "") + (D.signedIn ? " is-member" : "");
     el.setAttribute("aria-label", live ? "Player: the room, live" : kind === "quiet" ? "Player" : "Player: Discover");
     if (kind !== lastKind) { lastKind = kind; document.body.setAttribute("data-pb", kind); }

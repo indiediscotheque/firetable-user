@@ -14,7 +14,7 @@ What we're building towards. It comes from three rounds of mockups (the canvas "
 Boards `R4 · …` on the canvas's "Round 4" page. Where this section and a later one disagree, this section wins.
 
 - **Live:** no change to its layout, colours or controls. Phase 1's steps add function inside it, in today's skin.
-- **Colours:** today's variables (`--color-bg` `#181818`, `--color-bg-s2` `#111`, `--color-bg-t1` `#222`, `--color-border`, `--color-accent`). Panels in Discover are flat `--color-bg-t1`. No gradients, no tint from the song's cover.
+- **Colours:** today's variables (`--color-bg` `#181818`, `--color-bg-s2` `#111`, `--color-bg-t1` `#222`, `--color-border`, `--color-accent`). Panels in Discover are flat `--color-bg-t1`. No gradients, no tint from the song's cover, except the player bar (November 13, 2026): its edge, progress, source label and a faint wash take the playing song's artwork colour (`toneOf` in `discover.js`, read from the cover; grey or unreadable art keeps the accent). Live is told apart by its red ● LIVE badge, its words and its controls, not by colour.
 - **People:** circle avatars with the name beside them. Name plates only on the stage.
 - **Buttons:** today's raised `.butt` shape. A panel's main action is dark with gold text; play/pause is light; other buttons grey. No wide solid-gold buttons.
 - **Discover's frame (computers):** today's three columns at today's widths. The left column is unchanged: logo, theme, Discover | Live, the live line with Listen in, search, the views.
