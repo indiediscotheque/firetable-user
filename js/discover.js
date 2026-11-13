@@ -106,14 +106,39 @@ firetable.discover = (function () {
     var u = uid && ftapi.users && ftapi.users[uid];
     return !!(u && u.publicName === false);
   }
+  /**
+   * A member's uid from their name, for records that keep only the name
+   * (the play history's first and last DJ, older rows). Faces are made from
+   * uid + name, so the name can't stand in for the uid. Looks in the room's
+   * people, names seen this visit, then the library's DJs.
+   * @returns {string|null}
+   */
+  function uidOf(name) {
+    if (!name) return null;
+    var want = String(name).toLowerCase();
+    var users = (ftapi && ftapi.users) || {};
+    for (var id in users) {
+      if (Object.prototype.hasOwnProperty.call(users, id) && users[id] && String(users[id].username || "").toLowerCase() === want) return id;
+    }
+    var known = firetable.knownNames || {};
+    for (var k in known) {
+      if (Object.prototype.hasOwnProperty.call(known, k) && String(known[k]).toLowerCase() === want) return k;
+    }
+    var key = djIndex().byName[want];
+    var d = key && (lib("djs") || {})[key];
+    return (d && d.djid) || null;
+  }
   /** Who to show for a DJ: hidden for visitors when they opted out. */
   function djShown(uid, name) {
     if (!name) return null;
+    uid = uid || uidOf(name);
     if (!D.signedIn && nameHidden(uid)) return null;
-    return { uid: uid || name, name: name };
+    return { uid: uid, name: name };
   }
   function robot(dj, size) {
     if (!dj) return "";
+    // no uid to make their face from: a plain circle, never someone else's face
+    if (!dj.uid) return '<span class="ft-avatar pv-dj-avatar d-noface" role="img" aria-label="' + esc(dj.name) + '"></span>';
     return '<span class="ft-avatar pv-dj-avatar dj-avatar-tip" role="img" aria-label="' + esc(dj.name) + '" style="background-image:url(' +
       esc(firetable.utilities.avatarURL(dj.uid, dj.name, size || "40x40")) + ')"></span>';
   }
@@ -736,7 +761,7 @@ firetable.discover = (function () {
     var h = back("discover/djs", "DJs");
     var wait = libWaiting(d, "There's no page for this DJ. DJs get one after 25 plays here, unless they've turned it off.");
     if (wait) return h + wait;
-    var dj = { uid: d.djid || d.name, name: d.name };
+    var dj = { uid: d.djid || uidOf(d.name), name: d.name };
     var facts = [];
     if (d.since) facts.push("here since " + new Date(d.since).getFullYear());
     facts.push(n(d.plays) + " plays");
@@ -1344,7 +1369,7 @@ firetable.discover = (function () {
   function chatList(msgs) {
     if (!msgs.length) return '<p class="d-fact">The chat is quiet right now.</p>';
     return '<div class="d-chat">' + msgs.map(function (m) {
-      var who = m.n ? { uid: m.uid, name: m.n } : null;
+      var who = m.n ? { uid: m.uid || uidOf(m.n), name: m.n } : null;
       return '<div class="d-chatline">' + (who ? robot(who) : '<span class="ft-avatar pv-dj-avatar d-nobody" aria-hidden="true"></span>') +
         "<span><b>" + esc(who ? who.name : "a member") + "</b>" + esc(m.txt) + "</span></div>";
     }).join("") + "</div>";
@@ -2048,66 +2073,20 @@ firetable.discover = (function () {
   }
 
   /**
-   * Join or log in without leaving the page: the sign-in form (#login) moves
-   * into a dialog and goes back where it was when the dialog closes. In
-   * Live, where visitors already see the form, it just scrolls to it.
+   * Join or log in without leaving the page: the site's sign-in dialog
+   * (users.js openAuth), with a word about the visitor's crate.
    * @param {"create"|"login"} which
    */
-  var loginHome = null;
   function showSignIn(which) {
     var keep = document.getElementById("keepCrateBox");
     if (keep && keep.open) keep.close();
-    var login = document.getElementById("login");
-    if (!login || D.signedIn) return;
+    if (D.signedIn) return;
     lockedTab = "join"; // the form, whatever tab Live was showing
     lockedTabs();
-    firetable.ui.showAuth(which);
-    if (D.mode === "live" && login.offsetParent && !login.closest("#joinBox")) {
-      login.scrollIntoView({ behavior: "smooth", block: "start" });
-      setTimeout(function () { firetable.ui.showAuth(which, { focus: true }); }, 300);
-      return;
-    }
-    var dlg = joinBox();
     var n = crate().length;
-    dlg.querySelector("#joinTitle").textContent = which === "login" ? "Welcome back" : "Join " + (ftconfigs.roomName || "the room");
-    dlg.querySelector(".d-joinnote").textContent = n
+    firetable.ui.openAuth(which, { note: n
       ? "Your crate of " + firetable.utilities.pluralize(n, "song", "songs") + " comes with you. It becomes a playlist you can play for the room."
-      : "Members chat, save playlists, and take a turn on the decks.";
-    if (!login.closest("#joinBox")) {
-      loginHome = document.createComment("login");
-      login.parentNode.insertBefore(loginHome, login);
-      dlg.querySelector(".modalContent").appendChild(login);
-    }
-    if (!dlg.open) dlg.showModal();
-    firetable.ui.showAuth(which, { focus: true });
-  }
-  function joinBox() {
-    var dlg = document.getElementById("joinBox");
-    if (dlg) return dlg;
-    dlg = document.createElement("dialog");
-    dlg.id = "joinBox";
-    dlg.setAttribute("aria-labelledby", "joinTitle");
-    dlg.innerHTML = '<div class="modalBox"><div class="modalHeader"><h2 id="joinTitle"></h2>' +
-      '<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close">' + ms("close") + "</button></div>" +
-      '<div class="modalContent"><p class="d-joinnote"></p></div></div>';
-    document.body.appendChild(dlg);
-    dlg.addEventListener("click", function (e) {
-      if (e.target.closest(".closeModal") || e.target === dlg) dlg.close();
-    });
-    // the tabs say which form is open, so the title follows them
-    dlg.addEventListener("click", function (e) {
-      var b = e.target.closest("[data-auth]");
-      if (b) dlg.querySelector("#joinTitle").textContent = b.getAttribute("data-auth") === "create" ? "Join " + (ftconfigs.roomName || "the room") : "Welcome back";
-    });
-    dlg.addEventListener("close", putLoginBack);
-    return dlg;
-  }
-  function putLoginBack() {
-    if (!loginHome) return;
-    var login = document.getElementById("login");
-    if (login && login.closest("#joinBox") && loginHome.parentNode) loginHome.parentNode.insertBefore(login, loginHome);
-    if (loginHome.parentNode) loginHome.parentNode.removeChild(loginHome);
-    loginHome = null;
+      : null });
   }
 
   // ─── Every name is a door: Live's lists and stage, and the song sheet ───
@@ -2472,8 +2451,7 @@ firetable.discover = (function () {
     D.signedIn = on;
     document.body.classList.toggle("d-member", !!on);
     if (!on) { chatBack(); if (D.sideTab === "chat") D.sideTab = "now"; }
-    var join = document.getElementById("joinBox");
-    if (on && join && join.open) join.close();
+    if (on) firetable.ui.closeAuth();
     if (on) {
       firetable.saved.session = {};
       importCrate();

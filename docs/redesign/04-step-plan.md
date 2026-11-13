@@ -287,7 +287,8 @@ Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the
 - **Check:** screenshots as a visitor at all widths; smoke: a seeded unplayed release shows "Be the first"; the lead plays.
 - **Undo:** revert.
 
-### 2.5 Joining and logging in
+### 2.5 Joining and logging in ✅ shipped (with the account menu and Account tab)
+- **Shipped:** a Join / Log in button in the header for signed-out visitors on every page (`#nav-signin`), opening one sign-in dialog (`#joinBox`, `firetable.ui.openAuth` in `users.js`) from everywhere: the header, Discover's crate and chat, Live's locked tabs. One column, 44px fields, today's copy and colours. The header avatar opens an account menu (`#nav-accountMenu`); `#accountSettingsBox` gains an **Account** tab (email, sign-in method, change password, change email, Log out) and its Profile and Settings tabs are labelled sections. Part of 4.5's content (profile, settings, log out) now has one home a phone You tab can reuse.
 - **Rows:** AU-01 to AU-06.
 - **Change:** tidy `#login`, `#authBox`, `#oauthBox`, the join box in Discover and `#pickNameBox`: one column, 44px fields, the existing copy, today's colours.
 - **Check:** smoke's existing auth flow checks.

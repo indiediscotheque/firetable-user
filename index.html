@@ -47,10 +47,14 @@
 					<i class="material-symbols-outlined">alternate_email</i><span id="inboxBadge" hidden></span>
 				</button>
 				<span id="tip-inboxTrigger" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-inboxTrigger">Mentions</span>
-				<button type="button" id="loggedInUser" class="openModal header_icon" data-modal="accountSettingsBox" data-tab="profile-tab" aria-label="Profile &amp; Settings" aria-haspopup="dialog" style="anchor-name: --tip-loggedInUser" aria-describedby="tip-loggedInUser">
+				<button type="button" id="loggedInUser" class="header_icon" popovertarget="nav-accountMenu" aria-label="Your account" aria-haspopup="menu" aria-expanded="false" style="anchor-name: --tip-loggedInUser" aria-describedby="tip-loggedInUser">
 						<span class="ft-avatar skel"></span>
 				</button>
-				<span id="tip-loggedInUser" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-loggedInUser">Profile &amp; Settings</span>
+				<span id="tip-loggedInUser" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-loggedInUser">Your account</span>
+				<!-- Visitors: one way in from every page (the sign-in dialog, #joinBox) -->
+				<button type="button" id="nav-signin" class="nav-signin" data-auth-open="auto" aria-haspopup="dialog">
+					<i class="material-symbols-outlined" aria-hidden="true">account_circle</i><span id="nav-signinLabel">Log in</span>
+				</button>
 				<div id="reconnecting" role="status">Reconnecting…</div>
 			</div>
 		</header>
@@ -579,15 +583,27 @@
 		</button>
 	</div>
 
+	<!-- Join or log in, from anywhere on the site: the sign-in form (#login)
+	     moves in here while it's open and goes back after (users.js openAuth) -->
+	<dialog id="joinBox" aria-labelledby="joinTitle">
+		<div class="modalBox">
+			<div class="modalHeader">
+				<h2 id="joinTitle">Join the room</h2>
+				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			</div>
+			<div class="modalContent"><p class="d-joinnote" id="au-note"></p></div>
+		</div>
+	</dialog>
+
 	<dialog id="pickNameBox" aria-labelledby="pickNameTitle" data-required>
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2 id="pickNameTitle">Pick a username</h2>
 			</div>
 			<div class="modalContent">
-				<form id="pickNameForm" novalidate>
+				<form id="pickNameForm" class="authForm" novalidate>
 					<p>This is the name people see in the room. Letters, numbers and underscores, up to 22. You can change it later in Profile.</p>
-					<div class="inputline"><label for="pickName">Username</label><input type="text" id="pickName" maxlength="22" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" required /></div>
+					<div class="field"><label for="pickName">Username</label><input type="text" id="pickName" maxlength="22" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" required /></div>
 					<div class="formMessage" role="alert"></div>
 					<div class="modal-actions">
 						<button type="button" class="butt graybutt" id="pickNameLogout">Log out</button>
@@ -734,28 +750,39 @@
 		</div>
 	</dialog>
 
-	<dialog id="accountSettingsBox">
+	<dialog id="accountSettingsBox" aria-label="Your account">
 		<div class="modalBox">
-			<div class="tabs" id="accountSettingsTabs">
-				<button class="tab on" data-tab="profile-tab">Profile</button>
-				<button class="tab" data-tab="settings-tab">Settings</button>
-				<button class="tab" data-tab="mod-tab" id="modTab">Mod</button>
-				<button role="button" class="butt graybutt small logoutButt" id="logOutButton">Log Out</button>
-				<button role="button" class="butt graybutt iconbutt closeModal" id="accountSettingsClose" title="Close"><i class="material-symbols-outlined">close</i></button>
+			<div class="tabs" id="accountSettingsTabs" role="tablist" aria-label="Your account">
+				<button type="button" role="tab" class="tab on" data-tab="profile-tab" aria-controls="profile-tab">Profile</button>
+				<button type="button" role="tab" class="tab" data-tab="account-tab" aria-controls="account-tab">Account</button>
+				<button type="button" role="tab" class="tab" data-tab="settings-tab" aria-controls="settings-tab">Settings</button>
+				<button type="button" role="tab" class="tab" data-tab="mod-tab" id="modTab" aria-controls="mod-tab">Mod</button>
+				<button type="button" class="butt graybutt iconbutt closeModal" id="accountSettingsClose" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
 			</div>
 			<div class="modalContent">
-				<div id="profile-tab" class="tabPanel">
-					<div id="accountSettingsMain"></div>
-					<div class="grabStatsBox"><i class="material-symbols-outlined" aria-hidden="true">playlist_add</i><p id="grabStats" aria-live="polite"></p></div>
-					Change your username to some other thing...<br /><br />
-					<div class="usernameRow">
+				<div id="profile-tab" class="tabPanel" role="tabpanel">
+					<div id="accountSettingsMain" class="ac-identity">
 						<span class="ft-avatar" id="usernameAvatarPreview" role="img" aria-label="Your avatar"></span>
-						<input type="text" placeholder="Change Username" id="changeUsername" aria-describedby="usernameResponse" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+						<div class="ac-who"><b id="ac-name"></b><span id="ac-since"></span></div>
 					</div>
-					<div class="responseBox" id="usernameResponse"></div>
-					<div id="avatarPickerSection">
-					<br />
-					Avatar:<br /><br />
+					<section class="ac-section" aria-labelledby="ac-nameLabel">
+						<h3 class="ac-label" id="ac-nameLabel">Username</h3>
+						<form id="ac-nameForm" class="ac-inline" novalidate>
+							<div class="usernameRow">
+								<label for="changeUsername" class="sr-only">New username</label>
+								<input type="text" placeholder="New username" id="changeUsername" maxlength="22" aria-describedby="usernameResponse ac-nameHint" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+								<button type="submit" class="butt darkbutt" id="ac-saveName">Change</button>
+							</div>
+						</form>
+						<p class="settingHint" id="ac-nameHint">The name people see in the room. Letters, numbers and underscores, up to 22. Your avatar is made from your name, so it changes too.</p>
+						<div class="responseBox" id="usernameResponse" role="status"></div>
+					</section>
+					<section class="ac-section" aria-labelledby="ac-grabLabel">
+						<h3 class="ac-label" id="ac-grabLabel">Your grabs</h3>
+						<div class="grabStatsBox"><i class="material-symbols-outlined" aria-hidden="true">playlist_add</i><p id="grabStats" aria-live="polite"></p></div>
+					</section>
+					<div id="avatarPickerSection" class="ac-section">
+					<h3 class="ac-label"><label for="avatarStylePicker">Avatar</label></h3>
 					<select id="avatarStylePicker">
 						<optgroup label="Robohash">
 							<option value="robohash:set1">Robohash Robot Busts</option>
@@ -778,92 +805,168 @@
 							<option value="dicebear:toon-head">DiceBear Toon Head</option>
 						</optgroup>
 					</select>
-					<br /><br />
 					</div><!-- /#avatarPickerSection -->
 				</div>
-				<div id="settings-tab" class="tabPanel active">
-					Set all of the things here on the table.
-					<br /><br />
+				<div id="account-tab" class="tabPanel" role="tabpanel">
+					<section class="ac-section" aria-labelledby="ac-signedInLabel">
+						<h3 class="ac-label" id="ac-signedInLabel">Signed in</h3>
+						<div class="ac-facts">
+							<div class="ac-fact"><span>Email</span><b id="ac-email">—</b></div>
+							<div class="ac-fact"><span>Signs in with</span><b id="ac-method">—</b></div>
+						</div>
+					</section>
+					<section class="ac-section ac-emailOnly" aria-labelledby="ac-passLabel">
+						<h3 class="ac-label" id="ac-passLabel">Change password</h3>
+						<form id="ac-passForm" class="authForm" novalidate>
+							<input type="email" id="ac-passUser" autocomplete="username" hidden />
+							<div class="field"><label for="ac-curPass">Current password</label><span class="passField"><input type="password" id="ac-curPass" autocomplete="current-password" /><button type="button" class="showPass material-symbols-outlined" aria-label="Show password" aria-pressed="false">visibility</button></span></div>
+							<div class="field"><label for="ac-newPass">New password</label><span class="passField"><input type="password" id="ac-newPass" autocomplete="new-password" aria-describedby="ac-newPassNote" /><button type="button" class="showPass material-symbols-outlined" aria-label="Show password" aria-pressed="false">visibility</button></span><p class="fieldNote" id="ac-newPassNote" data-hint="At least 6 characters.">At least 6 characters.</p></div>
+							<div class="formMessage" role="alert"></div>
+							<div class="ac-actions">
+								<button type="submit" class="butt darkbutt" id="ac-savePass" data-label="Change password">Change password</button>
+								<button type="button" class="linkButton" id="ac-sendReset">Forgot it? Email me a reset link</button>
+							</div>
+						</form>
+					</section>
+					<section class="ac-section ac-emailOnly" aria-labelledby="ac-emailLabel">
+						<h3 class="ac-label" id="ac-emailLabel">Change email</h3>
+						<form id="ac-emailForm" class="authForm" novalidate>
+							<div class="field"><label for="ac-newEmail">New email</label><input type="email" id="ac-newEmail" autocomplete="email" autocapitalize="off" spellcheck="false" /></div>
+							<div class="field"><label for="ac-emailPass">Your password</label><span class="passField"><input type="password" id="ac-emailPass" autocomplete="current-password" /><button type="button" class="showPass material-symbols-outlined" aria-label="Show password" aria-pressed="false">visibility</button></span></div>
+							<p class="fieldNote">We'll send a link to the new address. Your email changes when you open it.</p>
+							<div class="formMessage" role="alert"></div>
+							<div class="ac-actions">
+								<button type="submit" class="butt darkbutt" id="ac-saveEmail" data-label="Send confirmation link">Send confirmation link</button>
+							</div>
+						</form>
+					</section>
+					<p class="settingHint ac-providerOnly" id="ac-providerNote"></p>
+					<section class="ac-section" aria-labelledby="ac-outLabel">
+						<h3 class="ac-label" id="ac-outLabel">Log out</h3>
+						<p class="settingHint">Your playlists, cards and settings stay with your account. @mention push notifications stop on this device until you log in again.</p>
+						<div class="ac-actions">
+							<button type="button" class="butt graybutt logoutButt" id="logOutButton"><i class="material-symbols-outlined" aria-hidden="true">logout</i>Log out</button>
+						</div>
+					</section>
+					<p class="ac-legal"><a href="terms" target="_blank">Terms of Service</a> · <a href="privacy" target="_blank">Privacy Policy</a></p>
+				</div>
+				<div id="settings-tab" class="tabPanel active" role="tabpanel">
 					<div class="getAppCard" id="getAppCard" hidden>
 						<i class="material-symbols-outlined" aria-hidden="true">install_mobile</i>
 						<div><b>Get the app</b><span>Install the room on your phone, with @mention notifications.</span></div>
 						<button type="button" class="butt small showInstallGuide">How to install</button>
 					</div>
-					<div class="settingline">
-						<input type="checkbox" id="publicNameToggle" name="publicNameToggle" checked>
-						<label for="publicNameToggle">Show my name on public pages</label>
-					</div>
-					<div class="settingline">
-						<input type="checkbox" id="previewOverToggle" name="previewOverToggle">
-						<label for="previewOverToggle">Previews play over the room</label>
-					</div>
-					<p class="settingHint">A 30-second preview plays on top, with the room turned down underneath, instead of stopping the room.</p>
-					<p class="settingHint" id="publicNameHint">Room charts, new releases and the chat visitors can read show who played and said what. Turn this off to show you as nobody there. Members in the room still see your name.</p>
-					<div class="settingline">
-						<input type="checkbox" id="badoopToggle" name="badoopToggle">
-						<label for="badoopToggle">Badoop sound for @mentions</label>
-					</div>
-					<div class="settingline">
-						<input type="checkbox" id="desktopNotifyMentionsToggle" name="DTNMToggle">
-						<label for="desktopNotifyMentionsToggle">Desktop notifications for @mentions</label>
-					</div>
-					<div class="settingline pushSetting">
-						<input type="checkbox" id="pushMentionsToggle" name="pushMentionsToggle">
-						<label for="pushMentionsToggle">Push @mentions to this device</label>
-						<button type="button" id="pushTest" class="butt graybutt small" hidden>Send a test</button>
-					</div>
-					<div class="settingline settingSub" id="pushEveryoneLine">
-						<input type="checkbox" id="pushEveryoneToggle" name="pushEveryoneToggle">
-						<label for="pushEveryoneToggle">Also push @everyone announcements</label>
-					</div>
-					<p id="pushHint" class="settingHint" role="status" hidden></p>
-					<p id="pushHowInstall" class="settingHint" hidden><button type="button" class="linkButton showInstallGuide">How to install the app</button></p>
-					<ul id="pushDevices" class="pushDevices" aria-label="Devices getting push notifications" hidden></ul>
-					<div class="settingline">
-						<input type="checkbox" id="shareTypingToggle" name="shareTypingToggle">
-						<label for="shareTypingToggle">Show others when I'm typing</label>
-					</div>
-					<div class="settingline">
-
-						<input type="checkbox" id="showImagesToggle" name="showImagesToggle">
-						<label for="showImagesToggle">Show images in chat</label><br />
-					</div>
-					<div class="settingline">
-						<input type="checkbox" id="showAvatarsToggle" name="showAvatarsToggle">
-						<label for="showAvatarsToggle">Show user avatars in chat</label>
-					</div>
-					<div class="settingline">
-						<input type="checkbox" id="showSongAnnouncementsToggle" name="showSongAnnouncementsToggle">
-						<label for="showSongAnnouncementsToggle">Show song announcements in chat</label>
-					</div>
-					<div class="settingline densityPicker">
-						<label for="densityPicker">View density</label>
-						<select id="densityPicker">
-							<option value="compact">Compact</option>
-							<option value="cozy">Cozy</option>
-							<option value="comfortable">Comfortable</option>
-						</select>
-					</div>
-					<div class="settingline">
-						<input type="checkbox" id="mediaDisableToggle" name="mediaDisableToggle">
-						<label for="mediaDisableToggle">Disable Media Playback</label>
-					</div>
-					<div class="settingline">
-
-						<span id="scrobtoggle"></span>
-					</div>
-					<div id="version" class="settingline"></div>
+					<section class="ac-section" aria-labelledby="se-notifyLabel">
+						<h3 class="ac-label" id="se-notifyLabel">@mentions</h3>
+						<div class="settingline">
+							<input type="checkbox" id="badoopToggle" name="badoopToggle">
+							<label for="badoopToggle">Badoop sound for @mentions</label>
+						</div>
+						<div class="settingline">
+							<input type="checkbox" id="desktopNotifyMentionsToggle" name="DTNMToggle">
+							<label for="desktopNotifyMentionsToggle">Desktop notifications for @mentions</label>
+						</div>
+						<div class="settingline pushSetting">
+							<input type="checkbox" id="pushMentionsToggle" name="pushMentionsToggle">
+							<label for="pushMentionsToggle">Push @mentions to this device</label>
+							<button type="button" id="pushTest" class="butt graybutt small" hidden>Send a test</button>
+						</div>
+						<div class="settingline settingSub" id="pushEveryoneLine">
+							<input type="checkbox" id="pushEveryoneToggle" name="pushEveryoneToggle">
+							<label for="pushEveryoneToggle">Also push @everyone announcements</label>
+						</div>
+						<p id="pushHint" class="settingHint" role="status" hidden></p>
+						<p id="pushHowInstall" class="settingHint" hidden><button type="button" class="linkButton showInstallGuide">How to install the app</button></p>
+						<ul id="pushDevices" class="pushDevices" aria-label="Devices getting push notifications" hidden></ul>
+					</section>
+					<section class="ac-section" aria-labelledby="se-chatLabel">
+						<h3 class="ac-label" id="se-chatLabel">Chat</h3>
+						<div class="settingline">
+							<input type="checkbox" id="shareTypingToggle" name="shareTypingToggle">
+							<label for="shareTypingToggle">Show others when I'm typing</label>
+						</div>
+						<div class="settingline">
+							<input type="checkbox" id="showImagesToggle" name="showImagesToggle">
+							<label for="showImagesToggle">Show images in chat</label>
+						</div>
+						<div class="settingline">
+							<input type="checkbox" id="showAvatarsToggle" name="showAvatarsToggle">
+							<label for="showAvatarsToggle">Show user avatars in chat</label>
+						</div>
+						<div class="settingline">
+							<input type="checkbox" id="showSongAnnouncementsToggle" name="showSongAnnouncementsToggle">
+							<label for="showSongAnnouncementsToggle">Show song announcements in chat</label>
+						</div>
+					</section>
+					<section class="ac-section" aria-labelledby="se-playLabel">
+						<h3 class="ac-label" id="se-playLabel">Playback and display</h3>
+						<div class="settingline">
+							<input type="checkbox" id="previewOverToggle" name="previewOverToggle">
+							<label for="previewOverToggle">Previews play over the room</label>
+						</div>
+						<p class="settingHint">A 30-second preview plays on top, with the room turned down underneath, instead of stopping the room.</p>
+						<div class="settingline">
+							<input type="checkbox" id="mediaDisableToggle" name="mediaDisableToggle">
+							<label for="mediaDisableToggle">Disable media playback</label>
+						</div>
+						<div class="settingline densityPicker">
+							<label for="densityPicker">View density</label>
+							<select id="densityPicker">
+								<option value="compact">Compact</option>
+								<option value="cozy">Cozy</option>
+								<option value="comfortable">Comfortable</option>
+							</select>
+						</div>
+					</section>
+					<section class="ac-section" aria-labelledby="se-privacyLabel">
+						<h3 class="ac-label" id="se-privacyLabel">Privacy</h3>
+						<div class="settingline">
+							<input type="checkbox" id="publicNameToggle" name="publicNameToggle" checked>
+							<label for="publicNameToggle">Show my name on public pages</label>
+						</div>
+						<p class="settingHint" id="publicNameHint">Room charts, new releases and the chat visitors can read show who played and said what. Turn this off to show you as nobody there. Members in the room still see your name.</p>
+					</section>
+					<section class="ac-section" aria-labelledby="se-lastfmLabel">
+						<h3 class="ac-label" id="se-lastfmLabel">Last.fm</h3>
+						<div class="settingline">
+							<span id="scrobtoggle"></span>
+						</div>
+					</section>
+					<div id="version" class="settingline ac-version"></div>
 				</div>
-				<div id="mod-tab" class="tabPanel">
-					Suspend a user's account, or manage active suspensions.<br /><br />
-					<input type="text" placeholder="Enter Username to Suspend User's Account" id="supercopSearch" />
-					<div class="responseBox" id="supercopResponse"></div>
-					<h3>Active Suspensions</h3>
-					<div id="activeSuspensions"></div>
+				<div id="mod-tab" class="tabPanel" role="tabpanel">
+					<section class="ac-section" aria-labelledby="mo-suspendLabel">
+						<h3 class="ac-label" id="mo-suspendLabel"><label for="supercopSearch">Suspend an account</label></h3>
+						<p class="settingHint">Type a username and press Enter, then Enter again to confirm.</p>
+						<input type="text" placeholder="Username" id="supercopSearch" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" />
+						<div class="responseBox" id="supercopResponse" role="status"></div>
+					</section>
+					<section class="ac-section" aria-labelledby="mo-activeLabel">
+						<h3 class="ac-label" id="mo-activeLabel">Active suspensions</h3>
+						<div id="activeSuspensions"></div>
+					</section>
 				</div>
 			</div>
 		</div>
 	</dialog>
+
+	<!-- The account menu: the header avatar opens it -->
+	<div id="nav-accountMenu" popover="auto" class="ft-popover">
+		<div id="nav-accountArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu nav-acctBox" role="menu" aria-label="Your account">
+			<div class="nav-acctHead">
+				<span class="ft-avatar" id="nav-acctAvatar" aria-hidden="true"></span>
+				<div class="nav-acctWho"><b id="nav-acctName"></b><span id="nav-acctEmail"></span></div>
+			</div>
+			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="profile-tab"><i class="material-symbols-outlined" aria-hidden="true">person</i>Profile</button>
+			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="account-tab"><i class="material-symbols-outlined" aria-hidden="true">manage_accounts</i>Account and sign-in</button>
+			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="settings-tab"><i class="material-symbols-outlined" aria-hidden="true">settings</i>Settings</button>
+			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="mod-tab" id="nav-acctMod" hidden><i class="material-symbols-outlined" aria-hidden="true">shield</i>Mod tools</button>
+			<button type="button" role="menuitem" class="butt graybutt nav-acctItem showInstallGuide" id="nav-acctApp" hidden><i class="material-symbols-outlined" aria-hidden="true">install_mobile</i>Get the app</button>
+			<div class="nav-acctSep" role="separator"></div>
+			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-logout"><i class="material-symbols-outlined" aria-hidden="true">logout</i>Log out</button>
+		</div>
+	</div>
 
 	<dialog id="importPromptBox">
 		<div class="modalBox">

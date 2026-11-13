@@ -116,6 +116,22 @@ try {
   check(auth.showPass === "text,true", "the password can be shown (" + auth.showPass + ")");
   check(auth.login === "logscreen" && auth.reset === "resetscreen,me@x.co,none" && auth.back === "logscreen",
     "Log in, Forgot your password (email carried over), and back (" + [auth.login, auth.reset, auth.back].join(" / ") + ")");
+  const entry = await page.evaluate(async () => {
+    const btn = document.getElementById("nav-signin");
+    const out = { shown: !!btn && btn.offsetParent !== null, label: document.getElementById("nav-signinLabel").textContent };
+    btn.click();
+    await new Promise((r) => setTimeout(r, 200));
+    const dlg = document.getElementById("joinBox");
+    out.dialog = dlg.open && !!dlg.querySelector("#login");
+    out.focused = document.activeElement && document.activeElement.id;
+    out.title = document.getElementById("joinTitle").textContent;
+    dlg.close();
+    for (let i = 0; i < 40 && document.getElementById("login").parentElement.id !== "mainGrid"; i++) await new Promise((r) => setTimeout(r, 50));
+    out.back = document.getElementById("login").parentElement.id;
+    return out;
+  });
+  check(entry.shown && entry.label === "Join" && entry.dialog && entry.focused === "newemail" && /^Join /.test(entry.title) && entry.back === "mainGrid",
+    "the header's Join opens the sign-in dialog for a new visitor, and the form goes back after (" + JSON.stringify(entry) + ")");
   await page.waitForFunction(() => typeof YT !== "undefined" && YT.Player, null, { timeout: 30000 }).catch(() => {});
   check(loaded("/s/player/") || loaded("www-widgetapi"), "YouTube's player API loaded under the policy");
 
@@ -889,10 +905,13 @@ try {
   await put("/newMusic", { f1: { artist: "Alpha & Beta", title: "Fav One", dj: "dj1", djid: "dj1", type: 1, cid: "lib0000001", when: now - 3600000,
     url: "https://www.youtube.com/watch?v=lib0000001", img: "https://i.ytimg.com/vi/lib0000001/mqdefault.jpg", colors: { color: "#333", txt: "#fff" } } });
   await put("/globalTracks/1lib0000001", { artist: "Alpha & Beta", title: "Fav One", type: 1, song: "sL1" });
-  await put("/globalSongs/sL1", { artist: "Alpha & Beta", title: "Fav One", plays: 30, first_play_date: now - 400 * 86400000, first_play_dj: "dj1", genres: ["Nu-Disco"] });
+  // the play history keeps only names: faces must come from the member's uid, never name + name
+  await put("/globalSongs/sL1", { artist: "Alpha & Beta", title: "Fav One", plays: 30, first_play_date: now - 400 * 86400000, first_play_dj: "Zed",
+    last_play_date: now - 86400000, last_play_dj: "Nobody Known", genres: ["Nu-Disco"] });
   const doors = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
+    firetable.knownNames = Object.assign(firetable.knownNames || {}, { uidZ: "Zed" });
     location.hash = "#live";
     await ftapi.watchFeed("fresh");
     await until(() => document.querySelector("#thediscovers .fresh-track-artist a"));
@@ -904,6 +923,8 @@ try {
     await until(() => document.querySelector("#dSheetBox[open] #dSheetHist b"));
     const sheet = document.getElementById("dSheetBox");
     out.sheet = (sheet.querySelector(".d-title") || {}).textContent + "|" + (sheet.querySelector("#dSheetHist") || {}).textContent;
+    const faces = [...sheet.querySelectorAll("#dSheetHist .pv-dj-avatar")];
+    out.faces = faces.map((f) => (f.classList.contains("d-noface") ? "none" : (f.style.backgroundImage.match(/robots\/([^.?]+)/) || [])[1] || f.style.backgroundImage)).join(",");
     sheet.querySelector(".closeModal").click();
     document.getElementById("track").click();
     await until(() => /playing in the room now/.test((document.getElementById("dSheetHist") || {}).textContent || ""));
@@ -917,6 +938,7 @@ try {
   });
   check(doors.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && /^#discover\/artist\//.test(doors.stageArtist || "") && doors.titleButton === "button",
     "in Live, artist names link to their pages and titles are buttons (" + JSON.stringify(doors) + ")");
+  check(doors.faces === "uidZZed,none", "a name-only history line shows that member's face (uid + name), or a plain circle when unknown (" + doors.faces + ")");
   check(/^Fav One\|.*30 plays/.test(doors.sheet || "") && /playing in the room now/.test(doors.stageSheet || ""), "a title opens its song sheet, with the room's plays; the stage's says it's playing now");
   check(doors.robot === "#discover/djs/dj1", "a DJ's robot in Live opens their DJ page (" + doors.robot + ")");
 
@@ -941,6 +963,42 @@ try {
   check(join.open && join.inside && join.form === "logscreen" && join.focused === "loginemail" && join.stillDiscover,
     "Log in opens the form in a dialog, on Discover (" + JSON.stringify(join) + ")");
   check(join.back === "mainGrid", "closing it puts the form back in the page (" + join.back + ")");
+
+  console.log("-- Join or log in from the header, on Discover and in Live");
+  const header = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const dlg = document.getElementById("joinBox");
+    const closeIt = async () => { dlg.close(); for (let i = 0; i < 40 && document.getElementById("login").parentElement.id !== "mainGrid"; i++) await wait(50); };
+    const out = {};
+    const btn = document.getElementById("nav-signin");
+    out.label = document.getElementById("nav-signinLabel").textContent;
+    out.discover = { shown: btn.offsetParent !== null };
+    btn.click();
+    await wait(200);
+    out.discover.open = dlg.open;
+    out.discover.form = ["createscreen", "logscreen"].filter((id) => !document.getElementById(id).hidden).join();
+    out.discover.title = document.getElementById("joinTitle").textContent;
+    document.getElementById("loginlink").click();
+    out.discover.retitled = document.getElementById("joinTitle").textContent;
+    await closeIt();
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await wait(300);
+    out.live = { shown: btn.offsetParent !== null };
+    btn.click();
+    await wait(200);
+    out.live.open = dlg.open;
+    out.live.inside = !!dlg.querySelector("#authBox");
+    out.live.focused = document.activeElement && document.activeElement.id;
+    await closeIt();
+    out.live.back = document.getElementById("login").parentElement.id;
+    document.querySelector('#modeTabs [data-mode="discover"]').click();
+    await wait(200);
+    return out;
+  });
+  check(header.label === "Join" && header.discover.shown && header.discover.open && header.discover.form === "createscreen" && /^Join /.test(header.discover.title) && header.discover.retitled === "Welcome back",
+    "on Discover, the header's Join opens the sign-in dialog; its title follows the tabs (" + JSON.stringify(header) + ")");
+  check(header.live.shown && header.live.open && header.live.inside && header.live.focused === "newemail" && header.live.back === "mainGrid",
+    "in Live it opens the same dialog, and the form goes back under the stage (" + JSON.stringify(header.live) + ")");
 
   console.log("-- Discover: genres, DJs, artists and years from the weekly library");
   const libPages = await dPage.evaluate(async () => {
@@ -1090,6 +1148,56 @@ try {
   check(chatHere.moved && chatHere.visible, "the room's chat, with its message box, opens in Discover's panel (" + JSON.stringify(chatHere) + ")");
   check(chatHere.backOnNow && chatHere.unread === "1" && chatHere.cleared, "on another tab, new messages from others are counted, and cleared on Chat (" + JSON.stringify(chatHere) + ")");
   check(chatHere.live.home && !chatHere.live.here, "Live gets its chat back (" + JSON.stringify(chatHere.live) + ")");
+
+  console.log("-- Your account: the avatar's menu, Profile · Account · Settings, and log out");
+  const acct = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const out = {};
+    const btn = document.getElementById("loggedInUser");
+    const menu = document.getElementById("nav-accountMenu");
+    out.signinHidden = document.getElementById("nav-signin").offsetParent === null;
+    btn.click();
+    await wait(250);
+    out.menuOpen = menu.matches(":popover-open");
+    out.expanded = btn.getAttribute("aria-expanded");
+    const label = (el) => el && el.lastChild ? el.lastChild.textContent.trim() : "";
+    out.items = [...menu.querySelectorAll('[role="menuitem"]')].filter((b) => !b.hidden).map(label).join("|");
+    out.focused = label(document.activeElement);
+    menu.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    out.arrow = label(document.activeElement);
+    menu.querySelector('[data-acct="account-tab"]').click();
+    await wait(100);
+    const dlg = document.getElementById("accountSettingsBox");
+    out.dialog = dlg.open;
+    out.menuClosed = !menu.matches(":popover-open");
+    out.tab = document.querySelector("#accountSettingsTabs .tab.on").textContent + "|" + document.getElementById("account-tab").classList.contains("active");
+    out.logout = !!document.querySelector("#account-tab #logOutButton");
+    // an empty password change is caught before it goes anywhere
+    document.getElementById("ac-savePass").click();
+    out.passMsg = document.querySelector("#ac-passForm .formMessage").textContent;
+    document.getElementById("ac-curPass").value = "oldpass1";
+    document.getElementById("ac-newPass").value = "abc";
+    document.getElementById("ac-savePass").click();
+    out.shortPass = document.getElementById("ac-newPassNote").getAttribute("data-state");
+    document.getElementById("ac-curPass").value = "";
+    document.getElementById("ac-newPass").value = "";
+    // arrow keys move between the tabs
+    const t = document.querySelector('#accountSettingsTabs [data-tab="account-tab"]');
+    t.focus();
+    t.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    out.nextTab = document.querySelector("#accountSettingsTabs .tab.on").getAttribute("data-tab");
+    // a username change with nothing typed says so
+    document.querySelector('#accountSettingsTabs [data-tab="profile-tab"]').click();
+    document.getElementById("ac-saveName").click();
+    out.nameMsg = document.getElementById("usernameResponse").getAttribute("data-state") + ":" + document.getElementById("usernameResponse").textContent;
+    dlg.close();
+    return out;
+  });
+  check(acct.signinHidden && acct.menuOpen && acct.expanded === "true" && acct.items === "Profile|Account and sign-in|Settings|Get the app|Log out" && acct.focused === "Profile" && acct.arrow === "Account and sign-in",
+    "the header avatar opens the account menu, with the keyboard (" + JSON.stringify(acct) + ")");
+  check(acct.dialog && acct.menuClosed && acct.tab === "Account|true" && acct.logout, "Account and sign-in opens the Account tab, with Log out (" + acct.tab + ")");
+  check(/current password/.test(acct.passMsg) && acct.shortPass === "bad", "changing the password checks what's typed first (" + acct.passMsg + " / " + acct.shortPass + ")");
+  check(acct.nextTab === "settings-tab" && /^bad:/.test(acct.nameMsg), "the tabs follow the arrow keys; an empty name change says so (" + acct.nextTab + " / " + acct.nameMsg + ")");
 
   console.log("-- Discover: members pick cards to feature on their DJ page");
   await put("/users/dj1/featured", ["cardP", "cardA"]); // cardA isn't dj1's: left out

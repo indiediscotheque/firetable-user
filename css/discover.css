@@ -263,6 +263,7 @@ body:not(.ft-has-discover) #dSearchOpen { display: none; }
 }
 #dBrowse .pvbar.previewing { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .d-nobody { visibility: hidden; }
+.d-noface { background-color: var(--color-bg-t3); }
 .hist-timestamp.d-rank {
     color: var(--color-text-light);
     font-size: var(--fs-title);
@@ -878,21 +879,7 @@ section .d-chips a.d-chip {
 .d-chatline span { min-width: 0; overflow-wrap: anywhere; }
 .d-chatline b { display: block; color: var(--color-text-muted); font-size: var(--fs-meta); font-weight: 500; }
 
-/* Join or log in from Discover: the sign-in form, moved into a dialog */
-#joinBox .modalBox { width: 26rem; max-width: min(26rem, calc(100vw - 2rem)); }
-#joinBox .modalContent { display: block; overflow-y: auto; }
-body.ft-discover #joinBox #login,
-#joinBox #login {
-    display: block !important;
-    height: auto;
-    max-width: none;
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-}
-#joinBox #welcomeInfo { display: none; }
-#joinBox #authBox { max-width: none; }
-.d-joinnote { margin: 0 0 var(--pad3); color: var(--color-text-light); font-size: var(--fs-title); }
+/* Join or log in: the site's sign-in dialog (#joinBox) is styled in looks.css */
 
 /* Put the chart on your site */
 #dEmbedBox .modalBox { width: 30rem; max-width: min(30rem, calc(100vw - 2rem)); }
