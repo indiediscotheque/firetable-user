@@ -2082,6 +2082,27 @@ firetable.discover = (function () {
     stageAt = want;
   }
 
+  /**
+   * In Live while you hear Discover (or have stopped the room): a card in the
+   * stage's lower left says you aren't hearing the room, with Listen live.
+   */
+  var notLiveHtml = "";
+  function renderNotLive() {
+    var el = document.getElementById("st-notlive");
+    if (!el) return;
+    var show = D.mode === "live" && !!liveTrack() && (discoverActive() || D.src === "off");
+    var html = "";
+    if (show) {
+      var t = discoverActive() ? P.track : null;
+      var line = t && !P.paused ? "Playing from Discover: " + t.t + (t.a ? " · " + t.a : "")
+        : t ? "Discover is paused" : "You turned the room's sound off";
+      html = '<span class="st-nl-text"><b>' + ms(t ? "explore" : "volume_off") + 'You\'re not listening live</b><span>' + esc(line) + "</span></span>" +
+        '<button type="button" class="butt graybutt small d-listen st-nl-go" title="You\'re not listening live. Listen in to the room"><i class="d-dot" aria-hidden="true"></i>Listen live</button>';
+    }
+    el.hidden = !show;
+    if (html !== notLiveHtml) { el.innerHTML = html; notLiveHtml = html; }
+  }
+
   function barKind() {
     if (discoverActive()) return "discover";
     if (liveTrack()) return D.src === "live" && !blocked() ? "live" : "onair";
@@ -2187,6 +2208,7 @@ firetable.discover = (function () {
     // in Live while you hear a Discover song (or nothing), the stage's screen stays up:
     // the room's players are carrying your song, not the room's video
     document.body.classList.toggle("pb-elsewhere", discoverActive() || D.src === "off");
+    renderNotLive();
 
     // where it's from
     var src = document.getElementById("pv-src");

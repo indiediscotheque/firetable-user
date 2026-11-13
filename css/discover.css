@@ -1245,6 +1245,49 @@ body.ft-has-discover #stageTopRight,
 body.ft-has-discover #stageActions { display: none; }
 body.ft-has-discover.pb-elsewhere:not(.pv-full-on) #mainGrid #screenBox { transform: translateY(-101%); }
 body.ft-has-discover.pb-elsewhere:not(.pv-full-on) #mainGrid #stageBackdrop { display: block; }
+/* in Live while you hear Discover (or stopped the room): the stage's lower left
+   says you aren't hearing the room, with Listen live */
+#st-notlive {
+    position: absolute;
+    bottom: var(--pad3);
+    left: var(--pad3);
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--pad2);
+    /* narrow, so it keeps to the stage's corner, clear of the DJs in the middle */
+    width: max-content;
+    max-width: min(17rem, 34cqw);
+    padding: var(--pad2) var(--pad3) var(--pad2) var(--pad2);
+    color: var(--color-text-light);
+    background: rgba(0, 0, 0, 0.62);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+    backdrop-filter: blur(8px) saturate(1.2);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    box-shadow: 0 0.5rem 1.5rem -0.5rem black;
+    animation: st-nl-in 220ms ease-out;
+}
+#st-notlive[hidden], body.ft-discover #st-notlive { display: none; }
+.st-nl-text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; line-height: 1.3; }
+.st-nl-text b { display: flex; align-items: center; gap: 0.35rem; font-size: var(--fs-meta); font-weight: 600; }
+.st-nl-text b i { flex: none; font-size: 1.1rem; color: var(--color-accent); }
+.st-nl-text span { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; font-size: var(--fs-micro); color: var(--color-text-muted); }
+.st-nl-go { gap: 0.4rem; color: var(--color-accent); white-space: nowrap; }
+.st-nl-go .d-dot { animation: pb-pulse 1.6s ease-in-out infinite; }
+@keyframes st-nl-in { from { opacity: 0; transform: translateY(0.5rem); } }
+@media (prefers-reduced-motion: reduce) { #st-notlive, .st-nl-go .d-dot { animation: none; } }
+/* a smaller stage keeps it smaller: the headline and the button, then the button alone */
+@container (max-width: 520px) {
+    #st-notlive { max-width: 28cqw; gap: var(--pad1); }
+    .st-nl-text span { display: none; }
+}
+@container (max-width: 420px) {
+    #st-notlive { bottom: var(--pad2); left: var(--pad2); padding: var(--pad1); }
+    .st-nl-text { display: none; }
+}
+
 /* the DJs, with the stage to themselves, stand as tall as their picture allows:
    sized to the stage, but never past the 110px image the stage asks for (bigger is blurry) */
 body.ft-has-discover #djStage .spot { max-width: clamp(10rem, 20cqw, 12rem); }
