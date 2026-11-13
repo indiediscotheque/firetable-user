@@ -905,10 +905,13 @@ try {
   await put("/newMusic", { f1: { artist: "Alpha & Beta", title: "Fav One", dj: "dj1", djid: "dj1", type: 1, cid: "lib0000001", when: now - 3600000,
     url: "https://www.youtube.com/watch?v=lib0000001", img: "https://i.ytimg.com/vi/lib0000001/mqdefault.jpg", colors: { color: "#333", txt: "#fff" } } });
   await put("/globalTracks/1lib0000001", { artist: "Alpha & Beta", title: "Fav One", type: 1, song: "sL1" });
-  await put("/globalSongs/sL1", { artist: "Alpha & Beta", title: "Fav One", plays: 30, first_play_date: now - 400 * 86400000, first_play_dj: "dj1", genres: ["Nu-Disco"] });
+  // the play history keeps only names: faces must come from the member's uid, never name + name
+  await put("/globalSongs/sL1", { artist: "Alpha & Beta", title: "Fav One", plays: 30, first_play_date: now - 400 * 86400000, first_play_dj: "Zed",
+    last_play_date: now - 86400000, last_play_dj: "Nobody Known", genres: ["Nu-Disco"] });
   const doors = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
+    firetable.knownNames = Object.assign(firetable.knownNames || {}, { uidZ: "Zed" });
     location.hash = "#live";
     await ftapi.watchFeed("fresh");
     await until(() => document.querySelector("#thediscovers .fresh-track-artist a"));
@@ -920,6 +923,8 @@ try {
     await until(() => document.querySelector("#dSheetBox[open] #dSheetHist b"));
     const sheet = document.getElementById("dSheetBox");
     out.sheet = (sheet.querySelector(".d-title") || {}).textContent + "|" + (sheet.querySelector("#dSheetHist") || {}).textContent;
+    const faces = [...sheet.querySelectorAll("#dSheetHist .pv-dj-avatar")];
+    out.faces = faces.map((f) => (f.classList.contains("d-noface") ? "none" : (f.style.backgroundImage.match(/robots\/([^.?]+)/) || [])[1] || f.style.backgroundImage)).join(",");
     sheet.querySelector(".closeModal").click();
     document.getElementById("track").click();
     await until(() => /playing in the room now/.test((document.getElementById("dSheetHist") || {}).textContent || ""));
@@ -933,6 +938,7 @@ try {
   });
   check(doors.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && /^#discover\/artist\//.test(doors.stageArtist || "") && doors.titleButton === "button",
     "in Live, artist names link to their pages and titles are buttons (" + JSON.stringify(doors) + ")");
+  check(doors.faces === "uidZZed,none", "a name-only history line shows that member's face (uid + name), or a plain circle when unknown (" + doors.faces + ")");
   check(/^Fav One\|.*30 plays/.test(doors.sheet || "") && /playing in the room now/.test(doors.stageSheet || ""), "a title opens its song sheet, with the room's plays; the stage's says it's playing now");
   check(doors.robot === "#discover/djs/dj1", "a DJ's robot in Live opens their DJ page (" + doors.robot + ")");
 

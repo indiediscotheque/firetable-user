@@ -106,14 +106,39 @@ firetable.discover = (function () {
     var u = uid && ftapi.users && ftapi.users[uid];
     return !!(u && u.publicName === false);
   }
+  /**
+   * A member's uid from their name, for records that keep only the name
+   * (the play history's first and last DJ, older rows). Faces are made from
+   * uid + name, so the name can't stand in for the uid. Looks in the room's
+   * people, names seen this visit, then the library's DJs.
+   * @returns {string|null}
+   */
+  function uidOf(name) {
+    if (!name) return null;
+    var want = String(name).toLowerCase();
+    var users = (ftapi && ftapi.users) || {};
+    for (var id in users) {
+      if (Object.prototype.hasOwnProperty.call(users, id) && users[id] && String(users[id].username || "").toLowerCase() === want) return id;
+    }
+    var known = firetable.knownNames || {};
+    for (var k in known) {
+      if (Object.prototype.hasOwnProperty.call(known, k) && String(known[k]).toLowerCase() === want) return k;
+    }
+    var key = djIndex().byName[want];
+    var d = key && (lib("djs") || {})[key];
+    return (d && d.djid) || null;
+  }
   /** Who to show for a DJ: hidden for visitors when they opted out. */
   function djShown(uid, name) {
     if (!name) return null;
+    uid = uid || uidOf(name);
     if (!D.signedIn && nameHidden(uid)) return null;
-    return { uid: uid || name, name: name };
+    return { uid: uid, name: name };
   }
   function robot(dj, size) {
     if (!dj) return "";
+    // no uid to make their face from: a plain circle, never someone else's face
+    if (!dj.uid) return '<span class="ft-avatar pv-dj-avatar d-noface" role="img" aria-label="' + esc(dj.name) + '"></span>';
     return '<span class="ft-avatar pv-dj-avatar dj-avatar-tip" role="img" aria-label="' + esc(dj.name) + '" style="background-image:url(' +
       esc(firetable.utilities.avatarURL(dj.uid, dj.name, size || "40x40")) + ')"></span>';
   }
@@ -736,7 +761,7 @@ firetable.discover = (function () {
     var h = back("discover/djs", "DJs");
     var wait = libWaiting(d, "There's no page for this DJ. DJs get one after 25 plays here, unless they've turned it off.");
     if (wait) return h + wait;
-    var dj = { uid: d.djid || d.name, name: d.name };
+    var dj = { uid: d.djid || uidOf(d.name), name: d.name };
     var facts = [];
     if (d.since) facts.push("here since " + new Date(d.since).getFullYear());
     facts.push(n(d.plays) + " plays");
@@ -1344,7 +1369,7 @@ firetable.discover = (function () {
   function chatList(msgs) {
     if (!msgs.length) return '<p class="d-fact">The chat is quiet right now.</p>';
     return '<div class="d-chat">' + msgs.map(function (m) {
-      var who = m.n ? { uid: m.uid, name: m.n } : null;
+      var who = m.n ? { uid: m.uid || uidOf(m.n), name: m.n } : null;
       return '<div class="d-chatline">' + (who ? robot(who) : '<span class="ft-avatar pv-dj-avatar d-nobody" aria-hidden="true"></span>') +
         "<span><b>" + esc(who ? who.name : "a member") + "</b>" + esc(m.txt) + "</span></div>";
     }).join("") + "</div>";
