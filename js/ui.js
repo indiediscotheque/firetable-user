@@ -836,13 +836,30 @@ firetable.nav = {
     });
   },
 
+  // Pending steps of the switch that's fading, so a newer one can cancel them
+  _fadeTimers: [],
+  _fadeFrame: 0,
+
+  /** Drop a fade in progress: its pending steps, its styles, the busy flag. */
+  _cancelFade: function () {
+    var n = firetable.nav;
+    n._fadeTimers.forEach(clearTimeout);
+    n._fadeTimers = [];
+    if (n._fadeFrame) cancelAnimationFrame(n._fadeFrame);
+    n._fadeFrame = 0;
+    n._isFading = false;
+    n._clearFadeStyles(n._mainPanels.concat(n._sidePanels));
+  },
+
   _withFade: function (selectors, mutator) {
     var n = firetable.nav;
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion || n._isFading) {
+      // A tap during a fade wins at once. Cancelling the earlier switch stops
+      // its delayed step from running afterwards and undoing this one.
+      n._cancelFade();
       mutator();
       n.apply();
-      n._clearFadeStyles(selectors);
       return;
     }
 
@@ -853,26 +870,34 @@ firetable.nav = {
       $el.css({ transition: 'opacity ' + n._fadeMs + 'ms ease', opacity: 0 });
     });
 
-    setTimeout(function () {
-      mutator();
-      n.apply();
+    n._fadeTimers.push(setTimeout(function () {
+      try {
+        mutator();
+        n.apply();
+      } catch (e) {
+        // never leave the panels faded out or the tabs stuck on the busy path
+        n._cancelFade();
+        throw e;
+      }
 
       var fadeInPanels = n._collectVisiblePanels(selectors);
       fadeInPanels.forEach(function ($el) {
         $el.css({ opacity: 0, transition: 'opacity ' + n._fadeMs + 'ms ease' });
       });
 
-      requestAnimationFrame(function () {
+      n._fadeFrame = requestAnimationFrame(function () {
+        n._fadeFrame = 0;
         fadeInPanels.forEach(function ($el) {
           $el.css('opacity', 1);
         });
       });
 
-      setTimeout(function () {
+      n._fadeTimers.push(setTimeout(function () {
+        n._fadeTimers = [];
         n._clearFadeStyles(selectors);
         n._isFading = false;
-      }, n._fadeMs + 30);
-    }, n._fadeMs);
+      }, n._fadeMs + 30));
+    }, n._fadeMs));
   },
 
   /** Persist current state to localStorage. */

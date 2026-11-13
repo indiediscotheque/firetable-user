@@ -453,6 +453,23 @@ try {
     await page.setViewportSize({ width: 1280, height: 720 });
   }
 
+  console.log("-- Section tabs: a second tap during the fade wins (issue #64)");
+  await page.setViewportSize({ width: 1194, height: 834 });
+  const tabs = await page.evaluate(async () => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login");
+    firetable.nav.setView("playlists");
+    await new Promise((r) => setTimeout(r, 600));
+    document.getElementById("mm-history").click();
+    await new Promise((r) => setTimeout(r, 60));
+    document.getElementById("mm-discover").click();
+    await new Promise((r) => setTimeout(r, 600));
+    const faded = ["#queuebox", "#thehistoryWrap", "#cardsWrap", "#discover"].filter((s) => $(s).length && $(s)[0].style.opacity !== "");
+    return { view: firetable.nav.view, on: $("#minimodeoptions .tab.on").attr("id"), busy: firetable.nav._isFading, faded: faded.join() };
+  });
+  check(tabs.view === "discover" && tabs.on === "mm-discover" && !tabs.busy && !tabs.faded, "the last tab tapped is the one shown, with nothing left faded (" + JSON.stringify(tabs) + ")");
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   console.log("-- Recent on a phone (mods): ⋮ menu, and the tag editor sits clear of the keyboard");
   await page.setViewportSize({ width: 390, height: 740 });
   const recent = await page.evaluate(async () => {
