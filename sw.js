@@ -48,6 +48,7 @@ self.addEventListener("push", function (event) {
     badge: "icons/badge-96.png",
     tag: d.tag || "mention",
     renotify: true,
+    silent: d.silent === true, // playlist upkeep notices: no sound or vibration
     timestamp: typeof d.time === "number" ? d.time : Date.now(),
     data: { url: d.url || "./", id: d.id || null, kind: d.kind || "mention" }
   };

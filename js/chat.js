@@ -312,7 +312,8 @@ firetable.actions.watchInbox = function () {
 // instead of an @ping in chat. Each shows as a toast, one after another, and
 // is removed once shown. Your phone gets the same as a push when you're away.
 
-firetable.notices = { ref: null, fn: null, queue: [], showing: false };
+firetable.notices = { ref: null, fn: null, queue: [], showing: false,
+  QUIET: { track: true, swap: true } }; // notice kinds that play no sound
 
 firetable.ui.showNextNotice = function () {
   var n = firetable.notices;
@@ -337,7 +338,8 @@ firetable.ui.showNextNotice = function () {
     } };
   }
   firetable.ui.toast(txt, "notice", opts);
-  firetable.utilities.playSound && firetable.utilities.playSound("sound");
+  // playlist upkeep (a broken/unplayable track, swaps found) shows without a sound
+  if (!firetable.notices.QUIET[v.kind]) firetable.utilities.playSound && firetable.utilities.playSound("sound");
 };
 
 firetable.actions.watchNotices = function () {
