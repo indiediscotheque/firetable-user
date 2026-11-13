@@ -800,10 +800,21 @@ try {
       tools: ["screenControl", "reloadtrack", "fullscreenBtn", "fire", "grab"].every((id) => document.getElementById(id).closest("#dMini")),
       stageEmpty: getComputedStyle(document.getElementById("stageTopRight")).display === "none" && getComputedStyle(document.getElementById("stageActions")).display === "none",
       avatar: Math.round((document.querySelector("#deck .avtr") || { getBoundingClientRect: () => ({ height: -1 }) }).getBoundingClientRect().height) };
+    // the stage's lower left says they aren't hearing the room
+    const nl = document.getElementById("st-notlive");
+    const stage = document.getElementById("djStage").getBoundingClientRect(), card = nl.getBoundingClientRect();
+    after.notLive = { shown: !nl.hidden && nl.offsetParent !== null, text: nl.textContent, lowerLeft: card.left - stage.left < stage.width / 2 && stage.bottom - card.bottom < stage.height / 2 && card.width > 0,
+      inside: card.right <= stage.right + 1 && card.bottom <= stage.bottom + 1 };
     // Listen in, from the bar: the room
     document.querySelector("#pv-switch .d-listen").click();
     await new Promise((r) => setTimeout(r, 300));
     after.listened = firetable.preview === false && /is-(live|onair)/.test(bar.className);
+    after.notLive.goneOnListen = nl.hidden && getComputedStyle(nl).display === "none";
+    document.querySelector('#modeTabs [data-mode="discover"]').click();
+    await new Promise((r) => setTimeout(r, 300));
+    after.notLive.notInDiscover = getComputedStyle(nl).display === "none";
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await new Promise((r) => setTimeout(r, 300));
     firetable.discover.onFailed = skip;
     return { during, chart, after };
   });
@@ -814,6 +825,10 @@ try {
     "going to Live keeps the Discover song playing: the bar along the bottom says so, and the stage's screen stays up (" + JSON.stringify(playing.after) + ")");
   check(playing.after.tools && playing.after.stageEmpty, "the stage's screen, reload, full screen, Fire and Grab are in the bar; the stage is left to the DJs (" + JSON.stringify(playing.after) + ")");
   check(playing.after.listened, "Listen in, in the bar, takes them to the room (" + JSON.stringify(playing.after) + ")");
+  check(playing.after.notLive.shown && /not listening live/.test(playing.after.notLive.text) && /First Single/.test(playing.after.notLive.text) && playing.after.notLive.lowerLeft && playing.after.notLive.inside,
+    "in Live while a Discover song plays, the stage's lower left says they aren't listening live (" + JSON.stringify(playing.after.notLive) + ")");
+  check(playing.after.notLive.goneOnListen, "the stage's not-live card goes once they listen in (" + JSON.stringify(playing.after.notLive) + ")");
+  check(playing.after.notLive.notInDiscover, "the not-live card is Live's only (" + JSON.stringify(playing.after.notLive) + ")");
   check(playing.after.avatar > 0 && playing.after.avatar <= 110, "the DJ on the stage is never drawn past its 110px picture (" + playing.after.avatar + "px)");
 
   console.log("-- Discover: the player bar says what it plays, Discover or the room, and switches between them");
@@ -875,6 +890,12 @@ try {
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await wait(300);
     out.fireHome = document.getElementById("fire").parentElement.id;
+    // in Live with the pick playing: Listen live on the stage's card takes them to the room
+    const nl = document.getElementById("st-notlive");
+    out.card = { shown: !nl.hidden };
+    if (nl.querySelector(".st-nl-go")) nl.querySelector(".st-nl-go").click();
+    await wait(300);
+    out.card.room = firetable.preview === false && /is-(live|onair)/.test(document.getElementById("dMini").className) && nl.hidden;
     firetable.discover.onFailed = skip;
     return out;
   });
@@ -893,6 +914,7 @@ try {
   check(/is-discover/.test(bar.back.cls) && /^newrel000/.test(bar.back.playing || ""), "Back to it plays the pick again (or the next, if the test video can't play) (" + JSON.stringify(bar.back) + ")");
   check(bar.join, "a visitor's Play it in the room opens the join dialog");
   check(bar.fireHome === "pv-livekeep", "in Live the stage's buttons stay in the bar (" + bar.fireHome + ")");
+  check(bar.card.shown && bar.card.room, "Listen live on the stage's not-live card takes them to the room (" + JSON.stringify(bar.card) + ")");
 
   console.log("-- Discover: the full-screen player grows out of the bar, shows Audio or Video, and closes back into it");
   const full = await dPage.evaluate(async () => {
