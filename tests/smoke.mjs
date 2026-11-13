@@ -741,7 +741,9 @@ try {
     genres: { "nu-disco": { name: "Nu-Disco", songs: 40, plays: 300, bpm: 118, first: 2010, djs: 2, x: 0.64, covers: ["1_lib0000001"], next: ["soul-and-randb"],
       about: "Disco's grooves rebuilt with modern synths.", dec: { 2010: 200, 2020: 100 } },
       "soul-and-randb": { name: "Soul & R&B", songs: 10, plays: 60, bpm: 98, first: 2012, djs: 1, x: 0.17, covers: [], next: ["nu-disco"], dec: { 2010: 60 } } },
-    genre: { "nu-disco": { fav: [row("lib0000001", "Alpha & Beta", "Fav One", 30), row("lib0000002", "Gamma", "Fav Two", 20)], newHere: [row("lib0000003", "Delta", "New One", 1)], deep: [],
+    genre: { "nu-disco": { fav: [row("lib0000001", "Alpha & Beta", "Fav One", 30), row("lib0000002", "Gamma", "Fav Two", 20)], newHere: [row("lib0000003", "Delta", "New One", 1)],
+      // a first DJ known only by a name nobody here has now: a plain circle, not a face
+      deep: [row("lib0000004", "Echo", "Deep One", 2, { dj: "Long Gone DJ", djid: null })],
       years: { 2010: 3, 2011: 5 }, who: [{ dj: "dj1", djid: "dj1", key: "dj1", plays: 40 }] } },
     djs: { dj1: { name: "dj1", djid: "dj1", plays: 120, firsts: 30, since: now - 900 * DAY, g: ["Nu-Disco"] } },
     dj: { dj1: { name: "dj1", djid: "dj1", plays: 120, firsts: 30, songs: 80, since: now - 900 * DAY, when: "Friday nights", taste: [{ g: "Nu-Disco", slug: "nu-disco", pct: 70 }],
@@ -1091,6 +1093,11 @@ try {
     out.ytm = (document.querySelector("#dBrowse .d-ytm") || { getAttribute: () => null }).getAttribute("href");
     out.artistLinks = [...document.querySelectorAll("#dBrowse .ft-rows .hist-track-artist a")].slice(0, 2).map((a) => a.getAttribute("href")).join();
     out.who = [...document.querySelectorAll("#dBrowse .d-person")].map((p) => p.getAttribute("href")).join();
+    // every face on the timeline is the timeline's size: linked to a DJ page or not, known or not
+    const faces = () => [...document.querySelectorAll("#dBrowse .hist-entry .pv-dj-avatar:not(.d-nobody)")].map((a) => Math.round(a.getBoundingClientRect().width) + "x" + Math.round(a.getBoundingClientRect().height));
+    out.favFaces = faces().join();
+    document.querySelector('.d-chip[data-gtab="deep"]').click();
+    out.deepFace = faces().join() + "|" + !!document.querySelector("#dBrowse .hist-entry .d-noface") + "|" + Math.round(document.querySelector("#dBrowse .hist-track-title").getBoundingClientRect().width);
     document.querySelector('.d-chip[data-gtab="newHere"]').click();
     out.newHere = [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join();
     document.querySelector("#dBrowse .d-radio").click();
@@ -1125,6 +1132,10 @@ try {
   check(libPages.ytm === "https://music.youtube.com/playlist?list=PLsmokeNuDisco", "a genre page links to its YouTube Music playlist (" + libPages.ytm + ")");
   check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
   check(libPages.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && libPages.who === "#discover/djs/dj1", "artists and DJs link to their pages (" + libPages.artistLinks + " / " + libPages.who + ")");
+  check(/^(\d+)x\1,\1x\1$/.test(libPages.favFaces) && Number(libPages.favFaces.split("x")[0]) > 10 && Number(libPages.favFaces.split("x")[0]) < 40,
+    "faces on a genre's timeline are the timeline's size, linked to a DJ page or not (" + libPages.favFaces + ")");
+  check(/^(\d+)x\1\|true\|(\d+)$/.test(libPages.deepFace) && Number(libPages.deepFace.split("x")[0]) < 40 && Number(libPages.deepFace.split("|")[2]) > 40,
+    "a first DJ nobody can name now is a small plain circle, and the title keeps its room (" + libPages.deepFace + ")");
   check(/^radio\|.*Nu-Disco radio/.test(libPages.radio), "genre radio plays (" + libPages.radio + ")");
   check(/^dj1\|.*Friday nights/.test(libPages.dj) && libPages.artist === "Alpha|1" && libPages.year === "1|1", "DJ, artist and year pages (" + [libPages.dj, libPages.artist, libPages.year].join(" / ") + ")");
   check(/no page for this DJ/.test(libPages.missing), "a DJ without a page says so (" + libPages.missing + ")");
@@ -1402,7 +1413,7 @@ try {
     ytm: /class="butt graybutt d-ytm" href="https:\/\/music\.youtube\.com\/playlist\?list=PLsmokeNuDisco"/.test(raw) && /"sameAs":"https:\/\/music\.youtube\.com\/playlist\?list=PLsmokeNuDisco"/.test(raw),
     site: /id="mainGrid"/.test(raw) && /<base href="\/"/.test(raw) && /class="ft-has-discover ft-discover"/.test(raw)
   };
-  check(/^Nu-Disco songs/.test(read.title) && read.canonical && read.h1 && read.rows === 3 && read.ld && read.site,
+  check(/^Nu-Disco songs/.test(read.title) && read.canonical && read.h1 && read.rows === 4 && read.ld && read.site,
     "a genre page as sent: the site itself, with the genre's songs already in Discover, and its own title and address (" + JSON.stringify(read) + ")");
   check(read.artist && read.dj, "artists and DJs link to their pages, only where a page exists");
   check(read.ytm, "a genre page as sent links to its YouTube Music playlist");

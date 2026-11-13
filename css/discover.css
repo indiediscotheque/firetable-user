@@ -369,6 +369,22 @@ body:not(.ft-has-discover) #dSearchOpen { display: none; }
     .d-g:hover { color: var(--color-text-light); text-decoration: underline; text-underline-offset: 2px; }
 }
 .d-djlink { display: inline-flex; flex: none; border-radius: 50%; mix-blend-mode: normal; }
+/* On a timeline row the face sits on the line, the size of any face there, whether or
+   not it links to a DJ page (the link is then the row's direct child, which the
+   timeline's own rule for .dj-avatar-tip doesn't reach) */
+.hist-entry > .d-djlink {
+    position: absolute;
+    left: calc(var(--hist-avatar-size) / -2);
+    width: var(--hist-avatar-size);
+    height: var(--hist-avatar-size);
+    z-index: 1;
+}
+.hist-entry > .d-djlink > .dj-avatar-tip {
+    width: 100%;
+    height: 100%;
+    border: 2px solid var(--color-border);
+    border-radius: 50%;
+}
 .d-g {
     max-width: 8rem;
     overflow: hidden;
