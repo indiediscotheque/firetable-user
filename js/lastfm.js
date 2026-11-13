@@ -1,8 +1,9 @@
 /**
  * lastfm.js — Last.fm scrobbling integration.
  *
- * Handles: session management (connect/disconnect), nowPlaying updates,
- * scrobble submissions, and track.love.
+ * Handles: session management (connect/disconnect), and nowPlaying,
+ * scrobbles and track.love for what this person is actually hearing: the
+ * room's song in Live or a Discover song (see "What you're hearing").
  *
  * Every call goes through this site's signing proxy (api/lastfm.php,
  * LASTFM_PROXY_URL), which holds the app's API key and shared secret, so
@@ -17,15 +18,6 @@ firetable.lastfm = {
 
   /** @type {boolean}  The proxy said Last.fm isn't set up on this server; stop calling it */
   unavailable: false,
-
-  /** @type {number|null}  Unix timestamp (seconds) when the current song started */
-  songStart: null,
-
-  /** @type {number|null}  Duration of the current song in seconds */
-  duration: null,
-
-  /** @type {number|null}  setTimeout ID for the scrobble timer */
-  timer: null,
 
   // ─── Session Management ────────────────────────────────────────────────
 
@@ -87,54 +79,163 @@ firetable.lastfm = {
     });
   },
 
-  // ─── API Calls ─────────────────────────────────────────────────────────
+  // ─── What you're hearing ────────────────────────────────────────────────
+  // Scrobbles follow what this person actually hears, not what the room
+  // plays: the room's song (Live) or a Discover song, whichever is sounding.
+  // Once a second we ask the players what's playing; time only counts while
+  // a song is really audible (playing, not paused, buffering, blocked by the
+  // browser, muted, or covered by a 30-second preview). A song that pauses,
+  // or gives way to the other side and comes back, keeps the time it had.
+  // Last.fm's rule decides the scrobble: a track over 30 s, once half of it
+  // (or 4 minutes) has been heard.
 
-  /** Is the user actually hearing the room right now? (not muted, media on, no preview) */
-  _listening: function () {
-    return !firetable.disableMediaPlayback && !firetable.preview &&
-      firetable.utilities.getEffectiveVolume() > 0;
+  /** @type {Object<string, Object>}  The current play on each side: live and discover */
+  _plays: { live: null, discover: null },
+  /** @type {string|null}  The play last sent as "now playing" */
+  _reported: null,
+  /** @type {Object|null}  The play heard at the last tick */
+  _last: null,
+  /** @type {number}  ms timestamp of the last tick */
+  _lastTick: 0,
+  /** @type {boolean|null}  The SoundCloud widget's last answer to isPaused (it only answers later) */
+  _scPaused: null,
+  /** @type {number|null}  setInterval ID of the listening clock */
+  _clock: null,
+  TICK_MS: 1000,
+
+  /** Start the listening clock (once; it idles while not connected). */
+  start: function () {
+    var L = firetable.lastfm;
+    if (L._clock) return;
+    L._lastTick = Date.now();
+    L._clock = setInterval(L._tick, L.TICK_MS);
   },
 
-  /** The current song's artist and cleaned-up title as plain text, plus the session key (null when nothing is playing). */
-  _trackFields: function () {
-    var song = firetable.song;
-    if (!song || !song.artist || !song.title || !firetable.lastfm.sk) return null;
+  /** A play record for one hearing of one song. */
+  _play: function (key, source, song) {
+    return { key: key, source: source, cid: String(song.cid), type: Number(song.type || MEDIA_YOUTUBE),
+      artist: song.artist, title: song.title, duration: Number(song.duration) || 0,
+      start: null, heard: 0, scrobbled: false };
+  },
+
+  /** The room's song, as a play (the same one until the room moves on). */
+  _livePlay: function () {
+    var L = firetable.lastfm, s = firetable.song;
+    if (!s || !s.cid || s.cid == 0) return null;
+    var key = "live:" + s.started + ":" + s.cid;
+    var p = L._plays.live;
+    if (!p || p.key !== key) p = L._plays.live = L._play(key, "live", s);
+    // a tag fix that arrived meanwhile is what gets scrobbled
+    p.artist = s.artist; p.title = s.title;
+    if (s.duration) p.duration = Number(s.duration);
+    return p;
+  },
+
+  /** Discover's song, as a play, while it's the one sounding (not paused). */
+  _discoverPlay: function () {
+    var L = firetable.lastfm;
+    var d = firetable.discover && firetable.discover.hearing && firetable.discover.hearing();
+    if (!d) return null;
+    var key = "discover:" + d.play + ":" + d.cid;
+    var p = L._plays.discover;
+    if (!p || p.key !== key) p = L._plays.discover = L._play(key, "discover", d);
+    if (d.duration) p.duration = Number(d.duration);
+    return p;
+  },
+
+  /** Is the room's player really sounding this song right now? */
+  _sounding: function (p) {
+    if (p.type === MEDIA_YOUTUBE) {
+      if (!firetable.ytLoaded || typeof player === "undefined" || !player.getPlayerState) return false;
+      if (player.getPlayerState() !== 1) return false; // PLAYING (not buffering, paused, ended…)
+      var v = player.getVideoData && player.getVideoData();
+      return !(v && v.video_id && v.video_id !== p.cid);
+    }
+    if (!firetable.scLoaded || !firetable.scwidget) return false;
+    firetable.scwidget.isPaused(function (paused) { firetable.lastfm._scPaused = !!paused; });
+    return firetable.lastfm._scPaused === false;
+  },
+
+  /** The play this person is hearing right now, or null. */
+  _hearing: function () {
+    var L = firetable.lastfm;
+    if (firetable.disableMediaPlayback || firetable.utilities.getEffectiveVolume() <= 0) return null;
+    var p;
+    if (firetable.preview === "discover") p = L._discoverPlay(); // a Discover song (or the room stopped)
+    else if (firetable.preview) return null;                     // a 30-second preview
+    else if (firetable.overlayPreview && firetable.overlayPreview.active()) return null; // a preview over the room
+    else if (document.body.classList.contains("media-blocked")) return null; // the browser held the room back
+    else p = L._livePlay();
+    return p && L._sounding(p) ? p : null;
+  },
+
+  /** Once a second: count what was heard, update now playing, scrobble when due. */
+  _tick: function () {
+    var L = firetable.lastfm;
+    var now = Date.now();
+    var elapsed = (now - L._lastTick) / 1000;
+    L._lastTick = now;
+    if (!L.sk || L.unavailable) { L._last = null; return; }
+    var p = L._hearing();
+    if (!p) { L._last = null; return; }
+    if (p.start == null) p.start = Math.floor(now / 1000);
+    // heard since the last tick only if it was the same song then too; a
+    // late tick counts (background tabs run timers late) but a sleep doesn't
+    if (L._last === p) p.heard += Math.min(elapsed, document.hidden ? 65 : 5);
+    L._last = p;
+    if (L._reported !== p.key) {
+      L._reported = p.key;
+      L.nowPlaying(p);
+    }
+    if (!p.scrobbled && p.duration > 30 && p.heard >= Math.min(p.duration / 2, 240)) {
+      p.scrobbled = true;
+      L.scrobble(p);
+    }
+  },
+
+  // ─── API Calls ─────────────────────────────────────────────────────────
+
+  /** A play's artist and cleaned-up title as plain text, plus the session key (null when there's nothing to send). */
+  _trackFields: function (p) {
+    if (!p || !p.artist || !p.title || !firetable.lastfm.sk) return null;
     return {
       sk:     firetable.lastfm.sk,
-      artist: firetable.utilities.decodeEntities(song.artist),
-      track:  firetable.lastfm._cleanForScrobble(firetable.utilities.decodeEntities(song.title))
+      artist: firetable.utilities.decodeEntities(p.artist),
+      track:  firetable.lastfm._cleanForScrobble(firetable.utilities.decodeEntities(p.title))
     };
   },
 
   /**
-   * Submit a scrobble (track.scrobble) for the current song.
-   * Scheduled by room.js once enough of the track has played.
+   * Submit a scrobble (track.scrobble) for a play: called by the listening
+   * clock once enough of it has been heard. The timestamp is when this
+   * person started hearing it.
+   * @param {Object} p - a play from _hearing
    */
-  scrobble: function () {
-    if (!firetable.lastfm._listening()) return;
-    var fields = firetable.lastfm._trackFields();
+  scrobble: function (p) {
+    var fields = firetable.lastfm._trackFields(p);
     if (!fields) return;
-    fields.timestamp = firetable.lastfm.songStart;
-    if (firetable.lastfm.duration) fields.duration = firetable.lastfm.duration;
+    fields.timestamp = p.start;
+    if (p.duration) fields.duration = Math.round(p.duration);
     firetable.lastfm.call('track.scrobble', fields, 'scrobbled');
   },
 
-  /** Send a track.love for the current song. */
+  /** Send a track.love for what you're hearing (or, failing that, the room's song). */
   love: function () {
-    var fields = firetable.lastfm._trackFields();
+    var L = firetable.lastfm;
+    var fields = L._trackFields(L._last || L._livePlay());
     if (!fields) return;
-    firetable.lastfm.call('track.love', fields, 'loved');
+    L.call('track.love', fields, 'loved');
   },
 
   /**
-   * Send a track.updateNowPlaying to Last.fm.
-   * Called immediately when a new song starts.
+   * Send a track.updateNowPlaying: called by the listening clock whenever a
+   * different song starts sounding for this person.
+   * @param {Object} p - a play from _hearing
    */
-  nowPlaying: function () {
-    if (!firetable.lastfm._listening()) return;
-    var fields = firetable.lastfm._trackFields();
+  nowPlaying: function (p) {
+    var fields = firetable.lastfm._trackFields(p);
     if (!fields) return;
-    if (firetable.lastfm.duration) fields.duration = firetable.lastfm.duration;
+    if (p.duration) fields.duration = Math.round(p.duration);
     firetable.lastfm.call('track.updateNowPlaying', fields, 'nowplaying updated');
   },
 

@@ -2052,6 +2052,7 @@ firetable.ui.checkLastfmToken = function () {
   if (thingo == "false") thingo = false;
   if (thingo) firetable.lastfm.sk = thingo;
   firetable.lastfm.renderToggle();
+  firetable.lastfm.start(); // the listening clock: scrobbles what you hear, Live or Discover
 
   // Back from Last.fm's "allow access" page with a one-time ?token=
   var url = new URL(window.location.href);

@@ -2,7 +2,7 @@
  * room.js — Room state event handlers.
  *
  * Handles all ftapi events related to room state:
- * - newSong: Load new track, start countdown/progress, Last.fm scrobble timer
+ * - newSong: Load new track, start countdown/progress (Last.fm follows on its own: lastfm.js)
  * - newProduce / newHistory: Render discover/history items
  * - editedHistory: Update edited tag in history list
  * - modCheck: Show/hide mod-only edit buttons
@@ -1036,32 +1036,11 @@ firetable.ui.setupRoomEvents = function () {
     var timeSince = ftapi.now() - data.started;
     if (timeSince <= 0) timeSince = 0;
     var secSince = Math.floor(timeSince / 1000);
-    var timeLeft = data.duration - secSince;
     firetable.song = data;
     firetable.ui.markCurrentDj();
     firetable.media.songChanged();
     firetable.ui.applyBeat();
     firetable.debug && console.log("NEW TRACK", data);
-
-    // ── Last.fm scrobble timer ──
-    if (firetable.lastfm.timer != null) {
-      clearTimeout(firetable.lastfm.timer);
-      firetable.lastfm.timer = null;
-    }
-    if (firetable.lastfm.sk && data.cid !== 0) {
-      firetable.lastfm.duration = Math.floor(timeLeft);
-      firetable.lastfm.songStart = Math.floor(ftapi.now() / 1000);
-      // Last.fm's rule: scrobble tracks over 30 s once at least half of
-      // them (or 4 minutes) has been heard — not when joining near the end.
-      var willHear = timeLeft - 3;
-      if (data.duration > 30 && willHear >= Math.min(data.duration / 2, 240)) {
-        firetable.lastfm.timer = setTimeout(function () {
-          firetable.lastfm.timer = null;
-          firetable.lastfm.scrobble();
-        }, willHear * 1000);
-      }
-      firetable.lastfm.nowPlaying();
-    }
 
     // ── Platform-specific UI + playback ──
     if (data.type === MEDIA_YOUTUBE) {
