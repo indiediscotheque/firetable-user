@@ -444,10 +444,12 @@ ftapi.init = function(firebaseConfig) {
           ftapi.chatEvent = chatRef.on('child_added', function(childSnapshot) {
             var feedData = childSnapshot.val() || {};
             var chatID = feedData.chatID;
+            // Keys go into element ids: skip any the site wouldn't have made
+            if (!ftapi.utilities.isSafeKey(chatID) || !ftapi.utilities.isSafeKey(childSnapshot.key)) return;
             // Fetch messages in parallel, but show them strictly in feed order
             var lookup = ftapi.lookup.chatData(chatID);
             chatChain = chatChain.then(function() { return lookup; }).then(function(chatData) {
-              if (!chatData) return; // pruned, or from someone you blocked
+              if (!chatData || typeof chatData !== "object") return; // pruned, or from someone you blocked
               chatData.chatID = chatID;
               chatData.feedID = childSnapshot.key;
               if (feedData.hidden) chatData.hidden = feedData.hidden;
@@ -462,6 +464,7 @@ ftapi.init = function(firebaseConfig) {
           });
           ftapi.chatChangedEvent = chatRef.on('child_changed', function(childSnapshot, prevChildKey) {
             var feedData = childSnapshot.val();
+            if (!feedData || !ftapi.utilities.isSafeKey(feedData.chatID) || !ftapi.utilities.isSafeKey(childSnapshot.key)) return;
             feedData.feedID = childSnapshot.key;
             if (feedData.hidden) ftapi.events.emit("chatRemoved", feedData);
           });
@@ -1160,6 +1163,10 @@ ftapi.lookup = {
    * @returns {Promise<Object|null>}
    */
   chatData: function(chatID, callback) {
+    if (!ftapi.utilities.isSafeKey(chatID)) {
+      if (callback) callback(null);
+      return Promise.resolve(null);
+    }
     var chatData = ftapi.db().ref("chatData/" + chatID);
     return chatData.once('value')
       .then(function(snap) { return snap.val(); }, function() { return null; })
@@ -1332,6 +1339,17 @@ ftapi.lookup = {
 UTILITY FUNCTIONS
 */
 ftapi.utilities = {
+  /**
+   * Is this a database key as the site makes them (push keys: letters,
+   * digits, "-" and "_")? Chat keys end up in element ids, so a key someone
+   * wrote by hand with other characters (quotes, "<", ",", "*") is never
+   * shown: it could inject markup or match the wrong elements.
+   * @param {*} key
+   * @returns {boolean}
+   */
+  isSafeKey: function(key) {
+    return typeof key === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(key);
+  },
   /**
    * The child keys under a path, without their data, via the database's
    * REST "shallow" read. Rejects if it can't be done (signed out, no fetch,

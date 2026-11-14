@@ -441,6 +441,39 @@ try {
   check(legacy.shown === "A new trading card has been printed." && legacy.first === "open" && legacy.sent === "!grab" && legacy.card === "cardL" && legacy.after === "mine",
     "it hides \"Type !grab\", sends a plain !grab and learns the card from \"… grabbed the card!\" (" + JSON.stringify(legacy) + ")");
 
+  console.log("-- chat keys: a hand-made key never reaches the page's markup or selectors");
+  const keys = await page.evaluate(async () => {
+    const emit = (chatID, extra) => ftapi.events.emit("newChat", Object.assign({ chatID, feedID: "-Fsmk", id: "keysmk", name: "keysmk", txt: "key test " + chatID, time: Date.now() }, extra));
+    const before = { body: document.body.children.length, chats: document.querySelectorAll("#chats .chatText").length };
+    const bad = ['x,*', 'x" data-pwned="1', 'x"><b id="pwned">', "x y", "a/txt", ""];
+    bad.forEach((k) => emit(k));
+    ftapi.events.emit("chatRemoved", { chatID: "x,*", feedID: "-Fsmk", hidden: true });
+    const lookups = await Promise.all(bad.map((k) => ftapi.lookup.chatData(k)));
+    // a normal pair from one person still groups into one block, with its card and reactions
+    emit("-Nsmk1aaaaaaaaaaaaaa");
+    const showCard = firetable.actions.showCard;
+    firetable.actions.showCard = () => {}; // the canvas is what's checked here, not the drawing
+    emit("-Nsmk2aaaaaaaaaaaaaa", { card: "cardA" });
+    firetable.actions.showCard = showCard;
+    const line2 = document.getElementById("chattxt-Nsmk2aaaaaaaaaaaaaa");
+    ftapi.events.emit("chatRemoved", { chatID: "-Nsmk1aaaaaaaaaaaaaa", feedID: "-Fsmk", hidden: true });
+    return {
+      shown: document.querySelectorAll("#chats .chatText").length - before.chats,
+      pwned: !!document.querySelector("[data-pwned], #pwned"),
+      body: document.body.children.length === before.body,
+      stray: document.querySelectorAll("body > .reactAdd, #mainGrid > .reactAdd, #chats > .reactAdd").length,
+      lookups: lookups.every((v) => v === null),
+      grouped: !!line2 && line2.parentElement === document.getElementById("chattxt-Nsmk1aaaaaaaaaaaaaa").parentElement,
+      card: !!document.querySelector("#chattxt-Nsmk2aaaaaaaaaaaaaa > canvas#cardMaker-Nsmk2aaaaaaaaaaaaaa"),
+      reactions: !!document.getElementById("reactions-Nsmk2aaaaaaaaaaaaaa"),
+      removed: document.getElementById("chattxt-Nsmk1aaaaaaaaaaaaaa").textContent === "[message removed]",
+      safe: ["-Nabc_09", "x,*", 'a"b', "a/b", 5].map((k) => ftapi.utilities.isSafeKey(k)).join()
+    };
+  });
+  check(keys.shown === 2 && !keys.pwned && keys.body && !keys.stray && keys.lookups && keys.safe === "true,false,false,false,false",
+    "messages with hand-made keys are dropped, and nothing is injected or matched (" + JSON.stringify(keys) + ")");
+  check(keys.grouped && keys.card && keys.reactions && keys.removed, "normal messages still group, show their card and reactions, and can be removed (" + JSON.stringify(keys) + ")");
+
   console.log("-- reaction picker: disco ball and dancers, fits a phone");
   const fits = async () => page.evaluate(async () => {
     const pop = document.getElementById("reactPickerPopover");
