@@ -16,6 +16,9 @@
  *   draw()         — called every frame by p5
  *   Glitch         — class instantiated in setup()
  *
+ * In the full-screen views (the stage's own full screen and Discover's
+ * full-screen player) the cover is shown plain: no effects, no animation.
+ *
  * Depends on: p5.js (loaded with the first SoundCloud song, js/lazy.js),
  *   firetable.scImg (set by room.js)
  */
@@ -61,7 +64,14 @@ function setup(useThis) {
     var $can = $('#scScreen canvas');
     var canrat = $can.width() / $can.height();
     $can.data('ratio', canrat);
+    syncGlitchLoop(); // a full-screen view draws the plain cover once
   });
+}
+
+/** Whether a full-screen view is showing the screen: the cover is plain there. */
+function isFullScreenView() {
+  return document.body.classList.contains('pv-full-on') ||
+    !!(document.getElementById('stage') && document.getElementById('stage').classList.contains('is-fullscreen'));
 }
 
 /**
@@ -72,7 +82,8 @@ function draw() {
   clear();
   background(0);
   if (isLoaded) {
-    glitch.show();
+    if (isFullScreenView()) glitch.showPlain();
+    else glitch.show();
   }
 }
 
@@ -242,6 +253,15 @@ class Glitch {
     return destImg;
   }
 
+  /** Draw the untouched cover, centred (the full-screen views). */
+  showPlain() {
+    this.replaceData(this.imgOrigin, this.copyData);
+    push();
+    translate((width - this.imgOrigin.width) / 2, (height - this.imgOrigin.height) / 2);
+    image(this.imgOrigin, 0, 0);
+    pop();
+  }
+
   /**
    * Main render — called every frame from draw().
    * Restores original pixels, randomly applies effects, then draws to canvas.
@@ -319,7 +339,8 @@ class Glitch {
 // ─── Only animate while it can be seen ──────────────────────────────────────
 // p5 redraws 60 times a second. The glitch is only visible with a SoundCloud
 // song playing, the video screen down and the tab in front, so pause the draw
-// loop otherwise (the last frame is never on show while paused).
+// loop otherwise (the last frame is never on show while paused). A full-screen
+// view shows the cover plain: drawn once, then the loop rests.
 
 var glitchPauseTimer = null;
 
@@ -328,7 +349,10 @@ function syncGlitchLoop() {
   var isSoundCloud = !!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD);
   var screenDown = document.body.classList.contains('screen');
   clearTimeout(glitchPauseTimer);
-  if (isSoundCloud && screenDown && !document.hidden) {
+  if (isFullScreenView()) {
+    noLoop();
+    if (isSoundCloud && typeof redraw === 'function') redraw();
+  } else if (isSoundCloud && screenDown && !document.hidden) {
     loop();
   } else if (document.hidden || !isSoundCloud) {
     noLoop();
@@ -357,4 +381,6 @@ ftapi.events.on('newSong', function (song) {
   setTimeout(syncGlitchLoop, 0);
 });
 document.addEventListener('visibilitychange', syncGlitchLoop);
+document.addEventListener('fullscreenchange', function () { setTimeout(syncGlitchLoop, 0); });
+document.addEventListener('webkitfullscreenchange', function () { setTimeout(syncGlitchLoop, 0); });
 new MutationObserver(syncGlitchLoop).observe(document.body, { attributes: true, attributeFilter: ['class'] });
