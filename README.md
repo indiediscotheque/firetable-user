@@ -119,6 +119,8 @@ Every push to `master` publishes the site to DreamHost (pages last, so a visitor
 The deploy never overwrites the server's `.htaccess`: it puts this file inside a `# BEGIN firetable` … `# END firetable` block at the top and keeps every other rule (DreamHost's, redirects, anything added by hand). The previous copy is saved as `.htaccess.firetable-previous`. If the site answers with a server error afterwards, the old file is restored and the run fails. Set the repository variable `SITE_URL` if the site's address isn't the last part of `DREAMHOST_PATH`.
 
 ## third-party libraries
+Loaded only when needed: SoundCloud's player (`#sc-widget`) gets its address the first time a SoundCloud track plays (`firetable.media.scLoad` in `js/player.js`), so visits that never play one don't load it. There's no jQuery UI: dragging rows to reorder them is `firetable.utilities.dragSort` (`js/helpers.js`; mouse, touch and pen, plus Alt+arrow keys in the room's playlist), and the stage's volume is a native range input. The idle timer is `idleTracker` in `js/state.js`.
+
 CDN scripts are pinned to exact versions and checked with Subresource Integrity: most in `index.html`, and the stage effects' libraries (PixiJS and GSAP for the fire, p5.js for the SoundCloud album-art glitch) in `js/lazy.js`, which loads them the first time the effect shows instead of with every page. The Content-Security-Policy in `.htaccess` allows each of these exact files, not whole CDNs. When upgrading one, update its URL in the policy and its `integrity` hash:
 `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`
 

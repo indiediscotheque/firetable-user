@@ -58,7 +58,6 @@ function onYouTubeIframeAPIReady() {
  * Called when the YouTube player is ready. Sets up:
  * - Volume from localStorage (or DEFAULT_VOLUME on first visit)
  * - Mute state from localStorage
- * - jQuery UI volume slider
  * - Resumes the current song if one is already playing
  *
  * @param {Object} event - YouTube player ready event
@@ -109,26 +108,35 @@ firetable.ui.initVolume = function () {
   if (typeof localStorage[STORAGE.mute] === "undefined") localStorage[STORAGE.mute] = false;
   var sliderVol = parseInt(localStorage[STORAGE.volume], 10);
   if (isNaN(sliderVol)) sliderVol = DEFAULT_VOLUME;
-  $("#slider").slider({
-    orientation: "vertical",
-    range: "min",
-    min: 0,
-    max: 100,
-    value: sliderVol,
-    step: 5,
-    slide: function (event, ui) {
-      firetable.utilities.setPlayersVolume(ui.value);
-      localStorage[STORAGE.volume] = ui.value;
-      if (localStorage[STORAGE.mute] !== "false") {
-        // Dragging the slider un-mutes
-        localStorage[STORAGE.mute] = false;
-      } else if (ui.value === 0) {
-        firetable.actions.muteToggle(true);
-      }
-      firetable.ui.renderMuteButton();
+  firetable.ui.paintVolumeSlider(sliderVol);
+  var slider = document.getElementById("slider");
+  if (slider) slider.addEventListener("input", function () {
+    var v = Number(slider.value);
+    firetable.ui.paintVolumeSlider(v);
+    firetable.utilities.setPlayersVolume(v);
+    localStorage[STORAGE.volume] = v;
+    if (localStorage[STORAGE.mute] !== "false") {
+      // Moving the slider un-mutes
+      localStorage[STORAGE.mute] = false;
+    } else if (v === 0) {
+      firetable.actions.muteToggle(true);
     }
+    firetable.ui.renderMuteButton();
   });
   firetable.ui.renderMuteButton();
+};
+
+/**
+ * Show a volume (0-100) on the stage's slider (#slider, a native range
+ * input; --pct fills the track up to the thumb).
+ * @param {number} v
+ */
+firetable.ui.paintVolumeSlider = function (v) {
+  var slider = document.getElementById("slider");
+  if (!slider) return;
+  v = Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  if (document.activeElement !== slider || Number(slider.value) !== v) slider.value = v;
+  slider.style.setProperty("--pct", v + "%");
 };
 
 /**
@@ -139,10 +147,10 @@ firetable.ui.initVolume = function () {
  */
 firetable.actions.muteToggle = function (zeroMute) {
   var muted = localStorage[STORAGE.mute];
-  var $slider = $("#slider");
   var sliderValue = function (v) {
-    if (!$slider.hasClass("ui-slider")) return v === undefined ? parseInt(localStorage[STORAGE.volume], 10) || 0 : undefined;
-    return v === undefined ? $slider.slider("value") : $slider.slider("value", v);
+    var slider = document.getElementById("slider");
+    if (v !== undefined) return firetable.ui.paintVolumeSlider(v);
+    return slider ? Number(slider.value) : parseInt(localStorage[STORAGE.volume], 10) || 0;
   };
 
   if (zeroMute) {

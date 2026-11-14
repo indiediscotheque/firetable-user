@@ -48,7 +48,7 @@ Never change `mxew/firetable` or `mxew/firetable-hostbot` (Matt's originals), an
 
 - Plain `<script>` files loaded in a fixed order at the bottom of `index.html` (storage, config, `firetable.js`, then `seasons`, `constants`, `state`, `lazy`, `fire`, `helpers`, `emoji`, `lastfm`, `player`, `cards`, `chat`, `install`, `push`, `search`, `playlist`, `playlists`, `users`, `room`, `ui`, `discover`, `glitch`, `snow`, and `init` last). Order matters: each file uses globals from earlier ones.
 - They share globals: `firetable` (state and UI, `js/state.js`), `ftapi` (database and auth, `js/firetable.js`), `ftconfigs` (`config.js`, server-only). A new script goes in `index.html` in the right place **and** its globals go in `eslint.config.mjs`.
-- jQuery 4 and jQuery UI (only `sortable`, for dragging playlist rows). Native `<dialog>` for modals, the Popover API (`popover="auto"`, `popovertarget`) with CSS anchor positioning (`anchor-name`, `position-anchor`) for menus, and Floating UI as the fallback positioner (`firetable.ui.positionPopover`).
+- jQuery 4 (no jQuery UI: rows are reordered with `firetable.utilities.dragSort` in `js/helpers.js`, mouse, touch and Alt+arrow keys; the stage's volume is a native range input, `#slider`). Native `<dialog>` for modals, the Popover API (`popover="auto"`, `popovertarget`) with CSS anchor positioning (`anchor-name`, `position-anchor`) for menus, and Floating UI as the fallback positioner (`firetable.ui.positionPopover`).
 - The `?v=` on local scripts, styles and fonts is set at deploy time from a hash of each file; nothing to bump by hand (except `config.js?v=`). `tools/subset-icons.py`'s docstring still says to bump versions; the deploy does it.
 
 ### Element ids are an API

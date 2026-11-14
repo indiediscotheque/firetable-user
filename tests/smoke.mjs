@@ -321,6 +321,105 @@ try {
   check(Object.keys(q).join() === "k1,k2,k3,k4", "the list keeps its order");
   await page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
   check(await page.$eval("#swapBar", (b) => b.hidden), "the bar goes once nothing is left to swap");
+
+  console.log("-- drag to reorder the playlist: mouse, Alt+arrow keys, and a finger held on a row");
+  await page.evaluate(() => {
+    $("#mainGrid").removeClass("login");
+    firetable.nav.view = "playlists";
+    firetable.nav.apply();
+    window.__saved = [];
+    window.__reorder = ftapi.actions.reorderList;
+    ftapi.actions.reorderList = (keys) => window.__saved.push(keys.join());
+    return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+  });
+  const rowOrder = (p = page) => p.evaluate(() => [...document.querySelectorAll("#mainqueue .pvbar")].map((r) => r.getAttribute("data-key")).join());
+  const box = (sel, p = page) => p.$eval(sel, (el) => { el.scrollIntoView({ block: "center" }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
+  const drag = {};
+  drag.before = await rowOrder();
+  // a click isn't a drag
+  let b1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords');
+  await page.mouse.click(b1.x, b1.y);
+  drag.click = await page.evaluate(() => window.__saved.length);
+  // the first row, dragged below the third
+  b1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords');
+  const b3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords');
+  await page.mouse.move(b1.x, b1.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(b1.x, b1.y + (b3.y + b3.h * 0.4 - b1.y) * i / 8);
+  drag.during = await page.evaluate(() => document.querySelector('#mainqueue .pvbar[data-key="k1"]').classList.contains("is-dragging"));
+  await page.mouse.up();
+  drag.mouse = await rowOrder();
+  drag.saved = await page.evaluate(() => window.__saved.join(" / "));
+  // Alt+↑ on a row's button moves that row up
+  await page.focus('#mainqueue .pvbar[data-key="k4"] .bumpsongs');
+  await page.keyboard.press("Alt+ArrowUp");
+  drag.keys = await rowOrder();
+  drag.focusKept = await page.evaluate(() => document.activeElement.closest(".pvbar").getAttribute("data-key"));
+  check(drag.before === "k1,k2,k3,k4" && drag.click === 0 && drag.during && drag.mouse === "k2,k3,k1,k4" && /^k2,k3,k1,k4$/.test(drag.saved),
+    "a mouse drags a row below another and the new order is saved; a click doesn't (" + JSON.stringify(drag) + ")");
+  check(drag.keys === "k2,k3,k4,k1" && drag.focusKept === "k4", "Alt+↑ moves the focused row up, keeping focus (" + drag.keys + ")");
+
+  // a phone: hold a row, then move it; a quick swipe scrolls instead
+  const touchPhone = await browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true });
+  const tPage = await touchPhone.newPage();
+  tPage.on("pageerror", (e) => pageErrors.push("phone: " + e.message));
+  await tPage.goto(SITE, { waitUntil: "load", timeout: 60000 });
+  await tPage.waitForFunction(() => window.firetable && firetable.started && window.ftapi && ftapi.started, null, { timeout: 30000 });
+  await tPage.evaluate(() => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    ftapi.uid = "smoke";
+    ftapi.queueRef = ftapi.db().ref("queues/smoke");
+    window.__saved = [];
+    ftapi.actions.reorderList = (keys) => window.__saved.push(keys.join());
+    $("#mainGrid").removeClass("login");
+    firetable.nav.view = "playlists";
+    firetable.nav.mobileSection = "view";
+    firetable.nav.apply();
+    return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+  });
+  await tPage.waitForFunction(() => document.querySelectorAll("#mainqueue .pvbar").length === 4, null, { timeout: 10000 }).catch(() => {});
+  const cdpT = await touchPhone.newCDPSession(tPage);
+  const touch = (type, x, y) => cdpT.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+  const t = {};
+  let s1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords', tPage);
+  let s3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords', tPage);
+  // swipe without holding: no drag
+  await touch("touchStart", s1.x, s1.y);
+  for (let i = 1; i <= 5; i++) { await touch("touchMove", s1.x, s1.y + i * 12); await sleep(16); }
+  await touch("touchEnd");
+  await sleep(300);
+  t.swipe = await rowOrder(tPage);
+  // hold, then move below the third row
+  s1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords', tPage);
+  s3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords', tPage);
+  await touch("touchStart", s1.x, s1.y);
+  await sleep(450);
+  for (let i = 1; i <= 8; i++) { await touch("touchMove", s1.x, s1.y + (s3.y + s3.h * 0.4 - s1.y) * i / 8); await sleep(16); }
+  await touch("touchEnd");
+  await sleep(300);
+  t.hold = await rowOrder(tPage);
+  t.saved = await tPage.evaluate(() => window.__saved.join(" / "));
+  check(t.swipe === "k1,k2,k3,k4" && t.hold === "k2,k3,k1,k4" && t.saved === "k2,k3,k1,k4",
+    "on a phone, holding a row drags it and saves the order; a swipe doesn't (" + JSON.stringify(t) + ")");
+  await touchPhone.close();
+  await page.evaluate(() => { ftapi.actions.reorderList = window.__reorder; $("#mainGrid").addClass("login"); });
+
+  console.log("-- the stage's volume slider (a native range input)");
+  const vol = await page.evaluate(async () => {
+    const s = document.getElementById("slider");
+    const out = { type: s.type, upright: getComputedStyle(s).writingMode.startsWith("vertical") };
+    s.value = 35;
+    s.dispatchEvent(new Event("input", { bubbles: true }));
+    out.saved = localStorage[STORAGE.volume];
+    out.pct = s.style.getPropertyValue("--pct");
+    firetable.actions.muteToggle();
+    out.muted = s.value + "|" + localStorage[STORAGE.mute];
+    firetable.actions.muteToggle();
+    out.back = s.value;
+    return out;
+  });
+  check(vol.type === "range" && vol.upright && vol.saved === "35" && vol.pct === "35%" && vol.muted === "0|35" && vol.back === "35",
+    "moving it sets and saves the volume, and mute / un-mute move it (" + JSON.stringify(vol) + ")");
   await page.evaluate(() => { firetable.$appShell = $("#appShell").detach(); });
 
   console.log("-- playlist counts fill in on load, without opening each list");
@@ -1468,11 +1567,23 @@ try {
     f.value = "bee";
     f.dispatchEvent(new Event("input", { bubbles: true }));
     out.filtered = [...document.querySelectorAll("#pv-plrows > li")].filter((li) => !li.hidden).length;
+    out.sortOff = document.getElementById("pv-plrows").classList.contains("is-sort-off");
     f.value = "";
     f.dispatchEvent(new Event("input", { bubbles: true }));
+    out.sortOn = !document.getElementById("pv-plrows").classList.contains("is-sort-off");
     document.querySelectorAll("#pv-plrows > li")[2].querySelector(".pl-top").click();
     await until(() => titles().startsWith("Three"));
     out.topped = titles();
+    // drag the first row's grip below the last row
+    const rowsNow = () => [...document.querySelectorAll("#pv-plrows > li")];
+    const grip = rowsNow()[0].querySelector(".pl-grip");
+    const g = grip.getBoundingClientRect(), last = rowsNow()[2].getBoundingClientRect();
+    const pe = (type, y, target) => (target || document).dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, isPrimary: true, button: 0, pointerType: "mouse", clientX: g.x + g.width / 2, clientY: y }));
+    pe("pointerdown", g.y + g.height / 2, grip);
+    for (let i = 1; i <= 6; i++) pe("pointermove", g.y + g.height / 2 + (last.bottom - 4 - g.y - g.height / 2) * i / 6);
+    pe("pointerup", last.bottom - 4);
+    await wait(500); // the saved order comes back from the database and the list is drawn again
+    out.dragged = titles();
     document.querySelectorAll("#pv-plrows > li")[0].querySelector(".d-mini-row").click();
     await wait(200);
     out.playingRow = !!document.querySelector("#pv-plrows > li.is-playing") && /Your|Default/.test(document.getElementById("pv-src").textContent);
@@ -1506,6 +1617,7 @@ try {
   });
   check(member.rows === "One,Two,Three" && member.next && member.filtered === 1, "the Playlists tab lists the DJ playlist with Next, and filters it (" + JSON.stringify(member) + ")");
   check(member.topped === "Three,One,Two" && member.playingRow, "Top moves a song up; a row plays in the bar, marked in the list (" + JSON.stringify(member) + ")");
+  check(member.dragged === "One,Two,Three" && member.sortOff && member.sortOn, "a row's grip drags it and the order is saved; no dragging while filtered (" + JSON.stringify({ dragged: member.dragged, sortOff: member.sortOff, sortOn: member.sortOn }) + ")");
   check(member.first && member.done && /First in/.test(member.note || "") && member.undone && member.fire,
     "Play it in the room puts the song first in the DJ playlist, says so, and Undo takes it out; listening in, Fire is in the bar (" + JSON.stringify(member) + ")");
 

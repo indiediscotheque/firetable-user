@@ -764,3 +764,173 @@ firetable.utilities = {
     }
   }
 };
+
+// ─── Drag to reorder ─────────────────────────────────────────────────────────
+
+/**
+ * Drag rows to reorder them, with a mouse, pen or finger. Used by the room's
+ * playlist, Discover's list and All Playlists.
+ *
+ * - With a `handle`, a drag starts as soon as the handle moves (give the
+ *   handle `touch-action: none` so a finger on it doesn't scroll the page).
+ * - Without one, the whole row drags: a mouse after a few pixels, a finger
+ *   after holding still for `holdMs` (moving sooner scrolls, as usual).
+ *   Drags never start on buttons, links or fields (`cancel`).
+ * - The row itself moves as the pointer passes other rows, also into another
+ *   parent (the room's playlist keeps rows in blocks). The row under the
+ *   pointer is found with elementFromPoint, so a list of thousands isn't
+ *   measured on every move.
+ * - `keys: true` also moves the focused row with Alt+↑ / Alt+↓.
+ *
+ * Rows can be redrawn at any time: events are delegated to `list`.
+ *
+ * @param {Element} list - the element holding the rows
+ * @param {Object} o
+ * @param {string} o.items - selector for the rows (any depth inside list)
+ * @param {string} [o.handle] - selector for the drag handle inside a row
+ * @param {string} [o.cancel] - selector drags never start on (no handle)
+ * @param {number} [o.holdMs=300] - touch hold before a handle-less drag
+ * @param {boolean} [o.keys] - Alt+arrow keys move the focused row
+ * @param {Function} [o.disabled] - returns true while dragging is off
+ * @param {Function} [o.onStart] - (row) a drag began
+ * @param {Function} [o.onEnd] - (row) a drag ended, moved or not
+ * @param {Function} [o.onUpdate] - (row) the order changed
+ */
+firetable.utilities.dragSort = function (list, o) {
+  if (!list) return;
+  var CANCEL = "button, a, input, textarea, select, label, [contenteditable], .no-drag";
+  var pending = null, drag = null, lastX = 0, lastY = 0, raf = 0;
+  var rows = function () { return Array.prototype.slice.call(list.querySelectorAll(o.items)); };
+  var sameOrder = function (a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  };
+  var scroller = function () {
+    for (var el = list; el && el !== document.body; el = el.parentElement) {
+      var oy = getComputedStyle(el).overflowY;
+      if ((oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight) return el;
+    }
+    return document.scrollingElement;
+  };
+  var listen = function (on) {
+    var f = on ? "addEventListener" : "removeEventListener";
+    document[f]("pointermove", move, { passive: false });
+    document[f]("pointerup", up);
+    document[f]("pointercancel", up);
+    document[f]("touchmove", holdStill, { passive: false });
+  };
+  // While a drag is on, a finger moves the row, not the page
+  var holdStill = function (e) { if (drag) e.preventDefault(); };
+
+  var down = function (e) {
+    if (pending || drag || e.button !== 0 || !e.isPrimary) return;
+    if (o.disabled && o.disabled()) return;
+    var row = e.target.closest(o.items);
+    if (!row || !list.contains(row)) return;
+    if (o.handle) {
+      if (!e.target.closest(o.handle)) return;
+      e.preventDefault(); // no text selection from the handle
+    } else if (e.target.closest(o.cancel || CANCEL)) {
+      return;
+    }
+    pending = { row: row, id: e.pointerId, x: e.clientX, y: e.clientY, touch: e.pointerType === "touch" && !o.handle, timer: 0 };
+    lastX = e.clientX; lastY = e.clientY;
+    if (pending.touch) pending.timer = setTimeout(begin, o.holdMs || 300);
+    listen(true);
+  };
+  var begin = function () {
+    var p = pending;
+    if (!p) return;
+    clearTimeout(p.timer);
+    pending = null;
+    drag = { row: p.row, id: p.id, before: rows(), scroll: scroller() };
+    p.row.classList.add("is-dragging");
+    list.classList.add("is-sorting");
+    if (p.touch && navigator.vibrate) { try { navigator.vibrate(10); } catch (e) { /* not allowed */ } }
+    if (window.getSelection) window.getSelection().removeAllRanges();
+    if (o.onStart) o.onStart(p.row);
+    raf = requestAnimationFrame(edgeScroll);
+  };
+  var stopPending = function () {
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pending = null;
+    listen(false);
+  };
+  var move = function (e) {
+    if (pending && e.pointerId === pending.id) {
+      var dist = Math.abs(e.clientX - pending.x) + Math.abs(e.clientY - pending.y);
+      if (pending.touch) { if (dist > 8) stopPending(); return; } // moved before the hold: a scroll
+      if (dist < 5) return;
+      begin();
+    }
+    if (!drag || e.pointerId !== drag.id) return;
+    e.preventDefault();
+    lastX = e.clientX; lastY = e.clientY;
+    place();
+  };
+  /** Put the dragged row before or after the row under the pointer. */
+  var place = function () {
+    var box = list.getBoundingClientRect();
+    var x = Math.min(Math.max(lastX, box.left + 2), box.right - 2);
+    var hit = document.elementFromPoint(x, lastY);
+    var over = hit && hit.closest(o.items);
+    if (!over || over === drag.row || !list.contains(over)) return;
+    var r = over.getBoundingClientRect();
+    if (lastY < r.top + r.height / 2) {
+      if (over.previousElementSibling !== drag.row) over.parentNode.insertBefore(drag.row, over);
+    } else if (over.nextElementSibling !== drag.row) {
+      over.parentNode.insertBefore(drag.row, over.nextSibling);
+    }
+  };
+  /** Near the top or bottom of the scrolling box, keep scrolling (and moving the row). */
+  var edgeScroll = function () {
+    if (!drag) return;
+    var s = drag.scroll;
+    if (s) {
+      var top = s === document.scrollingElement ? 0 : s.getBoundingClientRect().top;
+      var bottom = s === document.scrollingElement ? window.innerHeight : s.getBoundingClientRect().bottom;
+      var by = lastY < top + 40 ? -10 : lastY > bottom - 40 ? 10 : 0;
+      if (by) { s.scrollTop += by; place(); }
+    }
+    raf = requestAnimationFrame(edgeScroll);
+  };
+  var up = function (e) {
+    if (pending && e.pointerId === pending.id) return stopPending(); // a click or tap: nothing moved
+    if (!drag || e.pointerId !== drag.id) return;
+    var d = drag;
+    drag = null;
+    cancelAnimationFrame(raf);
+    listen(false);
+    d.row.classList.remove("is-dragging");
+    list.classList.remove("is-sorting");
+    // the release after a mouse drag isn't a click on the row
+    var swallow = function (ev) { ev.stopPropagation(); ev.preventDefault(); };
+    if (e.pointerType !== "touch") {
+      document.addEventListener("click", swallow, true);
+      setTimeout(function () { document.removeEventListener("click", swallow, true); }, 0);
+    }
+    if (o.onEnd) o.onEnd(d.row);
+    if (list.contains(d.row) && !sameOrder(d.before, rows()) && o.onUpdate) o.onUpdate(d.row);
+  };
+
+  list.addEventListener("pointerdown", down);
+  // A finger held on a row would open the browser's menu instead of dragging
+  list.addEventListener("contextmenu", function (e) { if (pending || drag) e.preventDefault(); });
+  if (o.keys) {
+    list.addEventListener("keydown", function (e) {
+      if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown") || (o.disabled && o.disabled())) return;
+      var row = e.target.closest(o.items);
+      if (!row || !list.contains(row)) return;
+      var all = rows().filter(function (r) { return r === row || r.offsetParent !== null; });
+      var to = all[all.indexOf(row) + (e.key === "ArrowUp" ? -1 : 1)];
+      if (!to) return;
+      e.preventDefault();
+      var focused = document.activeElement;
+      to.parentNode.insertBefore(row, e.key === "ArrowUp" ? to : to.nextSibling);
+      if (focused && row.contains(focused)) focused.focus();
+      if (o.onUpdate) o.onUpdate(row);
+    });
+  }
+};

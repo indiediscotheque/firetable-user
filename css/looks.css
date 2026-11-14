@@ -1818,75 +1818,50 @@ button.waitlist-pos {
     margin: 0;
 }
 
+/* Volume: a native range input, upright (loud at the top). --pct (set in
+   player.js) fills the track up to the thumb. */
 #slider {
+    --pct: 80%;
+    writing-mode: vertical-lr;
+    direction: rtl;
     height: 100%;
-    width: 0.1875rem;
+    width: 0.25rem;
+    margin: 0;
+    padding: 0; /* not the text fields' padding */
+    border: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 999px;
+    background: linear-gradient(to top, var(--color-accent) var(--pct), rgba(255, 255, 255, 0.16) var(--pct));
+    cursor: pointer;
+    touch-action: none;
 }
-
-.ui-slider {
-    position: relative;
-    display: flex;
-    justify-content: center;
-}
-
-.ui-slider .ui-slider-handle {
-    position: absolute;
-    z-index: 2;
+#slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
     width: 0.875rem;
     height: 0.875rem;
-    cursor: grab;
-    background-color: #fff;
+    border: 0;
     border-radius: 50%;
+    background-color: #fff;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-    touch-action: none;
+    cursor: grab;
     transition: transform 120ms ease;
 }
-.ui-slider .ui-slider-handle:hover,
-.ui-slider .ui-slider-handle.ui-state-active { transform: scale(1.2); }
-.ui-slider .ui-slider-handle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-
-.ui-slider .ui-slider-range {
-    position: absolute;
-    z-index: 1;
-    font-size: 0.7em;
-    display: block;
-    border: 0;
-    background-position: 0 0;
-}
-
-.ui-slider-horizontal .ui-slider-range-min {
-    left: 0;
-    background-color: var(--color-accent);
-}
-
-/* Vertical volume slider */
-.ui-slider-vertical {
-    width: 0.25rem;
-    height: 6rem;
-    border-radius: 999px;
-    background-color: rgba(255, 255, 255, 0.16);
-}
-
-.ui-slider-vertical .ui-slider-handle {
-    margin-bottom: -0.4375rem;
+#slider::-moz-range-thumb {
     width: 0.875rem;
     height: 0.875rem;
+    border: 0;
     border-radius: 50%;
     background-color: #fff;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    cursor: grab;
+    transition: transform 120ms ease;
 }
-
-.ui-slider-vertical .ui-slider-range {
-    left: 0;
-    width: 100%;
-    bottom: 0;
-}
-
-.ui-slider-vertical .ui-slider-range-min {
-    bottom: 0;
-    border-radius: 999px;
-    background-color: var(--color-accent);
-}
+#slider:hover::-webkit-slider-thumb,
+#slider:active::-webkit-slider-thumb { transform: scale(1.2); }
+#slider:hover::-moz-range-thumb,
+#slider:active::-moz-range-thumb { transform: scale(1.2); }
+#slider:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
 
 /* Tick marks on either side of the track */
 #volplace {
@@ -1931,26 +1906,6 @@ button.waitlist-pos {
     #volplace {
         display: none;
     }
-}
-
-.ui-state-default,
-.ui-widget-content .ui-state-default,
-.ui-widget-header .ui-state-default,
-.ui-button,
-html .ui-button.ui-state-disabled:hover,
-html .ui-button.ui-state-disabled:active {
-    font-weight: normal;
-}
-
-.ui-widget.ui-widget-content {
-    border: none;
-    background-color: rgba(204, 204, 204, 0.43);
-}
-
-.ui-widget-content {
-    border: 1px solid #dddddd;
-    background: #ffffff;
-    color: #333333;
 }
 
 /* ============================================

@@ -423,56 +423,12 @@ firetable.ui.setupPlaylistIndex = function () {
   $("#plIndexBtn").on("click", firetable.actions.openPlaylistIndex);
 
   // ── Drag the handle to reorder (mouse, touch and pen) ──
-  // Pointer events instead of jQuery UI sortable, which ignores drags that
-  // start on a button and doesn't know touch at all.
-  var drag = null;
-  var currentOrder = function () {
-    return $list.children(".plx-row").map(function () { return this.getAttribute("data-id"); }).get().join(",");
-  };
-  var scroller = $list[0]; // the list scrolls; the help text and new-list box stay put
-  var onDragMove = function (e) {
-    if (!drag || e.pointerId !== drag.pointer) return;
-    e.preventDefault();
-    var y = e.clientY, before = null;
-    $list.children(".plx-row").each(function () {
-      if (this === drag.row) return;
-      var r = this.getBoundingClientRect();
-      if (y < r.top + r.height / 2) { before = this; return false; }
-    });
-    if (before) { if (drag.row.nextElementSibling !== before) $list[0].insertBefore(drag.row, before); }
-    else if ($list[0].lastElementChild !== drag.row) $list[0].appendChild(drag.row);
-    // keep scrolling when dragging near the top or bottom of the dialog
-    if (scroller) {
-      var sr = scroller.getBoundingClientRect();
-      if (y < sr.top + 40) scroller.scrollTop -= 10;
-      else if (y > sr.bottom - 40) scroller.scrollTop += 10;
-    }
-  };
-  var onDragEnd = function (e) {
-    if (!drag || e.pointerId !== drag.pointer) return;
-    document.removeEventListener("pointermove", onDragMove);
-    document.removeEventListener("pointerup", onDragEnd);
-    document.removeEventListener("pointercancel", onDragEnd);
-    drag.row.classList.remove("is-dragging");
-    $list.removeClass("is-sorting");
-    var moved = currentOrder() !== drag.from;
-    var $handle = $(drag.row).find(".plx-handle");
-    drag = null;
-    if (moved) firetable.actions.savePlaylistOrder();
-    $handle.trigger("focus");
-  };
-  // Moving the row in the DOM drops pointer capture, so follow the pointer
-  // on the document for the length of the drag.
-  $list.on("pointerdown", ".plx-handle", function (e) {
-    if (e.button !== 0 || drag || $list.hasClass("is-filtered")) return;
-    e.preventDefault();
-    var row = this.closest(".plx-row");
-    drag = { row: row, pointer: e.pointerId, from: currentOrder() };
-    row.classList.add("is-dragging");
-    $list.addClass("is-sorting");
-    document.addEventListener("pointermove", onDragMove, { passive: false });
-    document.addEventListener("pointerup", onDragEnd);
-    document.addEventListener("pointercancel", onDragEnd);
+  firetable.utilities.dragSort($list[0], {
+    items: ".plx-row",
+    handle: ".plx-handle",
+    disabled: function () { return $list.hasClass("is-filtered"); },
+    onUpdate: function () { firetable.actions.savePlaylistOrder(); },
+    onEnd: function (row) { $(row).find(".plx-handle").trigger("focus"); }
   });
 
   $list
