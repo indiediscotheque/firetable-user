@@ -954,13 +954,18 @@ ftapi.actions = {
     });
   },
   logOut: function() {
-    var ref0 = ftapi.db().ref("users/" + ftapi.uid + "/status");
+    if (!ftapi.uid) return;
+    var me = ftapi.db().ref("users/" + ftapi.uid);
     ftapi.markClosed(); // signing out is leaving, like closing the browser
-    ref0.parent.child("offlineAt").set(firebase.database.ServerValue.TIMESTAMP).catch(function() {});
-    ref0.set(false);
+    // Let go of the account before saying you're offline: the people list
+    // answers that write at once, and while it still saw you signed in it
+    // marked you online again (and cleared "closed", so the bot kept a DJ's
+    // seat as if the connection had only dropped)
     ftapi.detachSession();
     ftapi.uid = null;
     ftapi.loggedIn = false;
+    me.child("offlineAt").set(firebase.database.ServerValue.TIMESTAMP).catch(function() {});
+    me.child("status").set(false);
     ftapi.events.emit("loggedOut");
     firebase.app("firetable").auth().signOut();
   },
