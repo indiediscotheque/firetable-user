@@ -25,13 +25,14 @@ if (!existsSync(RULES)) {
 const set = await fetch(DB + "/.settings/rules.json?ns=" + NS, { method: "PUT", headers: { Authorization: "Bearer owner" }, body: readFileSync(RULES) });
 if (!set.ok) { console.error("The emulator refused the rules: " + await set.text()); process.exit(1); }
 
-/** A real account in the auth emulator; resolves its uid. */
+/** A real account in the auth emulator (made, or reused from an earlier run); resolves its uid. */
 async function account(email) {
-  const r = await fetch(AUTH + "/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-key", {
+  const call = (what) => fetch(AUTH + "/identitytoolkit.googleapis.com/v1/accounts:" + what + "?key=fake-key", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password: "rules-pass-1", returnSecureToken: true })
-  });
-  const j = await r.json();
+  }).then((r) => r.json());
+  let j = await call("signUp");
+  if (j.error && j.error.message === "EMAIL_EXISTS") j = await call("signInWithPassword");
   if (!j.localId) throw new Error("auth emulator: " + JSON.stringify(j));
   return j.localId;
 }
