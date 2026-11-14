@@ -25,7 +25,8 @@
  * Playback uses the room's own players, the way 30-second previews do:
  * firetable.preview = "discover" stops the room from re-syncing, and going
  * back to Live (or Listen in) picks the room up where it is now. Discover
- * plays whole songs and isn't scrobbled.
+ * plays whole songs, and they're scrobbled like the room's (lastfm.js asks
+ * hearing() what's sounding).
  *
  * Visitors save songs to a crate kept in this browser. The third save offers
  * to keep it; when they join, it becomes a playlist ("My Discover crate"),
@@ -1786,7 +1787,8 @@ firetable.discover = (function () {
   //         "live":     the room, as it plays (the stage's buttons come along)
   //         "off":      the room stopped by you; nothing sounds
 
-  var P = { track: null, list: null, i: 0, paused: false, len: 0, at: 0, timer: null, inRoom: null };
+  // play: counts each start of a song (a new listen for Last.fm; pausing or Listen in keeps it)
+  var P = { track: null, list: null, i: 0, paused: false, len: 0, at: 0, timer: null, inRoom: null, play: 0 };
   var DECK_SPOTS = 4;
 
   function setSrc(src) { D.src = src; D.listening = src === "live"; }
@@ -1818,6 +1820,8 @@ firetable.discover = (function () {
     cancelPreview();
     if (!auto) failures = 0; // someone chose this one: count failures from here
     setSrc("discover");
+    // the same song picked up where it waited is the same listen
+    if (!(P.track && String(P.track.cid) === String(t.cid) && startAt)) P.play++;
     P.track = t; P.list = listName; P.i = i; P.paused = false; P.len = t.dur || 0; P.at = startAt || 0;
     firetable.preview = "discover";
     firetable.previewType = Number(t.type || 1);
@@ -1926,7 +1930,7 @@ firetable.discover = (function () {
     var list = lists[P.list];
     if (!list) return;
     // back, a few seconds in: the start of this song (as every player does)
-    if (by < 0 && P.at > 3 && discoverActive()) return seek(0);
+    if (by < 0 && P.at > 3 && discoverActive()) { P.play++; return seek(0); } // a new listen
     var i = P.i + by;
     if (i < 0 || i >= list.tracks.length) {
       if (by > 0) { // the end of the list
@@ -3963,6 +3967,16 @@ firetable.discover = (function () {
     },
     /** Picks changed in the card case: read them again on the next DJ page. */
     forgetFeatured: function (uid) { delete featuredData[uid]; },
+    /**
+     * The Discover song this person is hearing, for Last.fm (lastfm.js), or
+     * null when none is (paused, Live, the room stopped). play changes with
+     * each new listen of a song.
+     */
+    hearing: function () {
+      if (!discoverActive() || P.paused || firetable.preview !== "discover") return null;
+      var t = P.track;
+      return { play: P.play, cid: t.cid, type: Number(t.type || 1), artist: t.a || "", title: t.t || "", duration: P.len || t.dur || 0 };
+    },
     /** For tests: act as signed in or out without a real sign-in. */
     testSignedIn: signedIn,
     /** For tests: what's on screen. */
