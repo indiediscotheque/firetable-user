@@ -162,8 +162,12 @@ try {
   await step(fan, "playlists: the DJ list, merge, de-duplicate, swap a flagged track and undo", async () => {
     ftapi.actions.switchDjList(window.__list);
     await new Promise((r) => ftapi.actions.addToList(1, "Artist A - Song A", "aaaaaaaaaaa", "0", r));
+    await new Promise((r) => ftapi.actions.addToList(1, "Artist D - Song D", "ddddddddddd", "0", r));
     await new Promise((r) => ftapi.actions.mergeLists("0", window.__list, r));
     await new Promise((r) => ftapi.actions.removeDuplicatesFromList(window.__list, r));
+    // merged in, and each track there once (both saved as single writes)
+    const merged = Object.values((await ftapi.lookup.listRef(window.__list).once("value")).val() || {}).map((t) => t.type + ":" + t.cid);
+    if (merged.indexOf("1:ddddddddddd") === -1 || new Set(merged).size !== merged.length) throw new Error("after merge + de-duplicate: " + merged.join());
     const ref = ftapi.lookup.listRef("0");
     const key = Object.keys((await ref.once("value")).val())[0];
     // the bot's flag and suggestion (the owner may write their own list)
@@ -193,6 +197,19 @@ try {
     await new Promise((r) => setTimeout(r, 400));
     await new Promise((r) => ftapi.actions.unblockUser("dj1", r));
   });
+  // a save the rules refuse is told, not just logged
+  {
+    const before = fan.denied.length;
+    const told = await fan.page.evaluate(async () => {
+      await ftapi.actions.modUser("dj1"); // only supermods may
+      await new Promise((r) => setTimeout(r, 300));
+      return document.getElementById("ft-toast").textContent;
+    });
+    const refused = fan.denied.slice(before);
+    fan.denied.length = before;
+    check(/users\/dj1\/mod/.test(refused.join()) && /Couldn't save the new mod/.test(told),
+      "a refused save shows a message (" + told + ")");
+  }
   await step(fan, "log out (closed, offline, status)", () => ftapi.actions.logOut());
   check(!fan.errors.length, "no page errors for the member" + (fan.errors.length ? ": " + fan.errors.join("; ") : ""));
 

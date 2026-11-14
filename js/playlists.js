@@ -410,7 +410,7 @@ firetable.actions.deleteLists = function (ids) {
     delete firetable.plPrefs.order[id];
     if (firetable.plPrefs.format) delete firetable.plPrefs.format[id];
   });
-  ftapi.db().ref("playlists/" + ftapi.uid).update(listUpdates);
+  ftapi.db().ref("playlists/" + ftapi.uid).update(listUpdates).catch(ftapi.saveFailed("that change to your playlists"));
   ftapi.db().ref("playlistPrefs/" + ftapi.uid).update(orderUpdates).catch(function () { /* rules not deployed yet */ });
   var viewing = $("#listpicker").val();
   firetable.ui.fillPlaylistPickers(firetable.allPlaylists);

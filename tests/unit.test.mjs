@@ -198,6 +198,24 @@ test("dates and times", async () => {
   assert.deepEqual(r, ["12:05am", "12:30pm", "11:09pm", "Nov 10", "Nov 10, 2011", "1 play", "2 plays", "2 people"]);
 });
 
+test("saveFailed: tells the person once per burst, and swallows the error", async () => {
+  const r = await run(() => {
+    const shown = [];
+    const toast = firetable.ui.toast, log = console.error;
+    firetable.ui.toast = (msg, type) => shown.push(type + ": " + msg);
+    console.error = () => {};
+    ftapi._saveFailedShown = null;
+    const back = ftapi.saveFailed("the new order")(new Error("PERMISSION_DENIED"));
+    for (let i = 0; i < 5; i++) ftapi.saveFailed("the new order")(new Error("again"));
+    ftapi.saveFailed("x", "Couldn't send that message.")(new Error("no"));
+    firetable.ui.toast = toast;
+    console.error = log;
+    return { shown, back: back === undefined };
+  });
+  assert.deepEqual(r.shown, ["error: Couldn't save the new order. Try again in a moment.", "error: Couldn't send that message."]);
+  assert.ok(r.back);
+});
+
 test("no page errors while the site loaded and ran these", () => {
   assert.deepEqual(errors, []);
 });

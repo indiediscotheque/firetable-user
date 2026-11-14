@@ -2024,7 +2024,7 @@ firetable.ui.setupMiscEvents = function () {
     firetable.avatarStyle = val;
     localStorage[STORAGE.avatarStyle] = val;
     ftapi.db().ref("users/" + ftapi.uid + "/avatarStyle").set(val)
-      .catch(function (err) { console.error("[firetable] Avatar style save failed:", err); });
+      .catch(ftapi.saveFailed("your avatar style"));
     $("#loggedInUser .ft-avatar").css("background-image",
       "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname, null, firetable.roomAvatarStyle || val) + ")");
     if (firetable.ui.updateUsernamePreview) firetable.ui.updateUsernamePreview();

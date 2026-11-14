@@ -103,6 +103,27 @@ ftapi.now = function() {
 };
 
 /**
+ * A .catch handler for a save that failed: logs it and tells the person.
+ * Firebase keeps writes made while offline and sends them once the room is
+ * back, so this is for saves the database refused (the rules, a ban), not
+ * for a dropped connection. The same message shows at most once every few
+ * seconds, so a refused import doesn't stack up a toast per track.
+ * @param {string} what - what wasn't saved, e.g. "the new order"
+ * @param {string} [message] - what to say instead of "Couldn't save <what>…"
+ * @returns {Function} (error) => undefined (the error is handled here)
+ */
+ftapi.saveFailed = function(what, message) {
+  return function(err) {
+    console.error("[firetable] couldn't save " + what + ":", err);
+    var msg = message || "Couldn't save " + what + ". Try again in a moment.";
+    var now = Date.now(), last = ftapi._saveFailedShown || {};
+    if (last.msg === msg && now - last.at < 4000) return;
+    ftapi._saveFailedShown = { msg: msg, at: now };
+    if (window.firetable && firetable.ui && firetable.ui.toast) firetable.ui.toast(msg, "error");
+  };
+};
+
+/**
  * Stop everything tied to the signed-in user (presence, ban check, blocks,
  * playlist, supermod ban list), so logging out and back in — even as someone
  * else — never leaves old listeners running or stacks duplicates. The chat
@@ -599,9 +620,7 @@ ftapi.actions = {
           });
         });
       });
-    }).catch(function(err) {
-      console.error("[firetable] sending a chat message failed:", err);
-    });
+    }).catch(ftapi.saveFailed("a chat message", "Couldn't send that message. Try again in a moment."));
   },
   sendBotCommand: function(txt) {
     return ftapi.actions.postChat({
@@ -615,12 +634,12 @@ ftapi.actions = {
   // Save which playlist the DJ bot should draw from, without changing the local queue view.
   switchDjList: function(listID) {
     var uref = ftapi.db().ref("users/" + ftapi.uid + "/selectedList");
-    uref.set(listID);
+    uref.set(listID).catch(ftapi.saveFailed("which playlist you DJ from"));
     ftapi.selectedListThing = listID;
   },
   switchList: function(listID) {
     var uref = ftapi.db().ref("users/" + ftapi.uid + "/selectedList");
-    uref.set(listID);
+    uref.set(listID).catch(ftapi.saveFailed("which playlist you DJ from"));
     ftapi.selectedListThing = listID;
 
     // update queue bind
@@ -646,7 +665,7 @@ ftapi.actions = {
       name: listname,
       list: {}
     };
-    newlist.set(obj);
+    newlist.set(obj).catch(ftapi.saveFailed("the new playlist"));
     return listid;
   },
   addToList: function(type, name, cid, dest, callback, img, url) {
@@ -663,8 +682,9 @@ ftapi.actions = {
     };
     if (img) info.img = img;
     if (url) info.url = url;
-    var newTrack = destref.push(info, function() {
-      if (callback) callback();
+    var newTrack = destref.push(info, function(err) {
+      if (err) ftapi.saveFailed("that track")(err);
+      if (callback) callback(err || undefined);
     });
     return newTrack.key;
   },
@@ -736,7 +756,7 @@ ftapi.actions = {
   },
   unflagTrack: function(trackID) {
     // a swap suggestion only means something on a flagged track
-    ftapi.queueRef.child(trackID).update({ flagged: null, swap: null });
+    ftapi.queueRef.child(trackID).update({ flagged: null, swap: null }).catch(ftapi.saveFailed("that track"));
   },
   /**
    * Swap a flagged track for the YouTube Music audio track the bot found
@@ -799,7 +819,7 @@ ftapi.actions = {
   },
   deleteList: function(listID) {
     var removeThis = ftapi.db().ref("playlists/" + ftapi.uid + "/" + listID);
-    removeThis.remove();
+    removeThis.remove().catch(ftapi.saveFailed("that change to your playlists"));
   },
   mergeLists: function(source, dest, callback) {
     var destref;
@@ -819,25 +839,15 @@ ftapi.actions = {
         });
         return sourceref.once("value")
           .then(function(snapshot3) {
-            var writes = [];
+            // Every copy in one write: the merge is saved whole or not at all
+            var updates = {};
             snapshot3.forEach(function(childSnapshot3) {
               var childData = childSnapshot3.val();
-              if (childData) {
-                if (childData.cid) {
-                  var dupe = false;
-                  if (destObj[childData.cid]) {
-                    if (childData.type == destObj[childData.cid]) dupe = true;
-                  }
-                  if (!dupe) {
-                    // NOT A DUPLICATE! GO GO GO
-                    writes.push(destref.push(childData));
-                  }
-                }
-              }
-
+              if (!childData || !childData.cid) return;
+              if (destObj[childData.cid] && childData.type == destObj[childData.cid]) return; // already there
+              updates[destref.push().key] = childData; // push keys keep the source's order
             });
-            // Report completion only once every copy has been saved
-            return Promise.all(writes);
+            return Object.keys(updates).length ? destref.update(updates) : null;
           });
       }).then(function() {
         callback();
@@ -866,9 +876,10 @@ ftapi.actions = {
         if (seen.hasOwnProperty(id)) dupes.push(child.key);
         else seen[id] = true;
       });
-      return Promise.all(dupes.map(function(key) {
-        return ref.child(key).remove();
-      }));
+      // every copy removed in one write
+      var updates = {};
+      dupes.forEach(function(key) { updates[key] = null; });
+      return dupes.length ? ref.update(updates) : null;
     }).then(function() {
       if (callback) callback();
     }, function(err) {
@@ -899,8 +910,12 @@ ftapi.actions = {
       if (data.mod || data.supermod || data.hostbot) {
         response = "You can not block this person.";
       } else {
-        ftapi.blockRef.child(data.userid).set(true);
-        response = username + " blocked. They will not see your chats, and you will not see their chats.";
+        return ftapi.blockRef.child(data.userid).set(true).then(function() {
+          callback(username + " blocked. They will not see your chats, and you will not see their chats.");
+        }, function(err) {
+          console.error("[firetable] block failed:", err);
+          callback("Couldn't block " + username + ". Try again in a moment.");
+        });
       }
       return callback(response);
     });
@@ -910,8 +925,12 @@ ftapi.actions = {
       if (!data) return callback("There is no " + username);
       var response;
       if (ftapi.blockedUsers[data.userid]) {
-        ftapi.blockRef.child(data.userid).remove();
-        response = username + " has been unblocked. You will now see their chats, and they will see your chats.";
+        return ftapi.blockRef.child(data.userid).remove().then(function() {
+          callback(username + " has been unblocked. You will now see their chats, and they will see your chats.");
+        }, function(err) {
+          console.error("[firetable] unblock failed:", err);
+          callback("Couldn't unblock " + username + ". Try again in a moment.");
+        });
       } else {
         response = username + " wasn't even blocked to begin with...";
       }
@@ -1072,23 +1091,23 @@ ftapi.actions = {
   */
   unbanUser: function(userid) {
     var ref = ftapi.db().ref("banned/" + userid);
-    ref.set(false);
+    return ref.set(false).catch(ftapi.saveFailed("the unban"));
   },
   banUser: function(userid) {
     var ref = ftapi.db().ref("banned/" + userid);
-    ref.set(true);
+    return ref.set(true).catch(ftapi.saveFailed("the ban"));
   },
   modUser: function(userid) {
     var modp = ftapi.db().ref("users/" + userid + "/mod");
-    modp.set(true);
+    return modp.set(true).catch(ftapi.saveFailed("the new mod"));
   },
   unmodUser: function(userid) {
     var modp = ftapi.db().ref("users/" + userid + "/mod");
-    modp.set(false);
+    return modp.set(false).catch(ftapi.saveFailed("that change"));
   },
   deleteChat: function(feedID) {
     var feedEntry = ftapi.db().ref("chatFeed/" + feedID + "/hidden");
-    feedEntry.set(true);
+    return feedEntry.set(true).catch(ftapi.saveFailed("the removal of that message"));
   },
   /**
    * Correct a play's "Artist - Title" (mods). Saves the history entry and the
@@ -1445,7 +1464,7 @@ ftapi.utilities = {
       }
       return out;
     }, function(err, committed) {
-      if (err) console.error("[firetable] playlist update failed:", err);
+      if (err) ftapi.saveFailed("the new order")(err);
       if (onDone) onDone(err, committed ? moves : null);
     });
   },
