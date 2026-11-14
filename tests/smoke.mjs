@@ -4,45 +4,16 @@
 // policy blocks. Run (needs Java 21 for the emulator):
 //   cd tests && npm ci && npm run smoke
 // Never deployed. CI: .github/workflows/smoke.yml
-import http from "http";
-import { readFileSync, existsSync, statSync } from "fs";
-import { join, extname, normalize } from "path";
-import { fileURLToPath } from "url";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { chromium } from "playwright";
+import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep } from "./harness.mjs";
 
-const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const DB = "http://127.0.0.1:9000", NS = "demo-smoke";
-const put = (path, value) => fetch(DB + path + ".json?ns=" + NS, { method: "PUT", headers: { Authorization: "Bearer owner" }, body: JSON.stringify(value) });
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// The policy the server sends, plus the local emulator. upgrade-insecure-requests
-// is dropped: this test runs over plain http on 127.0.0.1.
-const htaccess = readFileSync(join(ROOT, ".htaccess"), "utf8");
-const CSP = htaccess.match(/Header always set Content-Security-Policy "([^"]+)"/)[1]
-  .replace("connect-src ", "connect-src " + DB + " ws://127.0.0.1:9000 ")
-  .replace("script-src ", "script-src " + DB + " ")
-  .replace(/;\s*upgrade-insecure-requests/, "");
-
-// config.js lives only on the server; this one points at the emulator
-const example = readFileSync(join(ROOT, "config.js.example"), "utf8");
-const CONFIG = example
-  .replace(/firebase:\s*\{[\s\S]*?\}/, `firebase: { apiKey: "fake-key", authDomain: "${NS}.firebaseapp.com", databaseURL: "${DB}?ns=${NS}" }`)
-  .replace(/youtubeKey: "[^"]*"/, 'youtubeKey: "no-yt-key"');
-
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".webmanifest": "application/manifest+json", ".mp3": "audio/mpeg", ".jpg": "image/jpeg", ".gif": "image/gif" };
-const server = http.createServer((req, res) => {
-  const path = decodeURIComponent(new URL(req.url, "http://x").pathname);
-  const headers = { "Content-Security-Policy": CSP, "X-Content-Type-Options": "nosniff" };
-  if (path === "/config.js") { res.writeHead(200, { ...headers, "Content-Type": "text/javascript" }); return res.end(CONFIG); }
-  let file = normalize(join(ROOT, path));
-  if (!file.startsWith(ROOT) || /[\\/](tests|node_modules|\.git)([\\/]|$)/.test(file.slice(ROOT.length))) { res.writeHead(404); return res.end(); }
-  if (existsSync(file) && statSync(file).isDirectory()) file = join(file, "index.html");
-  if (!existsSync(file)) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { ...headers, "Content-Type": TYPES[extname(file)] || "application/octet-stream" });
-  res.end(readFileSync(file));
-});
-await new Promise((r) => server.listen(0, "127.0.0.1", r));
-const SITE = "http://127.0.0.1:" + server.address().port + "/";
+const NS = "demo-smoke";
+const put = putAs(NS);
+const CSP = policy();
+const CONFIG = config(NS);
+const { server, SITE } = await serveSite({ csp: CSP, configJs: CONFIG });
 
 // the room as the bot leaves it: a YouTube song playing, two DJs, a theme
 const now = Date.now();
@@ -57,8 +28,7 @@ await put("/", {
 let failures = 0;
 const check = (ok, msg) => { console.log((ok ? "  PASS " : "  FAIL ") + msg); if (!ok) failures++; };
 
-const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: "127.0.0.1,localhost" } : undefined;
-const browser = await chromium.launch(proxy ? { proxy } : {});
+const browser = await chromium.launch(launchOptions());
 const context = await browser.newContext();
 await context.grantPermissions(["notifications"], { origin: SITE.slice(0, -1) });
 const page = await context.newPage();

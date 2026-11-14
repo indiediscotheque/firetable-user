@@ -115,14 +115,17 @@ Do this for every step in [04-step-plan.md](04-step-plan.md):
    npm ci && npm run lint
    ```
    ```bash
-   cd tests && npm ci && npm run smoke
-   ```
-   Add smoke checks for what the step adds (each step lists them). In a Claude cloud session the Firebase emulator's own requests trip the network proxy; start it without the proxy and run the test against it:
-   ```bash
-   cd tests && (env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx firebase emulators:start --only database --project demo-smoke > /tmp/emu.log 2>&1 &)
+   cd tests && npm ci && npm run unit && npm run smoke
    ```
    ```bash
-   cd tests && NO_PROXY="localhost,127.0.0.1,::1" node smoke.mjs
+   cd tests && HOSTBOT_RULES=../../firetable-hostbot/firebase-rules.json npm run rules
+   ```
+   Add smoke checks for what the step adds (each step lists them). A step that writes something new to the database adds it to `tests/rules.mjs` too, so the hostbot's rules are checked for it. In a Claude cloud session the Firebase emulator's own requests trip the network proxy; start the emulators without the proxy and run the tests against them:
+   ```bash
+   cd tests && (env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx firebase emulators:start --only database,auth --project demo-smoke > /tmp/emu.log 2>&1 &)
+   ```
+   ```bash
+   cd tests && NO_PROXY="localhost,127.0.0.1,::1" node smoke.mjs && HOSTBOT_RULES=../../firetable-hostbot/firebase-rules.json node rules.mjs
    ```
    A single "signal is aborted" page error is a known YouTube flake; run it again.
 6. **Screenshot after** at the same sizes and roles, and compare.
