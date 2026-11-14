@@ -49,7 +49,12 @@ try {
   check(await page.$eval("#themePillText", (el) => /smoke tests/.test(el.textContent)).catch(() => false), "the theme shows");
   check(!loaded("w.soundcloud.com/player/?") && await page.$eval("#sc-widget", (f) => !f.getAttribute("src") && !firetable.scwidget),
     "with a YouTube song playing, SoundCloud's player isn't loaded at all");
-  await page.waitForFunction(() => document.documentElement.classList.contains("room-colors"), null, { timeout: 10000 }).catch(() => {});
+  // the stage fades to the song's colour (--color-accent is animated): wait for it to arrive
+  await page.waitForFunction(() => {
+    if (!document.documentElement.classList.contains("room-colors")) return false;
+    const m = getComputedStyle(document.getElementById("stage")).getPropertyValue("--color-accent").match(/\d+/g);
+    return !!m && Math.abs(m[0] - 204) + Math.abs(m[1] - 28) + Math.abs(m[2] - 44) <= 12;
+  }, null, { timeout: 10000 }).catch(() => {});
   const colours = await page.evaluate(() => {
     const out = {
       on: document.documentElement.classList.contains("room-colors"),
