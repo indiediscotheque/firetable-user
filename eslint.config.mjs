@@ -30,7 +30,7 @@ const appGlobals = {
 // p5.js "global mode" functions used by glitch.js
 const p5Globals = Object.fromEntries([
   "createCanvas", "loadImage", "background", "clear", "image", "push", "pop",
-  "translate", "floor", "random", "width", "height", "loop", "noLoop"
+  "translate", "floor", "random", "width", "height", "loop", "noLoop", "redraw"
 ].map((n) => [n, "readonly"]));
 
 export default [
