@@ -47,6 +47,8 @@ try {
   await page.waitForFunction(() => /Smoke Song/.test(document.getElementById("track").textContent), null, { timeout: 30000 });
   check(true, "the playing song shows (from the database)");
   check(await page.$eval("#themePillText", (el) => /smoke tests/.test(el.textContent)).catch(() => false), "the theme shows");
+  check(!loaded("w.soundcloud.com/player/?") && await page.$eval("#sc-widget", (f) => !f.getAttribute("src") && !firetable.scwidget),
+    "with a YouTube song playing, SoundCloud's player isn't loaded at all");
 
   console.log("-- sign in: Create account and Log in as tabs, checks as you type");
   const auth = await page.evaluate(async () => {
@@ -681,6 +683,10 @@ try {
   await page.waitForFunction(() => document.querySelector("#scScreen canvas"), null, { timeout: 30000 }).catch(() => {});
   check(loaded("p5.min.js"), "p5.js loaded with the first SoundCloud song");
   check(!!(await page.$("#scScreen canvas")), "the glitch canvas is drawn");
+  await page.waitForFunction(() => firetable.scwidget, null, { timeout: 10000 }).catch(() => {});
+  const sc = await page.$eval("#sc-widget", (f) => ({ src: f.getAttribute("src") || "", widget: !!firetable.scwidget }));
+  check(sc.widget && /^https:\/\/w\.soundcloud\.com\/player\/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F13158665&/.test(sc.src) && /auto_play=true/.test(sc.src),
+    "the first SoundCloud song makes SoundCloud's player, pointed straight at that track (" + sc.src.slice(0, 120) + ")");
 
   console.log("-- someone sends a 🔥: the fire loads PixiJS and GSAP");
   await page.evaluate(() => window.firetableIgniteFyre(3));

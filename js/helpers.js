@@ -752,7 +752,7 @@ firetable.utilities = {
       if (firetable.ytLoaded) player.stopVideo();
       firetable.scSeek = timeSince;
       if (!firetable.disableMediaPlayback) {
-        firetable.scwidget.load(SC_API_TRACK_URL + data.cid, {
+        firetable.media.scLoad(data.cid, {
           auto_play: true,
           callback: function () {
             firetable.scwidget.setVolume(vol);

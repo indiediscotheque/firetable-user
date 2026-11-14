@@ -1836,7 +1836,7 @@ firetable.discover = (function () {
     } else {
       if (firetable.ytLoaded) player.stopVideo();
       firetable.scSeek = (startAt || 0) * 1000;
-      firetable.scwidget.load(SC_API_TRACK_URL + t.cid, { auto_play: true });
+      firetable.media.scLoad(t.cid, { auto_play: true });
     }
     startTicking();
     mediaSession(t);
@@ -3880,9 +3880,7 @@ firetable.discover = (function () {
         setMode(r.mode, { remember: true });
         if (r.mode === "discover") setView(D.view, D.sub);
       });
-      if (firetable.scwidget && window.SC && SC.Widget) {
-        firetable.scwidget.bind(SC.Widget.Events.FINISH, onEnded);
-      }
+      // (SoundCloud's FINISH reaches onEnded through the widget's own binding, player.js)
       ftapi.events.on("loggedIn", function () { signedIn(true); });
       ftapi.events.on("loggedOut", function () { signedIn(false); });
       ftapi.events.on("newSong", function () {

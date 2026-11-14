@@ -264,7 +264,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
       if (firetable.ytLoaded) player.stopVideo();
       firetable.scSeek = 0;
       if (!firetable.disableMediaPlayback) {
-        firetable.scwidget.load(SC_API_TRACK_URL + cid, { auto_play: true });
+        firetable.media.scLoad(cid, { auto_play: true });
       }
     }
   }
@@ -493,6 +493,49 @@ firetable.media = {
    * actually playing. If the browser blocked autoplay, show "Tap to start
    * audio" (the same pill YouTube uses).
    */
+  /**
+   * Play a SoundCloud track in the hidden widget (#sc-widget). The widget is
+   * made the first time, pointed straight at this track, so visits that never
+   * play SoundCloud don't load SoundCloud's player at all.
+   * @param {number|string} cid - SoundCloud track id
+   * @param {Object} [opts] - widget options (auto_play, single_active, callback)
+   */
+  scLoad: function (cid, opts) {
+    var url = SC_API_TRACK_URL + cid;
+    opts = opts || {};
+    if (firetable.scwidget) return firetable.scwidget.load(url, opts);
+    if (typeof SC === "undefined" || !SC.Widget) return; // SoundCloud's script was blocked
+    var iframe = document.getElementById("sc-widget");
+    var params = new URLSearchParams({ url: url, show_artwork: "false" });
+    Object.keys(opts).forEach(function (k) { if (k !== "callback") params.set(k, String(opts[k])); });
+    iframe.src = "https://w.soundcloud.com/player/?" + params.toString();
+    var w = firetable.scwidget = SC.Widget(iframe);
+    w.bind(SC.Widget.Events.READY, function () {
+      // When a SC track starts playing, apply volume + seek
+      w.bind(SC.Widget.Events.PLAY, function () {
+        w.setVolume(firetable.utilities.getEffectiveVolume());
+        // Previews start where asked; the room's song joins the room where it is now
+        if (firetable.preview) {
+          if (firetable.scSeek) w.seekTo(firetable.scSeek);
+        } else {
+          firetable.media.syncSoundCloud();
+        }
+        // Clear reload spinner once SC audio actually starts playing
+        $('#reloadtrack').removeClass('on working');
+        firetable.media.onSoundCloudPlay();
+      });
+      w.bind(SC.Widget.Events.ERROR, function () {
+        if (firetable.preview === "discover" && firetable.discover) return firetable.discover.onFailed();
+        firetable.media.onSoundCloudError();
+      });
+      w.bind(SC.Widget.Events.FINISH, function () {
+        if (firetable.preview === "discover" && firetable.discover) firetable.discover.onEnded();
+      });
+      firetable.scLoaded = true;
+      if (opts.callback) opts.callback();
+    });
+  },
+
   watchSoundCloud: function (tries) {
     var m = firetable.media;
     tries = tries || 0;
@@ -500,7 +543,11 @@ firetable.media = {
     if (!tries) m.scBlocked = false;
     var song = firetable.song;
     m._scTimer = setTimeout(function () {
-      if (!firetable.scLoaded || firetable.preview || firetable.disableMediaPlayback) return;
+      if (firetable.preview || firetable.disableMediaPlayback) return;
+      if (!firetable.scLoaded) { // the widget is still being made (first SoundCloud song)
+        if (tries < m.SC_RETRIES) m.watchSoundCloud(tries + 1);
+        return;
+      }
       if (!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD) || firetable.song !== song) return;
       firetable.scwidget.isPaused(function (paused) {
         // In a background tab the widget often hasn't started yet (the

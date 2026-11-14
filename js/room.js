@@ -1051,7 +1051,7 @@ firetable.ui.setupRoomEvents = function () {
         if (firetable.scLoaded) firetable.scwidget.pause();
         var thevol = firetable.utilities.getEffectiveVolume();
         player.setVolume(thevol);
-        firetable.scwidget.setVolume(thevol);
+        if (firetable.scwidget) firetable.scwidget.setVolume(thevol);
         if (!firetable.disableMediaPlayback) player.loadVideoById(data.cid, secSince, "large");
       }
 
@@ -1066,11 +1066,11 @@ firetable.ui.setupRoomEvents = function () {
         firetable.debug && console.log('big image error:', e);
       }
 
-      if (firetable.scLoaded && !firetable.preview) {
+      if (!firetable.preview) {
         if (firetable.ytLoaded) player.stopVideo();
         firetable.scSeek = timeSince;
         if (!firetable.disableMediaPlayback) {
-          firetable.scwidget.load(SC_API_TRACK_URL + data.cid, {
+          firetable.media.scLoad(data.cid, {
             auto_play: true,
             single_active: false,
             callback: function () {
