@@ -65,7 +65,10 @@ self.addEventListener("push", function (event) {
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
   var data = event.notification.data || {};
-  var url = new URL(data.url || "./", self.registration.scope).href;
+  // only ever this site's own pages, whatever a push message names
+  var target = new URL(data.url || "./", self.registration.scope);
+  if (target.origin !== self.location.origin) target = new URL("./", self.registration.scope);
+  var url = target.href;
   var openInbox = /#mentions$/.test(url);
   var openView = (url.match(/#(cards)$/) || [])[1]; // a card notice opens the card case
   event.waitUntil(appWindows().then(function (wins) {

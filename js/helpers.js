@@ -375,10 +375,9 @@ firetable.utilities = {
     // iPhone/iPad Safari has no Notification API, and Android Chrome throws on
     // `new Notification()`. Never let either break rendering the chat message.
     if (typeof Notification === "undefined") return;
-    if (Notification.permission !== "granted") {
-      try { Notification.requestPermission(); } catch (e) { /* not from a tap */ }
-      return;
-    }
+    // Permission is asked for when the setting is turned on (a tap); asking
+    // here, outside one, makes browsers quiet the site's prompts for good.
+    if (Notification.permission !== "granted") return;
     // The same tag as the bot's push for this mention, so one replaces the other
     var options = {
       icon: firetable.utilities.avatarURL(chatData.id, namebo),

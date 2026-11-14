@@ -11,8 +11,13 @@
 
 // ─── Config Guard ────────────────────────────────────────────────────────────
 if (typeof ftconfigs === "undefined") {
-  throw "config.js is missing! Copy config.js.example and rename to config.js. Edit this file and add your own app's information.";
+  throw new Error("config.js is missing! Copy config.js.example and rename to config.js. Edit this file and add your own app's information.");
 }
+// Text settings a config.js may leave out (older copies don't have them all)
+["roomName", "roomNameShort", "defaultAlbumArtUrl", "logoImage", "roomInfoUrl",
+  "facebookURL", "redditURL", "lastfmURL", "discordURL", "soundcloudURL"].forEach(function (k) {
+  if (typeof ftconfigs[k] !== "string") ftconfigs[k] = k === "roomName" ? "firetable" : "";
+});
 
 // ─── Application State ──────────────────────────────────────────────────────
 var firetable = {

@@ -1832,6 +1832,27 @@ try {
   rmSync(join(ROOT, "music"), { recursive: true, force: true });
 }
 
+console.log("-- fonts");
+const fontFiles = [...new Set(requested.filter((u) => /\/fonts\/[^?]+\.woff2/.test(u)).map((u) => decodeURIComponent(u.split("/fonts/")[1].split("?")[0])))];
+// characters on the page outside Inter's main part (from its unicode-range in fonts-local.css)
+const outside = await page.evaluate(async () => {
+  const css = await (await fetch("css/fonts-local.css")).text();
+  const block = css.split("@font-face").find((b) => /Inter-VariableFont[^']*\.main\.woff2/.test(b)) || "";
+  const ranges = (block.match(/unicode-range:([^;]+)/) || ["", ""])[1].split(",").map((r) => r.trim().slice(2).split("-").map((h) => parseInt(h, 16)));
+  const inMain = (cp) => ranges.some(([a, b]) => cp >= a && cp <= (b === undefined ? a : b));
+  const seen = new Map();
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n; (n = walk.nextNode());) {
+    for (const ch of n.nodeValue) {
+      const cp = ch.codePointAt(0);
+      if (cp > 0x7f && !inMain(cp) && !(cp >= 0xe000 && cp <= 0xf8ff) && !/\p{Extended_Pictographic}|\uFE0F|\u200D/u.test(ch)) seen.set("U+" + cp.toString(16).toUpperCase().padStart(4, "0"), (n.parentElement && (n.parentElement.id || n.parentElement.className || n.parentElement.tagName)) + ": " + n.nodeValue.trim().slice(0, 40));
+    }
+  }
+  return [...seen].map(([k, v]) => k + " in " + v);
+});
+check(fontFiles.some((f) => /^Inter-VariableFont.*\.main\.woff2$/.test(f)) && !fontFiles.some((f) => /\.rest\.woff2$/.test(f)),
+  "the site's own text needs only the main part of each font (" + fontFiles.join(", ") + (outside.length ? "; outside it: " + outside.join(" | ") : "") + ")");
+
 console.log("-- errors");
 check(violations.length === 0, "nothing blocked by the Content-Security-Policy" + (violations.length ? ": " + [...new Set(violations)].join("; ") : ""));
 check(pageErrors.length === 0, "no page errors" + (pageErrors.length ? ": " + pageErrors.join("; ") : ""));

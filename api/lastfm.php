@@ -82,7 +82,10 @@ function lastfm_callback_ok(string $cb): bool
 {
     $scheme = strtolower((string)parse_url($cb, PHP_URL_SCHEME));
     $host = strtolower((string)parse_url($cb, PHP_URL_HOST));
-    if (!in_array($scheme, ['http', 'https'], true) || $host === '') return false;
+    if ($host === '') return false;
+    // https only (the token comes back in the address), except a local test copy
+    $local = in_array($host, ['localhost', '127.0.0.1', '[::1]'], true);
+    if ($scheme !== 'https' && !($local && $scheme === 'http')) return false;
     $port = parse_url($cb, PHP_URL_PORT);
     $origin = $scheme . '://' . $host . ($port ? ':' . $port : '');
     $self = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
