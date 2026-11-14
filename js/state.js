@@ -265,26 +265,38 @@ var $playlistItemTemplate;
 
 // ─── Idle Detection ─────────────────────────────────────────────────────────
 /**
- * Tracks mouse/keyboard activity and fires idle/active events.
- * Sends idle status to the server via ftapi so other users see you as away.
+ * Marks you idle after IDLE_TIMEOUT without mouse, keyboard or touch, or as
+ * soon as the tab is hidden, and active again on the next activity or when
+ * the tab shows. Others see it in the room (ftapi.actions.changeIdleStatus
+ * skips repeats, so reporting the same state twice costs nothing).
  */
-var idlejs = new IdleJs({
-  idle: IDLE_TIMEOUT,
-  events: ['mousemove', 'keydown', 'mousedown', 'touchstart'],
-  onIdle: function () {
-    ftapi.actions.changeIdleStatus(true, 1);
-  },
-  onActive: function () {
-    ftapi.actions.changeIdleStatus(false, 1);
-  },
-  onHide: function () {
-    ftapi.actions.changeIdleStatus(true, 1);
-    firetable.debug && console.log("Tab hidden — marking idle");
-  },
-  onShow: function () {
-    ftapi.actions.changeIdleStatus(false, 1);
-  },
-  keepTracking: true,
-  startAtIdle: false
-});
-idlejs.start();
+var idleTracker = (function () {
+  var timer = null, idle = false, last = 0;
+  var report = function (isIdle) { ftapi.actions.changeIdleStatus(isIdle, 1); };
+  var schedule = function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () { idle = true; report(true); }, IDLE_TIMEOUT);
+  };
+  var activity = function () {
+    if (idle) { idle = false; report(false); }
+    var now = Date.now();
+    if (now - last < 1000) return; // mousemove fires constantly: restart the clock at most once a second
+    last = now;
+    schedule();
+  };
+  ["mousemove", "keydown", "mousedown", "touchstart"].forEach(function (ev) {
+    window.addEventListener(ev, activity, { passive: true, capture: true });
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      report(true);
+    } else {
+      idle = false;
+      report(false);
+      last = 0;
+      schedule();
+    }
+  });
+  schedule();
+  return { isIdle: function () { return idle || document.hidden; } };
+})();
