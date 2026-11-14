@@ -1858,6 +1858,8 @@ body.pv-full-on #djStage > :not(#screenBox) { visibility: hidden; }
 body.pv-full-on #mainGrid #screenBox { transform: translateY(-101%); transition: transform 1.6s ease-in-out; }
 body.pv-full-on.pv-full-video:not(.yt-stalled) #mainGrid #screenBox { transform: translateY(0); }
 body.pv-full-on #screenover { display: none; }
+/* a Discover song on the screen: the room's SoundCloud art (glitch.js) mustn't cover its video */
+body.pb-own #scScreen { visibility: hidden; }
 body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ease; }
 @media (prefers-reduced-motion: reduce) { body.pv-full-on #mainGrid #screenBox { transition: opacity 0.3s ease; } }
 

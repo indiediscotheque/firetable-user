@@ -247,6 +247,10 @@ firetable.discover = (function () {
   var lists = {};  // name -> { label, tracks }
 
   function setList(name, label, tracks) { lists[name] = { label: label, tracks: tracks }; }
+  // What's playing keeps its own copy of the list it came from: opening another
+  // playlist (or genre, DJ, search…) reuses that page's name, and mustn't change
+  // what the bar says it plays, what's up next, or what Next plays.
+  var QUEUE = "queue";
 
   function newTracks() {
     var all = (D.data.new && D.data.new.tracks) || [];
@@ -879,7 +883,7 @@ firetable.discover = (function () {
     var seen = {};
     var songs = [];
     var pool = (((D.data.new && D.data.new.tracks) || []).map(function (t) { return Object.assign({ type: 1 }, t); }));
-    Object.keys(lists).forEach(function (name) { if (name !== "search" && name !== "search-yt") pool = pool.concat(lists[name].tracks || []); });
+    Object.keys(lists).forEach(function (name) { if (name !== "search" && name !== "search-yt" && name !== QUEUE) pool = pool.concat(lists[name].tracks || []); });
     pool.forEach(function (t) {
       var k = (t.type || 1) + "_" + t.cid;
       if (seen[k] || !t.cid || songs.length >= 30) return;
@@ -1786,12 +1790,17 @@ firetable.discover = (function () {
   //         "live":     the room, as it plays (the stage's buttons come along)
   //         "off":      the room stopped by you; nothing sounds
 
-  var P = { track: null, list: null, i: 0, paused: false, len: 0, at: 0, timer: null, inRoom: null };
+  var P = { track: null, list: null, from: null, i: 0, paused: false, len: 0, at: 0, timer: null, inRoom: null };
   var DECK_SPOTS = 4;
 
   function setSrc(src) { D.src = src; D.listening = src === "live"; }
   function discoverActive() { return !!(P.track && D.src === "discover"); }
-  function isPlaying(list, i) { return discoverActive() && P.list === list && P.i === i; }
+  function sameTrack(a, b) { return !!(a && b) && String(a.cid) === String(b.cid) && Number(a.type || 1) === Number(b.type || 1); }
+  /** Is row i of this list the song playing? (the same page, the same place, the same song) */
+  function isPlaying(list, i) {
+    if (!discoverActive() || P.i !== i || (list !== QUEUE && list !== P.from)) return false;
+    return sameTrack(lists[list] && lists[list].tracks[i], P.track);
+  }
   function isSounding(list, i) { return isPlaying(list, i) && !P.paused; }
 
   function clock(sec) {
@@ -1818,7 +1827,8 @@ firetable.discover = (function () {
     cancelPreview();
     if (!auto) failures = 0; // someone chose this one: count failures from here
     setSrc("discover");
-    P.track = t; P.list = listName; P.i = i; P.paused = false; P.len = t.dur || 0; P.at = startAt || 0;
+    if (listName !== QUEUE) { lists[QUEUE] = list; P.from = listName; }
+    P.track = t; P.list = QUEUE; P.i = i; P.paused = false; P.len = t.dur || 0; P.at = startAt || 0;
     firetable.preview = "discover";
     firetable.previewType = Number(t.type || 1);
     if (firetable.disableMediaPlayback) {
@@ -2208,6 +2218,8 @@ firetable.discover = (function () {
     // in Live while you hear a Discover song (or nothing), the stage's screen stays up:
     // the room's players are carrying your song, not the room's video
     document.body.classList.toggle("pb-elsewhere", discoverActive() || D.src === "off");
+    // a Discover song owns the screen's players: the room's SoundCloud art (the glitch) stays off it
+    document.body.classList.toggle("pb-own", discoverActive());
     renderNotLive();
 
     // where it's from
@@ -3966,6 +3978,6 @@ firetable.discover = (function () {
     /** For tests: act as signed in or out without a real sign-in. */
     testSignedIn: signedIn,
     /** For tests: what's on screen. */
-    state: function () { return { mode: D.mode, view: D.view, listening: D.listening, playing: P.track && P.track.cid, list: P.list, i: P.i, full: F.open, fullView: fullView(), fullChat: F.chatOpen, fullTab: F.tab }; }
+    state: function () { return { mode: D.mode, view: D.view, listening: D.listening, playing: P.track && P.track.cid, list: P.from, i: P.i, full: F.open, fullView: fullView(), fullChat: F.chatOpen, fullTab: F.tab }; }
   };
 })();

@@ -1115,6 +1115,12 @@ try {
     localStorage.setItem("ft-crate", "[]");
     location.hash = "#discover/themes/nT2";
     await until(() => document.querySelectorAll("#dBrowse .ft-rows .pvbar").length === 100);
+    // another night opened (not played): the bar still plays, names and steps through Italo Night
+    out.kept = { src: document.getElementById("pv-src").textContent, playing: firetable.discover.state().list + ":" + firetable.discover.state().playing,
+      row: !!document.querySelector("#dBrowse .ft-rows .previewing") };
+    document.querySelector("#dMini .d-next").click();
+    await wait(200);
+    out.kept.next = firetable.discover.state().playing;
     document.querySelector("#dBrowse .d-saveall").click();
     out.savedLong = JSON.parse(localStorage.getItem("ft-crate") || "[]").length;
     localStorage.setItem("ft-crate", "[]");
@@ -1125,6 +1131,9 @@ try {
   check(extras.nights === "Italo Night" && extras.night === "Italo Night|3|#discover/themes/nT1", "theme nights, and a night's songs in order (" + extras.nights + " / " + extras.night + ")");
   check(extras.saved === "One,Two,Three", "Save all puts a whole list in the crate (" + extras.saved + ")");
   check(extras.savedLong === 100, "Save all saves every song on screen, not just the first 50 (" + extras.savedLong + " of 100)");
+  // (the test's players can't play, so a song may move on by itself: only that it stays in Italo Night is checked)
+  check(/^.*Italo Night · .* · \d of 3$/.test(extras.kept.src) && /^night:night0000\d$/.test(extras.kept.playing) && !extras.kept.row && /^night0000[23]$/.test(extras.kept.next),
+    "opening another list doesn't change what the bar plays, names, or plays next (" + JSON.stringify(extras.kept) + ")");
   check(extras.playing === "night:night00001" && extras.source && extras.reload, "Play the night; the player names the source and can reload (" + JSON.stringify(extras) + ")");
 
   console.log("-- Discover: share a chart as a link, an image or an embed");

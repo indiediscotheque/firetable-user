@@ -326,7 +326,8 @@ var glitchPauseTimer = null;
 function syncGlitchLoop() {
   if (typeof loop !== 'function' || typeof noLoop !== 'function') return; // p5 not ready yet
   var isSoundCloud = !!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD);
-  var screenDown = document.body.classList.contains('screen');
+  // the screen down, and the room's song on it (not a Discover song: body.pb-own)
+  var screenDown = document.body.classList.contains('screen') && !document.body.classList.contains('pb-own');
   clearTimeout(glitchPauseTimer);
   if (isSoundCloud && screenDown && !document.hidden) {
     loop();
