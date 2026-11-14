@@ -118,6 +118,9 @@ Every push to `master` publishes the site to DreamHost (pages last, so a visitor
 
 The deploy never overwrites the server's `.htaccess`: it puts this file inside a `# BEGIN firetable` … `# END firetable` block at the top and keeps every other rule (DreamHost's, redirects, anything added by hand). The previous copy is saved as `.htaccess.firetable-previous`. If the site answers with a server error afterwards, the old file is restored and the run fails. Set the repository variable `SITE_URL` if the site's address isn't the last part of `DREAMHOST_PATH`.
 
+## fonts
+Inter, Roboto Mono and Open Sans are self-hosted variable fonts, each split in two by `tools/subset-fonts.py` (`pip install fonttools brotli`): `fonts/<name>.main.woff2` holds Latin plus every character the site's own text uses, `.rest.woff2` the rest, and `css/fonts-local.css` (written by the tool) gives each a `unicode-range`, so browsers fetch the second part only for text that needs it (e.g. Cyrillic in a chat message). The full originals are in `tools/fonts/` (not deployed). After adding text with new characters to the site, run the tool again. The icons are `fonts/material-symbols-outlined.woff2` (`tools/subset-icons.py`).
+
 ## third-party libraries
 Loaded only when needed: SoundCloud's player (`#sc-widget`) gets its address the first time a SoundCloud track plays (`firetable.media.scLoad` in `js/player.js`), so visits that never play one don't load it. There's no jQuery UI: dragging rows to reorder them is `firetable.utilities.dragSort` (`js/helpers.js`; mouse, touch and pen, plus Alt+arrow keys in the room's playlist), and the stage's volume is a native range input. The idle timer is `idleTracker` in `js/state.js`.
 
