@@ -4,45 +4,16 @@
 // policy blocks. Run (needs Java 21 for the emulator):
 //   cd tests && npm ci && npm run smoke
 // Never deployed. CI: .github/workflows/smoke.yml
-import http from "http";
-import { readFileSync, existsSync, statSync } from "fs";
-import { join, extname, normalize } from "path";
-import { fileURLToPath } from "url";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { chromium } from "playwright";
+import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep } from "./harness.mjs";
 
-const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const DB = "http://127.0.0.1:9000", NS = "demo-smoke";
-const put = (path, value) => fetch(DB + path + ".json?ns=" + NS, { method: "PUT", headers: { Authorization: "Bearer owner" }, body: JSON.stringify(value) });
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// The policy the server sends, plus the local emulator. upgrade-insecure-requests
-// is dropped: this test runs over plain http on 127.0.0.1.
-const htaccess = readFileSync(join(ROOT, ".htaccess"), "utf8");
-const CSP = htaccess.match(/Header always set Content-Security-Policy "([^"]+)"/)[1]
-  .replace("connect-src ", "connect-src " + DB + " ws://127.0.0.1:9000 ")
-  .replace("script-src ", "script-src " + DB + " ")
-  .replace(/;\s*upgrade-insecure-requests/, "");
-
-// config.js lives only on the server; this one points at the emulator
-const example = readFileSync(join(ROOT, "config.js.example"), "utf8");
-const CONFIG = example
-  .replace(/firebase:\s*\{[\s\S]*?\}/, `firebase: { apiKey: "fake-key", authDomain: "${NS}.firebaseapp.com", databaseURL: "${DB}?ns=${NS}" }`)
-  .replace(/youtubeKey: "[^"]*"/, 'youtubeKey: "no-yt-key"');
-
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".webmanifest": "application/manifest+json", ".mp3": "audio/mpeg", ".jpg": "image/jpeg", ".gif": "image/gif" };
-const server = http.createServer((req, res) => {
-  const path = decodeURIComponent(new URL(req.url, "http://x").pathname);
-  const headers = { "Content-Security-Policy": CSP, "X-Content-Type-Options": "nosniff" };
-  if (path === "/config.js") { res.writeHead(200, { ...headers, "Content-Type": "text/javascript" }); return res.end(CONFIG); }
-  let file = normalize(join(ROOT, path));
-  if (!file.startsWith(ROOT) || /[\\/](tests|node_modules|\.git)([\\/]|$)/.test(file.slice(ROOT.length))) { res.writeHead(404); return res.end(); }
-  if (existsSync(file) && statSync(file).isDirectory()) file = join(file, "index.html");
-  if (!existsSync(file)) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { ...headers, "Content-Type": TYPES[extname(file)] || "application/octet-stream" });
-  res.end(readFileSync(file));
-});
-await new Promise((r) => server.listen(0, "127.0.0.1", r));
-const SITE = "http://127.0.0.1:" + server.address().port + "/";
+const NS = "demo-smoke";
+const put = putAs(NS);
+const CSP = policy();
+const CONFIG = config(NS);
+const { server, SITE } = await serveSite({ csp: CSP, configJs: CONFIG });
 
 // the room as the bot leaves it: a YouTube song playing, two DJs, a theme
 const now = Date.now();
@@ -57,8 +28,7 @@ await put("/", {
 let failures = 0;
 const check = (ok, msg) => { console.log((ok ? "  PASS " : "  FAIL ") + msg); if (!ok) failures++; };
 
-const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: "127.0.0.1,localhost" } : undefined;
-const browser = await chromium.launch(proxy ? { proxy } : {});
+const browser = await chromium.launch(launchOptions());
 const context = await browser.newContext();
 await context.grantPermissions(["notifications"], { origin: SITE.slice(0, -1) });
 const page = await context.newPage();
@@ -77,6 +47,36 @@ try {
   await page.waitForFunction(() => /Smoke Song/.test(document.getElementById("track").textContent), null, { timeout: 30000 });
   check(true, "the playing song shows (from the database)");
   check(await page.$eval("#themePillText", (el) => /smoke tests/.test(el.textContent)).catch(() => false), "the theme shows");
+  check(!loaded("w.soundcloud.com/player/?") && await page.$eval("#sc-widget", (f) => !f.getAttribute("src") && !firetable.scwidget),
+    "with a YouTube song playing, SoundCloud's player isn't loaded at all");
+  // the stage fades to the song's colour (--color-accent is animated): wait for it to arrive
+  await page.waitForFunction(() => {
+    if (!document.documentElement.classList.contains("room-colors")) return false;
+    const m = getComputedStyle(document.getElementById("stage")).getPropertyValue("--color-accent").match(/\d+/g);
+    return !!m && Math.abs(m[0] - 204) + Math.abs(m[1] - 28) + Math.abs(m[2] - 44) <= 12;
+  }, null, { timeout: 10000 }).catch(() => {});
+  const colours = await page.evaluate(() => {
+    const out = {
+      on: document.documentElement.classList.contains("room-colors"),
+      accent: getComputedStyle(document.getElementById("stage")).getPropertyValue("--color-accent").trim(),
+      outside: getComputedStyle(document.body).getPropertyValue("--color-accent").trim(),
+      injected: document.querySelectorAll("style.customColorStyles, style.playerControlsHider").length
+    };
+    const b = document.createElement("button");
+    b.className = "previewicon";
+    document.body.appendChild(b);
+    firetable.ui.hidePlayerControls();
+    out.mediaOff = getComputedStyle(b).display;
+    firetable.ui.showPlayerControls();
+    out.mediaOn = getComputedStyle(b).display;
+    b.remove();
+    return out;
+  });
+  // --color-accent is an animated (registered) property: compare within a few steps of #cc1c2c
+  const near = (c, [r, g, b]) => { const m = String(c).match(/\d+/g); return !!m && Math.abs(m[0] - r) + Math.abs(m[1] - g) + Math.abs(m[2] - b) <= 12; };
+  check(colours.on && near(colours.accent, [204, 28, 44]) && !near(colours.outside, [204, 28, 44]) && colours.injected === 0,
+    "the song's colour reaches the stage from a stylesheet, not an injected <style> (" + JSON.stringify(colours) + ")");
+  check(colours.mediaOff === "none" && colours.mediaOn !== "none", "media playback off hides the preview buttons (" + colours.mediaOff + " / " + colours.mediaOn + ")");
 
   console.log("-- sign in: Create account and Log in as tabs, checks as you type");
   const auth = await page.evaluate(async () => {
@@ -349,6 +349,105 @@ try {
   check(Object.keys(q).join() === "k1,k2,k3,k4", "the list keeps its order");
   await page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
   check(await page.$eval("#swapBar", (b) => b.hidden), "the bar goes once nothing is left to swap");
+
+  console.log("-- drag to reorder the playlist: mouse, Alt+arrow keys, and a finger held on a row");
+  await page.evaluate(() => {
+    $("#mainGrid").removeClass("login");
+    firetable.nav.view = "playlists";
+    firetable.nav.apply();
+    window.__saved = [];
+    window.__reorder = ftapi.actions.reorderList;
+    ftapi.actions.reorderList = (keys) => window.__saved.push(keys.join());
+    return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+  });
+  const rowOrder = (p = page) => p.evaluate(() => [...document.querySelectorAll("#mainqueue .pvbar")].map((r) => r.getAttribute("data-key")).join());
+  const box = (sel, p = page) => p.$eval(sel, (el) => { el.scrollIntoView({ block: "center" }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
+  const drag = {};
+  drag.before = await rowOrder();
+  // a click isn't a drag
+  let b1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords');
+  await page.mouse.click(b1.x, b1.y);
+  drag.click = await page.evaluate(() => window.__saved.length);
+  // the first row, dragged below the third
+  b1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords');
+  const b3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords');
+  await page.mouse.move(b1.x, b1.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(b1.x, b1.y + (b3.y + b3.h * 0.4 - b1.y) * i / 8);
+  drag.during = await page.evaluate(() => document.querySelector('#mainqueue .pvbar[data-key="k1"]').classList.contains("is-dragging"));
+  await page.mouse.up();
+  drag.mouse = await rowOrder();
+  drag.saved = await page.evaluate(() => window.__saved.join(" / "));
+  // Alt+↑ on a row's button moves that row up
+  await page.focus('#mainqueue .pvbar[data-key="k4"] .bumpsongs');
+  await page.keyboard.press("Alt+ArrowUp");
+  drag.keys = await rowOrder();
+  drag.focusKept = await page.evaluate(() => document.activeElement.closest(".pvbar").getAttribute("data-key"));
+  check(drag.before === "k1,k2,k3,k4" && drag.click === 0 && drag.during && drag.mouse === "k2,k3,k1,k4" && /^k2,k3,k1,k4$/.test(drag.saved),
+    "a mouse drags a row below another and the new order is saved; a click doesn't (" + JSON.stringify(drag) + ")");
+  check(drag.keys === "k2,k3,k4,k1" && drag.focusKept === "k4", "Alt+↑ moves the focused row up, keeping focus (" + drag.keys + ")");
+
+  // a phone: hold a row, then move it; a quick swipe scrolls instead
+  const touchPhone = await browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true });
+  const tPage = await touchPhone.newPage();
+  tPage.on("pageerror", (e) => pageErrors.push("phone: " + e.message));
+  await tPage.goto(SITE, { waitUntil: "load", timeout: 60000 });
+  await tPage.waitForFunction(() => window.firetable && firetable.started && window.ftapi && ftapi.started, null, { timeout: 30000 });
+  await tPage.evaluate(() => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    ftapi.uid = "smoke";
+    ftapi.queueRef = ftapi.db().ref("queues/smoke");
+    window.__saved = [];
+    ftapi.actions.reorderList = (keys) => window.__saved.push(keys.join());
+    $("#mainGrid").removeClass("login");
+    firetable.nav.view = "playlists";
+    firetable.nav.mobileSection = "view";
+    firetable.nav.apply();
+    return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+  });
+  await tPage.waitForFunction(() => document.querySelectorAll("#mainqueue .pvbar").length === 4, null, { timeout: 10000 }).catch(() => {});
+  const cdpT = await touchPhone.newCDPSession(tPage);
+  const touch = (type, x, y) => cdpT.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+  const t = {};
+  let s1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords', tPage);
+  let s3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords', tPage);
+  // swipe without holding: no drag
+  await touch("touchStart", s1.x, s1.y);
+  for (let i = 1; i <= 5; i++) { await touch("touchMove", s1.x, s1.y + i * 12); await sleep(16); }
+  await touch("touchEnd");
+  await sleep(300);
+  t.swipe = await rowOrder(tPage);
+  // hold, then move below the third row
+  s1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords', tPage);
+  s3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords', tPage);
+  await touch("touchStart", s1.x, s1.y);
+  await sleep(450);
+  for (let i = 1; i <= 8; i++) { await touch("touchMove", s1.x, s1.y + (s3.y + s3.h * 0.4 - s1.y) * i / 8); await sleep(16); }
+  await touch("touchEnd");
+  await sleep(300);
+  t.hold = await rowOrder(tPage);
+  t.saved = await tPage.evaluate(() => window.__saved.join(" / "));
+  check(t.swipe === "k1,k2,k3,k4" && t.hold === "k2,k3,k1,k4" && t.saved === "k2,k3,k1,k4",
+    "on a phone, holding a row drags it and saves the order; a swipe doesn't (" + JSON.stringify(t) + ")");
+  await touchPhone.close();
+  await page.evaluate(() => { ftapi.actions.reorderList = window.__reorder; $("#mainGrid").addClass("login"); });
+
+  console.log("-- the stage's volume slider (a native range input)");
+  const vol = await page.evaluate(async () => {
+    const s = document.getElementById("slider");
+    const out = { type: s.type, upright: getComputedStyle(s).writingMode.startsWith("vertical") };
+    s.value = 35;
+    s.dispatchEvent(new Event("input", { bubbles: true }));
+    out.saved = localStorage[STORAGE.volume];
+    out.pct = s.style.getPropertyValue("--pct");
+    firetable.actions.muteToggle();
+    out.muted = s.value + "|" + localStorage[STORAGE.mute];
+    firetable.actions.muteToggle();
+    out.back = s.value;
+    return out;
+  });
+  check(vol.type === "range" && vol.upright && vol.saved === "35" && vol.pct === "35%" && vol.muted === "0|35" && vol.back === "35",
+    "moving it sets and saves the volume, and mute / un-mute move it (" + JSON.stringify(vol) + ")");
   await page.evaluate(() => { firetable.$appShell = $("#appShell").detach(); });
 
   console.log("-- playlist counts fill in on load, without opening each list");
@@ -440,6 +539,39 @@ try {
   legacy.after = await page.$eval('.chat-grab-btn[data-card="cardL"]', (b) => b.dataset.state).catch(() => "missing");
   check(legacy.shown === "A new trading card has been printed." && legacy.first === "open" && legacy.sent === "!grab" && legacy.card === "cardL" && legacy.after === "mine",
     "it hides \"Type !grab\", sends a plain !grab and learns the card from \"… grabbed the card!\" (" + JSON.stringify(legacy) + ")");
+
+  console.log("-- chat keys: a hand-made key never reaches the page's markup or selectors");
+  const keys = await page.evaluate(async () => {
+    const emit = (chatID, extra) => ftapi.events.emit("newChat", Object.assign({ chatID, feedID: "-Fsmk", id: "keysmk", name: "keysmk", txt: "key test " + chatID, time: Date.now() }, extra));
+    const before = { body: document.body.children.length, chats: document.querySelectorAll("#chats .chatText").length };
+    const bad = ['x,*', 'x" data-pwned="1', 'x"><b id="pwned">', "x y", "a/txt", ""];
+    bad.forEach((k) => emit(k));
+    ftapi.events.emit("chatRemoved", { chatID: "x,*", feedID: "-Fsmk", hidden: true });
+    const lookups = await Promise.all(bad.map((k) => ftapi.lookup.chatData(k)));
+    // a normal pair from one person still groups into one block, with its card and reactions
+    emit("-Nsmk1aaaaaaaaaaaaaa");
+    const showCard = firetable.actions.showCard;
+    firetable.actions.showCard = () => {}; // the canvas is what's checked here, not the drawing
+    emit("-Nsmk2aaaaaaaaaaaaaa", { card: "cardA" });
+    firetable.actions.showCard = showCard;
+    const line2 = document.getElementById("chattxt-Nsmk2aaaaaaaaaaaaaa");
+    ftapi.events.emit("chatRemoved", { chatID: "-Nsmk1aaaaaaaaaaaaaa", feedID: "-Fsmk", hidden: true });
+    return {
+      shown: document.querySelectorAll("#chats .chatText").length - before.chats,
+      pwned: !!document.querySelector("[data-pwned], #pwned"),
+      body: document.body.children.length === before.body,
+      stray: document.querySelectorAll("body > .reactAdd, #mainGrid > .reactAdd, #chats > .reactAdd").length,
+      lookups: lookups.every((v) => v === null),
+      grouped: !!line2 && line2.parentElement === document.getElementById("chattxt-Nsmk1aaaaaaaaaaaaaa").parentElement,
+      card: !!document.querySelector("#chattxt-Nsmk2aaaaaaaaaaaaaa > canvas#cardMaker-Nsmk2aaaaaaaaaaaaaa"),
+      reactions: !!document.getElementById("reactions-Nsmk2aaaaaaaaaaaaaa"),
+      removed: document.getElementById("chattxt-Nsmk1aaaaaaaaaaaaaa").textContent === "[message removed]",
+      safe: ["-Nabc_09", "x,*", 'a"b', "a/b", 5].map((k) => ftapi.utilities.isSafeKey(k)).join()
+    };
+  });
+  check(keys.shown === 2 && !keys.pwned && keys.body && !keys.stray && keys.lookups && keys.safe === "true,false,false,false,false",
+    "messages with hand-made keys are dropped, and nothing is injected or matched (" + JSON.stringify(keys) + ")");
+  check(keys.grouped && keys.card && keys.reactions && keys.removed, "normal messages still group, show their card and reactions, and can be removed (" + JSON.stringify(keys) + ")");
 
   console.log("-- reaction picker: disco ball and dancers, fits a phone");
   const fits = async () => page.evaluate(async () => {
@@ -678,6 +810,10 @@ try {
   await page.waitForFunction(() => document.querySelector("#scScreen canvas"), null, { timeout: 30000 }).catch(() => {});
   check(loaded("p5.min.js"), "p5.js loaded with the first SoundCloud song");
   check(!!(await page.$("#scScreen canvas")), "the glitch canvas is drawn");
+  await page.waitForFunction(() => firetable.scwidget, null, { timeout: 10000 }).catch(() => {});
+  const sc = await page.$eval("#sc-widget", (f) => ({ src: f.getAttribute("src") || "", widget: !!firetable.scwidget }));
+  check(sc.widget && /^https:\/\/w\.soundcloud\.com\/player\/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F13158665&/.test(sc.src) && /auto_play=true/.test(sc.src),
+    "the first SoundCloud song makes SoundCloud's player, pointed straight at that track (" + sc.src.slice(0, 120) + ")");
 
   console.log("-- someone sends a 🔥: the fire loads PixiJS and GSAP");
   await page.evaluate(() => window.firetableIgniteFyre(3));
@@ -1459,11 +1595,23 @@ try {
     f.value = "bee";
     f.dispatchEvent(new Event("input", { bubbles: true }));
     out.filtered = [...document.querySelectorAll("#pv-plrows > li")].filter((li) => !li.hidden).length;
+    out.sortOff = document.getElementById("pv-plrows").classList.contains("is-sort-off");
     f.value = "";
     f.dispatchEvent(new Event("input", { bubbles: true }));
+    out.sortOn = !document.getElementById("pv-plrows").classList.contains("is-sort-off");
     document.querySelectorAll("#pv-plrows > li")[2].querySelector(".pl-top").click();
     await until(() => titles().startsWith("Three"));
     out.topped = titles();
+    // drag the first row's grip below the last row
+    const rowsNow = () => [...document.querySelectorAll("#pv-plrows > li")];
+    const grip = rowsNow()[0].querySelector(".pl-grip");
+    const g = grip.getBoundingClientRect(), last = rowsNow()[2].getBoundingClientRect();
+    const pe = (type, y, target) => (target || document).dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, isPrimary: true, button: 0, pointerType: "mouse", clientX: g.x + g.width / 2, clientY: y }));
+    pe("pointerdown", g.y + g.height / 2, grip);
+    for (let i = 1; i <= 6; i++) pe("pointermove", g.y + g.height / 2 + (last.bottom - 4 - g.y - g.height / 2) * i / 6);
+    pe("pointerup", last.bottom - 4);
+    await wait(500); // the saved order comes back from the database and the list is drawn again
+    out.dragged = titles();
     document.querySelectorAll("#pv-plrows > li")[0].querySelector(".d-mini-row").click();
     await wait(200);
     out.playingRow = !!document.querySelector("#pv-plrows > li.is-playing") && /Your|Default/.test(document.getElementById("pv-src").textContent);
@@ -1497,6 +1645,7 @@ try {
   });
   check(member.rows === "One,Two,Three" && member.next && member.filtered === 1, "the Playlists tab lists the DJ playlist with Next, and filters it (" + JSON.stringify(member) + ")");
   check(member.topped === "Three,One,Two" && member.playingRow, "Top moves a song up; a row plays in the bar, marked in the list (" + JSON.stringify(member) + ")");
+  check(member.dragged === "One,Two,Three" && member.sortOff && member.sortOn, "a row's grip drags it and the order is saved; no dragging while filtered (" + JSON.stringify({ dragged: member.dragged, sortOff: member.sortOff, sortOn: member.sortOn }) + ")");
   check(member.first && member.done && /First in/.test(member.note || "") && member.undone && member.fire,
     "Play it in the room puts the song first in the DJ playlist, says so, and Undo takes it out; listening in, Fire is in the bar (" + JSON.stringify(member) + ")");
 

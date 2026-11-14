@@ -1412,9 +1412,8 @@ body.ft-has-discover #djStage .avtr { height: min(110px, max(5rem, min(24cqw, va
 .pl-row.is-playing { background: var(--color-bg-t1); box-shadow: inset 3px 0 0 var(--color-accent); }
 .pl-row.is-playing .d-mini-text b { color: var(--color-accent); }
 .pl-grip { flex: none; color: var(--color-text-dim); font-size: 1.1rem; cursor: grab; touch-action: none; }
-.d-listpanel .ui-sortable-disabled .pl-grip { visibility: hidden; }
-.pl-row.ui-sortable-helper { background: var(--color-bg-t2); box-shadow: var(--shadow-drop); }
-.pl-row.ui-sortable-placeholder { visibility: visible !important; height: 3rem; border: 1px dashed var(--color-border); border-radius: var(--radius-sm); }
+.d-listpanel .is-sort-off .pl-grip { visibility: hidden; }
+.pl-row.is-dragging { background: var(--color-bg-t2); box-shadow: var(--shadow-drop); }
 .pl-acts { display: flex; flex: none; align-items: center; }
 .pl-acts .row-icon { width: 1.75rem; height: 1.75rem; font-size: 1.1rem; }
 .d-mini-text b .d-tag { display: inline-block; padding: 0 0.35rem; font-size: 0.6875rem; line-height: 1.1rem; vertical-align: 1px; overflow: visible; }

@@ -3,7 +3,7 @@
  *
  * Handles:
  * - Adding tracks to queue (queueTrack)
- * - Reordering via drag-and-drop (updateQueue, sortable)
+ * - Reordering by dragging or Alt+arrow keys (updateQueue, firetable.utilities.dragSort)
  * - Shuffle, dedup, bump-to-top, move-to-bottom, delete
  * - Queue filtering (#queueFilter)
  * - Merge lists between playlists
@@ -99,7 +99,7 @@ firetable.actions.queueTrack = function (cid, name, type, tobottom, extra) {
  * Reads the new DOM order and pushes it to the server.
  */
 firetable.actions.updateQueue = function () {
-  var arr = $('#mainqueue .pvbar:not(.ui-sortable-placeholder)').map(function () {
+  var arr = $('#mainqueue .pvbar').map(function () {
     return this.id.slice(5);
   }).get();
   // Rows not on screen yet (long lists render in chunks) keep their order
@@ -821,18 +821,20 @@ firetable.ui.queueBlockHTML = function (rowsHtml, count) {
 
 firetable.ui.setupPlaylistEvents = function () {
 
-  // ── Sortable drag-and-drop queue ──
+  // ── Drag to reorder (mouse, touch: hold a row, keyboard: Alt+↑/↓) ──
   // Rows sit in blocks (.pvchunk), and a row can be dropped into any block.
-  $('#mainqueue').sortable({
+  firetable.utilities.dragSort(document.getElementById('mainqueue'), {
     items: '.pvbar',
-    start: function (event, ui) {
-      ui.item.data('start_pos', ui.item.index());
-      ui.item.parent('.pvchunk').addClass('sort-src');
+    cancel: 'button, a, input, textarea, select, label, [contenteditable], .edittags',
+    keys: true,
+    onStart: function (row) {
+      var block = row.closest('.pvchunk');
+      if (block) block.classList.add('sort-src');
     },
-    stop: function () {
+    onEnd: function () {
       $('#mainqueue > .pvchunk.sort-src').removeClass('sort-src');
     },
-    update: function () {
+    onUpdate: function () {
       firetable.debug && console.log("UPDATE");
       firetable.actions.updateQueue();
     }

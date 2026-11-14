@@ -6,7 +6,7 @@
  *  2. Applies room branding from ftconfigs (title, logo, social links)
  *  3. Sets up the DOMParser for HTML stripping
  *  4. Binds the window resize handler (debounced)
- *  5. Initializes the SoundCloud widget and binds its READY/PLAY events
+ *  5. (The SoundCloud widget is made on first use: firetable.media.scLoad)
  *  6. Removes playlist/tag editor DOM templates for later cloning
  *  7. Boots Firebase via ftapi.init()
  *  8. Binds auth lifecycle events (login, logout, reconnect, ban)
@@ -102,51 +102,8 @@ firetable.init = function () {
 
   firetable.utilities.scrollToBottom();
 
-  // ── SoundCloud Widget ──
-  var widgetIframe = document.getElementById('sc-widget');
-  firetable.scwidget = SC.Widget(widgetIframe);
-
-  firetable.scwidget.bind(SC.Widget.Events.READY, function () {
-    // When a SC track starts playing, apply volume + seek
-    firetable.scwidget.bind(SC.Widget.Events.PLAY, function () {
-      var vol = firetable.utilities.getEffectiveVolume();
-      firetable.scwidget.setVolume(vol);
-      // Previews start where asked; the room's song joins the room where it is now
-      if (firetable.preview) {
-        if (firetable.scSeek) firetable.scwidget.seekTo(firetable.scSeek);
-      } else {
-        firetable.media.syncSoundCloud();
-      }
-      // Clear reload spinner once SC audio actually starts playing
-      $('#reloadtrack').removeClass('on working');
-      firetable.media.onSoundCloudPlay();
-    });
-    firetable.scwidget.bind(SC.Widget.Events.ERROR, function () {
-      if (firetable.preview === "discover" && firetable.discover) return firetable.discover.onFailed();
-      firetable.media.onSoundCloudError();
-    });
-    firetable.scwidget.bind(SC.Widget.Events.FINISH, function () {
-      if (firetable.preview === "discover" && firetable.discover) firetable.discover.onEnded();
-    });
-
-    // If a SC song was already loaded before the widget was ready, start it now
-    if (firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD) {
-      var data = firetable.song;
-      var timeSince = ftapi.now() - data.started;
-      if (timeSince <= 0) timeSince = 0;
-      if (!firetable.preview) {
-        firetable.scSeek = timeSince;
-        if (!firetable.disableMediaPlayback) {
-          firetable.scwidget.load(SC_API_TRACK_URL + data.cid, {
-            auto_play: true,
-            callback: function () { firetable.scwidget.play(); }
-          });
-          firetable.media.watchSoundCloud();
-        }
-      }
-    }
-    firetable.scLoaded = true;
-  });
+  // ── SoundCloud Widget: made the first time something plays from
+  // SoundCloud (firetable.media.scLoad in player.js), not on every visit ──
 
   // ── DOM Templates ──
   $playlistItemTemplate = $('#mainqueue .pvbar').remove();

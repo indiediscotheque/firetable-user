@@ -48,7 +48,7 @@ Never change `mxew/firetable` or `mxew/firetable-hostbot` (Matt's originals), an
 
 - Plain `<script>` files loaded in a fixed order at the bottom of `index.html` (storage, config, `firetable.js`, then `seasons`, `constants`, `state`, `lazy`, `fire`, `helpers`, `emoji`, `lastfm`, `player`, `cards`, `chat`, `install`, `push`, `search`, `playlist`, `playlists`, `users`, `room`, `ui`, `discover`, `glitch`, `snow`, and `init` last). Order matters: each file uses globals from earlier ones.
 - They share globals: `firetable` (state and UI, `js/state.js`), `ftapi` (database and auth, `js/firetable.js`), `ftconfigs` (`config.js`, server-only). A new script goes in `index.html` in the right place **and** its globals go in `eslint.config.mjs`.
-- jQuery 4 and jQuery UI (only `sortable`, for dragging playlist rows). Native `<dialog>` for modals, the Popover API (`popover="auto"`, `popovertarget`) with CSS anchor positioning (`anchor-name`, `position-anchor`) for menus, and Floating UI as the fallback positioner (`firetable.ui.positionPopover`).
+- jQuery 4 (no jQuery UI: rows are reordered with `firetable.utilities.dragSort` in `js/helpers.js`, mouse, touch and Alt+arrow keys; the stage's volume is a native range input, `#slider`). Native `<dialog>` for modals, the Popover API (`popover="auto"`, `popovertarget`) with CSS anchor positioning (`anchor-name`, `position-anchor`) for menus, and Floating UI as the fallback positioner (`firetable.ui.positionPopover`).
 - The `?v=` on local scripts, styles and fonts is set at deploy time from a hash of each file; nothing to bump by hand (except `config.js?v=`). `tools/subset-icons.py`'s docstring still says to bump versions; the deploy does it.
 
 ### Element ids are an API
@@ -115,14 +115,17 @@ Do this for every step in [04-step-plan.md](04-step-plan.md):
    npm ci && npm run lint
    ```
    ```bash
-   cd tests && npm ci && npm run smoke
-   ```
-   Add smoke checks for what the step adds (each step lists them). In a Claude cloud session the Firebase emulator's own requests trip the network proxy; start it without the proxy and run the test against it:
-   ```bash
-   cd tests && (env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx firebase emulators:start --only database --project demo-smoke > /tmp/emu.log 2>&1 &)
+   cd tests && npm ci && npm run unit && npm run smoke
    ```
    ```bash
-   cd tests && NO_PROXY="localhost,127.0.0.1,::1" node smoke.mjs
+   cd tests && HOSTBOT_RULES=../../firetable-hostbot/firebase-rules.json npm run rules
+   ```
+   Add smoke checks for what the step adds (each step lists them). A step that writes something new to the database adds it to `tests/rules.mjs` too, so the hostbot's rules are checked for it. In a Claude cloud session the Firebase emulator's own requests trip the network proxy; start the emulators without the proxy and run the tests against them:
+   ```bash
+   cd tests && (env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx firebase emulators:start --only database,auth --project demo-smoke > /tmp/emu.log 2>&1 &)
+   ```
+   ```bash
+   cd tests && NO_PROXY="localhost,127.0.0.1,::1" node smoke.mjs && HOSTBOT_RULES=../../firetable-hostbot/firebase-rules.json node rules.mjs
    ```
    A single "signal is aborted" page error is a known YouTube flake; run it again.
 6. **Screenshot after** at the same sizes and roles, and compare.

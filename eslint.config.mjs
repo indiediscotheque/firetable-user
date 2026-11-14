@@ -22,7 +22,7 @@ const appGlobals = {
   ytAPI: "readonly", setup: "readonly", ftLazy: "readonly",
   // third-party libraries
   firebase: "readonly", twemoji: "readonly", linkifyStr: "readonly", FloatingUIDOM: "readonly",
-  IdleJs: "readonly", SC: "readonly", YT: "readonly",
+  SC: "readonly", YT: "readonly",
   PIXI: "readonly", TweenMax: "readonly", TimelineMax: "readonly",
   Power0: "readonly", Power1: "readonly", Power2: "readonly", Bounce: "readonly"
 };

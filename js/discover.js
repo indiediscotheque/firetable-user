@@ -1610,17 +1610,16 @@ firetable.discover = (function () {
       applyFilter();
       if (refocus) { input.focus(); var v = input.value; input.setSelectionRange(v.length, v.length); }
     }
-    var $rows = $("#pv-plrows");
-    if (!$rows.length || !$.fn.sortable) return;
-    $rows.sortable({
+    var rowsEl = document.getElementById("pv-plrows");
+    if (!rowsEl || rowsEl._ftDrag) return;
+    rowsEl._ftDrag = true; // the list is redrawn as a new element, so this runs once per drawing
+    rowsEl.classList.toggle("is-sort-off", !!D.plFilter);
+    firetable.utilities.dragSort(rowsEl, {
+      items: ".pl-row",
       handle: ".pl-grip",
-      axis: "y",
-      items: "> li",
-      tolerance: "pointer",
-      delay: matchMedia("(pointer: coarse)").matches ? 250 : 0,
-      disabled: !!D.plFilter,
-      update: function () {
-        var keys = $rows.children("li").map(function () { return this.getAttribute("data-key"); }).get();
+      disabled: function () { return !!D.plFilter; },
+      onUpdate: function () {
+        var keys = $(rowsEl).children("li").map(function () { return this.getAttribute("data-key"); }).get();
         ftapi.actions.reorderList(keys);
         firetable.ui.toast("Order saved", "success");
       }
@@ -1637,8 +1636,8 @@ firetable.discover = (function () {
     });
     var none = document.querySelector("#dSide .pl-nomatch");
     if (none) none.hidden = !(q && !shown);
-    var $rows = $("#pv-plrows");
-    if ($rows.length && $rows.sortable("instance")) $rows.sortable("option", "disabled", !!q);
+    var rowsEl = document.getElementById("pv-plrows");
+    if (rowsEl) rowsEl.classList.toggle("is-sort-off", !!q); // no dragging while filtered: hide the grips
   }
 
   function rowTrack(btn) {
@@ -1836,7 +1835,7 @@ firetable.discover = (function () {
     } else {
       if (firetable.ytLoaded) player.stopVideo();
       firetable.scSeek = (startAt || 0) * 1000;
-      firetable.scwidget.load(SC_API_TRACK_URL + t.cid, { auto_play: true });
+      firetable.media.scLoad(t.cid, { auto_play: true });
     }
     startTicking();
     mediaSession(t);
@@ -1960,8 +1959,7 @@ firetable.discover = (function () {
     localStorage[STORAGE.volume] = v;
     if (localStorage[STORAGE.mute] && localStorage[STORAGE.mute] !== "false") localStorage[STORAGE.mute] = false; // moving it un-mutes
     else if (v === 0) firetable.actions.muteToggle(true);
-    var $slider = $("#slider");
-    if ($slider.hasClass("ui-slider")) $slider.slider("value", v);
+    firetable.ui.paintVolumeSlider(v);
     firetable.ui.renderMuteButton();
     renderVolume();
   }
@@ -3880,9 +3878,7 @@ firetable.discover = (function () {
         setMode(r.mode, { remember: true });
         if (r.mode === "discover") setView(D.view, D.sub);
       });
-      if (firetable.scwidget && window.SC && SC.Widget) {
-        firetable.scwidget.bind(SC.Widget.Events.FINISH, onEnded);
-      }
+      // (SoundCloud's FINISH reaches onEnded through the widget's own binding, player.js)
       ftapi.events.on("loggedIn", function () { signedIn(true); });
       ftapi.events.on("loggedOut", function () { signedIn(false); });
       ftapi.events.on("newSong", function () {

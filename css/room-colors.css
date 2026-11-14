@@ -1,0 +1,23 @@
+/* The playing song's colours, from the bot (colorsChanged in js/room.js).
+   room.js puts them in --room-color and --room-on-color on <html> and adds
+   .room-colors there; until the first song's colours arrive none of this
+   applies. :where() adds nothing to the selectors' specificity, and this is
+   the last stylesheet, so these rules win exactly as the <style> element
+   room.js used to append did. (No <style> elements: the Content-Security-
+   Policy only allows this site's own stylesheets.) */
+:where(html.room-colors) #stage {
+    --color-accent: var(--room-color);
+    --color-on-accent: var(--room-on-color);
+}
+:where(html.room-colors) #stage .accent:not(#fire),
+:where(html.room-colors) #stage .butt:not(.graybutt):not(#fire) {
+    color: var(--room-on-color);
+}
+:where(html.room-colors) #stage .iconbutt.on:not(.deckDepartureBtn):not(#fire) {
+    color: var(--room-color);
+    border-bottom: 1px solid color-mix(in srgb, var(--room-color) 40%, transparent);
+    box-shadow: inset 0 0 1rem color-mix(in srgb, var(--room-color) 20%, transparent);
+}
+:where(html.room-colors) #themebox {
+    background-color: color-mix(in srgb, var(--room-color) 20%, transparent);
+}

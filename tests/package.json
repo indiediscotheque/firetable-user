@@ -1,9 +1,11 @@
 {
   "name": "firetable-user-tests",
   "private": true,
-  "description": "Browser smoke test for the site: loads it in Chromium against a local database emulator, under the real Content-Security-Policy from .htaccess. Never deployed.",
+  "description": "Browser tests for the site, never deployed: unit tests of its own functions, a smoke test against a local database emulator, and its reads and writes against the hostbot's real database rules, all in Chromium under the real Content-Security-Policy from .htaccess.",
   "scripts": {
-    "smoke": "firebase emulators:exec --only database --project demo-smoke \"node smoke.mjs\""
+    "unit": "node --test unit.test.mjs",
+    "smoke": "firebase emulators:exec --only database --project demo-smoke \"node smoke.mjs\"",
+    "rules": "firebase emulators:exec --only database,auth --project demo-rules \"node rules.mjs\""
   },
   "devDependencies": {
     "firebase-tools": "^15.34.2",

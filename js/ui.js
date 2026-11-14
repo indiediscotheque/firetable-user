@@ -141,13 +141,7 @@ firetable.ui.openTagEditor = (function () {
  * Hide player/preview controls (when media playback is disabled).
  */
 firetable.ui.hidePlayerControls = function () {
-  document.body.classList.add("media-off");
-  $(".playerControlsHider").remove();
-  $("head").append(
-    "<style class='playerControlsHider'>" +
-    ".previewicon { display: none !important; } " +
-    "</style>"
-  );
+  document.body.classList.add("media-off"); // hides the preview buttons (looks.css)
 };
 
 /**
@@ -155,7 +149,6 @@ firetable.ui.hidePlayerControls = function () {
  */
 firetable.ui.showPlayerControls = function () {
   document.body.classList.remove("media-off");
-  $(".playerControlsHider").remove();
 };
 
 // ─── Feedback: toast + inline form messages ──────────────────────────────────
@@ -2031,7 +2024,7 @@ firetable.ui.setupMiscEvents = function () {
     firetable.avatarStyle = val;
     localStorage[STORAGE.avatarStyle] = val;
     ftapi.db().ref("users/" + ftapi.uid + "/avatarStyle").set(val)
-      .catch(function (err) { console.error("[firetable] Avatar style save failed:", err); });
+      .catch(ftapi.saveFailed("your avatar style"));
     $("#loggedInUser .ft-avatar").css("background-image",
       "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname, null, firetable.roomAvatarStyle || val) + ")");
     if (firetable.ui.updateUsernamePreview) firetable.ui.updateUsernamePreview();

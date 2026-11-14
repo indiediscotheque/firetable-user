@@ -90,7 +90,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | PE-02 | Radio listeners count | All | `#numStreamListeners` | keep |
 | PE-03 | User card (profile, DJ page link, cards they hold, block, deck controls) | All | `#ft-user-tip`, `ui.js` | keep |
 | PE-04 | Block / unblock | M | user card `utt-block-btn`, `/block`, `/unblock`, `blocks/` | keep |
-| PE-05 | Idle state | All | `idle.min.js`, `users/<uid>/idle` | keep |
+| PE-05 | Idle state | All | `js/state.js` (idleTracker), `users/<uid>/idle` | keep |
 
 ## CH · Chat
 
@@ -124,7 +124,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | CR-02 | Playlist rows: art, Artist - Title, preview | M | `#mainqueue`, `queueBlockHTML`, `$playlistItemTemplate` | 1.15 two-tone "Title · Artist", same template |
 | CR-03 | Row actions: top, bottom, YouTube, add to another playlist, delete | M | row buttons; `bumpSongInQueue`, move-to-bottom, `openStealPicker`, `deleteSongPrompt` (`#deleteSongPopover`) | 1.15 Top, Bottom, Preview, Open, Delete visible; ⋮ for the rest |
 | CR-04 | Track ⋮ menu: Swap for YouTube Music audio…, Send to bottom, Add to playlist, Open, Delete | M | `#trackMenuPopover` (`data-act`: swap, bottom, add, open, delete) | 1.15 plus Edit tags, Swap artist and title, Delete and search |
-| CR-05 | Drag to reorder | M | jQuery UI `sortable` on `#mainqueue`, `updateQueue` | keep |
+| CR-05 | Drag to reorder | M | `firetable.utilities.dragSort` on `#mainqueue` (mouse, touch hold, Alt+arrows), `updateQueue` | keep |
 | CR-06 | 30-second preview | M | `player.js` `pview`, Settings `#previewOverToggle` (plays over the room) | keep |
 | CR-07 | Filter the playlist; Remixes only; Broken only | M | `#filterMachine` > `#queueFilterForm` > `#queueFilter`, `#queueFilterExtras` (`#queueFilterRemixOnly`, `#queueFilterBrokenOnly`), `filterQueue` | 1.16 filter box + one "Show only" menu (tune icon) with Remixes, Broken, Not played here, Duplicates |
 | CR-08 | Find tracks (YouTube / SoundCloud search, links) | M | `#addToQueueBttn` (+) → `#searchMachine` (`#qsearch`, `#searchSelects` `#ytsearchSelect` `#scsearchSelect`), `#searchResults`, `search.js` `ytAPI('search')` (100 quota units) | keep as a + in a circle; 1.17 results list restyle; format-aware source (done); YouTube results ranked for the target list (official artist videos first; audio tracks first for YouTube Music lists) and marked `.search-kind` (done) |
