@@ -5985,6 +5985,11 @@ html#about body {
 
 /* Tracks with no artwork: blank tile while the preview button sits on it;
    the room logo when media playback is off (no preview button to fill it). */
+/* Media playback off (Settings): no preview buttons */
+body.media-off .previewicon {
+    display: none;
+}
+
 body.media-off .q-art.no-art {
     background-image: url("../img/idlogo.png");
     background-size: 70%;

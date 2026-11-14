@@ -49,6 +49,29 @@ try {
   check(await page.$eval("#themePillText", (el) => /smoke tests/.test(el.textContent)).catch(() => false), "the theme shows");
   check(!loaded("w.soundcloud.com/player/?") && await page.$eval("#sc-widget", (f) => !f.getAttribute("src") && !firetable.scwidget),
     "with a YouTube song playing, SoundCloud's player isn't loaded at all");
+  await page.waitForFunction(() => document.documentElement.classList.contains("room-colors"), null, { timeout: 10000 }).catch(() => {});
+  const colours = await page.evaluate(() => {
+    const out = {
+      on: document.documentElement.classList.contains("room-colors"),
+      accent: getComputedStyle(document.getElementById("stage")).getPropertyValue("--color-accent").trim(),
+      outside: getComputedStyle(document.body).getPropertyValue("--color-accent").trim(),
+      injected: document.querySelectorAll("style.customColorStyles, style.playerControlsHider").length
+    };
+    const b = document.createElement("button");
+    b.className = "previewicon";
+    document.body.appendChild(b);
+    firetable.ui.hidePlayerControls();
+    out.mediaOff = getComputedStyle(b).display;
+    firetable.ui.showPlayerControls();
+    out.mediaOn = getComputedStyle(b).display;
+    b.remove();
+    return out;
+  });
+  // --color-accent is an animated (registered) property: compare within a few steps of #cc1c2c
+  const near = (c, [r, g, b]) => { const m = String(c).match(/\d+/g); return !!m && Math.abs(m[0] - r) + Math.abs(m[1] - g) + Math.abs(m[2] - b) <= 12; };
+  check(colours.on && near(colours.accent, [204, 28, 44]) && !near(colours.outside, [204, 28, 44]) && colours.injected === 0,
+    "the song's colour reaches the stage from a stylesheet, not an injected <style> (" + JSON.stringify(colours) + ")");
+  check(colours.mediaOff === "none" && colours.mediaOn !== "none", "media playback off hides the preview buttons (" + colours.mediaOff + " / " + colours.mediaOn + ")");
 
   console.log("-- sign in: Create account and Log in as tabs, checks as you type");
   const auth = await page.evaluate(async () => {

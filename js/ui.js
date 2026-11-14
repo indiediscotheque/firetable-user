@@ -141,13 +141,7 @@ firetable.ui.openTagEditor = (function () {
  * Hide player/preview controls (when media playback is disabled).
  */
 firetable.ui.hidePlayerControls = function () {
-  document.body.classList.add("media-off");
-  $(".playerControlsHider").remove();
-  $("head").append(
-    "<style class='playerControlsHider'>" +
-    ".previewicon { display: none !important; } " +
-    "</style>"
-  );
+  document.body.classList.add("media-off"); // hides the preview buttons (looks.css)
 };
 
 /**
@@ -155,7 +149,6 @@ firetable.ui.hidePlayerControls = function () {
  */
 firetable.ui.showPlayerControls = function () {
   document.body.classList.remove("media-off");
-  $(".playerControlsHider").remove();
 };
 
 // ─── Feedback: toast + inline form messages ──────────────────────────────────

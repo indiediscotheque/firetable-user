@@ -1405,14 +1405,11 @@ firetable.ui.setupRoomEvents = function () {
       firetable.displayedPlaydex = firetable.playdex;
       applyDjActive(firetable.displayedPlaydex);
     }
-    // Update custom color styles
-    $('.customColorStyles').remove();
-    $("head").append(
-      "<style class='customColorStyles'>#stage { --color-accent: " + firetable.color + "; --color-on-accent: " + firetable.countcolor + "; } " +
-      "#stage .accent:not(#fire), #stage .butt:not(.graybutt):not(#fire) { color: " + firetable.countcolor + "; } " +
-      "#stage .iconbutt.on:not(.deckDepartureBtn):not(#fire) { color: " + firetable.color + "; border-bottom: 1px solid " + firetable.color + "66; box-shadow: inset 0 0 1rem " + firetable.color + "33; } " +
-      "#themebox { background-color: " + firetable.color + "33; }</style>"
-    );
+    // The song's colours for the stage (the rules are in css/room-colors.css)
+    var root = document.documentElement;
+    root.style.setProperty("--room-color", firetable.color);
+    root.style.setProperty("--room-on-color", firetable.countcolor);
+    root.classList.add("room-colors");
 
   });
 };
