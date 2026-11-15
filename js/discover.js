@@ -2047,12 +2047,14 @@ firetable.discover = (function () {
 
   var STAGE_BUTTONS = [["fire", "tip-fire", "pv-livekeep"], ["grab", "tip-grab", "pv-livekeep"], ["songlink", "tip-songlink", "pv-liveacts"],
     ["skipTrigger", "tip-skipTrigger", "pv-liveacts"], ["npModBtn", "tip-npModBtn", "pv-liveacts"]];
-  // The stage's own utilities: its screen (synced, on, off), reload and full
-  // screen. With the player along the bottom they live in it too, in Discover
-  // and Live, and the stage is left to the DJs. The screen goes into the
-  // full-screen player while it's open (its Video is the stage's screen down).
+  // The stage's own utilities: its screen (synced, on, off), reload, play on a
+  // speaker or TV, and full screen. With the player along the bottom they live
+  // in it too, in Discover and Live, and the stage is left to the DJs. The
+  // screen and the cast button go into the full-screen player while it's open
+  // (its Video is the stage's screen down; on phones it's the only player with
+  // room for the cast button).
   var STAGE_TOOLS = [["screenControl", "screenControlTip", "pv-tools", "pv-fscreen"], ["reloadtrack", "tip-reloadtrack", "pv-tools", null],
-    ["fullscreenBtn", "tip-fullscreenBtn", "pv-tools", null]];
+    ["st-cast", "tip-st-cast", "pv-tools", "pv-fscreen"], ["fullscreenBtn", "tip-fullscreenBtn", "pv-tools", null]];
   // Where the stage's buttons are: in the bar along the bottom, or in the
   // full-screen player while it's open. The stage keeps none.
   var stageAt = "stage";

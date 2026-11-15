@@ -134,6 +134,10 @@
 					<i class="material-symbols-outlined"> refresh </i>
 				</button>
 				<span id="tip-reloadtrack" role="tooltip" class="ft-tip" style="position-anchor: --tip-reloadtrack">Reload audio</span>
+				<button type="button" class="butt graybutt iconbutt" id="st-cast" aria-label="Play on a speaker or TV" aria-haspopup="dialog" style="anchor-name: --tip-st-cast" aria-describedby="tip-st-cast">
+					<i class="material-symbols-outlined">cast</i>
+				</button>
+				<span id="tip-st-cast" role="tooltip" class="ft-tip" style="position-anchor: --tip-st-cast">Play on a speaker or TV</span>
 				<button role="button" class="butt graybutt iconbutt" id="fullscreenBtn" aria-label="Full screen" tabindex="0" hidden style="anchor-name: --tip-fullscreenBtn" aria-describedby="tip-fullscreenBtn">
 					<i class="material-symbols-outlined">fullscreen</i>
 				</button>
@@ -657,6 +661,57 @@
 					</ol>
 				</details>
 				<p class="installNext">Then, in the app: <b>Settings → Push @mentions to this device</b>.</p>
+			</div>
+		</div>
+	</dialog>
+
+	<!-- How to play the room on a speaker or TV (js/cast.js) -->
+	<dialog id="st-castBox" aria-labelledby="st-castTitle">
+		<div class="modalBox">
+			<div class="modalHeader">
+				<h2 id="st-castTitle">Play on a speaker or TV</h2>
+				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			</div>
+			<div class="modalContent installGuide">
+				<p>The room plays on this device, so send this device's sound to your speaker. You can still Fire, chat and DJ from here as usual.</p>
+				<div id="st-castWays" class="castWays">
+					<details class="installSteps" data-way="chrome">
+						<summary><i class="material-symbols-outlined" aria-hidden="true">cast</i> Google Cast: Chromecast, Nest speakers, Google TV</summary>
+						<ol>
+							<li>Open the room in <b>Chrome</b> or <b>Edge</b> on a computer on the same Wi-Fi as the speaker.</li>
+							<li><b>Chrome:</b> menu <i class="material-symbols-outlined inline" aria-label="the menu icon">more_vert</i> → <b>Cast, save, and share</b> → <b>Cast…</b><br /><b>Edge:</b> menu <i class="material-symbols-outlined inline" aria-label="the menu icon">more_horiz</i> → <b>More tools</b> → <b>Cast media to device</b></li>
+							<li>If it shows <b>Sources</b>, choose <b>Cast tab</b>.</li>
+							<li>Pick your speaker, TV or speaker group. The room now plays there.</li>
+							<li>To stop, click <i class="material-symbols-outlined inline" aria-label="the Cast icon">cast</i> in the toolbar, then <b>Stop casting</b>.</li>
+						</ol>
+					</details>
+					<details class="installSteps" data-way="airplay">
+						<summary><i class="material-symbols-outlined" aria-hidden="true">airplay</i> AirPlay: HomePod, Sonos, Apple TV</summary>
+						<ol>
+							<li><b>iPhone or iPad:</b> open <b>Control Center</b> (swipe down from the top-right corner), tap <i class="material-symbols-outlined inline" aria-label="the AirPlay icon">airplay</i> on the music card, then pick your speaker.</li>
+							<li><b>Mac:</b> click <b>Control Center</b> in the menu bar, then the <i class="material-symbols-outlined inline" aria-label="the AirPlay icon">airplay</i> next to <b>Sound</b>, and pick your speaker.</li>
+							<li>Keep the room open. On iPhone, if the sound stops when the screen locks, keep the room on screen.</li>
+						</ol>
+					</details>
+					<details class="installSteps" data-way="android">
+						<summary><i class="material-symbols-outlined" aria-hidden="true">android</i> Android: Nest speakers, Chromecast, TVs</summary>
+						<ol>
+							<li>Open the <b>Google Home</b> app on the same Wi-Fi as the speaker.</li>
+							<li>Tap the speaker or speaker group, then <b>Cast my audio</b>.</li>
+							<li>Come back to the room. Its sound now plays on the speaker.</li>
+							<li><b>To a TV:</b> swipe down for Quick Settings and tap <b>Screen Cast</b> (<b>Smart View</b> on Samsung).</li>
+						</ol>
+					</details>
+					<details class="installSteps" data-way="bluetooth">
+						<summary><i class="material-symbols-outlined" aria-hidden="true">bluetooth</i> Bluetooth: any speaker, Amazon Echo, soundbars</summary>
+						<ol>
+							<li>Put the speaker in pairing mode. On an Amazon Echo, say <b>“Alexa, pair Bluetooth.”</b></li>
+							<li>Pair it in this device's Bluetooth settings (<b>Windows:</b> Settings → Bluetooth &amp; devices; <b>Mac:</b> System Settings → Bluetooth; <b>phones:</b> Settings → Bluetooth).</li>
+							<li>The room plays through it like any other sound.</li>
+						</ol>
+					</details>
+				</div>
+				<p class="installNext">Set the volume on the speaker, and keep the room's own volume up. Closing the room stops the sound.</p>
 			</div>
 		</div>
 	</dialog>
@@ -1230,6 +1285,7 @@
 	<script type="text/javascript" src="js/cards.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/chat.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/install.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/cast.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/push.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/search.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/playlist.js?v=01.12.08"></script>
