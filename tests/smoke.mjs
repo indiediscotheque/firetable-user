@@ -1447,6 +1447,8 @@ try {
   await put("/newMusic", { f1: { artist: "Alpha & Beta", title: "Fav One", dj: "dj1", djid: "dj1", type: 1, cid: "lib0000001", when: now - 3600000,
     url: "https://www.youtube.com/watch?v=lib0000001", img: "https://i.ytimg.com/vi/lib0000001/mqdefault.jpg", colors: { color: "#333", txt: "#fff" } } });
   await put("/globalTracks/1lib0000001", { artist: "Alpha & Beta", title: "Fav One", type: 1, song: "sL1" });
+  // its tempo, for the BPM tag below (the sheet keeps what it looked up)
+  await put("/bpm/1_lib0000001", { bpm: 118.3, src: "deezer" });
   // the play history keeps only names: faces must come from the member's uid, never name + name
   await put("/globalSongs/sL1", { artist: "Alpha & Beta", title: "Fav One", plays: 30, first_play_date: now - 400 * 86400000, first_play_dj: "Zed",
     last_play_date: now - 86400000, last_play_dj: "Nobody Known", genres: ["Nu-Disco"] });
@@ -1483,6 +1485,57 @@ try {
   check(doors.faces === "uidZZed,none", "a name-only history line shows that member's face (uid + name), or a plain circle when unknown (" + doors.faces + ")");
   check(/^Fav One\|.*30 plays/.test(doors.sheet || "") && /playing in the room now/.test(doors.stageSheet || ""), "a title opens its song sheet, with the room's plays; the stage's says it's playing now");
   check(doors.robot === "#discover/djs/dj1", "a DJ's robot in Live opens their DJ page (" + doors.robot + ")");
+
+  console.log("-- Discover: a song's BPM tag opens the songs played here at that tempo");
+  await put("/bpm/1_lib0000002", { bpm: 117.6, src: "manual" });
+  await put("/bpm/1_lib0000003", { bpm: 120, src: "deezer" });
+  await put("/bpm/1_lib0000004", { bpm: 124, src: "deezer" });
+  await put("/bpm/1_lib0000005", { none: true });
+  await put("/globalTracks/1lib0000002", { artist: "Gamma", title: "Same Tempo", type: 1, song: "sL2", first_play_date: now - 9 * 86400000, first_play_dj: "Zed" });
+  await put("/globalSongs/sL2", { artist: "Gamma", title: "Same Tempo", plays: 4 });
+  await put("/globalTracks/1lib0000003", { artist: "Delta", title: "Close Tempo", type: 1, song: "sL3" });
+  await put("/globalSongs/sL3", { artist: "Delta", title: "Close Tempo", plays: 2 });
+  await put("/globalTracks/1lib0000004", { artist: "Epsilon", title: "Too Fast", type: 1, song: "sL4" });
+  const tempo = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
+    const out = {};
+    location.hash = "#live";
+    await ftapi.watchFeed("fresh");
+    await until(() => document.querySelector("#thediscovers .fresh-track-title"));
+    document.querySelector("#thediscovers .fresh-track-title").click();
+    await until(() => document.querySelector("#dSheetBox[open] #dSheetTags .d-bpmtag"));
+    const tag = document.querySelector("#dSheetTags .d-bpmtag");
+    const genre = document.querySelector("#dSheetTags a.d-tag:not(.d-bpmtag)");
+    out.tag = tag ? tag.textContent + "|" + tag.getAttribute("href") : null;
+    out.sameFont = !!(tag && genre && getComputedStyle(tag).fontFamily === getComputedStyle(genre).fontFamily && getComputedStyle(tag).fontWeight === getComputedStyle(genre).fontWeight);
+    tag.click();
+    await until(() => (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent === "118 BPM" && document.querySelector("#dBrowse .ft-rows .pvbar"));
+    out.closed = !document.getElementById("dSheetBox").open;
+    out.hash = location.hash;
+    out.discover = document.body.classList.contains("ft-discover");
+    const lists = [...document.querySelectorAll("#dBrowse .ft-rows")].map((l) => [...l.querySelectorAll(".hist-track-title")].map((e) => e.textContent).join());
+    out.lists = lists.join("|");
+    out.fact = document.querySelector("#dBrowse .d-pagehead .d-fact").textContent;
+    out.half = [...document.querySelectorAll("#dBrowse .d-pagehead .d-fact a")].map((a) => a.getAttribute("href")).join();
+    document.querySelector("#dBrowse .d-playall").click();
+    await wait(200);
+    out.playing = firetable.discover.state().list;
+    document.querySelector('#dBrowse .d-headrow a[href="#discover/bpm/119"]').click();
+    await until(() => (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent === "119 BPM");
+    out.next = location.hash + "|" + [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join() + "|" + !!document.querySelector("#dBrowse .d-empty");
+    location.hash = "#discover/bpm/12";
+    await wait(300);
+    out.bad = location.hash + "|" + (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent;
+    return out;
+  });
+  check(tempo.tag === "118 BPM|#discover/bpm/118" && tempo.sameFont, "the BPM tag links to its tempo, in the tags' own font (" + JSON.stringify(tempo) + ")");
+  check(tempo.closed && tempo.hash === "#discover/bpm/118" && tempo.discover, "the tag opens the tempo's page in Discover and closes the sheet (" + tempo.hash + ")");
+  check(tempo.lists === "Fav One,Same Tempo|Close Tempo", "the tempo's songs, most played first, then the ones close by; untitled and too-far ones left out (" + tempo.lists + ")");
+  check(tempo.fact === "2 songs played here · 34 plays" && tempo.half === "#discover/bpm/59,#discover/bpm/236", "the tempo's facts, with half and double time (" + tempo.fact + " / " + tempo.half + ")");
+  check(tempo.playing === "bpm", "Play all plays the tempo's songs (" + tempo.playing + ")");
+  check(/^#discover\/bpm\/119\|Fav One,Close Tempo,Same Tempo\|true$/.test(tempo.next), "Faster steps to the next tempo: nothing at it, the songs close by closest first (" + tempo.next + ")");
+  check(tempo.bad === "#discover/bpm/12|119 BPM", "a tempo out of range isn't a page (" + tempo.bad + ")");
 
   console.log("-- Discover: joining opens the sign-in form over the page, and it goes back after");
   const join = await dPage.evaluate(async () => {
