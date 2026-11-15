@@ -16,13 +16,15 @@ Read these in order before touching anything:
 
 ## The shape of it
 
+**No opt-in switch (the owner, November 15, 2026).** There is no "Try the new room" and no Classic to keep: every step ships to everyone when it merges, and undoing one means reverting its pull request.
+
 **Order since round 4 (November 12, 2026):** Phase 0, then Phase 2 (Discover), then Phase 4 (phones), then Phase 1's Live steps one at a time, each with the owner's yes. Phase 3 is on hold. Live's look is frozen ([01-ground-rules.md](01-ground-rules.md)).
 
-1. **Phase 0, foundations (no visible change):** design tokens, a screenshot harness, an opt-in switch for the new room layout, tests.
+1. **Phase 0, foundations (no visible change):** design tokens, a screenshot harness, tests.
 2. **Phase 1, inside today's layout:** every improvement that doesn't move a region: readable text, labelled controls, small pick menus, the one-row crate toolbar, bulk select, playlist import, the "your turn" bar, stage states. Regulars keep their muscle memory.
 3. **Phase 2, Discover:** new releases lead Home, an On Air card shows the room, the player gains "Found by" and "Play it in the room", and the sound map shows where the room is. Today's frame and colours; nothing in Live changes.
 4. **Phase 3, the new room: on hold.** Round 3's rearranged Live layout isn't being built. Live keeps today's layout and look.
-5. **Phase 4, phones:** a bottom tab bar (Home · Discover · Live · Library · You), for visitors at once and for members behind "Try the new room". **Phase 5:** switch the default for members, keep Classic one more season, then retire it.
+5. **Phase 4, phones:** a bottom tab bar (Home · Discover · Live · Library · You), for everyone at once. **Phase 5:** remove the controls the tab bar replaced.
 
 ## Status
 
@@ -30,11 +32,11 @@ Keep this table current as steps ship (one line per step in [04-step-plan.md](04
 
 | Phase | Status |
 |---|---|
-| 0 Foundations | not started |
+| 0 Foundations | not started (0.3, the opt-in switch, dropped) |
 | 1 Inside today's layout | not started |
 | 2 Discover (round 4) | 2.5 shipped (joining, logging in, the account menu and Account tab); 2.1 and 2.3 shipped (the player bar along the bottom, the On Air card, and the right column for Playlists and Chat); 2.3b shipped (the full-screen player, for TVs and second screens, in Discover and Live, replacing the Now playing tab); 2.3c shipped (the player along the bottom of the whole site with the stage's utilities in it, audio that stays put between Discover and Live, modern buttons and sliders, the chat for members only) |
 | 3 The new room | on hold |
 | 4 Phones | not started |
-| 5 Default and clean-up | not started |
+| 5 Clean-up | not started (5.1, the default switch, dropped) |
 
 Already done before this plan started (November 2026): All Playlists restyled to the room's look (one aligned table with column labels, quiet icon toggles, Find a playlist, select all, a ⋮ menu per list for Rename / Check for broken tracks / Delete, a Create button, and a phone layout), playlist formats (YouTube Music / YouTube videos / SoundCloud, in All Playlists; the bot's swap suggestions are audio tracks for YouTube Music and unset lists, the artist's videos for video lists, none for SoundCloud lists), and the hostbot's swap search looks songs up free first (the room's history, the year playlists, YouTube Music's search, people's playlists on YouTube, YouTube's search), with a paid search capped at `SWAP_API_UNITS` a day only for when the free searches don't answer (`!ytmtest` diagnoses what YouTube answers the bot).

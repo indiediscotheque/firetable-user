@@ -31,17 +31,8 @@ Mark each step `✅ shipped in #PR` when it merges.
 - **Check:** it runs locally and in a Claude cloud session (start the emulator without the proxy, as in [01-ground-rules.md](01-ground-rules.md)).
 - **Undo:** delete the files.
 
-### 0.3 "Try the new room" switch
-- **Goal:** a way to ship the Phase 3 layout to people who choose it, and to switch it off for everyone at once.
-- **Rows:** SE-13 (new).
-- **Files and change:**
-  - `js/constants.js`: `STORAGE.roomLayout = "firetableRoomLayout"` (and add to `eslint.config.mjs` if anything new is global).
-  - `config.js.example`: document `newRoom: "off" | "optin" | "default"` (default `"optin"` when missing). Phase 5 sets `"default"`.
-  - `index.html`, Settings tab (`#settings-tab`), a toggle `#roomV2Toggle` labelled "Try the new room" with one line under it: "A refined layout of the room. Everything is still there; switch back any time."
-  - `js/ui.js`: `firetable.ui.applyRoomLayout()` sets `document.body.classList.toggle("ft-room-v2", on)` from config + storage, called in `initSettings` and when the toggle changes. It does nothing yet (no CSS uses the class).
-- **Keep:** with the class off, nothing changes. With `newRoom: "off"` the toggle is hidden.
-- **Check:** smoke: the toggle exists, flipping it toggles `body.ft-room-v2`, and it survives a reload (storage).
-- **Undo:** revert; or set `newRoom: "off"` on the server.
+### 0.3 "Try the new room" switch ✗ dropped (the owner, November 15, 2026)
+- No opt-in switch, no `newRoom` config, no `ft-room-v2` class, no Classic mode. Every step ships to everyone; to undo one, revert its pull request.
 
 ### 0.4 "Nothing lost" smoke check
 - **Goal:** a test that fails if a step removes or hides something people use.
@@ -323,14 +314,14 @@ Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the
 
 ---
 
-## Phase 3 · The new room, opt-in (`body.ft-room-v2`)
+## Phase 3 · The new room
 
-**On hold since round 4.** The owner wants Live to stay as it looks and is laid out today, so none of this is built unless they ask for it. Kept for reference. Everything here is CSS and element moves scoped to `.ft-room-v2`, so Classic is untouched.
+**On hold since round 4.** The owner wants Live to stay as it looks and is laid out today, so none of this is built unless they ask for it. Kept for reference. If it is taken up, each step ships to everyone with the owner's yes (no opt-in switch): CSS and element moves, one region at a time.
 
 ### 3.1 The left column: nav over the room
 - **Rows:** PE-01, DJ-03, NV-03.
 - **Change:** new `#nav-rail` (Home, Live room, DISCOVER views) inserted at the top of `#usersbox` (desktop only), reusing Discover's routes. `#usersStats` becomes "IN THE ROOM · N" with the radio count; the waitlist card above the people.
-- **Check:** with v2 off, `#nav-rail` is hidden; with it on, all items route.
+- **Check:** all items route; under 1024px `#nav-rail` is hidden.
 
 ### 3.2 The stage, full height
 - **Rows:** ST-01, ST-02, ST-04.
@@ -349,17 +340,17 @@ Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the
 - **Change:** the left column folds to a 64px rail with faces at 1440 (opens as an overlay); the Your turn bar's buttons become icons with tooltips; at 1024–1439 the three columns as today.
 
 ### 3.6 Owner and regulars' review
-- Turn on "Try the new room" for the owner and a few regulars for two weeks. Collect what they miss. Fix before phase 5.
+- Show each step to the owner and a few regulars on the review branch before it merges. Collect what they miss and fix it in the same pull request.
 
 ---
 
 ## Phase 4 · Phones
 
-Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what people know from other apps, and it leaves the screen for content. Visitors get it at once (they have no habits here); members get it behind "Try the new room" (0.3) until the owner switches the default (5.1), because it changes how regulars move around Live on a phone.
+Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what people know from other apps, and it leaves the screen for content. It ships to everyone at once, visitors and members alike (no opt-in switch, the owner, November 15, 2026). Because it changes how regulars move around Live on a phone, keep each step's first-run moment clear: the old tab's content is one tap away under its new tab, and nothing is reachable only by gesture.
 
 ### 4.1 Bottom tab bar
 - **Rows:** NV-01.
-- **Change:** under 640px (visitors always; members with "Try the new room" on), new `#nav-tabs` (Home · Discover · Live · Library · You) replaces `#modeTabs` (Discover | Live), Discover's sideways row of view tabs and `#minimodeoptions` (all kept in the DOM; their handlers still run). **Home** is Discover Home: logo, theme, search, the room in one row with Listen in, New this week, Not played live yet, the chart. **Discover** is search and the list of views. **Live** shows the stage with Chat · Recent · People · Cards. **Library** shows Playlists full screen (for visitors: the crate, and what joining opens). **You** opens Settings as a page, with community, about and install (for visitors: join or log in).
+- **Change:** under 640px, for everyone, new `#nav-tabs` (Home · Discover · Live · Library · You) replaces `#modeTabs` (Discover | Live), Discover's sideways row of view tabs and `#minimodeoptions` (all kept in the DOM; their handlers still run). **Home** is Discover Home: logo, theme, search, the room in one row with Listen in, New this week, Not played live yet, the chart. **Discover** is search and the list of views. **Live** shows the stage with Chat · Recent · People · Cards. **Library** shows Playlists full screen (for visitors: the crate, and what joining opens). **You** opens Settings as a page, with community, about and install (for visitors: join or log in).
 
 ### 4.2 Live on a phone
 - **Rows:** ST-*, NP-*, CH-*.
@@ -381,12 +372,10 @@ Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what peop
 
 ---
 
-## Phase 5 · Default and clean-up
+## Phase 5 · Clean-up
 
-Since round 4 the only thing behind the switch is the phone tab bar for members (and Phase 3's layout, if it is ever taken up).
+### 5.1 Make the new room the default ✗ dropped (the owner, November 15, 2026)
+- Nothing to switch: with no opt-in, every step is already the default when it merges.
 
-### 5.1 Make the new room the default
-- Set `newRoom: "default"` in `config.js` on the server (no deploy needed). Settings shows "Use the classic room" for anyone who wants it back.
-
-### 5.2 Retire Classic
-- After a season with few people on Classic: remove the Classic-only CSS, the hidden duplicate controls (`#modeTabs`, `#minimodeoptions` handlers if unused), and the toggle. Update `README.md`, the inventory and step 0.4's list.
+### 5.2 Remove what the tab bar replaced
+- Once Phase 4 has been live for a few weeks with nothing missed: remove the CSS and the hidden duplicate controls the phone tab bar replaced (`#modeTabs` and `#minimodeoptions` handlers if unused; ids that JS or smoke still bind to stay). Update `README.md`, the inventory and step 0.4's list.
