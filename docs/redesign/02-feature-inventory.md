@@ -255,6 +255,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | DI-27 | (new) The full-screen player: for a TV or a second screen, in Discover and Live | All | — | ✅ 2.3b, 2.3c: `#pv-full` (`openFull`, `renderFull`, `closeFull`), from the bar (`#fullscreenBtn`, `.pb-expand`, `#pv-art`) or F; the stage's `#screenControl` moved in (screen off: the song's own artwork; on: the video). Since November 15, 2026 (the owner: a passive listening mode) no DJs / Chat tabs or side panel: the cover beside the words on wide screens, filling the width on phones; under the song, Next (Play now), Play it in the room's Undo, and Listen in / Back to it (`fullNext`, `#pv-fnext`). The decks, Just played and the chat stay in Live and Discover |
 | DI-25 | (new) New this week leads Home; Not played live yet, "Be the first" | All | today: New's "not played live yet" filter | 2.4, 2.6 |
 | DI-26 | (new) The room on the sound map | All | — | 2.7 (the trail needs the bot's genre on recent plays) |
+| DI-28 | (new) Tempo pages: a song's BPM tag (sheet, full-screen player) opens the songs played here at that tempo, most played first, then those within 2 BPM; slower / faster, half and double time, Play all, Save all | All | `viewTempo`, `tempoPage`, `tempoTag`, `#discover/bpm/<n>`, reads `bpm/` (indexed by `bpm` in the hostbot's rules) | ✅ added November 15, 2026; the BPM tag is in the tags' own font |
 
 ## PH · Phone and app
 

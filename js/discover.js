@@ -14,7 +14,7 @@
  * the chat), for a TV or a second screen, in Discover and in Live.
  *
  * Views: Home, New, Charts, Genres, DJs, Years, Recent plays, and a page
- * for each genre, DJ, artist and year. The bot publishes the charts, new
+ * for each genre, DJ, artist, year and tempo (BPM). The bot publishes the charts, new
  * releases and a chat peek under discover/ (firetable-hostbot's
  * lib/discover.js); the weekly play history job publishes the library pages
  * under discover/lib/ (tools/history/library.js). Song details come from the
@@ -36,7 +36,7 @@
  * Addresses: #discover, #discover/new, #discover/charts,
  * #discover/charts/<week|month|year|all>/<id>, #discover/genres[/<slug>],
  * #discover/djs[/<key>], #discover/years[/<year>], #discover/artist/<slug>,
- * #discover/recent, #live.
+ * #discover/bpm/<tempo>, #discover/recent, #live.
  */
 
 // The YouTube player's own script leaves a fetch it cancelled unhandled when a
@@ -302,7 +302,7 @@ firetable.discover = (function () {
     { id: "themes", label: "Theme nights", icon: "nightlife" },
     { id: "recent", label: "Recent plays", icon: "history" }
   ];
-  var VIEW_IDS = VIEWS.map(function (v) { return v.id; }).concat(["artist", "search"]);
+  var VIEW_IDS = VIEWS.map(function (v) { return v.id; }).concat(["artist", "search", "bpm"]);
 
   function head(title, link, linkTo) {
     return '<div class="d-head"><h2>' + esc(title) + "</h2>" + (link ? '<a href="#' + esc(linkTo) + '">' + esc(link) + "</a>" : "") + "</div>";
@@ -398,6 +398,7 @@ firetable.discover = (function () {
     else if (v === "djs") h = D.sub ? viewDj(D.sub) : viewDjs();
     else if (v === "years") h = D.sub ? viewYear(D.sub) : viewYears();
     else if (v === "artist") h = viewArtist(D.sub);
+    else if (v === "bpm") h = viewTempo(Number(D.sub));
     else if (v === "themes") h = D.sub ? viewNight(D.sub) : viewNights();
     else if (v === "search") h = viewSearch(D.sub || "");
     else if (v === "recent") {
@@ -1151,6 +1152,108 @@ firetable.discover = (function () {
     return h;
   }
 
+  // ─── Tempo pages: the songs played here at one BPM ──────────────────────
+  // The bot keeps each track's tempo in bpm/<type>_<cid> (from Deezer, or
+  // set with !bpm), so a tempo's page asks bpm/ for the tempos around it and
+  // looks the songs up in the play history (globalTracks, globalSongs).
+  // "128 BPM" is every tempo that rounds to 128; Close by is two either side.
+
+  var BPM_MIN = 40, BPM_MAX = 250, BPM_NEAR = 2, BPM_FRESH = 5 * 60000;
+  var tempoPages = {};  // n -> undefined while it loads, null if it can't, else {at, near}
+  var tempoAsked = {};  // n -> when it was asked
+  var tempoSongs = {};  // "type_cid" -> Promise of the song, or null
+
+  function isTempo(x) { return x === Math.round(x) && x >= BPM_MIN && x <= BPM_MAX; }
+  /** A song's tempo as a tag that opens the songs played here at that tempo. */
+  function tempoTag(bpm) {
+    if (!isTempo(bpm)) return '<span class="d-tag">' + esc(bpm) + " BPM</span>";
+    return '<a class="d-tag d-bpmtag" href="#discover/bpm/' + bpm + '" title="' + esc("Songs played here at " + bpm + " BPM") + '">' + esc(bpm) + " BPM</a>";
+  }
+  /** The history's song for a tempo's key, as a library row: {type, cid, t, a, plays, first, dj, song}. */
+  function tempoSong(key) {
+    if (!tempoSongs[key]) {
+      var cut = key.indexOf("_");
+      var type = Number(key.slice(0, cut)) || 1, cid = key.slice(cut + 1);
+      tempoSongs[key] = db().ref("globalTracks/" + type + cid).once("value").then(function (s) {
+        var u = s.val();
+        if (!u || !u.title) return null;
+        var t = { type: type, cid: cid, t: u.title, a: u.artist || "", plays: Number(u.plays) || 0, first: u.first_play_date || null, dj: u.first_play_dj || null, song: u.song || null };
+        if (!u.song) return t;
+        return db().ref("globalSongs/" + u.song).once("value").then(function (g) {
+          var v = g.val() || {};
+          if (v.plays) t.plays = Number(v.plays) || t.plays;
+          if (v.first_play_date) { t.first = v.first_play_date; t.dj = v.first_play_dj || t.dj; }
+          return t;
+        }, function () { return t; });
+      }).catch(function () { return null; });
+    }
+    return tempoSongs[key];
+  }
+  /** bpm/<n>'s page: undefined while it loads (the last one stays up while it's asked again). */
+  function tempoPage(n) {
+    if (!tempoAsked[n] || Date.now() - tempoAsked[n] > BPM_FRESH) {
+      tempoAsked[n] = Date.now();
+      db().ref("bpm").orderByChild("bpm").startAt(n - BPM_NEAR - 0.5).endAt(n + BPM_NEAR + 0.49).once("value").then(function (s) {
+        var found = [];
+        s.forEach(function (c) {
+          var b = Number((c.val() || {}).bpm);
+          if (b >= BPM_MIN && b <= BPM_MAX) found.push({ key: c.key, bpm: b });
+        });
+        return Promise.all(found.map(function (f) {
+          return tempoSong(f.key).then(function (t) { return t && Object.assign({}, t, { bpm: f.bpm }); });
+        })).then(function (songs) {
+          // one row per song: its uploads share the history's song
+          var seen = {};
+          songs = songs.filter(Boolean).sort(function (x, y) { return (y.plays - x.plays) || Math.abs(x.bpm - n) - Math.abs(y.bpm - n); })
+            .filter(function (t) { var k = t.song || t.type + "_" + t.cid; if (seen[k]) return false; seen[k] = true; return true; });
+          tempoLoaded(n, {
+            at: songs.filter(function (t) { return Math.round(t.bpm) === n; }),
+            near: songs.filter(function (t) { return Math.round(t.bpm) !== n; })
+              .sort(function (x, y) { return (Math.abs(x.bpm - n) - Math.abs(y.bpm - n)) || (y.plays - x.plays); }).slice(0, 50)
+          });
+        });
+      }).catch(function (err) { quiet(err); tempoLoaded(n, tempoPages[n] || null); });
+    }
+    return tempoPages[n];
+  }
+  function tempoLoaded(n, val) {
+    tempoPages[n] = val;
+    if (D.mode === "discover" && D.view === "bpm" && Number(D.sub) === n) renderBrowse();
+  }
+  function tempoLink(n, label) {
+    return isTempo(n) ? '<a href="#discover/bpm/' + n + '">' + esc(label) + "</a>" : "";
+  }
+
+  function viewTempo(bpm) {
+    var page = tempoPage(bpm);
+    var title = bpm + " BPM";
+    var step = function (to, dir, label) {
+      return isTempo(to) ? '<a class="butt graybutt iconbutt" href="#discover/bpm/' + to + '" title="' + esc(label + ": " + to + " BPM") + '" aria-label="' + esc(label + ": " + to + " BPM") + '">' + ms(dir) + "</a>"
+        : '<button type="button" class="butt graybutt iconbutt" disabled aria-label="' + esc(label) + '">' + ms(dir) + "</button>";
+    };
+    var h = '<div class="d-headrow">' + step(bpm - 1, "chevron_left", "Slower") + step(bpm + 1, "chevron_right", "Faster") + '<p class="d-fact">Songs by tempo, from Deezer or set in chat with !bpm</p></div>';
+    if (page === undefined) return h + loading();
+    if (page === null) return h + emptyNote("Tempos can't be looked up right now. Try again in a moment.");
+    var at = page.at, near = page.near;
+    setList("bpm", title, at);
+    setList("bpm-near", "Close to " + title, near);
+    var plays = at.reduce(function (sum, t) { return sum + (t.plays || 0); }, 0);
+    var feel = [tempoLink(bpm / 2, "Half time: " + bpm / 2 + " BPM"), tempoLink(bpm * 2, "Double time: " + bpm * 2 + " BPM")].filter(Boolean);
+    h += '<div class="d-pagehead">' + mosaic(at.concat(near).slice(0, 4).map(function (t) { return t.type + "_" + t.cid; }), true) +
+      '<div class="d-pagetext"><h2>' + esc(title) + '</h2><p class="d-fact">' + esc(at.length ? firetable.utilities.pluralize(at.length, "song", "songs") + " played here · " + n(plays) + " plays" : "No songs played here at this tempo yet") + "</p>" +
+      (feel.length ? '<p class="d-fact">' + feel.join(" · ") + "</p>" : "") +
+      (at.length ? '<div class="d-actions">' + playAllButton("bpm", "Play all") + "</div>" : "") + "</div></div>";
+    h += "<section>" + head("Most played at " + title) +
+      (at.length ? rankedRows(at, "bpm") : emptyNote("A song's tempo comes from Deezer the first time it plays here. The DJ or a mod can set it in chat with !bpm " + bpm + ".")) + "</section>";
+    if (near.length) {
+      h += "<section>" + head("Close by") + '<p class="d-fact">' + esc("Within " + BPM_NEAR + " BPM, closest first") + "</p>" +
+        '<div class="ft-rows d-rowlist">' + near.map(function (t, i) {
+          return row(t, "bpm-near", i, { stamp: String(Math.round(t.bpm)), dj: djShown(t.djid, t.dj), right: '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" });
+        }).join("") + "</div></section>";
+    }
+    return h;
+  }
+
   function renderRail() {
     document.querySelectorAll("#dNav [data-view]").forEach(function (b) {
       var on = b.getAttribute("data-view") === D.view;
@@ -1317,7 +1420,7 @@ firetable.discover = (function () {
       var tags = (d.genres || []).slice(0, 2).map(function (g) { return '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>"; });
       if (t.rel) tags.push('<span class="d-tag d-numtag">' + esc(t.rel.slice(0, 4)) + "</span>");
       tags.push('<span class="d-tag">' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + "</span>");
-      if (d.bpm) tags.push('<span class="d-tag d-numtag">' + esc(d.bpm) + " BPM</span>");
+      if (d.bpm) tags.push(tempoTag(d.bpm));
       var tagEl = document.getElementById("pv-ftags");
       if (tagEl) tagEl.innerHTML = tags.join("");
       var lines = [];
@@ -2748,6 +2851,9 @@ firetable.discover = (function () {
     } else if (view === "genres" || view === "djs" || view === "years" || view === "artist" || view === "themes") {
       r.sub = /^[a-z0-9_-]{1,80}$/i.test(p[2] || "") ? p[2] : null;
       if (view === "artist" && !r.sub) return null;
+    } else if (view === "bpm") {
+      if (!isTempo(Number(p[2]))) return null;
+      r.sub = String(Number(p[2]));
     }
     return r;
   }
@@ -3321,7 +3427,7 @@ firetable.discover = (function () {
       if (sheetTrack !== t) return;
       var tags = (d.genres || []).slice(0, 3).map(function (g) { return '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>"; });
       if (t.rel) tags.push('<span class="d-tag d-numtag">' + esc(t.rel.slice(0, 4)) + "</span>");
-      if (d.bpm) tags.push('<span class="d-tag d-numtag">' + esc(d.bpm) + " BPM</span>");
+      if (d.bpm) tags.push(tempoTag(d.bpm));
       tags.push('<span class="d-tag">' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + "</span>");
       var lines = [];
       if (t.now) {
