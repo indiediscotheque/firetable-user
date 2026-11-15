@@ -1740,6 +1740,12 @@ try {
     // (layout sizes: the cover is still growing out of the bar)
     const artEl = el.querySelector(".pvf-art"), art = artEl.getBoundingClientRect(), text = el.querySelector(".pvf-text").getBoundingClientRect(), body = el.querySelector(".pvf-body").getBoundingClientRect();
     out.layout = { beside: text.left >= art.left + artEl.offsetWidth, tall: artEl.offsetHeight > body.height * 0.75, square: Math.abs(artEl.offsetWidth - artEl.offsetHeight) < 2 };
+    // the time row: the bar on the cover's edges, the times under its two ends, play under its middle
+    const bar = el.querySelector(".pvf-track .d-bar").getBoundingClientRect(), main = el.querySelector(".pvf-main").getBoundingClientRect();
+    const ink = (id) => { const r = document.createRange(); r.selectNodeContents(document.getElementById(id)); return r.getBoundingClientRect(); };
+    const at = ink("pv-fat"), len = ink("pv-flen");
+    out.time = { barLeft: Math.round(bar.left - art.left), barRight: Math.round(innerWidth - bar.right - art.left), atStart: Math.round(at.left - bar.left), lenEnd: Math.round(bar.right - len.right),
+      below: at.top >= bar.bottom && len.top >= bar.bottom, playCentred: Math.round((main.left + main.right) / 2 - (bar.left + bar.right) / 2) };
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await wait(600);
     out.closed = el.hidden && document.getElementById("fire").parentElement.id === "pv-livekeep";
@@ -1748,6 +1754,8 @@ try {
   check(/is-member/.test(fullMember.cls) && fullMember.fire && fullMember.grab, "a member has the stage's Fire and Grab in the full-screen player (" + JSON.stringify(fullMember) + ")");
   check(fullMember.noSide && fullMember.chatHome && fullMember.noState && fullMember.closed,
     "no DJs or Chat beside the song (a listening view): the chat stays in its place; Escape closes it and the buttons go home");
+  check(Math.abs(fullMember.time.barLeft) <= 1 && Math.abs(fullMember.time.barRight) <= 1 && Math.abs(fullMember.time.atStart) <= 1 && Math.abs(fullMember.time.lenEnd) <= 1 && fullMember.time.below && Math.abs(fullMember.time.playCentred) <= 1,
+    "the time row is symmetric: the bar on the cover's edges, each time under its end, play under the bar's middle (" + JSON.stringify(fullMember.time) + ")");
   check(fullMember.layout.beside && fullMember.layout.tall && fullMember.layout.square,
     "the artwork stands beside the words, square, filling the height the player has (" + JSON.stringify(fullMember.layout) + ")");
 
