@@ -368,6 +368,63 @@ try {
   await page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
   check(await page.$eval("#swapBar", (b) => b.hidden), "the bar goes once nothing is left to swap");
 
+  console.log("-- the playlist's tools: two rows, a ⋮ menu for the list, Show only for the filters");
+  const tools = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login");
+    firetable.nav.view = "playlists";
+    firetable.nav.apply();
+    await wait(100);
+    const out = {};
+    const top = document.querySelector(".queuetop").getBoundingClientRect();
+    const sw = document.getElementById("listpicker").getBoundingClientRect(), more = document.getElementById("cr-listBtn").getBoundingClientRect(),
+      find = document.getElementById("addToQueueBttn").getBoundingClientRect(), filt = document.getElementById("queueFilter").getBoundingClientRect(),
+      show = document.getElementById("cr-showOnly").getBoundingClientRect();
+    const mid = (r) => r.top + r.height / 2;
+    out.rows = { oneRow: Math.abs(mid(sw) - mid(more)) < 3 && Math.abs(mid(more) - mid(find)) < 3, filterRow: Math.abs(mid(filt) - mid(show)) < 3 && filt.top > sw.bottom,
+      height: Math.round(top.height), oldGone: ["plIndexBtn", "mergeLists", "plDeleteLauncher", "plAddLauncher"].every((id) => document.getElementById(id).offsetParent === null) };
+    // each item does what its old button did
+    const calls = [];
+    const keep = { idx: firetable.actions.openPlaylistIndex, shuf: firetable.actions.shuffleQueuePrompt, check: firetable.actions.checkBrokenTracks };
+    firetable.actions.openPlaylistIndex = () => calls.push("all");
+    firetable.actions.shuffleQueuePrompt = (a) => calls.push("shuffle:" + (a && a.id));
+    firetable.actions.checkBrokenTracks = (id) => { calls.push("check:" + id); return $.Deferred().resolve({ checked: 0, total: 0, broken: 0, newlyBroken: 0, fixed: 0, skipped: 0 }).promise(); };
+    const imp = document.getElementById("importPromptBox");
+    const menu = document.getElementById("cr-listMenu");
+    const pick = async (act) => { document.getElementById("cr-listBtn").click(); await wait(80); out.opened = (out.opened || 0) + (menu.matches(":popover-open") ? 1 : 0); menu.querySelector('[data-act="' + act + '"]').click(); await wait(80); };
+    await pick("all"); await pick("shuffle"); await pick("check");
+    await pick("import"); out.import = imp.open; imp.close();
+    await pick("new");
+    out.create = document.getElementById("queueControls").classList.contains("cr-creating") && document.getElementById("plmaker").offsetParent !== null &&
+      document.getElementById("plAddLauncher").offsetParent !== null && document.getElementById("cr-listBtn").offsetParent === null;
+    document.getElementById("plmaker").dispatchEvent(new KeyboardEvent("keyup", { key: "Escape", bubbles: true }));
+    out.createEnds = !document.getElementById("queueControls").classList.contains("cr-creating") && document.getElementById("cr-listBtn").offsetParent !== null;
+    await pick("merge"); await wait(300);
+    out.merge = $("#mergeContain").is(":visible");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    out.mergeCloses = !$("#mergeContain").is(":visible");
+    document.getElementById("cr-listBtn").click(); await wait(80);
+    out.deleteOff = $("#listpicker").val() !== "0" || menu.querySelector('[data-act="delete"]').disabled;
+    menu.hidePopover();
+    Object.assign(firetable.actions, { openPlaylistIndex: keep.idx, shuffleQueuePrompt: keep.shuf, checkBrokenTracks: keep.check });
+    out.calls = calls.join();
+    // Show only: the two filters in a menu, counted on the button
+    document.getElementById("cr-showOnly").click(); await wait(80);
+    out.showOpen = document.getElementById("cr-showOnlyMenu").matches(":popover-open") && !!document.querySelector("#cr-showOnlyMenu #queueFilterRemixOnly");
+    $("#queueFilterBrokenOnly").prop("checked", true).trigger("change");
+    out.badge = document.getElementById("cr-showOnlyCount").textContent + "/" + document.getElementById("cr-showOnly").getAttribute("aria-label");
+    $("#queueFilterBrokenOnly").prop("checked", false).trigger("change");
+    out.badgeOff = document.getElementById("cr-showOnlyCount").hidden;
+    document.getElementById("cr-showOnlyMenu").hidePopover();
+    return out;
+  });
+  check(tools.rows.oneRow && tools.rows.filterRow && tools.rows.height < 112 && tools.rows.oldGone,
+    "the playlist, ⋮ and Find tracks share one row; the filter and Show only the next (" + JSON.stringify(tools.rows) + ")");
+  check(tools.opened === 6 && tools.calls === "all,shuffle:cr-listBtn,check:" + (await page.evaluate(() => $("#listpicker").val())) && tools.import && tools.create && tools.createEnds && tools.merge && tools.mergeCloses && tools.deleteOff,
+    "every ⋮ item reaches what its old button did: All playlists, Shuffle, Check, Import, New (with Cancel), Merge, Delete (" + JSON.stringify(tools) + ")");
+  check(tools.showOpen && tools.badge === "1/Show only (1 on)" && tools.badgeOff, "Show only holds Remixes and Broken, and counts what's on (" + tools.badge + ")");
+
   console.log("-- drag to reorder the playlist: mouse, Alt+arrow keys, and a finger held on a row");
   await page.evaluate(() => {
     $("#mainGrid").removeClass("login");

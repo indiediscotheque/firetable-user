@@ -1131,7 +1131,7 @@ firetable.ui.setupPlaylistEvents = function () {
   function enterCreateMode() {
     $("#listpicker").hide();
     $("#plmanager").css("display", "flex");
-    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").hide().next(".ft-tip").hide();
+    $("#queueControls").addClass("cr-creating"); // the toolbar gives way to Cancel (CSS)
     $("#plAddLauncher").next(".ft-tip").text("Cancel Create Playlist");
     $("#plAddLauncher i").text("close");
     $("#mainqueuestuff, #filterMachine").css("display", "none");
@@ -1141,7 +1141,7 @@ firetable.ui.setupPlaylistEvents = function () {
   function exitCreateMode() {
     $("#plmanager").css("display", "none");
     $("#listpicker").show();
-    $("#plIndexBtn, #addToQueueBttn, #mergeLists, #shuffleQueue, #plDeleteLauncher").show().next(".ft-tip").show();
+    $("#queueControls").removeClass("cr-creating");
     $("#plAddLauncher").next(".ft-tip").text("New / Import playlist");
     $("#plAddLauncher i").text("add");
     $("#mainqueuestuff, #filterMachine").css("display", "block");
@@ -1264,11 +1264,12 @@ firetable.ui.setupPlaylistEvents = function () {
     $("#mergeCompleted").hide();
     $("#mergeHappening").hide();
     $("#mergeContain").hide();
-    $("#mergeLists").removeClass('on');
+    $("#mergeLists, #cr-listBtn").removeClass('on');
   }
 
-  $("#mergeLists").on("click", function () {
-    var $this = $(this);
+  $("#mergeLists").on("click", function () { toggleMerge(this); });
+  function toggleMerge(anchorEl) {
+    var $this = $(anchorEl);
     var isHidden = $("#mergeContain").is(":hidden");
     if (isHidden) {
       ftapi.lookup.listNames(function (allPlaylists) {
@@ -1295,7 +1296,7 @@ firetable.ui.setupPlaylistEvents = function () {
     } else {
       closeMergeContain();
     }
-  });
+  }
   $("#startMerge").on("click", function () {
     var source = $("#mergepicker").val();
     var sourceName = $("#mergepicker option:selected").text();
@@ -1314,7 +1315,7 @@ firetable.ui.setupPlaylistEvents = function () {
     .off('click.mergeContainDismiss')
     .on('click.mergeContainDismiss', function (e) {
       if ($("#mergeContain").is(':hidden')) return;
-      if ($(e.target).closest('#mergeContain, #mergeLists').length) return;
+      if ($(e.target).closest('#mergeContain, #mergeLists, #cr-listMenu').length) return;
       closeMergeContain();
     })
     .off('keydown.mergeContainDismiss')
@@ -1323,6 +1324,85 @@ firetable.ui.setupPlaylistEvents = function () {
         closeMergeContain();
       }
     });
+
+  // ── The playlist's ⋮ menu (#cr-listMenu): everything about the list on screen ──
+  // One button in place of six; each item does exactly what its old button did.
+  var listMenu = document.getElementById("cr-listMenu");
+  var listBtn = document.getElementById("cr-listBtn");
+  var menuKeys = function (menuEl) {
+    $(menuEl).on("keydown", function (e) {
+      var $items = $(menuEl).find('[role="menuitem"]:not(:disabled), input');
+      var idx = $items.index($items.filter(":focus"));
+      if (e.key === "ArrowDown") { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
+      else if (e.key === "Home") { e.preventDefault(); $items.first().focus(); }
+      else if (e.key === "End") { e.preventDefault(); $items.last().focus(); }
+    });
+  };
+  if (listMenu && listBtn) {
+    listMenu.addEventListener("toggle", function (e) {
+      var open = e.newState === "open";
+      listBtn.classList.toggle("on", open);
+      listBtn.setAttribute("aria-expanded", String(open));
+      if (!open) return;
+      var val = $("#listpicker").val();
+      var builtIn = !val || val === "0";
+      $(listMenu).find('[data-act="delete"]').prop("disabled", builtIn).attr("title", builtIn ? "This list can't be deleted" : null);
+      listMenu.style.visibility = "hidden";
+      firetable.ui.positionPopover(listBtn, listMenu, document.getElementById("cr-listMenuArrow"), "bottom-end").then(function () {
+        var first = listMenu.querySelector('[role="menuitem"]:not(:disabled)');
+        if (first) first.focus();
+      });
+    });
+    menuKeys(listMenu);
+    $(listMenu).on("click", "[data-act]", function () {
+      var act = this.getAttribute("data-act");
+      listMenu.hidePopover();
+      var id = $("#listpicker").val();
+      if (act === "all") return firetable.actions.openPlaylistIndex();
+      if (act === "new") return enterCreateMode();
+      if (act === "import") return document.getElementById("importPromptBox").showModal();
+      if (act === "shuffle") return firetable.actions.shuffleQueuePrompt(listBtn);
+      if (act === "merge") return toggleMerge(listBtn);
+      if (act === "delete") return $("#plDeleteLauncher").trigger("click");
+      if (act === "check") {
+        firetable.ui.toast("Checking " + $("#listpicker option:selected").text() + " for broken tracks…", "notice");
+        firetable.actions.checkBrokenTracks(id).then(function (r) {
+          firetable.ui.toast(firetable.utilities.brokenSummary(r), "success");
+        }, function (err) {
+          firetable.ui.toast((err && err.message) || "The check didn't finish.", "error");
+        });
+      }
+    });
+  }
+
+  // ── Show only (#cr-showOnlyMenu): Remixes and Broken, behind one button with a count ──
+  var showMenu = document.getElementById("cr-showOnlyMenu");
+  var showBtn = document.getElementById("cr-showOnly");
+  var renderShowOnly = function () {
+    var n = ["#queueFilterRemixOnly", "#queueFilterBrokenOnly"].filter(function (q) { return $(q).is(":checked"); }).length;
+    $("#cr-showOnlyCount").text(n || "").prop("hidden", !n);
+    if (!showBtn) return;
+    showBtn.classList.toggle("is-on", !!n);
+    showBtn.setAttribute("aria-label", n ? "Show only (" + n + " on)" : "Show only");
+    $("#tip-cr-showOnly").text(n ? "Show only: " + $(".cr-showOnlyBox input:checked + span").map(function () { return this.textContent; }).get().join(", ") : "Show only");
+  };
+  $("#queueFilterRemixOnly, #queueFilterBrokenOnly").on("change", renderShowOnly);
+  renderShowOnly();
+  if (showMenu && showBtn) {
+    showMenu.addEventListener("toggle", function (e) {
+      var open = e.newState === "open";
+      showBtn.classList.toggle("on", open);
+      showBtn.setAttribute("aria-expanded", String(open));
+      if (!open) return;
+      showMenu.style.visibility = "hidden";
+      firetable.ui.positionPopover(showBtn, showMenu, document.getElementById("cr-showOnlyArrow"), "bottom-end").then(function () {
+        var first = showMenu.querySelector("input");
+        if (first) first.focus();
+      });
+    });
+    menuKeys(showMenu);
+  }
 
   // ── Tag editing: Save (or Enter / the keyboard's Done key) in the editor ──
   /** Tag from the editor, or null (with a hint) when it isn't "Artist - Song Title". */

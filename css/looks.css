@@ -2937,27 +2937,69 @@ input.ft-filter {
     margin-left: var(--pad2);
 }
 
-/* Narrow panel: the playlist name gets its own row, tools sit underneath */
-@container queuetop (width < 34rem) {
-    #queueControls {
-        flex-wrap: wrap;
-        row-gap: var(--pad2);
-    }
-
-    #listpickerWrap {
-        flex: 1 1 100%;
-    }
-
-    #qControlButtons {
-        flex: 1 1 100%;
-        justify-content: flex-end;
-        padding-left: 0;
-    }
-
-    #cancelqsearch {
-        margin-left: auto;
-    }
+/* ─── The crate's tools, two rows at every width ───────────────────────────
+   1. the playlist, its ⋮ menu (#cr-listMenu: all playlists, new, import,
+      shuffle, merge, check for broken tracks, delete) and Find tracks (+);
+   2. the filter and Show only (#cr-showOnlyMenu: Remixes, Broken).
+   The old buttons stay in the DOM for the menu to use. Shuffle keeps its own
+   button on a computer, where there's room. While a new playlist is named,
+   the row is the name box and Cancel. */
+#plIndexBtn, #mergeLists, #plDeleteLauncher { display: none; }
+#queueControls:not(.cr-creating) #plAddLauncher,
+#queueControls.cr-creating :is(#cr-listBtn, #addToQueueBttn, #shuffleQueue) { display: none; }
+@media only screen and (max-width: 1023px) {
+    #shuffleQueue { display: none; }
 }
+#queueControls { gap: var(--pad2); padding: var(--pad3) var(--pad3) var(--pad2); }
+#qControlButtons { padding-left: 0; }
+/* Find tracks: the panel's main action, a dark circle with a gold + */
+#addToQueueBttn { border-radius: 50%; color: var(--color-accent); }
+#addToQueueBttn [class*="material-symbols-"] { font-size: 1.6rem; font-weight: 600; }
+#cr-showOnly { position: relative; flex: none; }
+#cr-showOnly.is-on { color: var(--color-accent); }
+.cr-badge {
+    position: absolute;
+    top: -0.3rem;
+    right: -0.3rem;
+    display: grid;
+    place-items: center;
+    min-width: 1.1rem;
+    height: 1.1rem;
+    padding: 0 0.25rem;
+    border-radius: 999px;
+    background: var(--color-danger);
+    color: #fff;
+    font-family: var(--font-numbers);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+}
+.cr-badge[hidden] { display: none; }
+/* Show only's choices read as menu rows */
+.cr-showOnlyBox .queueFilterExtras { flex-direction: column; align-items: stretch; gap: 0; }
+.cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly) {
+    gap: 0.75rem;
+    height: auto;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--fs-title);
+}
+@media (hover: hover) {
+    .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly):hover { background: rgba(255, 255, 255, 0.08); }
+}
+@media (pointer: coarse) {
+    .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly) { min-height: var(--tap-min); }
+}
+.cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly) input { width: 1.1rem; height: 1.1rem; }
+.cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly) input::before { width: 0.6rem; height: 0.6rem; }
+.ft-menu-sep { width: auto; height: 1px; margin: var(--pad1) 0.5rem; border: 0; background: var(--color-border); }
+
+#cancelqsearch { margin-left: auto; }
 
 #addbox,
 #plmanager {
