@@ -212,7 +212,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | SE-10 | Disable media playback | `#mediaDisableToggle`, `STORAGE.disableMedia` | keep |
 | SE-11 | Version | `#version` | keep |
 | SE-12 | Last.fm scrobbling (connect, now playing, scrobble, love) | `lastfm.js`, `api/lastfm.php`, `checkLastfmToken`, `STORAGE.lastfmSession` | keep |
-| SE-13 | (new) Try the new room | — | 0.3 |
+| SE-13 | ~~(new) Try the new room~~ | — | dropped: no opt-in switch (the owner, November 15, 2026) |
 
 ## MO · Mod tools
 

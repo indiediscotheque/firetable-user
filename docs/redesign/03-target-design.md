@@ -178,7 +178,7 @@ Boards `R3 · Discover home` and `R3 · Charts`.
 
 ## Phones
 
-**Round 4:** the tab bar and the You tab stand and move up the order (Phase 4 runs after Phase 2). Home and the player are as in "Round 4: what's current". Live and Library on a phone below are still the plan, behind "Try the new room" for members.
+**Round 4:** the tab bar and the You tab stand and move up the order (Phase 4 runs after Phase 2). Home and the player are as in "Round 4: what's current". Live and Library on a phone below are still the plan, for everyone at once (no opt-in switch).
 
 Boards `R3 · Phone · …`. Bottom tab bar: **Home · Discover · Live · Library · You** (44px targets, 11px labels). A mini player sits above it, showing the room or what you're playing from Discover.
 - **Live:** header (logo, theme pill, @ with badge); the stage **full width at 16:9** (390 × 219) with the playing DJ standing in front and the next DJs small at the right; a ⋮ on the stage for video/art, avatars, full screen and reload; the song row (title, "Röyksopp · 22 plays · 1:24 / 4:50", **Fire** with count, **Grab**, **⋯**); a "You're next · Closer to the Ground" row (bus button, opens Library); tabs CHAT · RECENT · PEOPLE · CARDS; about 320px of chat; the composer. Fresh moves to the Discover tab.
