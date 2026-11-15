@@ -11,7 +11,8 @@
  *  7. Boots Firebase via ftapi.init()
  *  8. Binds auth lifecycle events (login, logout, reconnect, ban)
  *  9. Calls firetable.ui.init() to wire up the rest of the UI, then
- *     firetable.install.init() ("Get the app" guide, js/install.js) and
+ *     firetable.install.init() ("Get the app" guide, js/install.js),
+ *     firetable.cast.init() (the speaker and TV guide, js/cast.js) and
  *     firetable.push.init() (@mention push notifications, js/push.js)
  *
  * The final line auto-starts the app: `if (!firetable.started) firetable.init();`
@@ -176,6 +177,7 @@ firetable.init = function () {
   // ── UI Init (wires everything up) ──
   firetable.ui.init();
   firetable.install.init();
+  firetable.cast.init();
   firetable.push.init();
   firetable.snow.init();
 };

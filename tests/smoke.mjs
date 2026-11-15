@@ -243,6 +243,24 @@ try {
   });
   check(guide, "the install guide opens with this device's steps first, the others one tap away");
 
+  console.log("-- \"Play on a speaker or TV\" guide");
+  const cast = await page.evaluate(() => {
+    const btn = document.getElementById("st-cast");
+    btn.click();
+    const dlg = document.getElementById("st-castBox");
+    const ways = [...dlg.querySelectorAll("#st-castWays .installSteps")];
+    const out = { open: dlg.open, order: ways.map((d) => d.dataset.way).join(), opened: ways.filter((d) => d.open).map((d) => d.dataset.way).join(),
+      steps: dlg.querySelectorAll(".installSteps li").length, label: btn.getAttribute("aria-label"), popup: btn.getAttribute("aria-haspopup"),
+      icon: getComputedStyle(btn.querySelector("i")).fontFamily };
+    dlg.querySelector(".closeModal").click();
+    out.closed = !dlg.open;
+    return out;
+  });
+  check(cast.open && cast.closed, "the cast button opens the speaker guide and its close button shuts it");
+  check(cast.order === "chrome,bluetooth,airplay,android" && cast.opened === "chrome",
+    "Chrome on a computer gets Google Cast first and open, the other ways one tap away (" + cast.order + " / " + cast.opened + ")");
+  check(cast.steps >= 14 && cast.label === "Play on a speaker or TV" && cast.popup === "dialog", "the guide has its steps and the button says what it does");
+
   console.log("-- what a playlist is kept to");
   const formats = await page.evaluate(() => {
     const keep = firetable.plPrefs.format;
@@ -983,7 +1001,7 @@ try {
     const bar = document.getElementById("dMini");
     const after = { preview: firetable.preview, mode: document.body.classList.contains("ft-discover"), hash: location.hash, playing: firetable.discover.state().playing,
       bar: bar.offsetParent !== null && /is-discover/.test(bar.className), stageUp: document.body.classList.contains("pb-elsewhere"),
-      tools: ["screenControl", "reloadtrack", "fullscreenBtn", "fire", "grab"].every((id) => document.getElementById(id).closest("#dMini")),
+      tools: ["screenControl", "reloadtrack", "st-cast", "fullscreenBtn", "fire", "grab"].every((id) => document.getElementById(id).closest("#dMini")),
       stageEmpty: getComputedStyle(document.getElementById("stageTopRight")).display === "none" && getComputedStyle(document.getElementById("stageActions")).display === "none",
       avatar: Math.round((document.querySelector("#deck .avtr") || { getBoundingClientRect: () => ({ height: -1 }) }).getBoundingClientRect().height) };
     // the stage's lower left says they aren't hearing the room
@@ -1133,6 +1151,7 @@ try {
     await wait(100);
     // the stage's screen button is in the player; V turns the screen on: the video behind the words
     out.screenHere = !!document.getElementById("screenControl").closest("#pv-fscreen");
+    out.castHere = !!document.getElementById("st-cast").closest("#pv-fscreen");
     const key = (k) => document.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
     key("v");
     await wait(800);
@@ -1211,6 +1230,7 @@ try {
   check(full.screenHere && full.video.cls && full.video.body && full.video.stage && full.video.under && full.video.screen && full.video.down && full.video.upWhileStalled && full.video.saved === "on" && full.audio,
     "the stage's screen button is in the player: on lowers the room's own screen behind it (up while YouTube stalls), off raises it, one setting with the stage (" + JSON.stringify(full.video) + ")");
   check(full.art.square && /mqdefault|newrel0001/.test(full.art.img) && !/maxresdefault/.test(full.art.img), "screen off shows the song's own artwork, square (" + JSON.stringify(full.art) + ")");
+  check(full.castHere, "the cast button comes into the player with it (phones' only way to it)");
   check(full.room.tone && full.room.tone === full.room.roomColor, "the background takes the room song's colour, the stage's (" + full.room.tone + " / " + full.room.roomColor + ")");
   check(full.room.name === "Indie Discotheque", "the room is named as the site's logo has it (" + full.room.name + ")");
   check(/is-room/.test(full.room.cls) && /Live|On air/.test(full.room.src) && full.room.title === full.room.song && full.room.joinFire && full.room.fireHidden && full.room.seek && full.room.pick,
