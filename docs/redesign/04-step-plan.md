@@ -189,7 +189,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke: each ⋮ item calls its function (stub and assert); narrow width shows Top and ⋮ only.
 - **Undo:** revert.
 
-### 1.16 The crate toolbar
+### 1.16 The crate toolbar ✅ shipped in part (the owner's request, November 15, 2026)
+- **Shipped:** two rows at every width instead of three. Row one: the playlist (`#listpicker`), ⋮ `#cr-listMenu` (All playlists…, New playlist, Import a playlist…, Shuffle this playlist, Merge playlists…, Check for broken tracks, Delete this playlist…) and Find tracks as a gold + in a dark circle (`#addToQueueBttn`). Row two: the filter and Show only (`#cr-showOnly`: Remixes, Broken, with a red count). `#plIndexBtn`, `#mergeLists`, `#plAddLauncher` (Cancel while naming a new list) and `#plDeleteLauncher` stay in the DOM, hidden; `#shuffleQueue` stays visible on computers. Still to come: sort (`#cr-sort`), select (1.17), Rename and Remove duplicates in ⋮, the Not played here yet and Duplicates filters, Export.
 - **Goal:** one row of tools; filters behind one button; playlist-wide actions in one menu.
 - **Rows:** CR-07, CR-10, CR-11, CR-13, CR-17, CR-20, CR-21.
 - **Files and change:**

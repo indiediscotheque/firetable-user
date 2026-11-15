@@ -307,6 +307,7 @@ firetable.actions.loggedIn = function (user) {
         $("#plmanager").css("display", "none");
         $("#listpickerWrap").show();
         $("#plAddLauncher i").text("add");
+        $("#queueControls").removeClass("cr-creating");
         try {
           localStorage.setItem(viewListStorageKey, val);
         } catch (e) {}

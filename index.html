@@ -364,10 +364,6 @@
 							<i class="material-symbols-outlined">library_music</i>
 						</button>
 						<span id="tip-plIndexBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-plIndexBtn">All playlists</span>
-						<button role="button" class="butt graybutt iconbutt" id="addToQueueBttn" aria-label="Find tracks" style="anchor-name: --tip-addToQueueBttn" aria-describedby="tip-addToQueueBttn">
-							<i class="material-symbols-outlined"> search </i>
-						</button>
-						<span id="tip-addToQueueBttn" role="tooltip" class="ft-tip" style="position-anchor: --tip-addToQueueBttn">Find tracks</span>
 						<button role="button" class="butt graybutt iconbutt" id="shuffleQueue" aria-label="Shuffle list" style="anchor-name: --tip-shuffleQueue" aria-describedby="tip-shuffleQueue">
 							<i class="material-symbols-outlined"> shuffle </i>
 						</button>
@@ -384,6 +380,15 @@
 							<i class="material-symbols-outlined">delete</i>
 						</button>
 						<span id="tip-plDeleteLauncher" role="tooltip" class="ft-tip" style="position-anchor: --tip-plDeleteLauncher">Delete playlist</span>
+						<!-- Everything about the playlist, in one menu (js/playlist.js): the buttons above stay for it to use -->
+						<button type="button" class="butt graybutt iconbutt" id="cr-listBtn" aria-label="Playlist options" aria-haspopup="menu" aria-expanded="false" popovertarget="cr-listMenu" style="anchor-name: --tip-cr-listBtn" aria-describedby="tip-cr-listBtn">
+							<i class="material-symbols-outlined">more_vert</i>
+						</button>
+						<span id="tip-cr-listBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-listBtn">Playlist options</span>
+						<button role="button" class="butt graybutt iconbutt" id="addToQueueBttn" aria-label="Find tracks" style="anchor-name: --tip-addToQueueBttn" aria-describedby="tip-addToQueueBttn">
+							<i class="material-symbols-outlined">add</i>
+						</button>
+						<span id="tip-addToQueueBttn" role="tooltip" class="ft-tip" style="position-anchor: --tip-addToQueueBttn">Find tracks</span>
 					</div>
 					<button role="button" class="butt graybutt" id="cancelqsearch">Done</button>
 				</div>
@@ -410,16 +415,11 @@
 				<div id="filterMachine">
 					<form id="queueFilterForm" autocomplete="off">
 						<input type="search" autocomplete="off" spellcheck="false" placeholder="Filter playlist…" name="queueFilter" id="queueFilter" class="ft-filter" aria-label="Filter playlist" />
-						<div id="queueFilterExtras" class="queueFilterExtras">
-							<label class="queueFilterRemixOnly" for="queueFilterRemixOnly">
-								<input type="checkbox" id="queueFilterRemixOnly" />
-								<span>Remixes</span>
-							</label>
-							<label class="queueFilterBrokenOnly" for="queueFilterBrokenOnly">
-								<input type="checkbox" id="queueFilterBrokenOnly" />
-								<span>Broken</span>
-							</label>
-						</div>
+						<button type="button" class="butt graybutt iconbutt" id="cr-showOnly" aria-label="Show only" aria-haspopup="true" aria-expanded="false" popovertarget="cr-showOnlyMenu" style="anchor-name: --tip-cr-showOnly" aria-describedby="tip-cr-showOnly">
+							<i class="material-symbols-outlined">filter_list</i>
+							<span id="cr-showOnlyCount" class="cr-badge" hidden></span>
+						</button>
+						<span id="tip-cr-showOnly" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-showOnly">Show only</span>
 					</form>
 				</div>
 				<div id="searchMachine">
@@ -763,6 +763,40 @@
 	</dialog>
 
 	<!-- All Playlists: a row's ⋮ menu -->
+	<!-- The playlist's ⋮ menu (#cr-listBtn, js/playlist.js) -->
+	<div id="cr-listMenu" popover="auto" class="ft-popover">
+		<div id="cr-listMenuArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu" role="menu" aria-label="Playlist options">
+			<button type="button" role="menuitem" class="butt graybutt" data-act="all"><i class="material-symbols-outlined">library_music</i> All playlists…</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="new"><i class="material-symbols-outlined">library_add</i> New playlist</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="import"><i class="material-symbols-outlined">download</i> Import a playlist…</button>
+			<hr class="ft-menu-sep" />
+			<button type="button" role="menuitem" class="butt graybutt" data-act="shuffle"><i class="material-symbols-outlined">shuffle</i> Shuffle this playlist</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="merge"><i class="material-symbols-outlined">merge_type</i> Merge playlists…</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="check"><i class="material-symbols-outlined">troubleshoot</i> Check for broken tracks</button>
+			<hr class="ft-menu-sep" />
+			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete this playlist…</button>
+		</div>
+	</div>
+
+	<!-- Show only (#cr-showOnly): the playlist filter's Remixes and Broken -->
+	<div id="cr-showOnlyMenu" popover="auto" class="ft-popover">
+		<div id="cr-showOnlyArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu cr-showOnlyBox" role="group" aria-labelledby="cr-showOnlyTitle">
+			<div class="ft-menu-title" id="cr-showOnlyTitle">Show only</div>
+			<div id="queueFilterExtras" class="queueFilterExtras">
+				<label class="queueFilterRemixOnly" for="queueFilterRemixOnly">
+					<input type="checkbox" id="queueFilterRemixOnly" />
+					<span>Remixes</span>
+				</label>
+				<label class="queueFilterBrokenOnly" for="queueFilterBrokenOnly">
+					<input type="checkbox" id="queueFilterBrokenOnly" />
+					<span>Broken</span>
+				</label>
+			</div>
+		</div>
+	</div>
+
 	<div id="cr-plRowMenu" popover="auto" class="ft-popover">
 		<div id="cr-plRowMenuArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box ft-menu" role="menu" aria-label="Playlist options">
