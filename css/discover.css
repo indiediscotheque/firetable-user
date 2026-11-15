@@ -1562,6 +1562,30 @@ body.pv-full-on { overflow: hidden; }
 }
 #pv-ftheme span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #pv-ftheme i { color: var(--pb-tone); font-size: 1.15em; }
+/* Wider than a phone: the room's name and theme lock up with the logo's last
+   ":". Each line is centred on one of its dots (in idlogo2.png, 600 × 282: the
+   dots run 76–153 and 200–276 down), its capitals as tall as a dot (Inter's
+   capitals are 0.727em; at line-height 1 their middle is the line's middle),
+   and the space before them follows the logo's own letter spacing. */
+@media only screen and (min-width: 640px) {
+    .pvf-brand {
+        --pvf-logo-w: clamp(3.75rem, 6.5vw, 7.5rem);
+        --pvf-dot: calc(var(--pvf-logo-w) * 77 / 600);
+        gap: calc(var(--pvf-logo-w) * 0.16);
+    }
+    .pvf-logo { width: var(--pvf-logo-w); }
+    .pvf-roomtext {
+        display: grid;
+        grid-template-rows: minmax(0, 76fr) minmax(0, 77fr) minmax(0, 47fr) minmax(0, 76fr) minmax(0, 6fr);
+        gap: 0;
+        height: calc(var(--pvf-logo-w) * 282 / 600);
+        line-height: 1;
+    }
+    .pvf-roomtext b, #pv-ftheme { align-self: center; font-size: max(0.75rem, var(--pvf-dot) / 0.727); }
+    .pvf-roomtext b { grid-row: 2; }
+    #pv-ftheme { grid-row: 4; }
+    #pv-ftheme i { font-size: 1em; }
+}
 .pvf-tools { display: flex; flex: none; align-items: center; gap: var(--pad2); }
 /* the stage's own screen button, moved in: on is the video, off the artwork */
 #pv-fscreen #screenControl.on { color: var(--pb-tone); }
