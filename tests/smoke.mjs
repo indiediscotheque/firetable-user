@@ -804,6 +804,56 @@ try {
   await put("/waitlist", null);
   await put("/table", [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }]);
 
+  console.log("-- on a phone: time left reads −m:ss, Chat comes first, the DJ playlist shows its name, removing a DJ takes two taps");
+  await page.setViewportSize({ width: 390, height: 740 });
+  const phoneFix = await page.evaluate(async () => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login");
+    const realUid = ftapi.uid, realSend = ftapi.actions.sendBotCommand, sent = [];
+    ftapi.actions.sendBotCommand = (t) => { sent.push(t); return Promise.resolve(); };
+    ftapi.uid = "smokeMod";
+    firetable.nav.mobileSection = "view";
+    firetable.nav.apply();
+    await new Promise((r) => setTimeout(r, 1200));
+    const out = { left: document.getElementById("timr").textContent, played: document.getElementById("timrUp").textContent };
+    const tabs = [...document.querySelectorAll("#minimodeoptions .tab")].filter((t) => t.offsetParent)
+      .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left).map((t) => t.id);
+    out.first = tabs[0];
+    const label = document.getElementById("djlistpickerLabel").getBoundingClientRect();
+    out.labelHidden = label.width <= 1 && label.height <= 1;
+    out.labelledBy = document.getElementById("djlistpicker").getAttribute("aria-labelledby");
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    const btn = () => document.querySelector("#deck .deckRemoveBtn");
+    out.btn = !!btn();
+    if (btn()) {
+      btn().click();
+      out.armed = btn().classList.contains("armed") && /Tap to remove/.test(btn().textContent) && btn().closest(".djplaque").classList.contains("confirming");
+      out.afterOne = sent.slice();
+      btn().click();
+      out.afterTwo = sent.slice();
+    }
+    ftapi.actions.sendBotCommand = realSend;
+    ftapi.uid = realUid;
+    firetable.$appShell = $("#appShell").detach();
+    return out;
+  });
+  if (process.env.SHOTS) {
+    await page.evaluate(() => {
+      window.__realUid = ftapi.uid; ftapi.uid = "smokeMod";
+      ftapi.events.emit("tableChanged", firetable.tableData);
+      document.querySelector("#deck .deckRemoveBtn").click();
+    });
+    await sleep(300);
+    await page.locator("#stage").screenshot({ path: process.env.SHOTS + "/phone-stage-remove-armed.png" });
+    await page.evaluate(() => { ftapi.uid = window.__realUid; ftapi.events.emit("tableChanged", firetable.tableData); });
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+  check(/^−\d+:\d\d$/.test(phoneFix.left) && /^\d+:\d\d$/.test(phoneFix.played), "time left has a minus, time played doesn't (" + phoneFix.played + " / " + phoneFix.left + ")");
+  check(phoneFix.first === "mmchat", "Chat is the first phone tab (" + phoneFix.first + ")");
+  check(phoneFix.labelHidden && phoneFix.labelledBy === "djlistpickerLabel", "on a phone the DJ playlist's label is for screen readers only, and still names the picker");
+  check(phoneFix.btn && phoneFix.armed && phoneFix.afterOne.length === 0 && phoneFix.afterTwo.join() === "!remove dj1",
+    "a mod's first tap on the plate's remove asks again; the second removes (" + JSON.stringify(phoneFix) + ")");
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));

@@ -812,7 +812,7 @@ firetable.ui.applySongAnnouncementVisibility = function () {
 firetable.nav = {
   view: 'playlists',
   side: 'chat',
-  mobileSection: 'view',
+  mobileSection: 'chat', // phones open on Chat until someone picks another tab
   _isFading: false,
   _fadeMs: 180,
 

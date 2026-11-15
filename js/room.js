@@ -467,8 +467,23 @@ firetable.ui.setupRoomEvents = function () {
       _pendingDeparture[userId] = newIsOn ? true : null;
       ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
     });
+    // One stray tap on a phone shouldn't pull a DJ off the stage: the first tap
+    // turns the button into "Tap to …", the second (within 4s) does it.
     $("#deck").off('click.remove').on('click.remove', '.deckRemoveBtn', function () {
-      var userId = $(this).attr('data-userid');
+      var $btn = $(this);
+      var userId = $btn.attr('data-userid');
+      if (!$btn.hasClass('armed')) {
+        var ask = userId === ftapi.uid ? 'Tap to step down' : 'Tap to remove';
+        $btn.addClass('armed').attr('aria-label', ask + ' (confirm)').append('<span class="deckRemoveAsk">' + ask + '</span>');
+        $btn.closest('.djplaque').addClass('confirming');
+        clearTimeout(_disarmRemove);
+        _disarmRemove = setTimeout(function () {
+          $btn.removeClass('armed').removeAttr('aria-label').find('.deckRemoveAsk').remove();
+          $btn.closest('.djplaque').removeClass('confirming');
+        }, 4000);
+        return;
+      }
+      clearTimeout(_disarmRemove);
       if (userId === ftapi.uid) {
         ftapi.actions.sendBotCommand("!removeme");
       } else {
@@ -1120,7 +1135,8 @@ firetable.ui.setupRoomEvents = function () {
       if (!song) return;
       var elapsed = Math.max(0, (ftapi.now() - song.started) / 1000);
       $("#timrUp").text(formatClock(Math.floor(elapsed)));
-      $("#timr").text(formatClock(Math.ceil((song.duration || 0) - elapsed)));
+      // time left: marked with a minus so it never reads as a second elapsed clock
+      $("#timr").text("\u2212" + formatClock(Math.max(0, Math.ceil((song.duration || 0) - elapsed))));
       if (!withBar) return;
       var pcnt = (elapsed / song.duration) * 100;
       $("#prgbar").css("background", "linear-gradient(90deg, " + firetable.color + " " + pcnt + "%, color-mix(in srgb, " + firetable.color + " 50%, black) " + pcnt + "%)");
@@ -1281,6 +1297,7 @@ firetable.ui.setupRoomEvents = function () {
   });
 
   // ── DJ Table ──
+  var _disarmRemove = null; // the timer that puts an armed remove / step-down button back
   var _pendingDeparture = {}; // userId -> true|null while bot command is in-flight
   ftapi.events.on("tableChanged", function (data) {
     firetable.tableData = data;

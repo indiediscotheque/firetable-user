@@ -625,6 +625,19 @@ button.track-warning {
     font-size: 0.9rem;
     pointer-events: none;
 }
+/* Armed (first tap): the button takes the whole plate and asks for a second tap */
+.djplaque.confirming > :not(.deckRemoveBtn) { visibility: hidden; }
+.djplaque .deckRemoveBtn.armed {
+    justify-self: stretch;
+    width: auto;
+    gap: var(--pad2);
+    color: #fff;
+    background: var(--color-danger);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+}
+#deck .djplaque .deckRemoveBtn.armed:hover { background: color-mix(in srgb, var(--color-danger) 85%, white); }
+.deckRemoveAsk { pointer-events: none; white-space: nowrap; }
 
 .butt {
     /* flat and rounded, sentence case: one clean shape for every button (November 2026) */
@@ -1160,6 +1173,20 @@ a.sociallogo[href] {
         letter-spacing: 0.04em;
         white-space: nowrap;
     }
+    /* Chat first: it's what most people open Live for on a phone */
+    #minimodeoptions #mmchat { order: -1; }
+
+    /* The playlist's name needs the room more than its label does
+       (the label stays for screen readers through aria-labelledby) */
+    #djlistpickerWrap #djlistpickerLabel {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+    #djlistpickerWrap #djlistpicker { padding-inline-start: 0.75em; }
 }
 
 #sidepanel-tabs {
