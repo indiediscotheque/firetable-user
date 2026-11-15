@@ -54,7 +54,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | ST-21 | Seasonal avatars (monsters in October, etc.) | All | `seasons.js` `AVATAR_SEASONS`, `ftconfigs.avatarset` | keep; check every stage state with non-robot sets |
 | ST-22 | Theme colours (room accent per night) | All | `colorsChanged` (`colors`) sets `--color-accent` | keep; all new accent uses go through the variable |
 | ST-23 | Stage backdrop with the `:id:` logo (when nothing plays) | All | `#stageBackdrop` | 1.10 the "decks are open" empty state |
-| ST-24 | User card on a DJ's avatar (Take the bus, Step down, Add to / Remove from deck, Block) | All / Mod | `#ft-user-tip` (`ui.js` user tip), `utt-*` buttons, `departure_board` | keep; 1.11 your own controls also in the Your turn bar |
+| ST-24 | User card on a DJ's avatar (Take the bus, Step down, Add to / Remove from deck, Block); the name plate's own remove / step down takes two taps ("Tap to remove", November 15, 2026) | All / Mod | `#ft-user-tip` (`ui.js` user tip), `utt-*` buttons, `departure_board` | keep; 1.11 your own controls also in the Your turn bar |
 
 ## NP · Now playing facts
 
@@ -66,7 +66,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | NP-04 | Tempo (BPM) | All | `#npBpm` | 1.4 |
 | NP-05 | Album art thumbnail | All | `#albumArt` | keep (used on narrow layouts) |
 | NP-06 | Progress bar | All | `#prgbar` > `#prgbarbar` | 1.8 along the stage's bottom edge (same element) |
-| NP-07 | Time: elapsed (`#timrUp`) and remaining (`#timr`) | All | `room.js` `newSong` countdown | 1.8 elapsed / total, plus remaining on hover |
+| NP-07 | Time: elapsed (`#timrUp`) and remaining (`#timr`, shown as −m:ss since November 15, 2026) | All | `room.js` `newSong` countdown | 1.8 elapsed / total, plus remaining on hover |
 | NP-08 | Song sheet (cover, links, tempo, source, plays, firsts, versions, Play, Save, Open, Copy link) from any title | All | `discover.js` `openSheet` (`.d-sheetlink`) | keep; reachable from the stage title (1.4) |
 
 ## DJ · Decks, waitlist, your turn
@@ -175,7 +175,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| NV-01 | Phone tabs: Playlists, Recent, Fresh, Cards, Chat, People | All | `#minimodeoptions` (`#mm-playlists`, `#mm-history`, `#mm-discover`, `#mm-cards`, `#mmchat`, `#mmusrs`), `STORAGE.navMobile` | 4.1 bottom tab bar Home · Discover · Live · Library · You; Live keeps Chat · Recent · People · Cards |
+| NV-01 | Phone tabs: Chat (first, and the default until you pick another, since November 15, 2026), Playlists, Recent, Fresh, Cards, People | All | `#minimodeoptions` (`#mm-playlists`, `#mm-history`, `#mm-discover`, `#mm-cards`, `#mmchat`, `#mmusrs`), `STORAGE.navMobile` | 4.1 bottom tab bar Home · Discover · Live · Library · You; Live keeps Chat · Recent · People · Cards |
 | NV-02 | Tablet side tabs: Chat, People | All | `#sidepanel-tabs` (`#sp-chat`, `#sp-people`), `STORAGE.navSide` | keep |
 | NV-03 | View under the stage (Playlists, Recent, Fresh, Cards) | All | `firetable.ui.showView`, `syncNavState`, `STORAGE.navView`, `#mainGrid.view-*` | keep |
 | NV-04 | Addresses (`#live`, `#discover/...`) and back button | All | `discover.js` `route`, `writeAddress` | keep; 2.2 adds nothing new |
