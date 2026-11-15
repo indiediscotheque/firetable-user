@@ -1142,7 +1142,7 @@ try {
     out.disc = { cls: el.className, title: document.getElementById("pv-ftitle").textContent,
       transport: ["d-prev", "pvf-main", "d-next", "d-reload"].filter((c) => el.querySelector("#pv-ftransport ." + c)).length, seek: !document.getElementById("pv-fseek").disabled,
       acts: !!el.querySelector("#pv-fkeep .d-savebtn") && !!el.querySelector("#pv-fkeep .d-toroom") && !!el.querySelector("#pv-facts .d-more"),
-      side: document.getElementById("pv-fside").textContent, theme: document.getElementById("pv-ftheme").textContent, noBars: !el.querySelector("#pv-feq, .pvf-eq") };
+      next: document.getElementById("pv-fnext").textContent, noSide: !el.querySelector("#pv-fside, #pv-ftabs, .pvf-side"), theme: document.getElementById("pv-ftheme").textContent, noBars: !el.querySelector("#pv-feq, .pvf-eq") };
     const was = el.classList.contains("is-paused");
     el.querySelector(".pvf-main").click();
     await wait(100);
@@ -1182,14 +1182,14 @@ try {
     firetable.screenControl = "sync";
     firetable.ui.applyScreenSetting();
     firetable.ui.updateScreenBtn("sync");
-    // Listen in, from the side: the room, with a visitor's Join to fire (the stage's Fire stays out of sight)
-    el.querySelector("#pv-fside .d-listen").click();
+    // Listen in, under the song: the room, with a visitor's Join to fire (the stage's Fire stays out of sight)
+    el.querySelector("#pv-fnext .d-listen").click();
     await wait(300);
     out.room = { cls: el.className, src: document.getElementById("pv-fsrc").textContent, title: document.getElementById("pv-ftitle").textContent, song: firetable.song.title,
       joinFire: !!el.querySelector("#pv-fkeep .pb-joinfire"), fireHidden: !!document.getElementById("fire").closest("#pv-fstage") && document.getElementById("fire").offsetParent === null,
-      side: document.getElementById("pv-fside").textContent, seek: document.getElementById("pv-fseek").disabled, pick: !!el.querySelector("#pv-fside .d-mypick"),
+      next: document.getElementById("pv-fnext").textContent, seek: document.getElementById("pv-fseek").disabled, pick: !!el.querySelector("#pv-fnext .d-mypick"),
       tone: getComputedStyle(document.getElementById("pv-fullbg")).getPropertyValue("--pb-art").trim(), roomColor: firetable.color,
-      name: el.querySelector(".pvf-roomtext b").textContent, noChatTab: !el.querySelector('[data-ftab="chat"]') && document.getElementById("pv-ftabs").hidden };
+      name: el.querySelector(".pvf-roomtext b").textContent, noSide: !el.querySelector("#pv-fside, #pv-ftabs, [data-ftab], .d-decks, .d-justplayed, #actualChat") };
     // Escape closes it back into the bar, the page usable again
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await wait(700);
@@ -1225,8 +1225,8 @@ try {
   check(full.open.logo, "the :id: logo is on the full-screen player");
   check(/is-discover/.test(full.disc.cls) && full.disc.title === "First Single" && full.disc.transport === 4 && full.disc.seek && full.disc.acts && full.disc.toggled && full.disc.noBars,
     "a Discover song in full: previous, play, next, reload, seek, Save, Play it in the room, ⋮, and no made-up level bars (" + JSON.stringify(full.disc) + ")");
-  check(/Up next|last song/.test(full.disc.side) && /Listen in/.test(full.disc.side) && /smoke tests/.test(full.disc.theme),
-    "beside it: up next and the room, with Listen in; the room's theme at the top (" + JSON.stringify({ side: full.disc.side.slice(0, 120), theme: full.disc.theme }) + ")");
+  check(full.disc.noSide && /^NextUnplayed/i.test(full.disc.next) && /Play now/.test(full.disc.next) && /The room.*Listen in/i.test(full.disc.next) && /smoke tests/.test(full.disc.theme),
+    "no side panel: under the song, the next one (Play now) and the room (Listen in); the room's theme at the top (" + JSON.stringify({ next: full.disc.next, theme: full.disc.theme }) + ")");
   check(full.screenHere && full.video.cls && full.video.body && full.video.stage && full.video.under && full.video.screen && full.video.down && full.video.upWhileStalled && full.video.saved === "on" && full.audio,
     "the stage's screen button is in the player: on lowers the room's own screen behind it (up while YouTube stalls), off raises it, one setting with the stage (" + JSON.stringify(full.video) + ")");
   check(full.art.square && /mqdefault|newrel0001/.test(full.art.img) && !/maxresdefault/.test(full.art.img), "screen off shows the song's own artwork, square (" + JSON.stringify(full.art) + ")");
@@ -1235,8 +1235,8 @@ try {
   check(full.room.name === "Indie Discotheque", "the room is named as the site's logo has it (" + full.room.name + ")");
   check(/is-room/.test(full.room.cls) && /Live|On air/.test(full.room.src) && full.room.title === full.room.song && full.room.joinFire && full.room.fireHidden && full.room.seek && full.room.pick,
     "Listen in shows the room in full: a visitor gets Join to fire, not the stage's Fire, can't seek, and their pick waits (" + JSON.stringify(full.room) + ")");
-  check(/On the decks/.test(full.room.side) && /dj1/.test(full.room.side) && /Join to DJ/.test(full.room.side) && !/Live chat|great tune/.test(full.room.side) && full.room.noChatTab,
-    "the room's side for a visitor: who's on the decks (and the open spot, Join to DJ), and no chat (" + full.room.side.slice(0, 160) + ")");
+  check(full.room.noSide && /Your pick.*Back to it/i.test(full.room.next),
+    "the room in full: no DJs or chat panel, just the paused pick under the song with Back to it (" + full.room.next + ")");
   check(full.closed.hidden && !full.closed.on && !full.closed.inert && full.closed.fire === "pv-livekeep" && full.closed.focus && full.fKey,
     "Escape closes it into the bar (the stage's buttons go back there, focus to the button that opened it); F opens it (" + JSON.stringify(full.closed) + ")");
   check(full.live.shown && full.live.label === "Full-screen player" && full.live.open && /is-room|is-quiet/.test(full.live.cls) && full.live.noSkipping && /Stop listening|Listen in/.test(full.live.main || "") && full.live.same && full.live.reload && full.live.back === "pv-livekeep" && full.live.bar,
@@ -1252,7 +1252,7 @@ try {
     firetable.discover.openFull();
     await wait(600);
     const el = document.getElementById("pv-full");
-    const shown = () => [...el.querySelectorAll("button, a.butt")].filter((b) => b.offsetParent !== null && getComputedStyle(b).visibility !== "hidden" && !b.closest(".pvf-side, .pvf-drawer, .pvf-title, .pvf-src")).length;
+    const shown = () => [...el.querySelectorAll("button, a.butt")].filter((b) => b.offsetParent !== null && getComputedStyle(b).visibility !== "hidden" && !b.closest(".pvf-next, .pvf-drawer, .pvf-title, .pvf-src")).length;
     const out = { before: shown() };
     el.querySelector(".pvf-morebtn").click();
     await wait(100);
@@ -1719,7 +1719,7 @@ try {
   check(member.first && member.done && /First in/.test(member.note || "") && member.undone && member.fire,
     "Play it in the room puts the song first in the DJ playlist, says so, and Undo takes it out; listening in, Fire is in the bar (" + JSON.stringify(member) + ")");
 
-  console.log("-- The full-screen player for members: the stage's buttons, and the room's chat beside it");
+  console.log("-- The full-screen player for members: the stage's buttons, and nothing beside the song");
   const fullMember = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const el = document.getElementById("pv-full");
@@ -1732,27 +1732,24 @@ try {
     out.cls = el.className;
     out.fire = !!document.getElementById("fire").closest("#pv-fstage") && document.getElementById("fire").offsetParent !== null;
     out.grab = !!document.getElementById("grab").closest("#pv-fstage");
-    out.hopOn = !!el.querySelector("#pv-fside .d-joinwait");
-    out.tabs = [...el.querySelectorAll("#pv-ftabs [data-ftab]")].map((b) => b.textContent.trim()).join();
-    el.querySelector('#pv-ftabs [data-ftab="chat"]').click();
-    await wait(200);
-    const chat = document.getElementById("actualChat");
-    out.chatIn = !!chat.closest("#pv-fside") && document.getElementById("newchat").offsetParent !== null;
-    out.state = firetable.discover.state().fullChat;
-    el.querySelector('#pv-ftabs [data-ftab="deck"]').click();
-    await wait(200);
-    out.backToDjs = chat.parentElement === home && /On the decks/.test(document.getElementById("pv-fsidebody").textContent);
-    el.querySelector('#pv-ftabs [data-ftab="chat"]').click();
-    await wait(100);
+    out.noSide = !el.querySelector("#pv-fside, #pv-ftabs, [data-ftab], .d-decks, .d-joinwait");
+    out.chatHome = document.getElementById("actualChat").parentElement === home && !el.contains(document.getElementById("actualChat"));
+    const st = firetable.discover.state();
+    out.noState = !("fullChat" in st) && !("fullTab" in st);
+    // the artwork beside the words on a wide screen, as tall as the space allows
+    // (layout sizes: the cover is still growing out of the bar)
+    const artEl = el.querySelector(".pvf-art"), art = artEl.getBoundingClientRect(), text = el.querySelector(".pvf-text").getBoundingClientRect(), body = el.querySelector(".pvf-body").getBoundingClientRect();
+    out.layout = { beside: text.left >= art.left + artEl.offsetWidth, tall: artEl.offsetHeight > body.height * 0.75, square: Math.abs(artEl.offsetWidth - artEl.offsetHeight) < 2 };
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await wait(600);
-    out.closed = el.hidden && document.getElementById("fire").parentElement.id === "pv-livekeep" && chat.parentElement === home;
+    out.closed = el.hidden && document.getElementById("fire").parentElement.id === "pv-livekeep";
     return out;
   });
   check(/is-member/.test(fullMember.cls) && fullMember.fire && fullMember.grab, "a member has the stage's Fire and Grab in the full-screen player (" + JSON.stringify(fullMember) + ")");
-  check(fullMember.hopOn, "and Hop on, beside the decks, when there's an open spot");
-  check(fullMember.tabs === "DJs,Chat" && fullMember.chatIn && fullMember.state && fullMember.backToDjs && fullMember.closed,
-    "a member tabs between the DJs and the room's own chat beside the song; Escape closes it and everything goes home (" + JSON.stringify(fullMember) + ")");
+  check(fullMember.noSide && fullMember.chatHome && fullMember.noState && fullMember.closed,
+    "no DJs or Chat beside the song (a listening view): the chat stays in its place; Escape closes it and the buttons go home");
+  check(fullMember.layout.beside && fullMember.layout.tall && fullMember.layout.square,
+    "the artwork stands beside the words, square, filling the height the player has (" + JSON.stringify(fullMember.layout) + ")");
 
   console.log("-- Your account: the avatar's menu, Profile · Account · Settings, and log out");
   const acct = await dPage.evaluate(async () => {

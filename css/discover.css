@@ -826,13 +826,6 @@ section .d-chips a.d-chip {
     font-size: var(--fs-meta);
 }
 .d-savebtn.is-saved { background: var(--color-bg-t3); color: var(--color-accent); }
-.d-upnext {
-    display: flex;
-    flex-direction: column;
-    gap: var(--pad1);
-    padding-top: var(--pad2);
-    border-top: 1px solid var(--color-border);
-}
 .d-mini-row {
     display: flex;
     align-items: center;
@@ -1333,17 +1326,6 @@ body.ft-has-discover #djStage .avtr { height: min(110px, max(5rem, min(24cqw, va
 .d-found { display: flex; flex-direction: column; gap: var(--pad1); }
 .d-rising { color: var(--color-success); }
 .d-befirst { color: var(--color-accent); }
-.d-roomrow {
-    display: flex;
-    align-items: center;
-    gap: var(--pad2);
-    padding: var(--pad2);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-t1);
-}
-.d-roomrow .d-mini-text b { display: flex; align-items: center; gap: 0.3rem; }
-.d-roomrow.is-quiet { color: var(--color-text-muted); }
 .d-dot.is-off { background: var(--color-text-dim); }
 .d-livefrom { gap: var(--pad2); }
 .d-livebadge {
@@ -1355,26 +1337,6 @@ body.ft-has-discover #djStage .avtr { height: min(110px, max(5rem, min(24cqw, va
 }
 .d-livebadge.is-off { background: none; color: var(--color-danger); box-shadow: inset 0 0 0 1px var(--color-danger); }
 .d-onair .d-cover { position: relative; }
-.d-decks { display: flex; flex-direction: column; gap: var(--pad1); }
-.d-deckrow { display: flex; flex-wrap: wrap; gap: var(--pad2) var(--pad3); }
-.d-deckdj { display: flex; align-items: center; gap: var(--pad2); min-width: 0; }
-.d-deckdj .ft-avatar { width: 2rem; height: 2rem; flex: none; }
-.d-deckdj > span:last-child { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
-.d-deckdj b { color: var(--color-text-light); font-size: var(--fs-meta); font-weight: 600; }
-.d-deckdj small { color: var(--color-text-muted); font-size: var(--fs-micro); }
-.d-deckdj.is-on small { color: var(--color-danger); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-.d-deckdj.is-me b { color: var(--color-accent); }
-.d-openspot {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border: 1px dashed var(--color-text-dim);
-    border-radius: 50%;
-    color: var(--color-text-muted);
-}
-.d-openspot i { font-size: 1.1rem; }
 
 /* the playlist panel */
 .d-listpanel { gap: var(--pad2); }
@@ -1607,30 +1569,35 @@ body.pv-full-on { overflow: hidden; }
 .pvf .iconbutt [class*="material-symbols-"] { font-size: 1.4rem; }
 .pvf .pvf-iconbtn[aria-pressed="true"] { color: var(--pb-tone); }
 
-/* ── middle: the song, and what's going on beside it ── */
+/* ── middle: the song, nothing else (the player is for listening). On a wide
+   screen its artwork stands as tall as the space allows, with the words
+   beside it; on a narrow one the artwork fills the width over the words. ── */
 .pvf-body {
+    container-type: size; /* the artwork is sized from the room the body has */
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(18rem, 25vw, 30rem);
-    gap: clamp(1.5rem, 3vw, 4rem);
-    padding: clamp(1rem, 3.5vh, 3rem) var(--pvf-pad);
+    padding: clamp(1rem, 4vh, 3.5rem) var(--pvf-pad);
     min-height: 0;
 }
 .pvf-now {
     display: grid;
-    grid-template-rows: minmax(6rem, 1fr) auto;
-    gap: clamp(0.75rem, 2.2vh, 1.75rem);
+    grid-template-columns: min(100cqh, 46cqw) minmax(0, 1fr);
+    align-items: center;
+    column-gap: clamp(2rem, 4.5vw, 6rem);
     min-width: 0;
     min-height: 0;
+    transition: grid-template-columns 0.6s ease, column-gap 0.6s ease;
 }
-/* the cover takes the room the words leave, as big as fits (a size container) */
+/* the cover takes the room its column has, as big as fits (a size container) */
 .pvf-visual {
     container-type: size;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: center;
+    align-self: stretch;
+    min-width: 0;
     min-height: 0;
 }
-.pvf-art { --art-w: min(100cqw, 100cqh, 36rem); }
+.pvf-art { --art-w: min(100cqw, 100cqh); }
 .pvf-art {
     position: relative;
     flex: none;
@@ -1694,36 +1661,65 @@ body.pv-full-on { overflow: hidden; }
 .pvf-hist .ft-avatar { width: 1.4rem; height: 1.4rem; }
 .pvf-hist:empty, .pvf-tags:empty { display: none; }
 
-/* the side: up next, the room; or the decks, just played, the chat */
-.pvf-side {
+/* under the song, quietly: what's next, and the other source one tap away */
+.pvf-next {
     display: flex;
     flex-direction: column;
-    gap: var(--pad3);
-    align-self: start;
-    max-height: 100%;
-    min-height: 0;
-    padding: clamp(0.75rem, 1.4vw, 1.5rem);
-    overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md);
-    background: rgba(0, 0, 0, 0.34);
-    scrollbar-width: thin;
+    align-items: flex-start;
+    gap: clamp(0.3rem, 0.8vh, 0.6rem);
+    margin-top: clamp(0.25rem, 1.6vh, 1.25rem);
+    min-width: 0;
+}
+.pvf-next:empty { display: none; }
+.pvf-line {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    max-width: 100%;
+    margin: 0;
+    padding: 0.15rem 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    box-shadow: none;
+    color: var(--color-text-subtle);
+    font: inherit;
+    font-size: var(--fs-title);
+    line-height: 1.35;
+    text-align: left;
+}
+button.pvf-line { cursor: pointer; }
+.pvf-linelabel {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 8.5em; /* the titles line up */
+    color: color-mix(in oklab, var(--pb-tone) 35%, white);
+    font-size: var(--fs-micro);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.pvf-linelabel [class*="material-symbols-"] { font-size: 1.2em; }
+.pvf-linelabel .d-dot { align-self: center; }
+.pvf-linetext { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvf-linetext b { color: var(--color-text-light); font-weight: 600; }
+.pvf-linetext span::before { content: " · "; }
+.pvf-linedo {
+    flex: none;
+    color: var(--color-text-light);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.35);
+    text-underline-offset: 3px;
     transition: opacity 0.5s ease;
 }
-.pvf-side:empty { visibility: hidden; }
-.pvf-side .d-upnext { border-top-color: rgba(255, 255, 255, 0.08); }
-.pvf-side .d-label { color: var(--color-text-subtle); }
-.pvf-side .d-roomrow { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.08); }
-.pvf-side .d-mini-art { width: clamp(2.5rem, 2.8vw, 3.25rem); height: clamp(2.5rem, 2.8vw, 3.25rem); }
-.pvf-side .d-deckdj .ft-avatar, .pvf-side .d-openspot { width: 40px; height: 40px; } /* the 40px picture, at its own size */
-.pvf-side .d-deckrow { flex-direction: column; }
-.pvf-side .d-deckdj.is-on { padding: var(--pad1) var(--pad2); margin-inline: calc(-1 * var(--pad2)); border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.06); box-shadow: inset 3px 0 0 var(--pb-tone); }
-.pvf-side .d-fact { margin: 0; color: var(--color-text-subtle); font-size: var(--fs-meta); }
-.pvf-side .d-chatline { font-size: var(--fs-title); }
-.pvf-side .d-chatline .ft-avatar { width: 1.75rem; height: 1.75rem; }
-.pvf-from span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pvf-chat .linkButton { align-self: flex-start; }
-.pvf .d-stepdown { color: var(--color-text-muted); font-size: inherit; }
+button.pvf-line:hover .pvf-linedo, button.pvf-line:focus-visible .pvf-linedo { text-decoration-color: currentColor; }
+button.pvf-line:focus-visible { outline: 2px solid var(--pb-tone); outline-offset: 3px; }
+.pvf-note { display: block; font-size: var(--fs-meta); }
+.pvf-note .linkButton { color: var(--color-text-light); }
 
 /* ── bottom: the song's time, then the controls ── */
 .pvf-bar {
@@ -1783,20 +1779,11 @@ body.pv-full-on { overflow: hidden; }
 .pvf .pb-vol { display: flex; align-items: center; gap: var(--pad1); }
 #pv-fvol { width: clamp(5rem, 7vw, 8rem); }
 
-/* the side's tabs (members): the DJs or up next, and the room's own chat */
-.pvf-tabs { flex: none; gap: 0; margin: calc(-1 * clamp(0.75rem, 1.4vw, 1.5rem)) calc(-1 * clamp(0.75rem, 1.4vw, 1.5rem)) 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-.pvf-tabs[hidden] { display: none; }
-.pvf-tabs .tab { flex: 1; }
-.pvf-tabs .tab.on { box-shadow: inset 0 -2px 0 var(--pb-tone); }
-.pvf-sidebody { display: flex; flex-direction: column; gap: var(--pad3); min-height: 0; }
-.pvf.on-chat .pvf-side { align-self: stretch; height: 100%; }
-.pvf.on-chat .pvf-sidebody { flex: 1; margin: 0 calc(-1 * clamp(0.75rem, 1.4vw, 1.5rem)) calc(-1 * clamp(0.75rem, 1.4vw, 1.5rem)); }
-.pvf-sidebody #actualChat { display: flex; flex: 1; min-width: 0; min-height: 0; background: rgba(0, 0, 0, 0.2); }
-
 /* resting: the controls fade, the song and the room stay */
 .pvf.is-idle { cursor: none; }
 .pvf.is-idle .pvf-tools, .pvf.is-idle .pvf-ctrls { opacity: 0; pointer-events: none; }
 .pvf.is-idle .pvf-time { opacity: 0.55; }
+.pvf.is-idle .pvf-linedo, .pvf.is-idle .pvf-note .linkButton { opacity: 0; }
 .pvf-tools { transition: opacity 0.5s ease; }
 
 /* ── Audio and Video: the stage's screen up and down ──
@@ -1806,9 +1793,9 @@ body.pv-full-on { overflow: hidden; }
    on the stage. */
 .pvf-visual { transition: opacity 0.8s ease, visibility 0s linear 0s; }
 body:not(.yt-stalled) .pvf.is-video .pvf-visual { opacity: 0; visibility: hidden; transition: opacity 0.6s ease, visibility 0s linear 0.6s; }
-.pvf.is-video :is(.pvf-title, .pvf-artist, .pvf-src, .pvf-hist, .pvf-roomtext) { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 1.5rem rgba(0, 0, 0, 0.6); }
-.pvf.is-video .pvf-side { background: rgba(0, 0, 0, 0.62); }
-.pvf.is-video.is-idle .pvf-side { opacity: 0; }
+/* over the video the artwork's column folds away and the words drop to the lower left */
+body:not(.yt-stalled) .pvf.is-video .pvf-now { grid-template-columns: 0 minmax(0, 1fr); column-gap: 0; align-items: end; }
+.pvf.is-video :is(.pvf-title, .pvf-artist, .pvf-src, .pvf-hist, .pvf-next, .pvf-roomtext) { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 1.5rem rgba(0, 0, 0, 0.6); }
 .pvf.is-video .pvf-tags .d-tag { background: rgba(0, 0, 0, 0.5); }
 .pvf::before,
 .pvf::after {
@@ -1862,13 +1849,12 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 
 /* ── Tablets and phones: one column that scrolls; the controls stack ── */
 @media only screen and (max-width: 1023px) {
+    /* one column: the artwork over the words */
     .pvf-body { display: flex; flex-direction: column; overflow-y: auto; }
-    .pvf-now { display: flex; flex: none; flex-direction: column; }
-    .pvf-visual { flex: none; justify-content: flex-start; container-type: inline-size; }
-    .pvf-art { --art-w: min(100cqw, 42vh); }
-    .pvf-side { flex: none; align-self: stretch; max-height: none; overflow: visible; }
+    .pvf-now { display: flex; flex: 1 1 auto; flex-direction: column; align-items: stretch; justify-content: center; gap: clamp(0.75rem, 2.4vh, 1.75rem); }
+    /* a square as wide as the page, giving way to the words on a short screen; the two stay together, centred */
+    .pvf-visual { flex: 0 1 100cqw; min-height: 9rem; justify-content: flex-end; }
     .pvf.is-video .pvf-body { overflow: hidden; }
-    .pvf.is-video .pvf-side { visibility: hidden; }
     /* the screen comes down where the cover is, as wide as the page (renderFull measures it) */
     body.pv-full-on #mainGrid #screenFrame {
         position: absolute;
@@ -1882,7 +1868,6 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     .pvf-transport { grid-area: transport; }
     .pvf-keep { grid-area: keep; }
     .pvf-right { grid-area: right; }
-    .pvf.on-chat .pvf-side { height: 70vh; }
 }
 /* ── Phones: quiet. The mark, the view and close at the top; the cover, the
    song; the time; then one action, the transport and "more".
@@ -1903,8 +1888,7 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     .pvf-artist { font-size: 1.1rem; }
     .pvf-tags { display: none; }
     .pvf-hist p:not(:first-child) { display: none; }
-    .pvf-side { padding: 0; border: 0; background: none; }
-    .pvf.is-video .pvf-side { background: none; }
+    .pvf-line { font-size: var(--fs-meta); }
 
     .pvf-ctrls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--pad3) var(--pad2); }
     .pvf-keep, .pvf-right, .pvf-ctrls .pb-host { display: contents; }
@@ -1924,4 +1908,5 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 /* short screens (a phone on its side): the cover gives way to the words */
 @media only screen and (max-height: 400px) {
     .pvf-visual { display: none; }
+    .pvf-now { grid-template-columns: minmax(0, 1fr); align-items: end; }
 }
