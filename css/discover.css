@@ -1752,18 +1752,24 @@ button.pvf-line:focus-visible { outline: 2px solid var(--pb-tone); outline-offse
     gap: clamp(0.5rem, 1.4vh, 1rem);
     padding: 0 var(--pvf-pad) max(var(--pvf-pad), env(safe-area-inset-bottom, 0px));
 }
+/* the bar runs the full width, on the same edges as the cover, the words and
+   the controls; the times sit under its two ends, so the row is symmetric */
 .pvf-time {
-    display: flex;
-    align-items: center;
-    gap: var(--pad3);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "track track" "at len";
+    row-gap: 0.3rem;
     color: var(--color-text-subtle);
     font-family: var(--font-numbers);
     font-size: var(--fs-meta);
     font-variant-numeric: tabular-nums;
+    line-height: 1.2;
     transition: opacity 0.5s ease;
 }
-.pvf-time .pb-at, .pvf-time .pb-len { min-width: 3.5rem; }
-.pvf-time .pb-len { text-align: right; }
+.pvf-time .pvf-track { grid-area: track; }
+.pvf-time .pb-at, .pvf-time .pb-len { min-width: 0; }
+.pvf-time .pb-at { grid-area: at; justify-self: start; text-align: left; }
+.pvf-time .pb-len { grid-area: len; justify-self: end; text-align: right; }
 .pvf-track .d-bar { height: 5px; background: rgba(255, 255, 255, 0.16); }
 .pvf.is-paused .pvf-track .d-bar i, .pvf.is-onair .pvf-track .d-bar i { background: var(--color-text-muted); }
 .pvf-ctrls {
@@ -1777,6 +1783,11 @@ button.pvf-line:focus-visible { outline: 2px solid var(--pb-tone); outline-offse
 .pvf-keep { justify-self: start; }
 .pvf-right { justify-self: end; }
 .pvf-transport { display: flex; align-items: center; justify-content: center; gap: clamp(0.5rem, 1.2vw, 1.25rem); }
+/* reload follows play with nothing to balance it: an empty twin on the other
+   side keeps play in the middle, under the middle of the bar */
+@media only screen and (min-width: 640px) {
+    .pvf-transport:has(.pb-small)::before { content: ""; flex: none; width: 2.5rem; }
+}
 .pvf .pvf-main {
     width: clamp(3.5rem, 4.4vw, 4.75rem);
     height: clamp(3.5rem, 4.4vw, 4.75rem);
