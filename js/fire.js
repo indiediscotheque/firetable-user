@@ -1,3 +1,6 @@
+// The room's fire. The live stage for other sites keeps a plain-canvas copy of
+// it (README, "The live stage for QueUp"): when its look changes here, change it there too.
+
 
 let pixelate = false;
 let fireBackground = false;

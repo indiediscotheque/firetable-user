@@ -13,20 +13,22 @@
 </head>
 <body>
 	<main id="st" class="is-loading" aria-label="Indie Discotheque, live">
-		<div class="st-bg" aria-hidden="true"><div class="st-blur" id="st-blur"></div><div class="st-logo"></div></div>
-		<div class="st-cover" id="st-cover" aria-hidden="true"></div>
-		<div class="st-screen" aria-hidden="true"><div id="st-yt"></div><div class="st-shield"></div></div>
-		<div class="st-shade" aria-hidden="true"></div>
+		<!-- The room's stage with its screen up, as on the site (#djStage) -->
+		<section class="st-stage" aria-label="The stage">
+			<div class="st-logo" aria-hidden="true"></div>
 
-		<header class="st-top">
-			<a class="st-brand" id="st-brand" target="_blank" rel="noopener" title="Open Indie Discotheque">
-				<img src="../../img/idlogo2.png?v=1" alt="" width="64" height="30" />
-				<span class="st-name" id="st-name">Indie Discotheque</span>
+			<div class="st-now" id="st-now" aria-live="polite">
+				<span class="st-art" id="st-art"></span>
+				<div class="st-npText">
+					<h1 class="st-title" id="st-title">Tuning in…</h1>
+					<p class="st-artist" id="st-artist"></p>
+					<p class="st-kicker" id="st-kicker"></p>
+				</div>
+			</div>
+
+			<div class="st-top">
 				<span class="st-live"><i aria-hidden="true"></i>Live</span>
-			</a>
-			<span class="st-count" id="st-count" hidden></span>
-			<span class="st-theme" id="st-theme" hidden><b>Theme</b><span id="st-themeText"></span></span>
-			<div class="st-ctl">
+				<span class="st-count" id="st-count" hidden></span>
 				<div class="st-vol" id="st-vol" hidden>
 					<button type="button" class="st-icon" id="st-mute" aria-label="Mute">
 						<svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.47 4.47 0 0 0 2.5-4zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06A9 9 0 0 0 14 3.23z" /></svg>
@@ -34,47 +36,47 @@
 					</button>
 					<input type="range" id="st-volume" min="0" max="100" step="5" value="80" aria-label="Volume" />
 				</div>
-				<a class="st-icon st-open" id="st-open" target="_blank" rel="noopener" aria-label="Open the room in a new tab" title="Open the room">
+				<a class="st-icon" id="st-open" target="_blank" rel="noopener" aria-label="Open the room in a new tab" title="Open the room">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" /></svg>
 				</a>
 			</div>
-		</header>
 
-		<button type="button" class="st-listen" id="st-listen" hidden>
-			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.47 4.47 0 0 0 2.5-4zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06A9 9 0 0 0 14 3.23z" /></svg>
-			<span>Listen live</span>
-			<small id="st-listenSub">Hear the room, in sync</small>
-		</button>
+			<button type="button" class="st-listen" id="st-listen" hidden>
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+				<span>Listen live</span>
+			</button>
 
-		<section class="st-quiet" id="st-quiet" hidden>
-			<img src="../../img/idlogo2.png?v=1" alt="" width="128" height="60" />
-			<h1>The decks are open</h1>
-			<p>Hop on and play something at <a id="st-quietLink" target="_blank" rel="noopener"></a></p>
+			<section class="st-quiet" id="st-quiet" hidden>
+				<h1>The decks are open</h1>
+				<p>Hop on and play something at <a id="st-quietLink" target="_blank" rel="noopener"></a></p>
+			</section>
+
+			<!-- The site's fire (flame.js, as js/fire.js) behind the DJ when the song's called hot -->
+			<div id="fyre" aria-hidden="true"></div>
+			<!-- The DJ playing, on the deck; the others in line beside it (as #deck and #ondeck) -->
+			<ol class="st-deck" id="st-deck" aria-label="On the decks"></ol>
+			<ol class="st-ondeck" id="st-ondeck" aria-label="Next on the decks"></ol>
+			<p class="st-note" id="st-note" role="status" hidden></p>
 		</section>
 
-		<footer class="st-low" id="st-low" aria-live="polite">
-			<span class="st-art" id="st-art"></span>
-			<div class="st-now">
-				<p class="st-kicker" id="st-kicker"></p>
-				<h1 class="st-title" id="st-title">Tuning in…</h1>
-				<p class="st-artist" id="st-artist"></p>
-			</div>
-			<ol class="st-deck" id="st-deck" aria-label="On the decks"></ol>
+		<div class="st-prog" aria-hidden="true"><i id="st-bar"></i></div>
+
+		<!-- As the site's #themebox: time played, the theme, time left -->
+		<footer class="st-box">
+			<span class="st-timr" id="st-at" title="Time played"></span>
+			<a class="st-theme" id="st-theme" target="_blank" rel="noopener" title="Open the room">
+				<b>Theme</b><span id="st-themeText">Indie Discotheque</span>
+			</a>
+			<span class="st-timr" id="st-left" title="Time left"></span>
 		</footer>
-		<div class="st-prog" id="st-prog" aria-hidden="true">
-			<span class="st-time" id="st-at"></span>
-			<span class="st-bar"><i id="st-bar"></i></span>
-			<span class="st-time" id="st-left"></span>
-		</div>
-		<p class="st-note" id="st-note" role="status" hidden></p>
 	</main>
-	<!-- SoundCloud's player: given its address the first time a SoundCloud song plays -->
-	<iframe id="st-sc" title="SoundCloud player" allow="autoplay; encrypted-media" tabindex="-1" aria-hidden="true"></iframe>
+	<!-- The room's radio stream (stage.js STREAM) -->
+	<audio id="st-audio" preload="none"></audio>
 
 	<script src="../../config.js?v=nocache"></script>
 	<script src="../../js/constants.js?v=1"></script>
 	<script src="../../js/seasons.js?v=1"></script>
+	<script src="flame.js?v=1"></script>
 	<script src="stage.js?v=1"></script>
-	<script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>

@@ -1,16 +1,21 @@
-/* The live stage for another site's screen (embed/stage/stage.js): fills
-   whatever box it's given, in the playing song's colours (--acc, --acc-txt) */
+/* The live stage for another site's screen (embed/stage/stage.js): the
+   room's stage with its screen up, as on the site (#djStage, #nowplaying,
+   #deck, #ondeck, #prgbar, #themebox in css/looks.css).
+
+   It scales as one picture: 1em is a fixed share of the box (1/44 of a 16:9
+   frame), and every size below is in em, so a bigger or smaller box with the
+   same proportions shows exactly the same layout, larger or smaller. No
+   pixel sizes, no minimums or maximums, no breakpoints. The playing song's
+   colours are --acc and --acc-txt. */
 :root {
   color-scheme: dark;
   --bg: #181818;
   --light: #fff;
-  --text: #e3e3e3;
   --subtle: #b3b3b3;
   --gold: #cc9933;
   --live: #e0393e;
-  --glass: rgba(16, 16, 16, 0.55);
+  --glass: rgba(16, 16, 16, 0.5);
   --glass-line: rgba(255, 255, 255, 0.12);
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 * { box-sizing: border-box; }
 html, body {
@@ -18,134 +23,124 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: var(--bg);
-  color: var(--text);
-  font: 400 clamp(10px, min(1.55vw, 2.75vh), 24px)/1.35 "Inter", "Open Sans", helvetica, arial, sans-serif;
+  color: var(--light);
+  /* the frame's width, or its height for a frame taller than 16:9 */
+  font: 400 min(100vw / 44, 100vh * 16 / 9 / 44)/1.35 "Inter", "Open Sans", helvetica, arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
 }
 a { color: inherit; text-decoration: none; }
-button { font: inherit; color: inherit; }
+button, input { font: inherit; color: inherit; } /* form controls keep their own size otherwise: never in step with the box */
 [hidden] { display: none !important; }
 svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
+:focus-visible { outline: 0.08em solid var(--light); outline-offset: 0.08em; }
 
+@property --acc { syntax: "<color>"; inherits: true; initial-value: #cc9933; }
 #st {
   --acc: var(--gold);
   --acc-txt: #fff;
-  position: relative;
-  width: 100%;
+  display: grid;
+  grid-template-rows: 1fr auto auto;
   height: 100%;
-  overflow: hidden;
-  isolation: isolate;
   transition: --acc 1.5s ease;
 }
-@property --acc { syntax: "<color>"; inherits: true; initial-value: #cc9933; }
 
-/* ─── Layers: colour, record, video, shade ─────────────────────────────── */
+/* ─── The stage: the song's colour, the :id: logo ──────────────────────── */
 
-.st-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: linear-gradient(to bottom, color-mix(in srgb, black 86%, var(--acc)), color-mix(in srgb, black 60%, var(--acc)));
-}
-.st-blur {
-  position: absolute;
-  inset: -12%;
-  background: center / cover no-repeat;
-  filter: blur(48px) saturate(1.5);
-  opacity: 0.4;
-  transition: background-image 1s ease;
+.st-stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(to bottom, color-mix(in srgb, black 85%, var(--acc)), color-mix(in srgb, black 66%, var(--acc)));
 }
 .st-logo {
   position: absolute;
   inset: 0;
-  padding: 6%;
+  z-index: -1;
+  padding: 2.6em;
   background: url(../../img/idlogo2.png?v=1) center / contain no-repeat content-box;
   opacity: 0.05;
+  pointer-events: none;
 }
 
-/* while there's no video (SoundCloud, ?video=0, before a video starts): the
-   cover fills the screen, still, under the shade */
-.st-cover {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: center / cover no-repeat;
-  transition: opacity 0.8s ease;
-}
+/* ─── Now playing (top left): cover, song, artist, who picked it ───────── */
 
-.st-screen {
+.st-now {
   position: absolute;
-  inset: 0;
-  z-index: 2;
+  top: 0;
+  left: 0;
+  right: 30%;
+  display: flex;
+  align-items: flex-start;
+  gap: 1em;
+  padding: 1.5em 0 0 1.5em;
+}
+.st-art {
+  flex: none;
+  width: 4em;
+  aspect-ratio: 1;
+  margin-left: 0.25em;
+  border-radius: 0.5em;
+  background: #222 center / cover no-repeat;
+  box-shadow: 0 0.4em 1.2em -0.45em rgba(0, 0, 0, 0.75);
+}
+.st-npText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.st-title, .st-artist { text-shadow: 0 0.06em 0.3em rgba(0, 0, 0, 0.6); }
+.st-title {
+  margin: 0;
+  font-size: 1.125em;
+  font-weight: 400;
+  line-height: 1.1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  background: #000;
-  opacity: 0;
-  transition: opacity 0.9s ease;
-  pointer-events: none;
 }
-/* the video covers the box, like a screen (cropped, never letterboxed) */
-#st-yt {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: max(100%, 177.78vh);
-  height: max(100%, 56.25vw);
-  translate: -50% -50%;
-  border: 0;
+.st-artist {
+  margin: 0 0 0.6em;
+  font-size: 0.875em;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.st-shield { position: absolute; inset: 0; }
-#st.has-video .st-screen { opacity: 1; }
-#st.has-video .st-cover { opacity: 0; }
-#st.no-video .st-screen { display: none; }
+.st-kicker {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.75em;
+  font-weight: 300;
+}
+.st-now .st-art, .st-npText { transition: opacity 0.2s ease, translate 0.2s ease; }
+.st-now.is-changing .st-art,
+.st-now.is-changing .st-npText { opacity: 0; translate: 0 0.2em; }
 
-.st-shade {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  background:
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent 24%),
-    linear-gradient(to top, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0.45) 26%, transparent 46%);
-}
-
-/* ─── Top: the room, who's here, the theme, sound ──────────────────────── */
+/* ─── Top right: live, who's here, sound, open the room ────────────────── */
 
 .st-top {
   position: absolute;
-  z-index: 5;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 1.5em;
+  right: 1.5em;
   display: flex;
-  align-items: baseline; /* every word sits on the logo's bottom edge (an image's baseline) */
-  gap: 0.75em;
-  padding: 1em 1.25em;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.7em;
 }
-.st-brand {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.6em;
-  min-width: 0;
-  color: var(--light);
-  font-weight: 700;
-}
-.st-brand img { height: 1.5em; width: auto; display: block; }
-.st-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); }
-/* Pills of capitals: each word's box trimmed to its capitals and baseline
-   (text-box), so the padding is even above and below and the word sits in the
-   middle. The theme's own words keep their full height (descenders). */
-.st-live, .st-theme b { text-box: trim-both cap alphabetic; }
 .st-live {
   display: inline-flex;
   align-items: baseline;
   gap: 0.4em;
   padding: 0.45em 0.7em;
-  border-radius: 999px;
+  border-radius: 999em;
   background: var(--live);
   color: #fff;
-  font-size: 0.7em;
+  font-size: 0.8em;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-box: trim-both cap alphabetic;
 }
 .st-live i {
   align-self: center;
@@ -158,51 +153,16 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 @keyframes st-blink { 50% { opacity: 0.3; } }
 #st.is-quiet .st-live { background: rgba(255, 255, 255, 0.16); }
 #st.is-quiet .st-live i { animation: none; opacity: 0.5; }
-.st-count { color: var(--subtle); font-size: 0.8em; white-space: nowrap; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); }
-.st-theme {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.5em;
-  min-width: 0;
-  max-width: 40%;
-  padding: 0.2em 0.85em 0.2em 0.3em;
-  border: 1px solid var(--glass-line);
-  border-radius: 999px;
-  background: var(--glass);
-  backdrop-filter: blur(10px);
-  color: var(--light);
-  font-size: 0.8em;
-}
-.st-theme b {
-  flex: none;
-  padding: 0.4em 0.6em;
-  border-radius: 999px;
-  background: var(--gold);
-  color: #111;
-  font-size: 0.75em;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.st-theme span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.st-ctl {
-  margin-left: auto;
-  align-self: center;
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-  transition: opacity 0.5s ease;
-}
+.st-count { color: rgba(255, 255, 255, 0.75); white-space: nowrap; margin-right: 0.25em; }
 .st-icon {
   display: inline-grid;
   place-items: center;
-  width: 2.25em;
-  height: 2.25em;
+  width: 2.5em;
+  height: 2.5em;
   padding: 0;
-  border: 1px solid var(--glass-line);
+  border: 0.06em solid var(--glass-line);
   border-radius: 50%;
   background: var(--glass);
-  backdrop-filter: blur(10px);
   color: var(--light);
   cursor: pointer;
   transition: background 0.2s ease;
@@ -211,12 +171,11 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 .st-vol {
   display: flex;
   align-items: center;
-  gap: 0.5em;
-  padding-right: 0.8em;
-  border: 1px solid var(--glass-line);
-  border-radius: 999px;
+  gap: 0.4em;
+  padding-right: 0.9em;
+  border: 0.06em solid var(--glass-line);
+  border-radius: 999em;
   background: var(--glass);
-  backdrop-filter: blur(10px);
 }
 .st-vol .st-icon { border: 0; background: none; }
 .st-vol .off, .st-vol.is-muted .on { display: none; }
@@ -227,302 +186,237 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   height: 0.3em;
   margin: 0;
   appearance: none;
-  border-radius: 999px;
+  border-radius: 999em;
   background: linear-gradient(to right, var(--light) var(--fill), rgba(255, 255, 255, 0.25) var(--fill));
   cursor: pointer;
 }
-#st-volume::-webkit-slider-thumb { appearance: none; width: 0.85em; height: 0.85em; border-radius: 50%; background: var(--light); }
-#st-volume::-moz-range-thumb { width: 0.85em; height: 0.85em; border: 0; border-radius: 50%; background: var(--light); }
-:focus-visible { outline: 2px solid var(--light); outline-offset: 2px; }
+#st-volume::-webkit-slider-thumb { appearance: none; width: 0.9em; height: 0.9em; border-radius: 50%; background: var(--light); }
+#st-volume::-moz-range-thumb { width: 0.9em; height: 0.9em; border: 0; border-radius: 50%; background: var(--light); }
+#st.is-buffering .st-vol .st-icon { animation: st-blink 1.2s ease-in-out infinite; }
 
-#st.is-idle.has-video .st-ctl,
-#st.is-idle.has-video .st-count { opacity: 0; }
-#st.is-idle.has-video { cursor: none; }
-
-/* ─── Centre: Listen live (browsers start sound only after a tap) ──────── */
+/* ─── Listen live (as the site's "Tap to start audio") ─────────────────── */
 
 .st-listen {
   position: absolute;
-  z-index: 6;
+  z-index: 4;
   left: 50%;
-  top: 45%;
+  top: 44%;
   translate: -50% -50%;
-  display: grid;
-  grid-template-columns: auto auto;
+  display: inline-flex;
   align-items: center;
-  column-gap: 0.6em;
-  padding: 0.85em 1.5em 0.85em 1.25em;
+  gap: 0.35em;
+  padding: 0.55em 1.1em 0.55em 0.85em;
   border: 0;
-  border-radius: 999px;
-  background: var(--light);
-  color: #111;
-  box-shadow: 0 0.6em 2.5em rgba(0, 0, 0, 0.5);
+  border-radius: 999em;
+  background: var(--acc);
+  color: var(--acc-txt);
+  font-size: 0.85em;
+  font-weight: 700;
+  box-shadow: 0 0.4em 1.6em -0.3em rgba(0, 0, 0, 0.7);
   cursor: pointer;
-  text-align: left;
-  transition: scale 0.2s var(--ease);
+  transition: scale 0.2s ease, filter 0.2s ease;
 }
-.st-listen svg { grid-row: span 2; width: 1.8em; height: 1.8em; fill: var(--acc); filter: brightness(0.8); }
-.st-listen span { font-size: 1.2em; font-weight: 700; line-height: 1.15; }
-.st-listen small { color: #555; font-size: 0.75em; }
-.st-listen:hover { scale: 1.04; }
+.st-listen svg { width: 1.3em; height: 1.3em; }
+.st-listen:hover { scale: 1.04; filter: brightness(1.1); }
 .st-listen::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--acc) 70%, white);
   animation: st-ring 2.4s ease-out infinite;
 }
-@keyframes st-ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--acc) 60%, white); } 70%, 100% { box-shadow: 0 0 0 1.4em transparent; } }
+@keyframes st-ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--acc) 70%, white); } 70%, 100% { box-shadow: 0 0 0 0.9em transparent; } }
 
-/* ─── Bottom: the song, who picked it, the decks ───────────────────────── */
+/* ─── The deck (bottom centre): the DJ playing, behind the DJ table ────── */
 
-.st-low {
-  position: absolute;
-  z-index: 4;
-  left: 0;
-  right: 0;
-  bottom: 1.9em;
-  display: flex;
-  align-items: flex-end;
-  gap: 1em;
-  padding: 0 1.25em;
-}
-.st-art {
-  flex: none;
-  width: 5.25em;
-  aspect-ratio: 1;
-  border-radius: 0.5em;
-  background: #222 center / cover no-repeat;
-  box-shadow: 0 0.4em 1.6em rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-.st-now { flex: 1; min-width: 0; padding-bottom: 0.15em; }
-.st-art, .st-now { transition: opacity 0.26s ease, translate 0.26s var(--ease); }
-.st-low.is-changing .st-art,
-.st-low.is-changing .st-now { opacity: 0; translate: 0 0.4em; }
-.st-kicker {
-  margin: 0 0 0.2em;
-  color: color-mix(in srgb, var(--acc) 45%, white);
-  font-size: 0.72em;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.st-title {
-  margin: 0;
-  color: var(--light);
-  font-size: 1.9em;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
-}
-.st-artist {
-  margin: 0.15em 0 0;
-  color: var(--text);
-  font-size: 1.1em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* The decks: a riser the DJs stand on, lit along its front edge in the song's
-   colour, with their names set into its face like the room's deck plates; a
-   shadow under each DJ's feet and a spotlight on the one playing */
 .st-deck {
-  --riser: 1.75em;  /* the riser's face: a name plate and its margins */
-  --lip: 0.22em;    /* the lit top edge */
-  position: relative;
-  isolation: isolate;
-  flex: none;
+  position: absolute;
+  z-index: 2;
+  bottom: 0;
+  left: 50%;
+  translate: -50% 0;
   display: flex;
   align-items: flex-end;
-  gap: 0.4em;
+  justify-content: center;
   margin: 0;
-  padding: 0 0.9em;
+  padding: 0 0.5em;
   list-style: none;
 }
-.st-deck::before {
-  content: "";
-  position: absolute;
-  z-index: -2;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: var(--riser);
-  border-radius: 0.35em 0.35em 0.25em 0.25em;
-  background:
-    linear-gradient(to bottom, color-mix(in srgb, var(--acc) 70%, white) 0 var(--lip), color-mix(in srgb, var(--acc) 35%, #000) var(--lip), transparent calc(var(--lip) + 0.5em)),
-    linear-gradient(to bottom, #232323, #0b0b0b);
-  box-shadow:
-    0 -0.35em 1.4em -0.1em color-mix(in srgb, var(--acc) 45%, transparent),
-    0 0.7em 1.4em rgba(0, 0, 0, 0.65);
-}
-.st-dj {
+.st-spot {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  width: 6em;
+  justify-content: flex-end;
+  width: 10em;
+  height: 7.2em;
 }
-.st-face {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  aspect-ratio: 1;
-  background: center bottom / contain no-repeat;
-  transform-origin: 50% 100%;
-}
-/* the shadow where the DJ meets the stage */
-.st-dj::before {
-  content: "";
+/* the robot stands at the table, its base tucked just below the table's top
+   edge (the table is 1.5em tall), so it never shows a gap; the bob only goes
+   down from here */
+.st-avtr {
   position: absolute;
   z-index: 0;
-  left: 18%;
-  right: 18%;
-  bottom: calc(var(--riser) - 0.28em);
-  height: 0.6em;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.7), transparent);
+  bottom: 1.2em;
+  width: 100%;
+  height: 6em;
+  background: center bottom / contain no-repeat;
 }
-/* the spotlight on the DJ playing: a beam from above and a pool of light at their feet */
-.st-dj.is-on::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  left: -30%;
-  right: -30%;
-  bottom: calc(var(--riser) - 0.4em);
-  height: 165%;
-  pointer-events: none;
-  background:
-    radial-gradient(50% 9% at 50% 100%, color-mix(in srgb, var(--acc) 55%, white), transparent),
-    linear-gradient(to bottom, transparent 10%, color-mix(in srgb, var(--acc) 22%, transparent) 80%, color-mix(in srgb, var(--acc) 34%, transparent));
-  clip-path: polygon(42% 0, 58% 0, 92% 100%, 8% 100%);
-  mix-blend-mode: screen;
-  opacity: 0.6;
-}
-.st-plate {
-  max-width: 100%;
-  height: 1.6em;
-  margin: 0.55em 0 0.5em;
-  padding: 0 0.7em;
-  border-radius: 0.3em;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  color: var(--light);
-  font-size: 0.65em;
-  font-weight: 600;
-  line-height: 1.6em;
+/* the site's bob: down behind the table and back, to the beat when it's known */
+.st-spot .st-avtr { animation: st-bop 1s linear infinite; }
+#st.has-beat .st-avtr { animation-duration: var(--bop); animation-delay: var(--beat-phase); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+@keyframes st-bop { 50% { transform: translateY(0.5em); } }
+/* the DJ table: a booth front in the song's colour, lit along its top edge,
+   with the DJ's name on it */
+.st-plaque {
+  position: relative;
+  z-index: 1;
+  padding: 0 0.33em;
+  border-radius: 0.67em 0.67em 0 0;
+  background: linear-gradient(to bottom, var(--acc), color-mix(in srgb, #282828, var(--acc) 66%));
+  box-shadow:
+    inset 0 0.12em rgba(255, 255, 255, 0.35),
+    0 -0.25em 0.8em -0.3em rgba(0, 0, 0, 0.6);
+  color: var(--acc-txt);
+  font-size: 0.75em;
+  line-height: 2em;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: background 1s ease;
 }
-.st-dj.is-on .st-plate { background: var(--acc); color: var(--acc-txt); }
-/* the DJ playing sways on the spot (feet on the stage), to the beat */
-.st-dj.is-on .st-face { animation: st-bop 1.1s ease-in-out infinite; }
-#st.has-beat .st-dj.is-on .st-face { animation-duration: var(--bop); animation-delay: var(--beat-phase); }
-@keyframes st-bop { 0%, 50%, 100% { transform: rotate(0) scaleY(1); } 25% { transform: rotate(-3deg) scaleY(0.97); } 75% { transform: rotate(3deg) scaleY(0.97); } }
 
-.st-prog {
+/* The site's fire (flame.js draws it in #fyre, as js/fire.js) behind the DJ, as the
+   room's stage places it (js/room.js positionFyreAtActiveDJ): the same box
+   and the same place, so the flames rise from the same spot behind the DJ */
+#fyre {
   position: absolute;
-  z-index: 4;
-  left: 1.25em;
-  right: 1.25em;
-  bottom: 0.55em;
+  z-index: 1;
+  left: 50%;
+  bottom: -4em;
+  width: 13.5em;
+  height: 16.7em; /* the site's: 216 × 267px on its stage, in its 16px em */
+  translate: -50% 0;
+  pointer-events: none;
+  overflow: visible;
+  mix-blend-mode: plus-lighter;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+#st.has-fire #fyre { opacity: 1; }
+#fyre canvas { display: block; width: 100%; height: 100%; }
+
+/* the others on the decks, in line (bottom right, as the site's #ondeck) */
+.st-ondeck {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
   display: flex;
-  align-items: center;
-  gap: 0.75em;
+  gap: 0.5em;
+  margin: 0;
+  padding: 0 0.75em;
+  list-style: none;
 }
-.st-time {
-  flex: none;
-  min-width: 3.2em;
-  color: var(--subtle);
-  font: 500 0.7em "Roboto Mono", ui-monospace, monospace;
+.st-ondeck li {
+  width: 2.5em;
+  height: 2.5em;
+  margin-bottom: 0.5em;
+  border-radius: 50%;
+  background: #000 50% 66% / auto 125% no-repeat;
+  box-shadow: 0 0 0 0.06em rgba(255, 255, 255, 0.12);
 }
-.st-time:last-child { text-align: right; }
-.st-bar {
-  flex: 1;
-  height: 0.2em;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  overflow: hidden;
-}
-.st-bar i {
+
+/* ─── Under the stage: the progress line and the box with the times ────── */
+
+.st-prog { height: 0.19em; background: rgba(0, 0, 0, 0.35); }
+.st-prog i {
   display: block;
   height: 100%;
   background: var(--acc);
-  filter: brightness(1.3) saturate(1.2);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.5s linear;
 }
+.st-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.5em 0.25em;
+  background-color: color-mix(in srgb, var(--acc) 20%, var(--bg));
+  transition: background-color 1.5s ease;
+}
+.st-timr {
+  flex: none;
+  min-width: 4.7em;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-align: center;
+}
+.st-theme {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5em;
+  font-size: 0.75em;
+}
+.st-theme b {
+  flex: none;
+  padding: 0.4em 0.6em;
+  border-radius: 999em;
+  background: var(--gold);
+  color: #111;
+  font-size: 0.75em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-box: trim-both cap alphabetic;
+}
+.st-theme span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-theme:hover span { text-decoration: underline; text-underline-offset: 0.15em; }
+.st-theme.no-theme b { display: none; }
+
+/* ─── Notes, and the room when no one's playing ────────────────────────── */
 
 .st-note {
   position: absolute;
-  z-index: 6;
-  top: 4.2em;
+  z-index: 5;
   left: 50%;
+  bottom: 9em;
   translate: -50% 0;
-  max-width: calc(100% - 2.5em);
+  max-width: calc(100% - 3em);
   margin: 0;
   padding: 0.5em 1em;
-  border-radius: 999px;
+  border-radius: 999em;
   background: var(--glass);
-  backdrop-filter: blur(10px);
-  color: var(--light);
-  font-size: 0.8em;
+  font-size: 0.7em;
   text-align: center;
 }
-
-/* ─── Quiet: no one's playing ──────────────────────────────────────────── */
-
 .st-quiet {
   position: absolute;
-  z-index: 4;
   inset: 0;
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 0.4em;
+  gap: 0.3em;
   padding: 2em;
   text-align: center;
 }
-.st-quiet img { width: 6em; height: auto; opacity: 0.9; animation: st-breathe 4s ease-in-out infinite; }
-.st-quiet h1 { margin: 0.4em 0 0; color: var(--light); font-size: 1.8em; }
-.st-quiet p { margin: 0; color: var(--subtle); }
+.st-quiet h1 { margin: 0; font-size: 1.3em; }
+.st-quiet p { margin: 0; color: var(--subtle); font-size: 0.8em; }
 .st-quiet a { color: var(--gold); font-weight: 600; }
 .st-quiet a:hover { text-decoration: underline; }
-@keyframes st-breathe { 50% { scale: 1.06; opacity: 0.7; } }
-#st.is-quiet .st-cover,
-#st.is-quiet .st-low,
-#st.is-quiet .st-prog { display: none; }
-#st.is-loading .st-cover { opacity: 0; }
-
-/* ─── Small boxes ──────────────────────────────────────────────────────── */
-
-@media (max-width: 520px) {
-  html, body { font-size: clamp(9px, 2.6vw, 14px); }
-  .st-count, .st-theme, .st-name { display: none; }
-  .st-dj:not(.is-on) { display: none; }
-  .st-art { width: 4em; }
-  .st-title { font-size: 1.5em; }
-}
-@media (max-height: 260px) {
-  .st-art, .st-deck, .st-theme, .st-count { display: none; }
-  .st-title { font-size: 1.4em; -webkit-line-clamp: 1; line-clamp: 1; }
-}
+#st.is-quiet .st-now,
+#st.is-quiet .st-deck,
+#st.is-quiet .st-ondeck { display: none; }
+#st.is-loading .st-deck { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  .st-dj.is-on .st-face, #st.has-beat .st-dj.is-on .st-face,
-  .st-listen::before, .st-live i, .st-quiet img { animation: none; }
+  .st-spot .st-avtr, #st.has-beat .st-avtr, .st-listen::before, .st-live i { animation: none; }
 }
