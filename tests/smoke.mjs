@@ -2105,7 +2105,10 @@ console.log("-- the live stage for other sites (embed/stage/)");
     .filter((f) => readFileSync(f, "utf8").includes("embed/stage"));
   check(!linked.length, "nothing on the site links to the stage (it's unlisted)" + (linked.length ? ": " + linked.join(", ") : ""));
   const csp2 = stagePolicy.replace("connect-src ", "connect-src " + DB + " ").replace(/;\s*upgrade-insecure-requests/, "");
-  const site2 = await serveSite({ csp: csp2, configJs: config(NS2) });
+  check(/media-src 'self' https:\/\/radio\.howtojointheindiediscothequewaitlist\.com/.test(stagePolicy) && !/youtube|soundcloud/.test(stagePolicy),
+    "the stage's policy lets it play the room's radio stream, and no video or SoundCloud players");
+  // the stream here is the site's own sound file, as config.js stageStreamURL
+  const site2 = await serveSite({ csp: csp2, configJs: config(NS2).replace(/roomName:/, 'stageStreamURL: "/sound.mp3", roomName:') });
   const t0 = Date.now();
   await put2("/", {
     users: { dj1: { username: "dj1", status: true }, dj2: { username: "dj2", status: true }, bot: { username: "bot", status: true, hostbot: true },
@@ -2114,57 +2117,89 @@ console.log("-- the live stage for other sites (embed/stage/)");
     songToPlay: Object.assign({}, youtubeSong, { title: "Stage &amp; Song", started: t0 - 30000 }),
     songBpm: { bpm: 120, started: t0 - 30000 }, theme: "stage night", colors: { color: "#1c6ccc", txt: "#fff" }
   });
-  const sp = await context.newPage();
-  sp.on("pageerror", (e) => { if (!theirs(e)) pageErrors.push("Stage: " + e.message); });
+  const stageCtx = await browser.newContext({ viewport: { width: 1120, height: 630 } });
+  const sp = await stageCtx.newPage();
+  sp.on("pageerror", (e) => { pageErrors.push("Stage: " + e.message); });
   await sp.exposeFunction("__cspViolation", (v) => violations.push("Stage: " + v));
   await sp.addInitScript(() => document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI)));
   try {
     await sp.goto(site2.SITE + "embed/stage/", { waitUntil: "load" });
-    await sp.waitForFunction(() => !document.getElementById("st-listen").hidden && document.querySelectorAll("#st-deck li").length === 2 &&
-      document.getElementById("st-theme").hidden === false, null, { timeout: 15000 }).catch(() => {});
+    await sp.waitForFunction(() => document.querySelectorAll("#st-deck .st-spot").length === 1 && document.querySelectorAll("#st-ondeck li").length === 1 &&
+      !document.getElementById("st-theme").classList.contains("no-theme") && /BPM/.test(document.getElementById("st-kicker").textContent) &&
+      document.getElementById("st-title").textContent === "Stage & Song" && document.getElementById("st-at").textContent, null, { timeout: 15000 }).catch(() => {});
     const on = await sp.evaluate(() => ({
       title: document.getElementById("st-title").textContent, artist: document.getElementById("st-artist").textContent,
       kicker: document.getElementById("st-kicker").textContent, count: document.getElementById("st-count").textContent,
       theme: document.getElementById("st-themeText").textContent, acc: document.getElementById("st").style.getPropertyValue("--acc"),
-      djs: [...document.querySelectorAll("#st-deck li")].map((li) => li.textContent + (li.classList.contains("is-on") ? "*" : "")).join(),
-      sizes: [...new Set([...document.querySelectorAll("#st-deck .st-face")].map((f) => f.offsetWidth + "/" + getComputedStyle(f.parentNode).opacity))].join(),
-      at: document.getElementById("st-at").textContent, links: [...document.querySelectorAll("#st a")].every((a) => a.target === "_blank" && /#live$/.test(a.href))
+      deck: document.querySelector("#st-deck .st-plaque") && document.querySelector("#st-deck .st-plaque").textContent,
+      line: [...document.querySelectorAll("#st-ondeck li")].map((li) => li.title).join(),
+      avatar: /robots\/dj1dj1\.png\?size=\d+x\d+&set=/.test((document.querySelector("#st-deck .st-avtr") || {}).style.backgroundImage || ""),
+      art: /mqdefault|maxresdefault/.test(document.getElementById("st-art").style.backgroundImage),
+      at: document.getElementById("st-at").textContent, left: document.getElementById("st-left").textContent,
+      links: [...document.querySelectorAll("#st a")].every((a) => a.target === "_blank" && /#live$/.test(a.href)),
+      video: !!document.querySelector("iframe")
     }));
-    check(on.title === "Stage & Song" && on.artist === "Smoke Artist" && on.kicker === "Picked by dj1 · 120 BPM",
-      "the stage shows the room's song and who picked it, with its tempo (" + JSON.stringify(on) + ")");
-    check(on.djs === "dj1*,dj2" && !/,/.test(on.sizes) && /\/1$/.test(on.sizes) && on.count === "2 in the room" && on.theme === "stage night" && on.acc === "#1c6ccc",
-      "the DJs on the decks, who's here (online, not the bot), the theme and the song's colours (" + JSON.stringify(on) + ")");
-    check(/^0:3\d$/.test(on.at) && on.links, "it's where the room is in the song, and every link opens the room (" + on.at + ")");
-    // YouTube's player is made under the stage's policy; the video shows once it
-    // plays (YouTube won't play on CI's runners, so its playing isn't required here)
-    await sp.waitForFunction(() => !!document.querySelector("iframe#st-yt[src*='youtube.com']"), null, { timeout: 20000 }).catch(() => {});
-    await sp.waitForTimeout(4000);
-    const yt = await sp.evaluate(() => {
-      const frame = document.querySelector("iframe#st-yt");
-      return { frame: !!(frame && /youtube\.com\/embed\/.*[?&]mute=1/.test(frame.src)), shown: document.getElementById("st").classList.contains("has-video"),
-        video: getComputedStyle(document.querySelector(".st-screen")).opacity };
+    check(on.title === "Stage & Song" && on.artist === "Smoke Artist" && on.kicker === "Picked by dj1 · 120 BPM" && on.art,
+      "the stage shows the room's song, its cover and who picked it, with its tempo (" + JSON.stringify(on) + ")");
+    check(on.deck === "dj1" && on.avatar && on.line === "dj2" && on.count === "2 in the room" && on.theme === "stage night" && on.acc === "#1c6ccc",
+      "the DJ playing stands at their plaque, the next in line beside it; who's online (not the bot), the theme and the song's colours (" + JSON.stringify(on) + ")");
+    check(/^00:3\d$/.test(on.at) && /^−04:[23]\d$/.test(on.left) && on.links && !on.video,
+      "the times as the stage shows them, every link opens the room, and no video player (" + on.at + " / " + on.left + ")");
+    // the radio: by itself where the browser allows it, else Listen live
+    if (!(await sp.evaluate(() => document.getElementById("st").classList.contains("is-listening")))) await sp.click("#st-listen");
+    await sp.waitForTimeout(800);
+    const radio = await sp.evaluate(() => {
+      const a = document.getElementById("st-audio");
+      return { src: /\/sound\.mp3\?t=\d+$/.test(a.src), listen: document.getElementById("st-listen").hidden, vol: !document.getElementById("st-vol").hidden, muted: a.muted };
     });
-    check(yt.frame && (yt.shown ? yt.video !== "0" : yt.video === "0"),
-      "the room's video loads on the stage, muted until Listen live, and shows only once it plays (" + JSON.stringify(yt) + ")");
-    await sp.click("#st-listen");
-    const listening = await sp.evaluate(() => ({ listen: document.getElementById("st-listen").hidden, vol: !document.getElementById("st-vol").hidden }));
-    check(listening.listen && listening.vol, "Listen live turns the sound on and shows the volume (" + JSON.stringify(listening) + ")");
+    check(radio.src && radio.listen && radio.vol && !radio.muted, "Listen live plays the room's radio stream and shows the volume (" + JSON.stringify(radio) + ")");
+    // one picture at any size: half the box, everything half the size, in the same places
+    const layout = () => sp.evaluate(() => ["#st-art", "#st-deck .st-spot", "#st-title", ".st-top", ".st-box", "#st-ondeck li"].map((sel) => {
+      const r = document.querySelector(sel).getBoundingClientRect();
+      return [r.left / innerWidth, r.top / innerHeight, r.width / innerWidth, r.height / innerHeight].map((v) => Math.round(v * 200) / 200).join(":");
+    }).join(" "));
+    const big = await layout();
+    await sp.setViewportSize({ width: 560, height: 315 });
+    await sp.waitForTimeout(300);
+    const small = await layout();
+    await sp.setViewportSize({ width: 1920, height: 1080 });
+    await sp.waitForTimeout(300);
+    const huge = await layout();
+    // (text measures a hair differently at each size: within 1.5% of the box)
+    const same = (a, b) => a.split(/[ :]/).every((v, i) => Math.abs(Number(v) - Number(b.split(/[ :]/)[i])) <= 0.015);
+    check(same(big, small) && same(big, huge), "the stage scales as one picture: the same layout at 560, 1120 and 1920 wide (" + big + (same(big, small) && same(big, huge) ? "" : " | " + small + " | " + huge) + ")");
+    // fire: the bot's count for the song playing lights a flame behind the DJ; a count for another song doesn't
+    await put2("/songFires", { started: t0 - 60000, count: 5 });
+    await sp.waitForTimeout(800);
+    const stale = await sp.evaluate(() => document.getElementById("st").classList.contains("has-fire"));
+    await put2("/songFires", { started: t0 - 30000, count: 3 });
+    // the site's fire (flame.js: js/fire.js on a plain canvas), drawn behind the DJ
+    await sp.waitForFunction(() => document.getElementById("st").classList.contains("has-fire") && !!document.querySelector("#fyre canvas"), null, { timeout: 10000 }).catch(() => {});
+    await sp.waitForTimeout(1200);
+    const lit = await sp.evaluate(() => {
+      const c = document.querySelector("#fyre canvas");
+      let drawn = 0;
+      if (c) { const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; for (let i = 3; i < d.length; i += 4) if (d[i]) drawn++; }
+      return { on: document.getElementById("st").classList.contains("has-fire"), drawn: drawn > 500, sized: !!c && c.width === Math.round(document.getElementById("fyre").clientWidth * devicePixelRatio),
+        kicker: document.getElementById("st-kicker").textContent, libs: typeof PIXI === "undefined" && typeof TweenMax === "undefined",
+        behind: Number(getComputedStyle(document.getElementById("fyre")).zIndex) < Number(getComputedStyle(document.getElementById("st-deck")).zIndex) };
+    });
+    check(!stale && lit.on && lit.drawn && lit.sized && lit.behind && lit.libs && /\u{1F525} 3$/u.test(lit.kicker),
+      "fire: three fires for this song light the fire behind the DJ, with no libraries to load; none for another song's (" + JSON.stringify(lit) + ")");
     await put2("/songToPlay", { type: 2, cid: "13158665", title: "Stage SC", artist: "Forss", started: Date.now(), duration: 200, djid: "dj2", djname: "dj2",
       url: "https://soundcloud.com/forss/flickermood", image: site2.SITE + "icons/icon-512.png" });
-    await sp.waitForFunction(() => /w\.soundcloud\.com\/player/.test(document.getElementById("st-sc").src) && document.getElementById("st-title").textContent === "Stage SC", null, { timeout: 15000 }).catch(() => {});
-    await sp.waitForFunction(() => getComputedStyle(document.getElementById("st-cover")).opacity === "1", null, { timeout: 5000 }).catch(() => {});
-    const sc = await sp.evaluate(() => ({ sc: document.getElementById("st").className, src: document.getElementById("st-sc").src.slice(0, 40), on: (document.querySelector("#st-deck .is-on") || {}).textContent,
-      cover: /icon-512\.png/.test(document.getElementById("st-cover").style.backgroundImage), shown: getComputedStyle(document.getElementById("st-cover")).opacity === "1",
-      fills: (() => { const r = document.getElementById("st-cover").getBoundingClientRect(); return r.width === innerWidth && r.height === innerHeight; })() }));
-    check(/is-sc/.test(sc.sc) && !/has-video/.test(sc.sc) && /soundcloud/.test(sc.src) && sc.on === "dj2" && sc.cover && sc.shown && sc.fills,
-      "a SoundCloud song plays from SoundCloud's player, its cover filling the screen (" + JSON.stringify(sc) + ")");
+    await sp.waitForFunction(() => document.getElementById("st-title").textContent === "Stage SC", null, { timeout: 15000 }).catch(() => {});
+    const sc = await sp.evaluate(() => ({ deck: (document.querySelector("#st-deck .st-plaque") || {}).textContent, line: [...document.querySelectorAll("#st-ondeck li")].map((li) => li.title).join(),
+      art: /icon-512\.png/.test(document.getElementById("st-art").style.backgroundImage), radio: !document.getElementById("st-audio").paused || /sound\.mp3/.test(document.getElementById("st-audio").src) }));
+    sc.fire = await sp.evaluate(() => document.getElementById("st").classList.contains("has-fire"));
+    check(sc.deck === "dj2" && sc.line === "dj1" && sc.art && sc.radio && !sc.fire, "a SoundCloud song: its cover, the next DJ at the plaque, the radio still on, the last song's fire out (" + JSON.stringify(sc) + ")");
     await put2("/songToPlay", null);
     await sp.waitForFunction(() => document.getElementById("st").classList.contains("is-quiet"), null, { timeout: 10000 }).catch(() => {});
     check(await sp.evaluate(() => !document.getElementById("st-quiet").hidden && document.getElementById("st-listen").hidden), "with no one playing, the stage says the decks are open");
   } catch (e) {
     check(false, "stage test threw: " + e.message);
   } finally {
-    await sp.close();
+    await stageCtx.close();
     site2.server.close();
   }
 }
