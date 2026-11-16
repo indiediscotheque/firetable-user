@@ -39,7 +39,7 @@ Keep this table current as steps ship (one line per step in [04-step-plan.md](04
 | 4 Phones | not started; 4.6 (the mini player) mostly shipped with 2.3 and 2.3c; 4.0, measure first, added. Live on a phone got Chat first, −m:ss time left and two-tap remove (November 15, 2026) |
 | 5 Clean-up | not started (5.1, the default switch, dropped; 5.3, Discover always on, approved and moved up the order) |
 
-Also shipped outside the plan's steps (November 13 to 15, 2026): Play on a speaker or TV (`#st-cast`, ST-08b), tempo pages from a song's BPM tag (DI-28), the "You're not listening live" card on the stage (`#st-notlive`, ST-25), Last.fm scrobbling what each listener hears in Live or Discover, link previews and an offline page (OT-06, PH-02), a lighter first load (Latin font subset, a 42 KB icon font, the emoji data from this site), no jQuery UI (drag rows with touch, a native volume slider), saves that fail say so (OT-07), and unit and database-rules tests beside the smoke test.
+Also shipped outside the plan's steps (November 13 to 15, 2026): Play on a speaker or TV (`#st-cast`, ST-08b), tempo pages from a song's BPM tag (DI-28), the "You're not listening live" card on the stage (`#st-notlive`, ST-25), Last.fm scrobbling what each listener hears in Live or Discover, link previews and an offline page (OT-06, PH-02), a lighter first load (Latin font subset, a 42 KB icon font, the emoji data from this site), no jQuery UI (drag rows with touch, a native volume slider), saves that fail say so (OT-07), unit and database-rules tests beside the smoke test, and the live stage for QueUp's screen (`embed/stage/`, OT-08).
 
 ## Next, in this order (realigned November 15, 2026)
 
