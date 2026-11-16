@@ -108,7 +108,7 @@ Do this for every step in [04-step-plan.md](04-step-plan.md):
 
 1. **Read the step** and the inventory rows it lists. Open each file it names and find the functions and ids before changing anything.
 2. **Branch** from current `master`: `redesign/<phase>-<step>-<short-name>`.
-3. **Screenshot before** with the harness from step 0.2 (`tests/screens.mjs`): 390, 1024, 1440 and 1920 wide, as a visitor, a member, a DJ on deck and a mod. Keep them in the PR.
+3. **Screenshot before** with the harness from step 0.2 (`cd tests && npm run screens`, or `node screens.mjs` with the emulators already running): 390, 1024, 1440 and 1920 wide, as a visitor, a member, a DJ on deck and a mod. Note the short sha of `master`; after the change, run it again with `BASE=<that sha>` and the contact sheet (`tests/screens/<sha>/index.html`) marks what changed. Put the changed pictures in the PR.
 4. **Make the smallest change** that does the step. CSS first, then markup, then JS. Reuse existing functions (`firetable.ui.toast`, `openStealPicker`, `positionPopover`, `savePlaylistPrefs`, `formatRefusal`, ...).
 5. **Run the checks:**
    ```bash

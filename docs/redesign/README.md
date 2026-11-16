@@ -32,7 +32,7 @@ Keep this table current as steps ship (one line per step in [04-step-plan.md](04
 
 | Phase | Status |
 |---|---|
-| 0 Foundations | not started (0.3, the opt-in switch, and 0.5, icons up front, dropped; 0.6, an accessibility check, added) |
+| 0 Foundations | 0.2 shipped (the screenshot harness); 0.3 (the opt-in switch) and 0.5 (icons up front) dropped; 0.6 (an accessibility check) added |
 | 1 Inside today's layout | 1.15 and 1.16 shipped in part (the owner's request, November 15, 2026); 1.8 superseded; 1.14 dropped; 1.9 moved to Phase 2; 1.3, 1.5 and 1.10 narrowed by what Phase 2 did (see the step plan's notes) |
 | 2 Discover (round 4) | 2.5 shipped (joining, logging in, the account menu and Account tab); 2.1 and 2.3 shipped (the player bar along the bottom, the On Air card, and the right column for Playlists and Chat); 2.3b shipped (the full-screen player, for TVs and second screens, in Discover and Live, replacing the Now playing tab); 2.3c shipped (the player along the bottom of the whole site with the stage's utilities in it, audio that stays put between Discover and Live, modern buttons and sliders, the chat for members only) |
 | 3 The new room | on hold |
@@ -45,7 +45,7 @@ Also shipped outside the plan's steps (November 13 to 15, 2026): Play on a speak
 
 Phase 2's player work is in, plus a stream of owner requests. What isn't in is the safety net Phase 0 promised: controls now move between the stage, the player bar and the full-screen player, or hide in the DOM behind a menu, and only the smoke test's hand-written checks guard them. So:
 
-1. **0.2 Screenshot harness, then 0.4 "Nothing lost"**, before the next step that moves anything. 0.4 records where 2.3c and 1.16 put things.
+1. ~~0.2 Screenshot harness~~ ✅, then **0.4 "Nothing lost"**, before the next step that moves anything. 0.4 records where 2.3c and 1.16 put things.
 2. **0.6 Accessibility check** (new) and **0.1 tokens** (type, space, radius and targets only; colours stay).
 3. **2.4 Home leads with new releases** and **2.6 New and Charts, with 1.9's tied ranks.** New and Charts matter most (the owner, November 15, 2026).
 4. **The crate: finish 1.16 and 1.15, then 1.17 Select several.** The owner started these; each stays in today's skin.

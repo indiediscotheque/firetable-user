@@ -5,7 +5,8 @@
   "scripts": {
     "unit": "node --test unit.test.mjs",
     "smoke": "firebase emulators:exec --only database --project demo-smoke \"node smoke.mjs\"",
-    "rules": "firebase emulators:exec --only database,auth --project demo-rules \"node rules.mjs\""
+    "rules": "firebase emulators:exec --only database,auth --project demo-rules \"node rules.mjs\"",
+    "screens": "firebase emulators:exec --only database,auth --project demo-screens \"node screens.mjs\""
   },
   "devDependencies": {
     "firebase-tools": "^15.34.2",

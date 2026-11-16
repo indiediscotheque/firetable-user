@@ -60,3 +60,47 @@ export async function serveSite({ csp, configJs }) {
 /** Chromium options: through the HTTPS proxy when there is one (CDN files), never for the local servers. */
 export const launchOptions = () =>
   process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: "127.0.0.1,localhost" } } : {};
+
+/**
+ * A real account in the auth emulator (made, or reused from an earlier run);
+ * resolves its uid.
+ */
+export async function authAccount(email, password) {
+  const call = (what) => fetch(AUTH + "/identitytoolkit.googleapis.com/v1/accounts:" + what + "?key=fake-key", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, returnSecureToken: true })
+  }).then((r) => r.json());
+  let j = await call("signUp");
+  if (j.error && j.error.message === "EMAIL_EXISTS") j = await call("signInWithPassword");
+  if (!j.localId) throw new Error("auth emulator: " + JSON.stringify(j));
+  return j.localId;
+}
+
+/**
+ * Point the site's Firebase app at the auth emulator the moment it's made,
+ * before anything signs in (no change to the site's code).
+ */
+export const useAuthEmulator = (page) => page.addInitScript((authUrl) => {
+  let fb;
+  Object.defineProperty(window, "firebase", {
+    configurable: true,
+    get() { return fb; },
+    set(v) {
+      fb = v;
+      const init = v.initializeApp;
+      v.initializeApp = function () {
+        const app = init.apply(this, arguments);
+        app.auth().useEmulator(authUrl, { disableWarnings: true });
+        return app;
+      };
+    }
+  });
+}, AUTH);
+
+/** Log the loaded site in as `email` with the site's own login, and wait until it's signed in as `uid`. */
+export async function logInAs(page, email, password, uid) {
+  await page.waitForFunction(() => window.ftapi && ftapi.started, null, { timeout: 30000 });
+  await page.evaluate(([e, p]) => ftapi.actions.logIn(e, p, (err) => { window.__loginError = String(err && err.message); }), [email, password]);
+  await page.waitForFunction((u) => ftapi.uid === u && ftapi.queueRef && !window.__loginError, uid, { timeout: 30000 })
+    .catch(async () => { throw new Error("couldn't sign in as " + email + ": " + await page.evaluate(() => window.__loginError)); });
+}
