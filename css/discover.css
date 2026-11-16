@@ -1641,6 +1641,8 @@ body.pv-full-on { overflow: hidden; }
     background: center / cover no-repeat;
     transition: filter 0.5s ease;
 }
+/* a 4:3 still with the video letterboxed inside: zoom past the bars, so the frame fills the square */
+.pvf:not(.is-quiet) .pvf-cover.is-box { background-size: auto 133.4%; }
 .pvf.is-quiet .pvf-cover { background: url(../img/idlogo2.png) center / 45% auto no-repeat; opacity: 0.35; }
 .pvf.is-paused .pvf-cover, .pvf.is-onair .pvf-cover { filter: saturate(0.55) brightness(0.75); }
 
