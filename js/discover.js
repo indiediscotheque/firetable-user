@@ -2393,6 +2393,36 @@ firetable.discover = (function () {
     return /-large\.(jpg|png)/.test(art) ? art.replace(/-large\.(jpg|png)/, "-t500x500.$1") : art;
   }
 
+  /**
+   * A YouTube song's sharpest still, for the big cover: the 320px thumbnail
+   * goes soft blown up on a TV. YouTube keeps several sizes, not all of them
+   * for every video, and a missing one comes back as a 120px grey stand-in,
+   * so try them largest first and keep the first real one. maxres is the 16:9
+   * frame; sd and hq are 4:3 with the frame letterboxed inside (box: true, the
+   * cover zooms past the bars). Resolves null when none beats the thumbnail.
+   */
+  var hiArts = {};
+  function hiArt(t) {
+    var art = artOf(t);
+    if (!t || Number(t.type || 1) !== MEDIA_YOUTUBE || !t.cid || (t.img && !/ytimg\.com\/vi(_webp)?\//i.test(art))) return Promise.resolve(null);
+    var id = String(t.cid);
+    if (hiArts[id]) return hiArts[id];
+    var base = "https://i.ytimg.com/vi/" + encodeURIComponent(id) + "/";
+    var sizes = [{ f: "maxresdefault.jpg", box: false }, { f: "sddefault.jpg", box: true }, { f: "hqdefault.jpg", box: true }];
+    hiArts[id] = new Promise(function (resolve) {
+      var i = 0;
+      (function next() {
+        if (i >= sizes.length) return resolve(null);
+        var size = sizes[i++];
+        var img = new Image();
+        img.onload = function () { if (img.naturalWidth > 120) resolve({ url: base + size.f, box: size.box }); else next(); };
+        img.onerror = next;
+        img.src = base + size.f;
+      })();
+    });
+    return hiArts[id];
+  }
+
   function fullHtml() {
     var name = esc((document.getElementById("roomlogo") || {}).title || "Indie Discotheque");
     var iconBtn = function (id, icon, label, extra) {
@@ -2629,6 +2659,7 @@ firetable.discover = (function () {
     var layers = document.querySelectorAll("#pv-fullbg .pvf-bgart");
     if (!t) {
       cover.style.backgroundImage = "";
+      cover.classList.remove("is-box");
       F.art = null;
       layers.forEach(function (l) { l.classList.remove("on"); });
       return;
@@ -2638,7 +2669,19 @@ firetable.discover = (function () {
     var first = !F.art;
     F.art = src;
     var url = "url(" + JSON.stringify(src) + ")";
-    var swap = function () { cover.style.backgroundImage = url; };
+    // the cover: the sharpest still once it's in, the thumbnail until then
+    var best = null;
+    var swapped = false;
+    var paint = function () {
+      cover.style.backgroundImage = best ? "url(" + JSON.stringify(best.url) + ")" : url;
+      cover.classList.toggle("is-box", !!(best && best.box));
+    };
+    var swap = function () { swapped = true; paint(); };
+    hiArt(t).then(function (hi) {
+      if (!hi || F.art !== src) return;
+      best = hi;
+      if (swapped) paint(); // else the flip's swap paints it
+    });
     var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (first || reduce || !art.animate || !art.offsetParent) swap();
     else {
