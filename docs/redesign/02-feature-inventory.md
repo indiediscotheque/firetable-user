@@ -122,7 +122,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| CR-01 | View / edit a playlist (switch which one shows) | M | `#listpicker` (`#listpickerWrap`), `switchViewList`, `STORAGE`'d per uid | 1.14 a one-row switcher button (★, name, count, broken) opening a searchable menu; the select stays in the DOM for the code |
+| CR-01 | View / edit a playlist (switch which one shows) | M | `#listpicker` (`#listpickerWrap`), `switchViewList`, `STORAGE`'d per uid | keep: the select stays (1.14 dropped, the owner, November 15, 2026). Was: 1.14 a one-row switcher button (★, name, count, broken) opening a searchable menu; the select stays in the DOM for the code |
 | CR-02 | Playlist rows: art, Artist - Title, preview | M | `#mainqueue`, `queueBlockHTML`, `$playlistItemTemplate` | 1.15 two-tone "Title · Artist", same template |
 | CR-03 | Row actions: top, bottom, YouTube, add to another playlist, delete | M | row buttons; `bumpSongInQueue`, move-to-bottom, `openStealPicker`, `deleteSongPrompt` (`#deleteSongPopover`) | 1.15 Top, Bottom, Preview, Open, Delete visible; ⋮ for the rest |
 | CR-04 | Track ⋮ menu: Swap for YouTube Music audio…, Send to bottom, Add to playlist, Open, Delete | M | `#trackMenuPopover` (`data-act`: swap, bottom, add, open, delete) | 1.15 plus Edit tags, Swap artist and title, Delete and search. ✅ 1.15 in part (November 15, 2026): Edit tags… (`tags`) and Swap artist and title (`swaptags`) added; ⋮ shows on every playlist row at every width |
