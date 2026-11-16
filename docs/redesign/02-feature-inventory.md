@@ -124,7 +124,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | CR-01 | View / edit a playlist (switch which one shows) | M | `#listpicker` (`#listpickerWrap`), `switchViewList`, `STORAGE`'d per uid | 1.14 a one-row switcher button (★, name, count, broken) opening a searchable menu; the select stays in the DOM for the code |
 | CR-02 | Playlist rows: art, Artist - Title, preview | M | `#mainqueue`, `queueBlockHTML`, `$playlistItemTemplate` | 1.15 two-tone "Title · Artist", same template |
 | CR-03 | Row actions: top, bottom, YouTube, add to another playlist, delete | M | row buttons; `bumpSongInQueue`, move-to-bottom, `openStealPicker`, `deleteSongPrompt` (`#deleteSongPopover`) | 1.15 Top, Bottom, Preview, Open, Delete visible; ⋮ for the rest |
-| CR-04 | Track ⋮ menu: Swap for YouTube Music audio…, Send to bottom, Add to playlist, Open, Delete | M | `#trackMenuPopover` (`data-act`: swap, bottom, add, open, delete) | 1.15 plus Edit tags, Swap artist and title, Delete and search |
+| CR-04 | Track ⋮ menu: Swap for YouTube Music audio…, Send to bottom, Add to playlist, Open, Delete | M | `#trackMenuPopover` (`data-act`: swap, bottom, add, open, delete) | 1.15 plus Edit tags, Swap artist and title, Delete and search. ✅ 1.15 in part (November 15, 2026): Edit tags… (`tags`) and Swap artist and title (`swaptags`) added; ⋮ shows on every playlist row at every width |
 | CR-05 | Drag to reorder | M | `firetable.utilities.dragSort` on `#mainqueue` (mouse, touch hold, Alt+arrows), `updateQueue` | keep |
 | CR-06 | 30-second preview | M | `player.js` `pview`, Settings `#previewOverToggle` (plays over the room) | keep |
 | CR-07 | Filter the playlist; Remixes only; Broken only | M | `#filterMachine` > `#queueFilterForm` > `#queueFilter`, `#queueFilterExtras` (`#queueFilterRemixOnly`, `#queueFilterBrokenOnly`), `filterQueue` | 1.16 filter box + one "Show only" menu (tune icon) with Remixes, Broken, Not played here, Duplicates. ✅ 1.16 (November 15, 2026): the filter box and **Show only** (`#cr-showOnly` → `#cr-showOnlyMenu`, holding the same `#queueFilterExtras` checkboxes) with a red count badge (`#cr-showOnlyCount`) |
@@ -143,7 +143,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | CR-20 | Swap all / Show them bar | M | `#swapBar` (`#swapShowBtn`, `#swapAllBtn`), `renderSwapBar`, `swapAll` | keep, restyle 1.16 |
 | CR-21 | Remove duplicates | M | `removeDupesFromQueue` | 1.16 playlist ⋮ menu |
 | CR-22 | Delete and search for another | M | `deleteSongAndSearch` | 1.15 row ⋮ |
-| CR-23 | Edit tags (Artist - Title) | M | `editTagsPrompt`, `#tagEditorPopover` (`#tagMachine`), `tagLog` | 1.15 row ⋮ |
+| CR-23 | Edit tags (Artist - Title) | M | `editTagsPrompt`, `#tagEditorPopover` (`#tagMachine`), `tagLog` | 1.15 row ⋮. ✅ 1.15 in part (November 15, 2026): a playlist track's tags before it's played, from its ⋮ (`renameQueueTrack` → `ftapi.actions.renameTrack`, with Undo); the hostbot plays it under that name and its first play saves those tags |
 | CR-24 | Undo after add / move / swap | M | `savedToast`, toast actions | keep |
 | CR-25 | The built-in list ("Default Playlist", renamable) | M | `queues/<uid>`, `defaultListName`, `playlistPrefs/<uid>/defaultName` | keep |
 | CR-26 | Discover's "Save all" into a new playlist | M | `discover.js` `saveAll` | keep; also a source in Import (1.19) |

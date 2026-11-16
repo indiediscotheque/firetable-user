@@ -697,6 +697,33 @@ firetable.actions.importList = function (id, name, type) {
 // ─── Tag Editing ─────────────────────────────────────────────────────────────
 
 /**
+ * Rename a track in the playlist on show, with Undo.
+ * @param {jQuery} $p - its row in #mainqueue
+ * @param {string} name - "Artist - Title"
+ */
+firetable.actions.renameQueueTrack = function ($p, name) {
+  var key = $p.attr('data-key');
+  var cid = $p.attr('data-cid');
+  ftapi.actions.renameTrack(key, name, cid).then(function (old) {
+    if (old === null) {
+      firetable.ui.toast("That track has moved or gone. Nothing changed.", "error");
+      return;
+    }
+    firetable.ui.toast("Renamed: " + name, "success", { action: { label: "Undo", fn: function () {
+      ftapi.actions.renameTrack(key, old, cid);
+    } } });
+  }, function () {});
+};
+
+/** "Title - Artist" (how many uploads are named) → "Artist - Title", on a playlist row. */
+firetable.actions.swapTrackTags = function ($p) {
+  var tag = String($p.attr('data-tags') || '');
+  var sep = tag.indexOf(' - ');
+  if (sep < 1) return;
+  firetable.actions.renameQueueTrack($p, tag.slice(sep + 3).trim() + ' - ' + tag.slice(0, sep).trim());
+};
+
+/**
  * Show the tag editor prompt on a history item.
  * @param {string} songid - data-key of the history item
  * @param {string} tag    - Current "Artist - Title" string
@@ -929,6 +956,7 @@ firetable.ui.setupPlaylistEvents = function () {
     $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
     $menu.find('.ft-menu-open-logo').html($link.find('svg').prop('outerHTML') || '');
     $menu.find('[data-act="swap"]').prop('hidden', !$p.hasClass('has-swap'));
+    $menu.find('[data-act="swaptags"]').prop('hidden', String($p.attr('data-tags') || '').indexOf(' - ') < 1);
     $(btn).addClass('on').attr('aria-expanded', 'true');
     trackMenuEl.style.visibility = 'hidden';
     trackMenuEl.showPopover();
@@ -961,6 +989,10 @@ firetable.ui.setupPlaylistEvents = function () {
         firetable.actions.deleteSongPrompt($p.attr('data-key'), $p.attr('data-tags') || $p.find('.listwords').text(), $p.attr('data-type'), btn);
       } else if (act === 'swap') {
         firetable.actions.swapPrompt($p.attr('data-key'), btn);
+      } else if (act === 'tags') {
+        firetable.actions.editTagsPrompt($p.attr('data-key'), $p.attr('data-tags') || $p.find('.listwords').text(), btn);
+      } else if (act === 'swaptags') {
+        firetable.actions.swapTrackTags($p);
       }
     })
     .on('keydown', function (e) {
@@ -1439,6 +1471,13 @@ firetable.ui.setupPlaylistEvents = function () {
     }
     var $pvbar = firetable.editingPvbar;
     if (!$pvbar || !$pvbar.length) { popoverEl.hidePopover(); return; }
+    // a track in your playlist: its name, before it's played (the hostbot
+    // plays it under that name, and its first play here saves those tags)
+    if ($pvbar.closest('#mainqueue').length) {
+      if (tag !== $pvbar.attr('data-tags')) firetable.actions.renameQueueTrack($pvbar, tag);
+      popoverEl.hidePopover();
+      return;
+    }
     if (tag !== $pvbar.attr('data-tag')) {
       ftapi.actions.editTag(
         $pvbar.attr('data-type'),

@@ -754,6 +754,32 @@ ftapi.actions = {
         if (callback) return callback(err);
       });
   },
+  /**
+   * Rename a track in the playlist on show ("Artist - Title"): the name the
+   * hostbot plays it under, and the tags its first play here saves. Only if
+   * the slot still holds that track (the list may have changed meanwhile).
+   * @param {string} trackID - Track key
+   * @param {string} name - "Artist - Title"
+   * @param {string} [cid] - The track's cid as shown
+   * @returns {Promise<string|null>} the old name (for undo), or null when nothing changed
+   */
+  renameTrack: function(trackID, name, cid) {
+    var old = null;
+    return ftapi.queueRef.child(trackID).transaction(function(t) {
+      old = null;
+      // nothing cached yet: null, so the database runs this again with what it holds
+      if (t === null) return null;
+      if (cid != null && String(t.cid) !== String(cid)) return; // another track in that slot now: leave it
+      old = t.name || "";
+      t.name = String(name).slice(0, 1000);
+      return t;
+    }).then(function(res) {
+      return res.committed && old !== null ? old : null;
+    }, function(err) {
+      ftapi.saveFailed("that name")(err);
+      throw err;
+    });
+  },
   unflagTrack: function(trackID) {
     // a swap suggestion only means something on a flagged track
     ftapi.queueRef.child(trackID).update({ flagged: null, swap: null }).catch(ftapi.saveFailed("that track"));

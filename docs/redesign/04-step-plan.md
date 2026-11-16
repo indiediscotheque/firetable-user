@@ -182,6 +182,7 @@ Nothing moves region. Regulars find everything where it was.
 - **Undo:** revert.
 
 ### 1.15 Crate rows and the row menu
+- **Shipped in part (the owner's request, November 15, 2026):** `#trackMenuPopover` has Edit tags… and Swap artist and title, and ⋮ shows on every playlist row. Still to come: the row restyle (Title · Artist, tags, number), Delete and search for another, and narrow rows keeping only Top and ⋮.
 - **Goal:** rows read at a glance; the actions you use are on the row, the rest in ⋮.
 - **Rows:** CR-02 to CR-06, CR-18, CR-19, CR-22, CR-23.
 - **Files and change:** `playlist.js` `queueBlockHTML` / the row template: number, cover, **Title** · Artist (split the stored "Artist - Title" for display only), a tag (NEXT on the first row of the list you DJ from; BROKEN when `flagged`; REMIX when the title says so, the same test the Remixes filter uses), length if known. Visible actions on desktop: Top, Bottom, Preview, YouTube/SoundCloud, Delete, ⋮. `#trackMenuPopover` gains Edit tags (`editTagsPrompt`), Swap artist and title, Delete and search for another (`deleteSongAndSearch`), Copy to playlist (the steal picker). On narrow rows (under 640) only Top and ⋮ stay visible; ⋮ has everything.
