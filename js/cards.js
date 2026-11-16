@@ -891,12 +891,31 @@ firetable.actions.displayCard = function (data, chatid, opts) {
     onDone && onDone();
   }
 
+  /**
+   * The part of the artwork to show in the square album window. A YouTube
+   * thumbnail is a 16:9 frame (with black bars above and below on the 4:3
+   * sizes), and on art tracks the cover sits square in its middle, so take
+   * that centre square: the cover then fills the window edge to edge. Other
+   * artwork is centre-cropped to a square.
+   */
+  function albumCrop(image) {
+    var w = image.naturalWidth || image.width;
+    var h = image.naturalHeight || image.height;
+    var frameY = 0;
+    var frameH = h;
+    if (/ytimg\.com/i.test(image.src) && w / h < 16 / 9 - 0.05) {
+      frameH = w * 9 / 16; // the video frame inside the letterbox bars
+      frameY = (h - frameH) / 2;
+    }
+    var side = Math.min(w, frameH);
+    return { x: (w - side) / 2, y: frameY + (frameH - side) / 2, size: side };
+  }
+
   function drawAlbumBadge(image) {
     var albumX = 152;
     var albumY = 198;
     var albumW = 50;
-    var albumH = image.src.match(/ytimg\.com/i) ? 33 : 50;
-    var albumDrawY = albumY + ((50 - albumH) / 2);
+    var crop = albumCrop(image);
 
     ctx.save();
     ctx.translate(albumX + 25, albumY + 25);
@@ -906,7 +925,7 @@ firetable.actions.displayCard = function (data, chatid, opts) {
     fillRoundedRect(albumX, albumY, albumW, 50, 10, "rgba(255,255,255,0.08)");
     strokeRoundedRect(albumX, albumY, albumW, 50, 10, "rgba(255,255,255,0.22)", 1);
     withRoundedClip(albumX, albumY, albumW, 50, 10, function () {
-      ctx.drawImage(image, albumX, albumDrawY, albumW, albumH);
+      ctx.drawImage(image, crop.x, crop.y, crop.size, crop.size, albumX, albumY, albumW, 50);
       var stickerShade = ctx.createLinearGradient(albumX, albumY, albumX, albumY + 50);
       stickerShade.addColorStop(0, "rgba(255,255,255,0.12)");
       stickerShade.addColorStop(1, "rgba(0,0,0,0.22)");
