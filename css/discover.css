@@ -1166,6 +1166,9 @@ body.ft-discover #dSide #actualChat {
     .pb-track:has(:is(#pv-seek, #pv-fseek):not(:disabled)):hover .d-bar { height: 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .pb-track .d-bar i { transition: none; } }
+/* Live, the bar on the room's song: the stage right above already shows its
+   time played, time left and progress, so the bar leaves them out */
+body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
 
 /* right: actions, the other source, volume, Now playing */
 .pb-side { grid-area: side; display: flex; align-items: center; justify-content: flex-end; gap: var(--pad2); min-width: 0; }
