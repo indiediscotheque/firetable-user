@@ -2028,7 +2028,8 @@ try {
 // The library's plain pages (tools/plain-pages.mjs), built from the same data
 // and loaded under the real policy, as search engines and visitors get them
 const plain = await context.newPage();
-plain.on("pageerror", (e) => { pageErrors.push("Plain pages: " + e.message); });
+// (it's the whole site, so YouTube's player can throw there as in Discover)
+plain.on("pageerror", (e) => { if (theirs(e)) return; pageErrors.push("Plain pages: " + e.message); });
 try {
   console.log("-- plain pages: the library as ordinary pages, with a sitemap");
   const { execFile } = await import("child_process");
@@ -2107,13 +2108,14 @@ console.log("-- the live stage for other sites (embed/stage/)");
   const site2 = await serveSite({ csp: csp2, configJs: config(NS2) });
   const t0 = Date.now();
   await put2("/", {
-    users: { dj1: { username: "dj1", status: true }, dj2: { username: "dj2", status: true }, bot: { username: "bot", status: true, hostbot: true } },
+    users: { dj1: { username: "dj1", status: true }, dj2: { username: "dj2", status: true }, bot: { username: "bot", status: true, hostbot: true },
+      gone: { username: "gone", status: false } },
     table: [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }],
     songToPlay: Object.assign({}, youtubeSong, { title: "Stage &amp; Song", started: t0 - 30000 }),
     songBpm: { bpm: 120, started: t0 - 30000 }, theme: "stage night", colors: { color: "#1c6ccc", txt: "#fff" }
   });
   const sp = await context.newPage();
-  sp.on("pageerror", (e) => pageErrors.push("Stage: " + e.message));
+  sp.on("pageerror", (e) => { if (!theirs(e)) pageErrors.push("Stage: " + e.message); });
   await sp.exposeFunction("__cspViolation", (v) => violations.push("Stage: " + v));
   await sp.addInitScript(() => document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI)));
   try {
@@ -2125,12 +2127,13 @@ console.log("-- the live stage for other sites (embed/stage/)");
       kicker: document.getElementById("st-kicker").textContent, count: document.getElementById("st-count").textContent,
       theme: document.getElementById("st-themeText").textContent, acc: document.getElementById("st").style.getPropertyValue("--acc"),
       djs: [...document.querySelectorAll("#st-deck li")].map((li) => li.textContent + (li.classList.contains("is-on") ? "*" : "")).join(),
+      sizes: [...new Set([...document.querySelectorAll("#st-deck .st-face")].map((f) => f.offsetWidth + "/" + getComputedStyle(f.parentNode).opacity))].join(),
       at: document.getElementById("st-at").textContent, links: [...document.querySelectorAll("#st a")].every((a) => a.target === "_blank" && /#live$/.test(a.href))
     }));
     check(on.title === "Stage & Song" && on.artist === "Smoke Artist" && on.kicker === "Picked by dj1 · 120 BPM",
       "the stage shows the room's song and who picked it, with its tempo (" + JSON.stringify(on) + ")");
-    check(on.djs === "dj1*,dj2" && on.count === "2 in the room" && on.theme === "stage night" && on.acc === "#1c6ccc",
-      "the DJs on the decks, who's here (not the bot), the theme and the song's colours (" + JSON.stringify(on) + ")");
+    check(on.djs === "dj1*,dj2" && !/,/.test(on.sizes) && /\/1$/.test(on.sizes) && on.count === "2 in the room" && on.theme === "stage night" && on.acc === "#1c6ccc",
+      "the DJs on the decks, who's here (online, not the bot), the theme and the song's colours (" + JSON.stringify(on) + ")");
     check(/^0:3\d$/.test(on.at) && on.links, "it's where the room is in the song, and every link opens the room (" + on.at + ")");
     // YouTube's player is made under the stage's policy; the video shows once it
     // plays (YouTube won't play on CI's runners, so its playing isn't required here)
@@ -2149,8 +2152,12 @@ console.log("-- the live stage for other sites (embed/stage/)");
     await put2("/songToPlay", { type: 2, cid: "13158665", title: "Stage SC", artist: "Forss", started: Date.now(), duration: 200, djid: "dj2", djname: "dj2",
       url: "https://soundcloud.com/forss/flickermood", image: site2.SITE + "icons/icon-512.png" });
     await sp.waitForFunction(() => /w\.soundcloud\.com\/player/.test(document.getElementById("st-sc").src) && document.getElementById("st-title").textContent === "Stage SC", null, { timeout: 15000 }).catch(() => {});
-    const sc = await sp.evaluate(() => ({ sc: document.getElementById("st").className, src: document.getElementById("st-sc").src.slice(0, 40), on: (document.querySelector("#st-deck .is-on") || {}).textContent }));
-    check(/is-sc/.test(sc.sc) && !/has-video/.test(sc.sc) && /soundcloud/.test(sc.src) && sc.on === "dj2", "a SoundCloud song plays on a record, from SoundCloud's player (" + JSON.stringify(sc) + ")");
+    await sp.waitForFunction(() => getComputedStyle(document.getElementById("st-cover")).opacity === "1", null, { timeout: 5000 }).catch(() => {});
+    const sc = await sp.evaluate(() => ({ sc: document.getElementById("st").className, src: document.getElementById("st-sc").src.slice(0, 40), on: (document.querySelector("#st-deck .is-on") || {}).textContent,
+      cover: /icon-512\.png/.test(document.getElementById("st-cover").style.backgroundImage), shown: getComputedStyle(document.getElementById("st-cover")).opacity === "1",
+      fills: (() => { const r = document.getElementById("st-cover").getBoundingClientRect(); return r.width === innerWidth && r.height === innerHeight; })() }));
+    check(/is-sc/.test(sc.sc) && !/has-video/.test(sc.sc) && /soundcloud/.test(sc.src) && sc.on === "dj2" && sc.cover && sc.shown && sc.fills,
+      "a SoundCloud song plays from SoundCloud's player, its cover filling the screen (" + JSON.stringify(sc) + ")");
     await put2("/songToPlay", null);
     await sp.waitForFunction(() => document.getElementById("st").classList.contains("is-quiet"), null, { timeout: 10000 }).catch(() => {});
     check(await sp.evaluate(() => !document.getElementById("st-quiet").hidden && document.getElementById("st-listen").hidden), "with no one playing, the stage says the decks are open");
