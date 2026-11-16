@@ -36,7 +36,7 @@ const p5Globals = Object.fromEntries([
 export default [
   { ignores: ["**/*.min.js", "js/twemoji.js", "tools/**", "node_modules/**"] },
   {
-    files: ["js/**/*.js"],
+    files: ["js/**/*.js", "embed/**/*.js"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "script",

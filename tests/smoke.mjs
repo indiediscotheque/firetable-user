@@ -4,7 +4,7 @@
 // policy blocks. Run (needs Java 21 for the emulator):
 //   cd tests && npm ci && npm run smoke
 // Never deployed. CI: .github/workflows/smoke.yml
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { chromium } from "playwright";
 import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep } from "./harness.mjs";
@@ -2135,6 +2135,79 @@ try {
 } finally {
   const { rmSync } = await import("fs");
   rmSync(join(ROOT, "music"), { recursive: true, force: true });
+}
+
+// The live stage for QueUp's screen (embed/stage/): its own page under its own
+// policy, reading a room of its own (a namespace apart, so the pages above
+// don't hear its songs change)
+console.log("-- the live stage for other sites (embed/stage/)");
+{
+  const NS2 = NS + "-stage", put2 = putAs(NS2);
+  const htaccess = readFileSync(join(ROOT, ".htaccess"), "utf8");
+  const stageBlock = (htaccess.match(/<If "%\{REQUEST_URI\} =~ m#\^\/embed\/stage\/#">([\s\S]*?)<\/If>/) || ["", ""])[1];
+  const stagePolicy = (stageBlock.match(/Content-Security-Policy "([^"]+)"/) || ["", ""])[1];
+  check(/frame-ancestors 'self' https:\/\/queup\.net https:\/\/\*\.queup\.net/.test(stagePolicy) && /X-Robots-Tag "noindex, nofollow"/.test(stageBlock) &&
+    htaccess.indexOf("m#^/embed/stage/#") > htaccess.indexOf("m#^/embed/#"), "the stage has its own policy: only this site and QueUp may frame it, never indexed");
+  const linked = [join(ROOT, "index.html"), ...readdirSync(join(ROOT, "js")).filter((f) => f.endsWith(".js")).map((f) => join(ROOT, "js", f))]
+    .filter((f) => readFileSync(f, "utf8").includes("embed/stage"));
+  check(!linked.length, "nothing on the site links to the stage (it's unlisted)" + (linked.length ? ": " + linked.join(", ") : ""));
+  const csp2 = stagePolicy.replace("connect-src ", "connect-src " + DB + " ").replace(/;\s*upgrade-insecure-requests/, "");
+  const site2 = await serveSite({ csp: csp2, configJs: config(NS2) });
+  const t0 = Date.now();
+  await put2("/", {
+    users: { dj1: { username: "dj1", status: true }, dj2: { username: "dj2", status: true }, bot: { username: "bot", status: true, hostbot: true } },
+    table: [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }],
+    songToPlay: Object.assign({}, youtubeSong, { title: "Stage &amp; Song", started: t0 - 30000 }),
+    songBpm: { bpm: 120, started: t0 - 30000 }, theme: "stage night", colors: { color: "#1c6ccc", txt: "#fff" }
+  });
+  const sp = await context.newPage();
+  sp.on("pageerror", (e) => pageErrors.push("Stage: " + e.message));
+  await sp.exposeFunction("__cspViolation", (v) => violations.push("Stage: " + v));
+  await sp.addInitScript(() => document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI)));
+  try {
+    await sp.goto(site2.SITE + "embed/stage/", { waitUntil: "load" });
+    await sp.waitForFunction(() => !document.getElementById("st-listen").hidden && document.querySelectorAll("#st-deck li").length === 2 &&
+      document.getElementById("st-theme").hidden === false, null, { timeout: 15000 }).catch(() => {});
+    const on = await sp.evaluate(() => ({
+      title: document.getElementById("st-title").textContent, artist: document.getElementById("st-artist").textContent,
+      kicker: document.getElementById("st-kicker").textContent, count: document.getElementById("st-count").textContent,
+      theme: document.getElementById("st-themeText").textContent, acc: document.getElementById("st").style.getPropertyValue("--acc"),
+      djs: [...document.querySelectorAll("#st-deck li")].map((li) => li.textContent + (li.classList.contains("is-on") ? "*" : "")).join(),
+      at: document.getElementById("st-at").textContent, links: [...document.querySelectorAll("#st a")].every((a) => a.target === "_blank" && /#live$/.test(a.href))
+    }));
+    check(on.title === "Stage & Song" && on.artist === "Smoke Artist" && on.kicker === "Picked by dj1 · 120 BPM",
+      "the stage shows the room's song and who picked it, with its tempo (" + JSON.stringify(on) + ")");
+    check(on.djs === "dj1*,dj2" && on.count === "2 in the room" && on.theme === "stage night" && on.acc === "#1c6ccc",
+      "the DJs on the decks, who's here (not the bot), the theme and the song's colours (" + JSON.stringify(on) + ")");
+    check(/^0:3\d$/.test(on.at) && on.links, "it's where the room is in the song, and every link opens the room (" + on.at + ")");
+    // YouTube's player is made under the stage's policy; the video shows once it
+    // plays (YouTube won't play on CI's runners, so its playing isn't required here)
+    await sp.waitForFunction(() => !!document.querySelector("iframe#st-yt[src*='youtube.com']"), null, { timeout: 20000 }).catch(() => {});
+    await sp.waitForTimeout(4000);
+    const yt = await sp.evaluate(() => {
+      const frame = document.querySelector("iframe#st-yt");
+      return { frame: !!(frame && /youtube\.com\/embed\/.*[?&]mute=1/.test(frame.src)), shown: document.getElementById("st").classList.contains("has-video"),
+        video: getComputedStyle(document.querySelector(".st-screen")).opacity };
+    });
+    check(yt.frame && (yt.shown ? yt.video !== "0" : yt.video === "0"),
+      "the room's video loads on the stage, muted until Listen live, and shows only once it plays (" + JSON.stringify(yt) + ")");
+    await sp.click("#st-listen");
+    const listening = await sp.evaluate(() => ({ listen: document.getElementById("st-listen").hidden, vol: !document.getElementById("st-vol").hidden }));
+    check(listening.listen && listening.vol, "Listen live turns the sound on and shows the volume (" + JSON.stringify(listening) + ")");
+    await put2("/songToPlay", { type: 2, cid: "13158665", title: "Stage SC", artist: "Forss", started: Date.now(), duration: 200, djid: "dj2", djname: "dj2",
+      url: "https://soundcloud.com/forss/flickermood", image: site2.SITE + "icons/icon-512.png" });
+    await sp.waitForFunction(() => /w\.soundcloud\.com\/player/.test(document.getElementById("st-sc").src) && document.getElementById("st-title").textContent === "Stage SC", null, { timeout: 15000 }).catch(() => {});
+    const sc = await sp.evaluate(() => ({ sc: document.getElementById("st").className, src: document.getElementById("st-sc").src.slice(0, 40), on: (document.querySelector("#st-deck .is-on") || {}).textContent }));
+    check(/is-sc/.test(sc.sc) && !/has-video/.test(sc.sc) && /soundcloud/.test(sc.src) && sc.on === "dj2", "a SoundCloud song plays on a record, from SoundCloud's player (" + JSON.stringify(sc) + ")");
+    await put2("/songToPlay", null);
+    await sp.waitForFunction(() => document.getElementById("st").classList.contains("is-quiet"), null, { timeout: 10000 }).catch(() => {});
+    check(await sp.evaluate(() => !document.getElementById("st-quiet").hidden && document.getElementById("st-listen").hidden), "with no one playing, the stage says the decks are open");
+  } catch (e) {
+    check(false, "stage test threw: " + e.message);
+  } finally {
+    await sp.close();
+    site2.server.close();
+  }
 }
 
 console.log("-- fonts");

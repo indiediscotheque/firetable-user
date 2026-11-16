@@ -46,6 +46,16 @@ Options -Indexes
     Header always unset X-Frame-Options
   </If>
 
+  # The live stage (embed/stage/), unlisted, for QueUp's screen: only this site
+  # and QueUp may frame it. It plays the room's YouTube and SoundCloud songs,
+  # reads the room over Firebase's streaming REST API, and shows avatars and
+  # cover art from other hosts. To let another site show it, add it to
+  # frame-ancestors. (After the block above, so its policy wins here.)
+  <If "%{REQUEST_URI} =~ m#^/embed/stage/#">
+    Header always set Content-Security-Policy "default-src 'none'; script-src 'self' https://www.youtube.com/iframe_api https://www.youtube.com/s/player/ https://w.soundcloud.com/player/api.js; style-src 'self' 'unsafe-inline'; style-src-elem 'self'; img-src 'self' data: https:; font-src 'self'; connect-src https://*.firebaseio.com https://*.firebasedatabase.app; frame-src https://www.youtube.com https://w.soundcloud.com; media-src 'self' blob: https:; base-uri 'none'; form-action 'none'; frame-ancestors 'self' https://queup.net https://*.queup.net; upgrade-insecure-requests"
+    Header always set X-Robots-Tag "noindex, nofollow"
+  </If>
+
   # The service worker (push notifications): browsers check it for updates on
   # every visit, so never let a cache hand them an old copy
   <Files "sw.js">
