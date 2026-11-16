@@ -30,10 +30,6 @@
 			</div>
 
 			<div class="st-top">
-				<div class="st-status">
-					<span class="st-live"><i aria-hidden="true"></i>Live</span>
-					<span class="st-count" id="st-count" hidden></span>
-				</div>
 				<div class="st-sound">
 				<div class="st-vol" id="st-vol" hidden>
 					<button type="button" class="st-icon" id="st-mute" aria-label="Mute">
@@ -64,6 +60,11 @@
 			<!-- The DJ playing, on the deck; the others in line beside it (as #deck and #ondeck) -->
 			<ol class="st-deck" id="st-deck" aria-label="On the decks"></ol>
 			<ol class="st-ondeck" id="st-ondeck" aria-label="Next on the decks"></ol>
+			<!-- Lower left, level with the line of DJs: live, and who's here -->
+			<div class="st-status">
+				<span class="st-live"><i aria-hidden="true"></i>Live</span>
+				<span class="st-count" id="st-count" hidden></span>
+			</div>
 			<p class="st-note" id="st-note" role="status" hidden></p>
 		</section>
 
