@@ -160,7 +160,7 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 .st-now.is-changing .st-art,
 .st-now.is-changing .st-npText { opacity: 0; translate: 0 0.2em; }
 
-/* ─── Top right: live, who's here, sound, open the room ────────────────── */
+/* ─── Top right: sound, open the room ──────────────────────────────────── */
 
 .st-top {
   flex: none;
@@ -170,7 +170,21 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   gap: 0.6em;
   font-size: 0.7em;
 }
-.st-status, .st-sound { display: flex; align-items: center; gap: 0.5em; }
+.st-sound { display: flex; align-items: center; gap: 0.5em; }
+
+/* ─── Lower left: live, and who's here, level with the line of DJs on the
+   right (3em circles, 0.5em up: in this 0.7em text, 4.29em tall, 0.71em up) */
+.st-status {
+  position: absolute;
+  z-index: 2;
+  left: 1.79em;
+  bottom: 0.71em;
+  height: 4.29em;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: 0.7em;
+}
 .st-live {
   display: inline-flex;
   align-items: baseline;
@@ -196,7 +210,7 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 @keyframes st-blink { 50% { opacity: 0.3; } }
 #st.is-quiet .st-live { background: rgba(255, 255, 255, 0.16); }
 #st.is-quiet .st-live i { animation: none; opacity: 0.5; }
-.st-count { color: rgba(255, 255, 255, 0.75); white-space: nowrap; }
+.st-count { color: rgba(255, 255, 255, 0.8); white-space: nowrap; text-shadow: 0 0.06em 0.4em rgba(0, 0, 0, 0.6); }
 .st-icon {
   display: inline-grid;
   place-items: center;
