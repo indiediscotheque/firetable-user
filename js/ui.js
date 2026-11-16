@@ -1861,10 +1861,11 @@ firetable.ui.setupMiscEvents = function () {
         $('#pickerSearch').focus();
       });
       if (!firetable.pickerInit) {
-        (async function () {
+        firetable.emojis.buildPicker().then(function (ok) {
+          if (!ok || firetable.pickerInit) return;
+          firetable.pickerInit = true;
           twemoji.parse(document.getElementById("pickerResults"));
-          return true;
-        })();
+        });
       }
     } else {
       $(this).removeClass('on');

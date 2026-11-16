@@ -547,13 +547,20 @@ try {
 
   console.log("-- emoji: Emoji 17.0 in the picker, old shortnames still work");
   await page.waitForFunction(() => firetable.emojiMap && firetable.emojiMap.trombone, null, { timeout: 30000 }).catch(() => {});
-  const emo = await page.evaluate(() => ({
-    newest: firetable.emojiMap.trombone, renamed: firetable.emojiMap.hugging_face, old: firetable.emojiMap.smile,
-    sections: document.querySelectorAll("#pickerContents > div").length, picker: document.querySelectorAll(".pickerResult").length,
-    chat: firetable.utilities.emojiShortnamestoUnicode(":orca: :pouting_face:")
-  }));
-  check(emo.newest === "\u{1FA8A}" && emo.renamed === "🤗" && emo.old === "😄", "Emoji 17.0 shortnames load, and renamed and old ones still work");
-  check(emo.sections === 9 && emo.picker > 1900 && /\u{1FACD}/u.test(emo.chat) && /😡/.test(emo.chat), "the picker has every group and " + emo.picker + " emoji");
+  const emo = await page.evaluate(async () => {
+    const before = document.querySelectorAll(".pickerResult").length; // the picker's data waits for its first open
+    const fromHere = performance.getEntriesByType("resource").filter((r) => /emoji-(map|picker)\.json/.test(r.name)).every((r) => r.name.startsWith(location.origin));
+    const built = await firetable.emojis.buildPicker();
+    return {
+      newest: firetable.emojiMap.trombone, renamed: firetable.emojiMap.hugging_face, old: firetable.emojiMap.smile, before, built, fromHere,
+      sections: document.querySelectorAll("#pickerContents > div").length, picker: document.querySelectorAll(".pickerResult").length,
+      words: (document.querySelector('.pickerResult[title="grinning_face_with_big_eyes"]') || { getAttribute: () => "" }).getAttribute("data-alternative-name"),
+      chat: firetable.utilities.emojiShortnamestoUnicode(":orca: :pouting_face:")
+    };
+  });
+  check(emo.newest === "\u{1FA8A}" && emo.renamed === "🤗" && emo.old === "😄" && emo.fromHere, "Emoji 17.0 shortnames load from this site, and renamed and old ones still work");
+  check(emo.before === 0 && emo.built && emo.sections === 9 && emo.picker > 1900 && /smile/.test(emo.words) && /\u{1FACD}/u.test(emo.chat) && /😡/.test(emo.chat),
+    "the picker loads on its first open, with every group, " + emo.picker + " emoji and their search words (" + JSON.stringify({ before: emo.before, words: emo.words }) + ")");
 
   console.log("-- a printed card: GRAB, then YOURS / GRABBED BY / GONE");
   await put("/cards", { cardA: { owner: false, cardnum: 1 }, cardB: { owner: false, cardnum: 2 }, cardC: { owner: false, cardnum: 3 } });

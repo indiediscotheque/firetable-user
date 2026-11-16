@@ -1,9 +1,10 @@
 /**
  * emoji.js — Emoji picker, search, and shortname-to-unicode conversion.
  *
- * Loads emoji data (Emoji 17.0) from unpkg CDN (unicode-emoji-json + emojilib),
- * builds the picker DOM, and converts :shortname: strings to unicode
- * characters in chat messages.
+ * Emoji data (Emoji 17.0) comes from this site's own js/emoji-map.json (every
+ * page) and js/emoji-picker.json (the picker's first open), both built by
+ * tools/build-emoji.mjs. Converts :shortname: strings to unicode characters
+ * in chat messages.
  */
 
 firetable.emojis = {
@@ -86,68 +87,76 @@ firetable.emojis = {
 // ─── Emoji Map Loading & Conversion (extends firetable.utilities) ────────────
 
 /**
- * Fetch emoji data from CDN and build:
- * 1. firetable.emojiMap — shortname → unicode lookup
- * 2. Picker DOM — category nav + emoji grid in #pickerNav / #pickerContents
+ * Where the emoji data lives: this site's own files, built by
+ * tools/build-emoji.mjs. index.html links them (#emojiMapData, preloaded) so
+ * the deploy gives each a version from its contents.
+ * @param {string} which - "map" or "picker"
+ * @returns {string}
+ */
+function emojiDataUrl(which) {
+  var link = document.getElementById("emojiMapData");
+  if (which === "picker") return (link && link.getAttribute("data-picker")) || "js/emoji-picker.json";
+  return (link && link.getAttribute("href")) || "js/emoji-map.json";
+}
+
+/**
+ * Fetch firetable.emojiMap (shortname → emoji, with the old emojilib v2 names
+ * and names Unicode has since changed). Small, read on every page: the chat,
+ * the theme and notices all turn :shortnames: into emoji.
  */
 firetable.utilities.getEmojiMap = function () {
   firetable.emojiMap = {};
-  (async function () {
-    try {
-      var requests = EMOJI_URLS.map(function (src) {
-        return fetch(src.url, { integrity: src.integrity, mode: "cors", credentials: "omit" });
-      });
-      var responses = await Promise.all(requests);
-      var promises = responses.map(function (response) { return response.json(); });
-      var data = await Promise.all(promises);
+  fetch(emojiDataUrl("map"), { credentials: "same-origin" })
+    .then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); })
+    .then(function (map) { firetable.emojiMap = map; })
+    .catch(function (err) { console.error("Failed to load emoji data:", err); });
+};
 
-      var groups = data[0], oldLib = data[1], keywords = data[2];
-
-      // emojilib v2: emoji char -> its old shortname
-      var oldmojis = {};
-      Object.keys(oldLib).forEach(function (oldSlug) { oldmojis[oldLib[oldSlug].char] = oldSlug; });
-
+/**
+ * Build the picker (category nav + emoji grid in #pickerNav / #pickerContents)
+ * the first time it opens, from js/emoji-picker.json: only members chat, so
+ * nobody else downloads it.
+ * @returns {Promise<boolean>} whether the picker is built
+ */
+firetable.emojis.buildPicker = function () {
+  if (firetable.emojis.pickerReady) return firetable.emojis.pickerReady;
+  firetable.emojis.pickerReady = fetch(emojiDataUrl("picker"), { credentials: "same-origin" })
+    .then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); })
+    .then(function (groups) {
       // The app shell is detached on the login screen, so look there too
       var findEl = function (id) {
         return document.getElementById(id) || (firetable.$appShell && firetable.$appShell.find('#' + id)[0]) || null;
       };
-      var $nav = $(findEl("pickerNav"));
-      var $contents = $(findEl("pickerContents"));
-
+      var nav = findEl("pickerNav"), contents = findEl("pickerContents");
+      if (!nav || !contents) throw new Error("no picker");
       // One nav button (its first emoji as the icon) and one section per group
       groups.forEach(function (group) {
         var list = group.emojis || [];
         if (!list.length) return;
-        $('<span></span>').attr({ id: "bpicker" + group.slug, title: group.name }).text(list[0].emoji).appendTo($nav);
+        $('<span></span>').attr({ id: "bpicker" + group.slug, title: group.name }).text(list[0][0]).appendTo(nav);
         var $section = $('<div></div>').attr("id", "picker" + group.slug).append($('<h3></h3>').text(group.name));
         var frag = document.createDocumentFragment();
         list.forEach(function (item) {
-          firetable.emojiMap[item.slug] = item.emoji;
-          var words = (keywords[item.emoji] || []).slice();
-          if (oldmojis[item.emoji]) words.push(oldmojis[item.emoji]);
           var el = document.createElement("span");
           el.setAttribute("role", "button");
           el.className = "pickerResult";
-          el.title = item.slug;
-          el.setAttribute("data-alternative-name", words.join(","));
-          el.textContent = item.emoji;
+          el.title = item[1];
+          el.setAttribute("data-alternative-name", item[2]);
+          el.textContent = item[0];
           frag.appendChild(el);
         });
         $section[0].appendChild(frag);
-        $section.appendTo($contents);
+        $section.appendTo(contents);
       });
-
-      // Old emojilib v2 shortnames (:smile:, :+1:) and names Unicode has since changed
-      Object.keys(oldmojis).forEach(function (emoji) { firetable.emojiMap[oldmojis[emoji]] = emoji; });
-      Object.keys(EMOJI_RENAMED).forEach(function (oldName) {
-        var now = firetable.emojiMap[EMOJI_RENAMED[oldName]];
-        if (now && !Object.prototype.hasOwnProperty.call(firetable.emojiMap, oldName)) firetable.emojiMap[oldName] = now;
-      });
-      if ($nav[0]) twemoji.parse($nav[0]);
-    } catch (err) {
-      console.error("Failed to load emoji data:", err);
-    }
-  })();
+      twemoji.parse(nav);
+      return true;
+    })
+    .catch(function (err) {
+      console.error("Failed to load the emoji picker:", err);
+      firetable.emojis.pickerReady = null; // try again next time it opens
+      return false;
+    });
+  return firetable.emojis.pickerReady;
 };
 
 /**

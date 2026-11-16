@@ -130,9 +130,12 @@ CDN scripts are pinned to exact versions and checked with Subresource Integrity:
 `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`
 
 ## icons
-`fonts/material-symbols-outlined.woff2` holds only the icons the site uses (about 260 KB instead of ~4 MB). After using an icon the site hasn't used before, rebuild it:
+`fonts/material-symbols-outlined.woff2` holds only the icons the site uses, with its weight, grade and optical size fixed at the one setting the CSS draws them at (outlined / filled stays): about 42 KB instead of ~4 MB. After using an icon the site hasn't used before, rebuild it:
 `pip install "fonttools[woff]" && python3 tools/subset-icons.py`
 The full font lives in `tools/fonts/` (never deployed).
+
+## emoji
+The chat's emoji data is this site's own: `js/emoji-map.json` (every `:shortname:`, about 64 KB, read on every page for the chat, the theme and notices) and `js/emoji-picker.json` (the picker's groups and search words, read the first time someone opens the picker). Both are built from pinned, integrity-checked copies of unicode-emoji-json and emojilib by `node tools/build-emoji.mjs`; rerun it and commit the two files when moving to a newer Emoji version (keep `js/twemoji.js` on the same one).
 
 ## avatars
 Robot avatars provided by [robohash.org](https://robohash.org/).
