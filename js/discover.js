@@ -3645,7 +3645,7 @@ firetable.discover = (function () {
       '<nav id="dNav" aria-label="Discover">' +
       VIEWS.map(function (v) { return '<button type="button" class="d-nav" data-view="' + v.id + '">' + ms(v.icon) + "<span>" + esc(v.label) + "</span></button>"; }).join("") +
       '<button type="button" class="d-nav d-chatnav">' + ms("forum") + "<span>Chat</span></button>" +
-      '</nav></div><div id="dBrowse" class="scroll-view"></div><aside id="dSide" aria-label="Playlists and chat"></aside>';
+      '</nav></div><div id="dBrowse" class="scroll-view"></div><section id="dSide" aria-label="Playlists and chat"></section>';
     var grid = document.getElementById("mainGrid");
     grid.appendChild(page);
     // the player along the bottom of the whole site, under Discover and Live alike

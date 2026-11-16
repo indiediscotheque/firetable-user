@@ -86,5 +86,10 @@ firetable.install = {
       }).catch(function () {}).then(i.render);
     });
     i.render();
+    // sw.js on every visit, not only with push on: it also shows the offline
+    // page when the site can't be reached (and the app opens without a connection)
+    var startWorker = function () { if (firetable.push) firetable.push.register(); };
+    if (document.readyState === "complete") startWorker();
+    else window.addEventListener("load", startWorker, { once: true });
   }
 };
