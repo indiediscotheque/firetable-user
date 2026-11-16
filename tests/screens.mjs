@@ -20,6 +20,7 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "fs";
 import { join, relative, sep } from "path";
 import { execSync } from "child_process";
+import { createHash } from "crypto";
 import { chromium } from "playwright";
 import { ROOT, policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs } from "./harness.mjs";
 import { DAY, youtubeSong, room, discover, library } from "./seed.mjs";
@@ -36,11 +37,13 @@ const WIDTHS = list(process.env.WIDTHS, ["390", "1024", "1440", "1920"]).map(Num
 const VIEW_FILTER = list(process.env.VIEWS, null);
 const SIZES = { 390: { width: 390, height: 844 }, 1024: { width: 1024, height: 768 }, 1440: { width: 1440, height: 900 }, 1920: { width: 1920, height: 1080 } };
 
-// what changes on its own between two runs: clocks, progress and the times on chat and
+// what changes on its own between two runs: clocks, progress and the times in chat and
 // Recent are masked; the
 // video is hidden for the picture (a mask would cover whatever stands in front of it)
-const MASK = "#timr, #timrUp, #prgbar, .pb-time, #pv-fat, #pv-flen, #pv-fseek, .chatTime, .hist-timestamp:not(.d-rank), .histtime";
-const HIDE = process.env.SHOW_VIDEO ? "" : "#playerArea iframe, #pvOverPlayer iframe, #sc-widget { visibility: hidden !important; }";
+const MASK = "#timr, #timrUp, #prgbar, .pb-time, .pb-line, #pv-fat, #pv-flen, #pv-fseek, .chatTime, .hist-timestamp:not(.d-rank), .histtime";
+// the DJs bob to the beat from the song's start: hold them still for the picture
+const HIDE = ".avtr, .avtr *, .ft-avatar, #deck *, #ondeck * { animation: none !important; transition: none !important; }" +
+  (process.env.SHOW_VIDEO ? "" : " #playerArea iframe, #pvOverPlayer iframe, #sc-widget { visibility: hidden !important; }");
 
 // real YouTube videos, so covers load (the titles are made up)
 const VIDS = ["kJQP7kiw5Fk", "9bZkp7q19f0", "JGwWNGJdvx8", "fJ9rUzIMcZQ", "OPf0YbXqDm0", "hTWKbfoikeg", "YQHsXMglC9A", "RgKAFK5djSk", "CevxZvSJLk8", "60ItHLz5WEA"];
@@ -73,13 +76,18 @@ const tracks = ["Glider - Night Drive", "Röyksopp - Me & Youphoria", "Romain Mu
 const queue = () => Object.fromEntries(tracks.map((name, i) => ["q" + i, Object.assign({ type: 1, cid: VIDS[i % VIDS.length], name },
   i === 5 ? { flagged: { date: now - DAY, code: 1 } } : {})]));
 const playlists = { p1: { name: "Nu-disco keepers", list: { a: { type: 1, cid: VIDS[8], name: "Kartell - Riviera" }, b: { type: 1, cid: VIDS[9], name: "Moods - Wildflower" } } }, p2: { name: "Theme: Italo" } };
+// Recent groups plays by the hour: the history starts at 8 pm (yesterday's, before 9 pm)
+// so the groups are the same whenever the pictures are taken
+const evening = new Date(now);
+evening.setHours(20, 0, 0, 0);
+if (evening.getTime() > now - 3600000) evening.setDate(evening.getDate() - 1);
 const history = Object.fromEntries(tracks.slice(0, 6).map((name, i) => {
   const [artist, title] = name.split(" - ");
-  return ["h" + i, { type: 1, cid: VIDS[i], artist, title, dj: i % 2 ? "dj2" : "dj1", djid: i % 2 ? "dj2" : "dj1", when: now - (i + 1) * 6 * 60000, img: art(VIDS[i]) }];
+  return ["h" + i, { type: 1, cid: VIDS[i], artist, title, dj: i % 2 ? "dj2" : "dj1", djid: i % 2 ? "dj2" : "dj1", when: evening.getTime() + (6 - i) * 6 * 60000, img: art(VIDS[i]) }];
 }));
 const fresh = Object.fromEntries(tracks.slice(2, 6).map((name, i) => {
   const [artist, title] = name.split(" - ");
-  return ["f" + i, { artist, title, dj: "dj1", djid: "dj1", type: 1, cid: VIDS[i + 2], when: now - (i + 1) * 3600000, url: "https://www.youtube.com/watch?v=" + VIDS[i + 2], img: art(VIDS[i + 2]) }];
+  return ["f" + i, { artist, title, dj: "dj1", djid: "dj1", type: 1, cid: VIDS[i + 2], when: evening.getTime() - i * 3600000, url: "https://www.youtube.com/watch?v=" + VIDS[i + 2], img: art(VIDS[i + 2]) }];
 }));
 const chatLines = [["dj1", "dj1", "evening all"], ["scytheria", "scytheria", "this one is a banger"], ["bot", "hostbot", "dj1 started playing Smoke Song by Smoke Artist"],
   ["matt", "matt", "🔥🔥"], ["dj2", "dj2", "next up something italo"]];
@@ -168,8 +176,35 @@ const VIEWS = [
 ].filter((v) => !VIEW_FILTER || VIEW_FILTER.some((f) => (f.endsWith("*") ? v.name.startsWith(f.slice(0, -1)) : v.name === f)));
 const roleDecks = (role) => (role === "dj" ? decks.mine(people.dj) : decks.normal());
 
-/** Wait for the page to settle: fonts, the images on screen, a moment for fades. */
-async function settle(page) {
+// Pictures from other sites (avatars, covers) come from a disk cache after the first
+// run: the same bytes every time, and nothing left loading when a picture is taken
+const CACHE = join(ROOT, "tests", "screens", ".cache");
+const CACHED = /^https:\/\/((www\.)?indiediscotheque\.com\/robots\/|api\.dicebear\.com\/|i\.ytimg\.com\/|img\.youtube\.com\/|i\d*\.sndcdn\.com\/)/;
+async function cachedPicture(route) {
+  const url = route.request().url();
+  const file = join(CACHE, createHash("sha1").update(url).digest("hex"));
+  if (existsSync(file + ".json")) {
+    const m = JSON.parse(readFileSync(file + ".json", "utf8"));
+    return route.fulfill({ status: m.status, headers: m.headers, body: readFileSync(file) });
+  }
+  try {
+    const res = await route.fetch();
+    const body = await res.body();
+    const headers = Object.fromEntries(Object.entries(res.headers()).filter(([k]) => !/^(content-length|content-encoding|transfer-encoding|set-cookie)$/i.test(k)));
+    mkdirSync(CACHE, { recursive: true });
+    writeFileSync(file, body);
+    writeFileSync(file + ".json", JSON.stringify({ url, status: res.status(), headers }));
+    return route.fulfill({ status: res.status(), headers, body });
+  } catch (e) {
+    return route.abort();
+  }
+}
+
+/**
+ * Wait for the page to settle: fonts, the images on screen, every avatar and
+ * cover the page asked for (cards draw theirs onto a canvas), a moment for fades.
+ */
+async function settle(page, inflight) {
   await sleep(700);
   await page.evaluate(async () => {
     await document.fonts.ready;
@@ -185,6 +220,10 @@ async function settle(page) {
     const bgs = [...urls].map((u) => new Promise((r) => { const i = new Image(); i.onload = i.onerror = r; i.src = u; }));
     await Promise.race([Promise.all(shown.concat(bgs)), new Promise((r) => setTimeout(r, 8000))]);
   });
+  for (let quiet = 0, t = 0; quiet < 2 && t < 40; t++) {
+    await sleep(200);
+    quiet = inflight.size ? 0 : quiet + 1;
+  }
   await sleep(300);
 }
 
@@ -201,7 +240,12 @@ try {
       await setDecks(roleDecks(role));
       const phone = w < 640;
       const context = await browser.newContext({ viewport: SIZES[w] || { width: w, height: 900 }, deviceScaleFactor: phone ? 2 : 1, isMobile: phone, hasTouch: phone });
+      await context.route(CACHED, cachedPicture);
       const page = await context.newPage();
+      const inflight = new Set();
+      page.on("request", (r) => { if (CACHED.test(r.url())) inflight.add(r); });
+      page.on("requestfinished", (r) => inflight.delete(r));
+      page.on("requestfailed", (r) => inflight.delete(r));
       page.on("pageerror", (e) => problems.push(role + " " + w + ": " + e.message));
       await useAuthEmulator(page);
       await page.goto(SITE, { waitUntil: "load", timeout: 60000 });
@@ -218,7 +262,7 @@ try {
           await v.run(page, role);
           await page.mouse.move(SIZES[w] ? SIZES[w].width - 1 : 1, 1);
           await page.evaluate(() => { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); });
-          await settle(page);
+          await settle(page, inflight);
           await page.screenshot({ path: join(OUT, file), animations: "disabled", caret: "hide", mask: [page.locator(MASK)], maskColor: "#2a2a2a", style: HIDE });
           shots.push({ role, w, view: v.name, file });
           process.stdout.write(".");
