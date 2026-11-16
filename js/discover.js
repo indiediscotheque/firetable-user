@@ -914,7 +914,7 @@ firetable.discover = (function () {
     ytAPI("search", { q: query, type: "video", part: "snippet", maxResults: SEARCH_MAX_RESULTS }, function (res) {
       var rows = ((res && res.items) || []).map(function (item) {
         var cid = item.id && (item.id.videoId || item.id);
-        var p = firetable.utilities.parseArtistTitle(firetable.ui.strip(item.snippet.title), firetable.ui.strip(item.snippet.channelTitle).replace(" - Topic", ""));
+        var p = firetable.utilities.parseArtistTitle(firetable.ui.strip(firetable.utilities.youtubeTrackName(item.snippet.title, item.snippet.channelTitle, item.snippet.description)));
         return { type: MEDIA_YOUTUBE, cid: cid, a: p.artist, t: p.title };
       }).filter(function (t) { return t.cid; });
       Promise.all(rows.map(function (t) {

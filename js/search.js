@@ -170,11 +170,7 @@ firetable.ui.setupSearchEvents = function () {
         $.each(ranked, function (index, r) {
           var item = r.item;
           var thecid = item.kind === "youtube#searchResult" ? item.id.videoId : item.id;
-          var parsed = firetable.utilities.parseArtistTitle(
-            item.snippet.title,
-            item.snippet.channelTitle.replace(" - Topic", "")
-          );
-          var vidTitle = parsed.artist + " - " + parsed.title;
+          var vidTitle = firetable.utilities.youtubeTrackName(item.snippet.title, item.snippet.channelTitle, item.snippet.description);
           var pkey = "ytcid" + thecid;
 
           var $srli = $searchItemTemplate.clone();
