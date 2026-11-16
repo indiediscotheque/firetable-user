@@ -2180,9 +2180,17 @@ console.log("-- the live stage for other sites (embed/stage/)");
     check(on.djs === "dj1*,dj2" && on.count === "2 in the room" && on.theme === "stage night" && on.acc === "#1c6ccc",
       "the DJs on the decks, who's here (not the bot), the theme and the song's colours (" + JSON.stringify(on) + ")");
     check(/^0:3\d$/.test(on.at) && on.links, "it's where the room is in the song, and every link opens the room (" + on.at + ")");
-    await sp.waitForFunction(() => document.getElementById("st").classList.contains("has-video"), null, { timeout: 20000 }).catch(() => {});
-    check(await sp.evaluate(() => document.getElementById("st").classList.contains("has-video") && !!document.querySelector("iframe#st-yt[src*='youtube.com']")),
-      "the room's video plays on the stage (muted until Listen live)");
+    // YouTube's player is made under the stage's policy; the video shows once it
+    // plays (YouTube won't play on CI's runners, so its playing isn't required here)
+    await sp.waitForFunction(() => !!document.querySelector("iframe#st-yt[src*='youtube.com']"), null, { timeout: 20000 }).catch(() => {});
+    await sp.waitForTimeout(4000);
+    const yt = await sp.evaluate(() => {
+      const frame = document.querySelector("iframe#st-yt");
+      return { frame: !!(frame && /youtube\.com\/embed\/.*[?&]mute=1/.test(frame.src)), shown: document.getElementById("st").classList.contains("has-video"),
+        video: getComputedStyle(document.querySelector(".st-screen")).opacity };
+    });
+    check(yt.frame && (yt.shown ? yt.video !== "0" : yt.video === "0"),
+      "the room's video loads on the stage, muted until Listen live, and shows only once it plays (" + JSON.stringify(yt) + ")");
     await sp.click("#st-listen");
     const listening = await sp.evaluate(() => ({ listen: document.getElementById("st-listen").hidden, vol: !document.getElementById("st-vol").hidden }));
     check(listening.listen && listening.vol, "Listen live turns the sound on and shows the volume (" + JSON.stringify(listening) + ")");
