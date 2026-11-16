@@ -263,7 +263,18 @@ try {
           await page.mouse.move(SIZES[w] ? SIZES[w].width - 1 : 1, 1);
           await page.evaluate(() => { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); });
           await settle(page, inflight);
-          await page.screenshot({ path: join(OUT, file), animations: "disabled", caret: "hide", mask: [page.locator(MASK)], maskColor: "#2a2a2a", style: HIDE });
+          // mask only what's in sight: a mask is drawn on top of everything, even over
+          // a clock hidden under the full-screen player
+          await page.evaluate((sel) => {
+            for (const el of document.querySelectorAll(sel)) {
+              const r = el.getBoundingClientRect();
+              if (!r.width || !r.height || r.bottom < 0 || r.top > innerHeight) continue;
+              const top = document.elementFromPoint(Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)), Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2)));
+              if (top && (el === top || el.contains(top) || top.contains(el))) el.setAttribute("data-screens-mask", "");
+            }
+          }, MASK);
+          await page.screenshot({ path: join(OUT, file), animations: "disabled", caret: "hide", mask: [page.locator("[data-screens-mask]")], maskColor: "#2a2a2a", style: HIDE });
+          await page.evaluate(() => document.querySelectorAll("[data-screens-mask]").forEach((el) => el.removeAttribute("data-screens-mask")));
           shots.push({ role, w, view: v.name, file });
           process.stdout.write(".");
         } catch (e) {
