@@ -389,6 +389,41 @@ try {
   await page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
   check(await page.$eval("#swapBar", (b) => b.hidden), "the bar goes once nothing is left to swap");
 
+  console.log("-- a playlist track's tags before it's played: ⋮ Edit tags, Undo, Swap artist and title");
+  await put("/queues/smoke/k5", { type: 1, cid: "relvideo001", name: "Release - Fresh Song" });
+  const tagUi = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    await ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+    const row = document.querySelector('#mainqueue .pvbar[data-key="k5"]');
+    const out = { more: getComputedStyle(row.querySelector(".row-more")).display !== "none" };
+    row.querySelector(".row-more").click();
+    await wait(150);
+    out.swapShown = !document.querySelector('#trackMenuPopover [data-act="swaptags"]').hidden;
+    document.querySelector('#trackMenuPopover [data-act="tags"]').click();
+    await wait(200);
+    out.editor = document.getElementById("tagEditorPopover").matches(":popover-open") && document.getElementById("tagMachine").value;
+    document.getElementById("tagMachine").value = "New Band - Fresh Song";
+    document.querySelector("#tagEditorForm .tagSave").click();
+    return out;
+  });
+  check(tagUi.more && tagUi.swapShown && tagUi.editor === "Release - Fresh Song", "⋮ on a playlist row opens the tag editor with its name (" + JSON.stringify(tagUi) + ")");
+  await sleep(800);
+  q = await listNow();
+  check(q.k5.name === "New Band - Fresh Song" && q.k5.cid === "relvideo001", "Save renames the track in the playlist");
+  await page.evaluate(() => document.querySelector("#ft-toast .ft-toast-action").click());
+  await sleep(800);
+  q = await listNow();
+  check(q.k5.name === "Release - Fresh Song", "Undo puts the old name back");
+  await page.evaluate(async () => {
+    await ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+    firetable.actions.swapTrackTags($('#mainqueue .pvbar[data-key="k5"]'));
+  });
+  await sleep(800);
+  q = await listNow();
+  check(q.k5.name === "Fresh Song - Release", "Swap artist and title flips the name");
+  await put("/queues/smoke/k5", null);
+  await page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
+
   console.log("-- the playlist's tools: two rows, a ⋮ menu for the list, Show only for the filters");
   const tools = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

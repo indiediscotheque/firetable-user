@@ -833,9 +833,14 @@ button.track-warning {
     }
 }
 
-/* Overflow menu trigger, only shown on narrow playlist rows */
+/* Overflow menu trigger: every playlist row (Edit tags and the rest live
+   there); other lists show it where they say so */
 .row-more {
     display: none;
+}
+
+#mainqueue .row-more {
+    display: inline-flex;
 }
 
 @media (pointer: coarse) {
