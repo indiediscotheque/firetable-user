@@ -1099,7 +1099,8 @@ try {
     const snap = () => ({ cls: el().className, src: document.getElementById("pv-src").textContent, title: document.getElementById("pv-title").textContent,
       main: (document.querySelector("#dMini .pb-main") || {}).getAttribute("aria-label"), seek: document.getElementById("pv-seek").disabled,
       fireHere: !!document.querySelector("#dMini #fire") && document.getElementById("fire").offsetParent !== null,
-      joinFire: !!document.querySelector("#dMini .pb-joinfire"), tone: el().getAttribute("data-tone-for"), other: (document.querySelector("#pv-switch .pb-other") || { className: "" }).className });
+      joinFire: !!document.querySelector("#dMini .pb-joinfire"), tone: el().getAttribute("data-tone-for"), other: (document.querySelector("#pv-switch .pb-other") || { className: "" }).className,
+      time: getComputedStyle(document.querySelector("#dMini .pb-time")).display !== "none" });
     const out = {};
     // the test's videos aren't real: keep the player from skipping past them
     const skip = firetable.discover.onFailed;
@@ -1153,10 +1154,12 @@ try {
     out.fireHome = document.getElementById("fire").parentElement.id;
     // in Live with the pick playing: Listen live on the stage's card takes them to the room
     const nl = document.getElementById("st-notlive");
-    out.card = { shown: !nl.hidden };
+    out.card = { shown: !nl.hidden, pickTime: snap().time };
     if (nl.querySelector(".st-nl-go")) nl.querySelector(".st-nl-go").click();
     await wait(300);
     out.card.room = firetable.preview === false && /is-(live|onair)/.test(document.getElementById("dMini").className) && nl.hidden;
+    out.card.roomTime = snap().time;
+    out.card.stageTime = getComputedStyle(document.getElementById("timr")).display !== "none" && getComputedStyle(document.getElementById("prgbar")).display !== "none";
     firetable.discover.onFailed = skip;
     return out;
   });
@@ -1176,6 +1179,8 @@ try {
   check(bar.join, "a visitor's Play it in the room opens the join dialog");
   check(bar.fireHome === "pv-livekeep", "in Live the stage's buttons stay in the bar (" + bar.fireHome + ")");
   check(bar.card.shown && bar.card.room, "Listen live on the stage's not-live card takes them to the room (" + JSON.stringify(bar.card) + ")");
+  check(bar.room.time && bar.disc.time && bar.live.time && bar.card.pickTime && !bar.card.roomTime && bar.card.stageTime,
+    "the bar shows time and progress except in Live on the room's song, where the stage already shows them (" + JSON.stringify({ room: bar.room.time, disc: bar.disc.time, live: bar.live.time, card: bar.card }) + ")");
 
   console.log("-- Discover: the full-screen player grows out of the bar, shows Audio or Video, and closes back into it");
   const full = await dPage.evaluate(async () => {
