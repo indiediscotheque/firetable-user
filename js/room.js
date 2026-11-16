@@ -440,7 +440,9 @@ firetable.ui.setupRoomEvents = function () {
     ondeckHtml += '</div>';
 
     $("#deck").html(deckHtml);
-    $("#ondeck").html(ondeckHtml);
+    // by reference: on a narrow stage a visitor's #ondeck is in the detached People panel
+    var $ondeck = $(firetable.ui.ondeckEl ? firetable.ui.ondeckEl() : document.getElementById("ondeck"));
+    $ondeck.html(ondeckHtml);
     $("#deckQueue").empty();
     if (firetable.ui.tooltip) firetable.ui.tooltip.refreshUserTip();
 
@@ -449,7 +451,7 @@ firetable.ui.setupRoomEvents = function () {
     $("#deck").off('click.addme').on('click.addme', '.addmeButt', function () {
       ftapi.actions.sendBotCommand("!addme");
     });
-    $("#ondeck").off('click.addme').on('click.addme', '.ondeck-slot.empty', function () {
+    $ondeck.off('click.addme').on('click.addme', '.ondeck-slot.empty', function () {
       ftapi.actions.sendBotCommand("!addme");
     });
     // Only your own departure button is drawn. The bot keeps its own copy of
@@ -567,6 +569,12 @@ firetable.ui.setupRoomEvents = function () {
   }
 
   $(window).off('resize.fyrePosition').on('resize.fyrePosition', positionFyreAtActiveDJ);
+  // the stage also changes size without the window: the screen coming down, or
+  // a narrow stage standing the DJ at its right (discover.css #stage.dj-side)
+  if (window.ResizeObserver && document.getElementById('djStage') && !firetable._fyreStageObserver) {
+    firetable._fyreStageObserver = new ResizeObserver(function () { requestAnimationFrame(positionFyreAtActiveDJ); });
+    firetable._fyreStageObserver.observe(document.getElementById('djStage'));
+  }
 
   // ── Discover (Recently Played by Others) ──
   var $discoverItem = $('#thediscovers .pvbar').remove();

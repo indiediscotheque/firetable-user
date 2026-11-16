@@ -1289,6 +1289,45 @@ body.ft-has-discover.pb-elsewhere:not(.pv-full-on) #mainGrid #stageBackdrop { di
 body.ft-has-discover #djStage .spot { max-width: clamp(10rem, 20cqw, 12rem); }
 body.ft-has-discover #djStage .avtr { height: min(110px, max(5rem, min(24cqw, var(--stage-max-height) * 0.5))); }
 
+/* ── A narrow stage (phones, and the middle column of a narrow desktop) with the
+   screen up: the DJ stands at the right, beside the song, and the stage is only
+   as tall as the song and the DJ need. #stage.dj-side follows the same width
+   test that moves the on-deck DJs to People (ui.js applyDeckPlacement). With the
+   screen down the stage keeps 16:9 for the video. */
+body.ft-has-discover:not(.pv-full-on):is(:not(.screen), .yt-stalled, .pb-elsewhere) #stage.dj-side:not(.is-fullscreen) {
+    --dj-side-w: 8.5rem;
+
+    & #djStage {
+        aspect-ratio: auto;
+        contain: size;          /* sized by the song beside it, never by the fire behind the DJ */
+        min-height: 8.5rem;     /* the tallest avatar (110px) on its plaque, with headroom */
+        max-height: none;
+    }
+    & #nowplaying {
+        margin-right: calc(var(--dj-side-w) + var(--pad3));
+        padding-bottom: var(--pad4);
+    }
+    & #deck {
+        justify-content: flex-end;
+        padding-inline: 0 var(--pad3);
+    }
+    & #djStage .spot {
+        flex: 0 0 var(--dj-side-w);
+        max-width: var(--dj-side-w);
+    }
+    /* "Tap to start audio" gets a row of its own under the song, centred left of the DJ */
+    body.media-blocked & #nowplaying,
+    &:has(#st-notlive:not([hidden])) #nowplaying {
+        padding-bottom: calc(var(--tap-min) + var(--pad3) * 2);
+    }
+    & #tapToPlay {
+        top: auto;
+        bottom: var(--pad3);
+        left: calc((100% - var(--dj-side-w) - var(--pad3)) / 2);
+        transform: translateX(-50%);
+    }
+}
+
 /* the player's own buttons: quiet circles that light up on hover, the big play the one solid button */
 :is(.pb, .pvf) .graybutt.iconbutt { background: transparent; }
 @media (hover: hover) {

@@ -2157,11 +2157,20 @@ firetable.ui.init = function () {
     var peopleEl = document.getElementById('usersbox');
     if (!stageEl || !deckEl || !peopleEl) return;
 
+    var roomEl   = document.getElementById('stage');
+    // kept by reference: for visitors the People panel is detached (with #ondeck
+    // in it on a narrow stage), where getElementById can't find it to bring it back
+    var ondeckRef = document.getElementById('ondeck');
+    firetable.ui.ondeckEl = function () { return document.getElementById('ondeck') || ondeckRef; };
+
     firetable.ui._deckIsNarrow = false;
 
     firetable.ui.applyDeckPlacement = function () {
-      var ondeckEl = document.getElementById('ondeck');
+      // a narrow stage stands the DJ at its right, beside the song (discover.css)
+      if (roomEl) roomEl.classList.toggle('dj-side', firetable.ui._deckIsNarrow);
+      var ondeckEl = firetable.ui.ondeckEl();
       if (!ondeckEl) return;
+      ondeckRef = ondeckEl;
       if (firetable.ui._deckIsNarrow) {
         peopleEl.prepend(ondeckEl);
         // Measure stageActions' right edge relative to the stage so the active
