@@ -110,7 +110,7 @@ Board `R3 · Live room · 1920`. Same regions as today at 1024px and up:
   - A **floor**: a gradient from transparent to the stage background over the bottom ~110px, so avatars stand on something.
   - **The playing DJ** stands big, centre-front, overlapping the video's lower part, with a light name plate under their feet ("jarvis · 3 plays"). **The next DJs** stand small at the bottom-right, with a dashed + "Hop on the decks" when a spot is open. This is today's arrangement; the floor is what fixes "peeking out of a window".
   - **Top-left:** the song's title (18px, bold), artist (a link), then "22 plays · 31 all versions / first Sep 30, 2022 / last Nov 10 by scytheria", then small tags (genre, year, BPM). Today's place for this.
-  - **Top-right, a column of 40px buttons:** screen (synced video / art / off), volume (opens the slider), reload, full screen, **hide avatars** (player view). Today's place.
+  - **Top-right, a column of 40px buttons:** screen (synced video / art / off), volume (opens the slider), reload, full screen. Today's place. *(No hide-avatars button, the owner, November 15, 2026.)*
   - **Bottom-left, 44px buttons:** **Fire** with its count, **Grab** as a split button (tap: add to the last playlist you grabbed to, with Undo; ▾: pick), **Link**, **⋯** (more), and the **shield** for mods only. Today's place. **Skip** appears here only while your own song plays.
   - **Progress** as a 3px line along the stage's bottom edge.
 - **Your turn bar** (`#themebox` today, under the stage): `1:24 / 4:50` (elapsed / total), "You DJ from [★ 2026 | Indie Discotheque ▾]" (the existing `#djlistpicker`), "You're up next with Closer to the Ground · Supertaste", **Take the bus**, **Step down**. For people not on the decks it says "Hop on the decks" instead.
@@ -153,7 +153,7 @@ Board `R3 · Every stage state`. Each must be built and checked:
 1. **A visitor's first second:** the room visible behind a dark veil with "▶ Listen to the room" and one line ("jarvis is playing Me & Youphoria · 7 people here"). Replaces `#tapToPlay`'s words, same element.
 2. **Nobody on the decks:** the `:id:` backdrop (today's `#stageBackdrop`), one big dashed + and "The decks are open. Hop on and the room plays from your ★ playlist. 3 people are listening."
 3. **Full decks with a waitlist:** four DJs, no open spot, a chip top-right "Waitlist · 3 · you're 2nd".
-4. **Player view:** avatars hidden, one chip "jarvis · Chris next" bottom-left, the person button top-right to bring them back. Remembered per device; Stage view stays the default.
+4. ~~**Player view:** avatars hidden, one chip "jarvis · Chris next" bottom-left.~~ Dropped (the owner, November 15, 2026): the DJs always stand on the stage; the full-screen player is the view without them.
 5. **Artwork, long titles, other avatar sets:** square art at full height; long titles wrap in the side column; cats, monsters and DiceBear sets stand on the same floor.
 6. **Your song:** you're the big DJ; **Skip** appears; Fire shows the count you've received; "matt and 5 others fired your song". Lights and snow as their seasons say.
 

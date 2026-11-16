@@ -73,15 +73,15 @@ Nothing moves region. Regulars find everything where it was.
 - New buttons follow the round 4 rule: no big filled gold.
 
 **Realigned November 15, 2026 (what 2.3c and later work already did):**
-- **1.3 narrowed:** with Discover on, the screen control, reload, full screen and cast are in the player bar and `#stageTopRight` is hidden. Left: a clearer glyph than `microwave` for `#screenControl` (wherever it sits) and the avatars toggle, if the owner still wants it now the full-screen player is the passive listening view.
+- **1.3 narrowed:** with Discover on, the screen control, reload, full screen and cast are in the player bar and `#stageTopRight` is hidden. Left: a clearer glyph than `microwave` for `#screenControl`. No avatars toggle (the owner, November 15, 2026: the DJs always stand on the stage; the full-screen player is the view without them).
 - **1.5 narrowed:** Fire's count only, on `#fire` wherever it is (the player bar with Discover on).
 - **1.6:** unchanged, but the split button lives in the player bar (and the full-screen player), since `#grab` moves there.
 - **1.8 ✗ superseded:** time left reads −m:ss with "Time played" / "Time left" tooltips, and the player bar leaves time out on the room's song (both November 15, 2026). Nothing left unless the owner asks for the progress line on the stage's bottom edge.
 - **1.9 moves to Phase 2:** it only touches Discover, so it ships with 2.6.
 - **1.10 narrowed:** audio held back by the browser already shows as **On air** in the bar (`body.media-blocked`), and `#st-notlive` on the stage says when you're not listening live. Left: the empty-decks state, the waitlist chip and `#tapToPlay`'s words.
-- **1.14 narrowed:** New playlist, Import and All playlists are in ⋮ (`#cr-listMenu`, 1.16), and on phones the select shows the list's name and count in full. Left, if the owner still wants it: the switcher button (★, name, count, broken, format) with a filterable list, for members with many playlists.
+- **1.14 ✗ dropped** (the owner, November 15, 2026: "whatever is most intuitive and efficient"): the plain `#listpicker` select stays. It shows each list's name and count, opens the phone's own picker and jumps by typing on a computer, and ⋮ (`#cr-listMenu`, 1.16) has New playlist, Import and All playlists.
 - **1.15, 1.16:** shipped in part; finish them before 1.17 (see each step).
-- **1.18:** F opens the full-screen player and V switches its view (2.3b), so Fire needs another key: **H** (as in `/hot`), if the owner agrees.
+- **1.18:** F opens the full-screen player and V switches its view (2.3b), so Fire is **H**, for "h0t tracks" (the owner, November 15, 2026).
 
 ### 1.1 Apply the tokens
 - **Goal:** the new colours and surfaces everywhere: darker page, clearer panels, consistent borders.
@@ -99,7 +99,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** no computed font-size under 11px (add a smoke check that walks visible text nodes at 1024 and 390 and reports any smaller).
 - **Undo:** revert.
 
-### 1.3 Stage controls, top-right, and player view
+### 1.3 Stage controls, top-right, and player view (narrowed: the screen icon only)
+- **The owner, November 15, 2026:** no player view and no `#st-avatarsBtn` / `#st-djChip`. What's left is the `#screenControl` glyph below; the rest is kept for reference.
 - **Goal:** clear, labelled screen controls; a way to hide avatars.
 - **Rows:** ST-05 to ST-08, new player view.
 - **Files and change:**
@@ -192,7 +193,7 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke: a seeded bot announcement gets `.ch-song`; with the setting off it's hidden.
 - **Undo:** revert.
 
-### 1.14 The playlist switcher
+### 1.14 The playlist switcher ✗ dropped (the owner, November 15, 2026; see the notes above)
 - **Goal:** one button shows which playlist you're looking at and opens everything about your playlists.
 - **Rows:** CR-01, CR-12, CR-13, CR-14, CR-15, CR-16, CR-25.
 - **Files and change:**
@@ -335,7 +336,7 @@ Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the
 - **Rows:** DI-04 to DI-11, DI-26 (new).
 - **Change:** round 3's fixes: the overview strip above long lists; top 10 with "Show all"; fact chips in heroes; DJ pages default to "Brought here first"; "Their sound" as a stacked bar plus the top five genres; recent sets merged by night and clickable; Years with covers and "released in"; numbers through `n()`; map label collisions; a fallback cover for missing art (a colour block with the artist's initials). DJs: larger circle avatars. **The sound map:** the genre of the room's song gets a red dot (`globalTracks` → `globalSongs/<id>/genres[0]`, the lookup `loadDetails` does); the genres of tonight's earlier plays get small rings, which needs the genre on recent plays (**bot first:** `g` on each row the hostbot's `lib/discover.js` publishes; until then only the room's dot shows); the genre you're hearing gets a gold outline; a legend under the map says what each means. Clicking a genre shows its card under the map (name, description, counts, next door, **[Genre] radio** through `playRadio`, **Open**) and doesn't leave the page.
 - **Check:** screenshots of each page type; plain pages; smoke: with a seeded song and genre, that genre's label carries the room mark.
-- **Realigned:** Discover still has rows of chips the ground rules rule out: Genres' decades, a genre's Room favorites / New here / Deep cuts, the DJs' sort and a DJ's Most played / Brought here first. Ask the owner, then give each the 2.6 treatment: a segmented control where it switches between two to four views, one **Sort** menu where it sorts. Tempo pages (DI-28, new since the plan) get the same overview strip and fallback cover.
+- **Chip rows (the owner, November 15, 2026):** New and Charts (2.6) matter most. Discover's other rows of buttons (Genres' decades, a genre's Room favorites / New here / Deep cuts, the DJs' sort, a DJ's Most played / Brought here first) stay as they are. Tempo pages (DI-28, new since the plan) get the same overview strip and fallback cover.
 
 ### 2.8 One song menu everywhere
 - **Rows:** DI-19, CR-04, NP-08.
@@ -416,5 +417,6 @@ Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what peop
 ### 5.2 Remove what the tab bar replaced
 - Once Phase 4 has been live for a few weeks with nothing missed: remove the CSS and the hidden duplicate controls the phone tab bar replaced (`#modeTabs` and `#minimodeoptions` handlers if unused; ids that JS or smoke still bind to stay). Update `README.md`, the inventory and step 0.4's list.
 
-### 5.3 Retire the site-without-Discover paths (new; the owner's call)
-- If the live site keeps `discover: true` for good, every moved control still has a second home for a site without Discover: the stage's own full screen, `#stageTopRight`'s volume and buttons, `#chatPeek`, the stage-only cast button, and the smoke checks for them. Removing those paths shrinks `ui.js`, `room.js`, `looks.css` and the tests, and makes every later step simpler. Only with the owner's yes; the `discover` option in `config.js.example` and the README's "discover" section change with it. Ids JS or smoke still bind to stay.
+### 5.3 Discover always on: retire the site-without-Discover paths (approved, the owner, November 15, 2026)
+- **Order:** done early, right after the crate's 1.15 to 1.17 (README, "Next, in this order"), once 0.2 and 0.4 guard the controls. Discover becomes part of the site, not a `config.js` option.
+- Today, every moved control still has a second home for a site without Discover: the stage's own full screen, `#stageTopRight`'s volume and buttons, `#chatPeek`, the stage-only cast button, and the smoke checks for them. Removing those paths shrinks `ui.js`, `room.js`, `looks.css` and the tests, and makes every later step simpler. The `discover` option in `config.js.example` and the README's "discover" section change with it. Ids JS or smoke still bind to stay.
