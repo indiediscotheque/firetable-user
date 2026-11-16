@@ -32,11 +32,36 @@ Keep this table current as steps ship (one line per step in [04-step-plan.md](04
 
 | Phase | Status |
 |---|---|
-| 0 Foundations | not started (0.3, the opt-in switch, dropped) |
-| 1 Inside today's layout | not started |
+| 0 Foundations | not started (0.3, the opt-in switch, and 0.5, icons up front, dropped; 0.6, an accessibility check, added) |
+| 1 Inside today's layout | 1.15 and 1.16 shipped in part (the owner's request, November 15, 2026); 1.8 superseded; 1.9 moved to Phase 2; 1.3, 1.5, 1.10 and 1.14 narrowed by what Phase 2 did (see the step plan's notes) |
 | 2 Discover (round 4) | 2.5 shipped (joining, logging in, the account menu and Account tab); 2.1 and 2.3 shipped (the player bar along the bottom, the On Air card, and the right column for Playlists and Chat); 2.3b shipped (the full-screen player, for TVs and second screens, in Discover and Live, replacing the Now playing tab); 2.3c shipped (the player along the bottom of the whole site with the stage's utilities in it, audio that stays put between Discover and Live, modern buttons and sliders, the chat for members only) |
 | 3 The new room | on hold |
-| 4 Phones | not started |
-| 5 Clean-up | not started (5.1, the default switch, dropped) |
+| 4 Phones | not started; 4.6 (the mini player) mostly shipped with 2.3 and 2.3c; 4.0, measure first, added. Live on a phone got Chat first, −m:ss time left and two-tap remove (November 15, 2026) |
+| 5 Clean-up | not started (5.1, the default switch, dropped; 5.3, retire the site-without-Discover paths, added for the owner to decide) |
+
+Also shipped outside the plan's steps (November 13 to 15, 2026): Play on a speaker or TV (`#st-cast`, ST-08b), tempo pages from a song's BPM tag (DI-28), the "You're not listening live" card on the stage (`#st-notlive`, ST-25), Last.fm scrobbling what each listener hears in Live or Discover, link previews and an offline page (OT-06, PH-02), a lighter first load (Latin font subset, a 42 KB icon font, the emoji data from this site), no jQuery UI (drag rows with touch, a native volume slider), saves that fail say so (OT-07), and unit and database-rules tests beside the smoke test.
+
+## Next, in this order (realigned November 15, 2026)
+
+Phase 2's player work is in, plus a stream of owner requests. What isn't in is the safety net Phase 0 promised: controls now move between the stage, the player bar and the full-screen player, or hide in the DOM behind a menu, and only the smoke test's hand-written checks guard them. So:
+
+1. **0.2 Screenshot harness, then 0.4 "Nothing lost"**, before the next step that moves anything. 0.4 records where 2.3c and 1.16 put things.
+2. **0.6 Accessibility check** (new) and **0.1 tokens** (type, space, radius and targets only; colours stay).
+3. **2.4 Home leads with new releases**, round 4's headline and still not built.
+4. **The crate: finish 1.16 and 1.15, then 1.17 Select several.** The owner started these; each stays in today's skin.
+5. **2.6 New and Charts controls, with 1.9's tied ranks** (Discover only, so it moved here).
+6. **2.8 One song menu everywhere.** The crate row's ⋮ grew in 1.15; Recent's and Discover's menus now lag it.
+7. **2.7 Library pages and the sound map**, with the remaining chip rows. The trail on the map waits for the hostbot to put the genre on recent plays.
+8. **Phase 4, phones**, starting with 4.0 (measure), then 4.1, 4.5, 4.3, 4.4; 4.2 and 4.6 are mostly done.
+9. **Phase 1's Live steps**, one at a time with the owner's yes: 1.6 Grab, 1.19 Import, 1.5 Fire's count, 1.11 Your turn, 1.10 states, 1.18 shortcuts, 1.7, 1.12, 1.13, 1.2, 1.3, 1.4, 1.14. 1.20 waits for the bot's import job, 1.21 for a Spotify key.
+10. **Phase 5:** 5.2 after Phase 4 has been live a few weeks; 5.3 if the owner says so.
+
+### Open questions for the owner
+
+- **1.18:** F already opens the full-screen player. Fire on **H** (as in `/hot`)?
+- **1.14:** ⋮ already has All playlists, New and Import. Is a searchable switcher still wanted, or is the select enough?
+- **1.3:** now the full-screen player is the passive listening view, is a "hide the avatars" view on the stage still wanted?
+- **2.7:** Discover still uses rows of chips (decades, a genre's tabs, the DJs' sort, a DJ's tabs). Same treatment as 2.6?
+- **5.3:** is `discover: true` on for good? Then the paths kept for a site without it can go.
 
 Already done before this plan started (November 2026): All Playlists restyled to the room's look (one aligned table with column labels, quiet icon toggles, Find a playlist, select all, a ⋮ menu per list for Rename / Check for broken tracks / Delete, a Create button, and a phone layout), playlist formats (YouTube Music / YouTube videos / SoundCloud, in All Playlists; the bot's swap suggestions are audio tracks for YouTube Music and unset lists, the artist's videos for video lists, none for SoundCloud lists), and the hostbot's swap search looks songs up free first (the room's history, the year playlists, YouTube Music's search, people's playlists on YouTube, YouTube's search), with a paid search capped at `SWAP_API_UNITS` a day only for when the free searches don't answer (`!ytmtest` diagnoses what YouTube answers the bot).

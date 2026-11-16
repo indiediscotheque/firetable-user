@@ -40,13 +40,13 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | ST-07 | Reload audio | All | `#reloadtrack`, `player.js` `reloadtrack` | ✅ 2.3c: `#reloadtrack` in the player bar while it plays the room |
 | ST-08 | Full screen | All | `#fullscreenBtn` (hidden where unsupported) | ✅ 2.3c: with Discover on, `#fullscreenBtn` is in the player bar and opens the full-screen player (`#pv-full`, DI-27), which has the video and fills the screen itself; without Discover, today's stage full screen (`ui.js`, #155) |
 | ST-08b | Play on a speaker or TV (cast guide) | All | `#st-cast`, `#tip-st-cast`, `#st-castBox`, `cast.js` (`firetable.cast`) | ✅ added November 15, 2026: on the stage without Discover; with Discover in the player bar and, while it's open, the full-screen player's top tools (phones' way to it). Opens a guide to Google Cast (Chrome or Edge, Cast tab), AirPlay, Android's Google Home "Cast my audio" and Bluetooth, this device's way first and open. The songs play in YouTube's and SoundCloud's own players, so no web API can hand them to a speaker directly |
-| ST-09 | Fire (🔥) | M | `#fire` → chat reaction `:fire:`; `chat.js` `sendReaction`, `processFireReactionMessage`, fire effect `fire.js` (PixiJS, lazy), `!hot` | 1.5 shows the count; same place (bottom-left of stage) |
+| ST-09 | Fire (🔥) | M | `#fire` → chat reaction `:fire:`; `chat.js` `sendReaction`, `processFireReactionMessage`, fire effect `fire.js` (PixiJS, lazy), `!hot` | ✅ 2.3c: in the player bar with Discover on; 1.5 shows the count there |
 | ST-10 | Rain (🌧) reaction | M | `#cloud_with_rain` state, `:cloud_with_rain:`, `!storm` | keep wherever it is reachable today; 1.5 keep the state |
-| ST-11 | Grab (add the playing song to a playlist) | M | `#grab` → `#stealContain` / `#stealpicker` (`openStealPicker`, `fillStealPicker`), `recordGrab` (`grabs/<djid>`), `savedToast` with Undo | 1.6 split button: tap = last used playlist (Undo), ▾ = picker |
-| ST-12 | Song link (open on YouTube or SoundCloud) | All | `#songlink` | keep, 1.5 label |
-| ST-13 | Skip your own track | D | `#skipTrigger` → `#skipPopover` (`.skipNowAction` → `!skip`) | keep: shows only on your song |
-| ST-14 | Mod tools on the playing song: Skip, Fix tags, Flag ▸ | Mod | `#npModBtn` → `#npModMenu` (`#npSkip`, `#npFixTags` → `#tagEditorPopover`, `#npFlag` → `#flagMenuPopover`) | 1.7 plus "Remove from the decks" |
-| ST-15 | "Tap to start audio" | All | `#tapToPlay` (autoplay blocked) | 1.10 "Listen to the room" overlay with one line of context |
+| ST-11 | Grab (add the playing song to a playlist) | M | `#grab` → `#stealContain` / `#stealpicker` (`openStealPicker`, `fillStealPicker`), `recordGrab` (`grabs/<djid>`), `savedToast` with Undo | ✅ 2.3c: in the player bar with Discover on; 1.6 split button there: tap = last used playlist (Undo), ▾ = picker |
+| ST-12 | Song link (open on YouTube or SoundCloud) | All | `#songlink` | ✅ 2.3c: in the player bar with Discover on |
+| ST-13 | Skip your own track | D | `#skipTrigger` → `#skipPopover` (`.skipNowAction` → `!skip`) | keep: shows only on your song (in the player bar with Discover on, 2.3c) |
+| ST-14 | Mod tools on the playing song: Skip, Fix tags, Flag ▸ | Mod | `#npModBtn` → `#npModMenu` (`#npSkip`, `#npFixTags` → `#tagEditorPopover`, `#npFlag` → `#flagMenuPopover`) | `#npModBtn` in the player bar with Discover on (2.3c); 1.7 plus "Remove from the decks" |
+| ST-15 | "Tap to start audio" | All | `#tapToPlay` (autoplay blocked) | the bar says **On air** while the browser holds audio back (`body.media-blocked`, 2.3); 1.10 the overlay's words and one line of context |
 | ST-16 | String lights (December, or `!lights`) | All | `ul.lightrope`, `room.js` `lightsChanged`, `applyLights`, `seasons.js` `LIGHTS_MONTHS` | keep exactly |
 | ST-17 | Snow (Jan, Feb) | All | `snow.js`, `SNOW_MONTHS` | keep exactly |
 | ST-18 | Fire embers effect | All | `#fyre`, `fire.js` (PixiJS + GSAP via `lazy.js`) | keep exactly |
@@ -56,6 +56,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | ST-22 | Theme colours (room accent per night) | All | `colorsChanged` (`colors`) sets `--color-accent` | keep; all new accent uses go through the variable |
 | ST-23 | Stage backdrop with the `:id:` logo (when nothing plays) | All | `#stageBackdrop` | 1.10 the "decks are open" empty state |
 | ST-24 | User card on a DJ's avatar (Take the bus, Step down, Add to / Remove from deck, Block); the name plate's own remove / step down takes two taps ("Tap to remove", November 15, 2026) | All / Mod | `#ft-user-tip` (`ui.js` user tip), `utt-*` buttons, `departure_board` | keep; 1.11 your own controls also in the Your turn bar |
+| ST-25 | (new) "You're not listening live": a card in the stage's lower left while a Discover song plays in Live or the room is stopped, with Listen live | All | `#st-notlive`, `discover.js` `renderNotLive` | ✅ added November 13, 2026; keeps clear of the DJs, shrinks on a small stage |
 
 ## NP · Now playing facts
 
@@ -66,8 +67,8 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | NP-03 | First played … by …, last played … by … | All | `#firstPlay`, `#lastPlay` | 1.4 |
 | NP-04 | Tempo (BPM) | All | `#npBpm` | 1.4 |
 | NP-05 | Album art thumbnail | All | `#albumArt` | keep (used on narrow layouts) |
-| NP-06 | Progress bar | All | `#prgbar` > `#prgbarbar` | 1.8 along the stage's bottom edge (same element) |
-| NP-07 | Time: elapsed (`#timrUp`) and remaining (`#timr`, shown as −m:ss since November 15, 2026) | All | `room.js` `newSong` countdown | 1.8 elapsed / total, plus remaining on hover |
+| NP-06 | Progress bar | All | `#prgbar` > `#prgbarbar` | keep (1.8 superseded; the stage's bottom edge only if the owner asks) |
+| NP-07 | Time: elapsed (`#timrUp`) and remaining (`#timr`, shown as −m:ss since November 15, 2026) | All | `room.js` `newSong` countdown | ✗ 1.8 superseded: −m:ss time left with "Time played" / "Time left" tooltips (November 15, 2026); the player bar leaves time out on the room's song |
 | NP-08 | Song sheet (cover, links, tempo, source, plays, firsts, versions, Play, Save, Open, Copy link) from any title | All | `discover.js` `openSheet` (`.d-sheetlink`) | keep; reachable from the stage title (1.4) |
 
 ## DJ · Decks, waitlist, your turn
@@ -97,7 +98,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| CH-01 | Chat messages, grouped by sender | All (V reads in Discover) | `#actualChat` > `#chatsWrap` > `#chats`, template `#chatKEY`, `chat.js` `setupChatEvents`, `chatFeed` / `chatData` | keep; 1.13 type and spacing |
+| CH-01 | Chat messages, grouped by sender | M (visitors no longer read it, CH-19) | `#actualChat` > `#chatsWrap` > `#chats`, template `#chatKEY`, `chat.js` `setupChatEvents`, `chatFeed` / `chatData` | keep; 1.13 type and spacing |
 | CH-02 | Song announcements (the bot's "started playing …") | All | bot messages; Settings `#showSongAnnouncementsToggle` (`applySongAnnouncementVisibility`) | 1.13 one slim line each, setting kept |
 | CH-03 | Images in chat | All | `#showImagesToggle`, `firetable.ui.showImages` | keep |
 | CH-04 | Avatars in chat | All | `#showAvatarsToggle` | keep |
@@ -212,7 +213,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | SE-09 | View density (compact, cozy, comfortable) | `#densityPicker`, `applyDensity`, `STORAGE.density` | keep; the new layout supports all three |
 | SE-10 | Disable media playback | `#mediaDisableToggle`, `STORAGE.disableMedia` | keep |
 | SE-11 | Version | `#version` | keep |
-| SE-12 | Last.fm scrobbling (connect, now playing, scrobble, love) | `lastfm.js`, `api/lastfm.php`, `checkLastfmToken`, `STORAGE.lastfmSession` | keep |
+| SE-12 | Last.fm scrobbling (connect, now playing, scrobble, love) of what each listener hears, Live or Discover (November 13, 2026) | `lastfm.js`, `api/lastfm.php`, `checkLastfmToken`, `STORAGE.lastfmSession` | keep |
 | SE-13 | ~~(new) Try the new room~~ | — | dropped: no opt-in switch (the owner, November 15, 2026) |
 
 ## MO · Mod tools
@@ -262,7 +263,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | Id | Feature | Today | Goes to |
 |---|---|---|---|
 | PH-01 | Installable app (manifest, icons, Home Screen) | `manifest.webmanifest`, `icons/`, `install.js` | keep |
-| PH-02 | Service worker for push (no fetch handler) | `sw.js` | keep (never add a fetch handler as part of the redesign) |
+| PH-02 | Service worker: push, and an offline page | `sw.js` (since November 15, 2026 its fetch handler serves `offline.html` only when one of the site's own pages can't be reached; nothing else passes through it), `offline.html`, registered by `install.js` | keep; the redesign adds no caching of the app itself |
 | PH-03 | Keyboard stays out of the way (fields scrolled into view), safe areas | `viewport.js`, `keepFocusedFieldVisible`, `env(safe-area-inset-*)` | keep |
 | PH-04 | Wake lock while on deck | `ftapi.keepAwake` | keep |
 | PH-05 | Media Session (lock-screen controls for Discover) | `mediaSession` | keep |
@@ -275,4 +276,6 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | OT-02 | Chart embed for other sites | `embed/` (own policy) | keep |
 | OT-03 | SoundCloud and Last.fm proxies | `api/soundcloud.php`, `api/lastfm.php`, `api/common.php` | keep |
 | OT-04 | Storage fallback when blocked | `storage.js` | keep |
-| OT-05 | Toasts, tooltips, form messages | `#ft-toast`, `#ft-tooltip`, `firetable.ui.toast`, `tooltip`, `formMessage` | 1.1 restyle |
+| OT-05 | Toasts, tooltips, form messages | `#ft-toast`, `#ft-tooltip`, `firetable.ui.toast`, `tooltip`, `formMessage` | keep (1.1 dropped in round 4) |
+| OT-06 | Link previews: the room's title, description, canonical address, Open Graph and Twitter tags, `img/og.png`; library pages' own tags and covers | `index.html` head, `tools/plain-pages.mjs` | ✅ added November 15, 2026; keep (smoke checks one set per page) |
+| OT-07 | A save the database refuses says so ("Couldn't save … Try again in a moment.", once per burst) | `ftapi.saveFailed` (`firetable.js`) | ✅ added November 14, 2026; new writes in later steps use it |

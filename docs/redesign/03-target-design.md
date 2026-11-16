@@ -82,7 +82,7 @@ Material Symbols Outlined, as today, in the subset font (see [01-ground-rules.md
 
 ## The Live room, desktop (1920 and 1440)
 
-**On hold since round 4.** Live keeps today's layout and look. Of this section, only what Phase 1 still lists is built (the Your turn bar, the crate toolbar and rows, Fire's count, slim song lines in chat).
+**On hold since round 4.** Live keeps today's layout and look. Of this section, only what Phase 1 still lists is built (the Your turn bar, the crate toolbar and rows, Fire's count, slim song lines in chat). **Since 2.3c (November 13, 2026)** the stage's top-right and bottom-left buttons below live in the player bar along the bottom of the site, not on the stage.
 
 Board `R3 · Live room · 1920`. Same regions as today at 1024px and up:
 
@@ -143,7 +143,7 @@ Board `R3 · The small pick menus`. Every menu is a popover (today's pattern) of
 | **Show only** | tune | Remixes, Broken, Not played here yet, Duplicates (each with a count), Genre ▸, BPM range |
 | **Playlist options ⋮** | ⋮ in the toolbar | Rename, Play this when I DJ (★), Shuffle the order, Remove duplicates, Check for broken songs, Swap all to YouTube Music audio, Merge into…, Export, Delete playlist (red) |
 | **A song in your crate ⋮** | ⋮ on a row | Copy to playlist ▸, Edit tags, Swap artist and title, Swap for YouTube Music audio, Delete and search for another |
-| **Keyboard** | `?` | F Fire, G Grab to last used, T move selected to top, / search, M mute, ? all shortcuts |
+| **Keyboard** | `?` | H Fire (F is the full-screen player, V its view, Space play/pause, Shift + arrows previous / next, since 2.3b), G Grab to last used, T move selected to top, / search, M mute, ? all shortcuts |
 
 ## Every stage state
 
