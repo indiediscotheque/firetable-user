@@ -18,6 +18,8 @@
 	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 	<!-- Icons are a font: fetch it right away, not after the stylesheet is read -->
 	<link rel="preload" href="fonts/material-symbols-outlined.woff2?v=01.12.08" as="font" type="font/woff2" crossorigin />
+	<!-- :shortname: → emoji (js/emoji.js; tools/build-emoji.mjs builds both files). The picker's data loads on its first open. -->
+	<link rel="preload" id="emojiMapData" href="js/emoji-map.json?v=01.12.08" as="fetch" type="application/json" crossorigin data-picker="js/emoji-picker.json?v=01.12.08" />
 	<link rel="stylesheet" href="css/reset.css?v=01.12.08" type="text/css" />
 	<link rel="stylesheet" href="css/fonts-local.css?v=01.12.08" type="text/css" />
 	<link rel="stylesheet" href="css/looks.css?v=01.12.08" type="text/css" />

@@ -1027,9 +1027,12 @@ firetable.discover = (function () {
   }
   // The cards a DJ picked for their page (users/<uid>/featured), still theirs
   var featuredData = {};
+  var featuredAsk = {}; // uid -> the lookup in flight, so a stale answer is dropped
   function featuredOf(uid) {
     if (!(uid in featuredData)) {
       featuredData[uid] = undefined;
+      var ask = featuredAsk[uid] = {};
+      var current = function () { return featuredAsk[uid] === ask; };
       db().ref("users/" + uid + "/featured").once("value").then(function (s) {
         var v = s.val() || {};
         var ids = Object.keys(v).sort().map(function (k) { return v[k]; }).filter(function (id) { return typeof id === "string" && id; });
@@ -1037,9 +1040,10 @@ firetable.discover = (function () {
           return db().ref("cards/" + id).once("value").then(function (c) { return c.val() ? Object.assign({ key: id }, c.val()) : null; }, function () { return null; });
         }));
       }).then(function (cards) {
+        if (!current()) return; // forgotten (picks changed) while this was loading
         featuredData[uid] = cards.filter(function (c) { return c && c.owner === uid && c.djname; });
         if (D.mode === "discover" && D.view === "djs") renderBrowse();
-      }, function (err) { quiet(err); featuredData[uid] = []; });
+      }, function (err) { quiet(err); if (current()) featuredData[uid] = []; });
     }
     return featuredData[uid];
   }
@@ -1536,7 +1540,7 @@ firetable.discover = (function () {
     var g = document.querySelector('#oauthBox .oauthBttn[data-provider="google"] svg');
     return '<div class="d-join">' +
       (google ? '<button type="button" class="butt oauthBttn d-google">' + (g ? g.outerHTML : "") + "Continue with Google</button>" : "") +
-      '<button type="button" class="butt d-createaccount">Create Account</button>' +
+      '<button type="button" class="butt darkbutt d-createaccount">Create account</button>' +
       '<p class="d-fact d-center">Already a member? <button type="button" class="linkButton d-login">Log in</button></p></div>';
   }
 
@@ -2994,7 +2998,7 @@ firetable.discover = (function () {
     paneEl.hidden = join;
     ["welcomeInfo", "authBox"].forEach(function (id) { var el = document.getElementById(id); if (el) el.hidden = !join; });
     if (join) { paneEl.innerHTML = ""; return; }
-    var joinLine = '<div class="d-lockjoin"><button type="button" class="butt d-createaccount">Join the room</button>' +
+    var joinLine = '<div class="d-lockjoin"><button type="button" class="butt darkbutt d-createaccount">Join the room</button>' +
       '<span>Already a member? <button type="button" class="linkButton d-login">Log in</button></span></div>';
     if (lockedTab === "playlists") {
       var n = crate().length;
@@ -3954,7 +3958,7 @@ firetable.discover = (function () {
       return key ? "#discover/djs/" + key : null;
     },
     /** Picks changed in the card case: read them again on the next DJ page. */
-    forgetFeatured: function (uid) { delete featuredData[uid]; },
+    forgetFeatured: function (uid) { delete featuredData[uid]; delete featuredAsk[uid]; },
     /**
      * The Discover song this person is hearing, for Last.fm (lastfm.js), or
      * null when none is (paused, Live, the room stopped). play changes with

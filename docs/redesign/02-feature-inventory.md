@@ -102,7 +102,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | CH-03 | Images in chat | All | `#showImagesToggle`, `firetable.ui.showImages` | keep |
 | CH-04 | Avatars in chat | All | `#showAvatarsToggle` | keep |
 | CH-05 | Links made clickable | All | `linkify`, `textToLinks` | keep |
-| CH-06 | Emoji picker | M | `#pickEmoji`, `#emojiPicker` (`#pickerNav`, `#pickerSearch`, `#pickerResults`), `emoji.js` (unpkg data) | keep |
+| CH-06 | Emoji picker | M | `#pickEmoji`, `#emojiPicker` (`#pickerNav`, `#pickerSearch`, `#pickerResults`), `emoji.js` (`js/emoji-picker.json`, loaded on first open) | keep |
 | CH-07 | `:shortname:` emoji | M | `emoji.js` | keep |
 | CH-08 | @mention picker | M | `#atPicker`, keyboard nav in `chat.js` | keep |
 | CH-09 | Reactions on messages | M | `#reactPickerPopover`, `chatData/<id>/reactions/<emoji>/<uid>`, `toggleReaction`, `renderReactions` | keep |

@@ -5,16 +5,19 @@ Rebuild fonts/material-symbols-outlined.woff2 with only the icons firetable uses
 The full Material Symbols font is ~4 MB; firetable uses a few hundred of its
 4,000+ icons. This keeps every icon whose name (or codepoint, e.g. &#xE887;)
 appears in the site's HTML/JS/CSS, plus the alternate glyphs the font switches
-to for filled icons, and all four variation axes (FILL, GRAD, opsz, wght), so
-icons render exactly as with the full font.
+to for filled icons. Of the four variation axes only FILL (outlined / filled)
+is kept: the CSS always draws icons at GRAD 0, opsz 24 and wght 400
+(css/looks.css, .material-symbols-*), so those three are fixed at those values
+(PINNED below), which makes the font about 85% smaller with every icon drawn
+exactly as before. Using another weight, grade or optical size means adding
+that axis back here.
 
 Run it after using an icon the app hasn't used before:
 
     pip install "fonttools[woff]"
     python3 tools/subset-icons.py
 
-Then bump the version (index.html ?v=, the font URL in css/looks.css and
-firetable.version in js/state.js) so browsers fetch the new font.
+The deploy sets the ?v= on the font from its hash, so there's nothing to bump.
 
 Source font: tools/fonts/material-symbols-outlined.full.woff2 (not deployed).
 """
@@ -29,6 +32,8 @@ from fontTools.ttLib import TTFont
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE = os.path.join(ROOT, "tools", "fonts", "material-symbols-outlined.full.woff2")
 OUTPUT = os.path.join(ROOT, "fonts", "material-symbols-outlined.woff2")
+# Axes fixed at the one value the CSS uses; FILL stays variable
+PINNED = {"GRAD": 0, "opsz": 24, "wght": 400}
 
 
 def lookups(gsub):
@@ -67,7 +72,7 @@ def main():
     used, codepoints = set(), set()
     for path in glob.glob(os.path.join(ROOT, "**", "*"), recursive=True):
         rel = os.path.relpath(path, ROOT)
-        if not re.search(r"\.(html|js|css)$", path) or rel.startswith(("tools", "node_modules")) or ".min.js" in path:
+        if not re.search(r"\.(html|js|css)$", path) or not os.path.isfile(path) or rel.startswith(("tools", "tests", "music")) or "node_modules" in rel.split(os.sep) or ".min.js" in path:
             continue
         text = open(path, encoding="utf-8", errors="ignore").read()
         used.update(w for w in re.findall(r"[a-z0-9_]+", text) if w in names)
@@ -99,6 +104,12 @@ def main():
         ], check=True)
     finally:
         os.remove(glyph_file)
+
+    from fontTools.varLib import instancer
+    subset = TTFont(OUTPUT)
+    pinned = instancer.instantiateVariableFont(subset, PINNED)
+    pinned.flavor = "woff2"
+    pinned.save(OUTPUT)
     print("%d icons (%d glyphs) -> %s, %d KB" % (len(used) + len(codepoints), len(keep), os.path.relpath(OUTPUT, ROOT), os.path.getsize(OUTPUT) // 1024))
 
 
