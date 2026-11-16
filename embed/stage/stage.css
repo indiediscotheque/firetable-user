@@ -170,7 +170,9 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   gap: 0.6em;
   font-size: 0.7em;
 }
-.st-sound { display: flex; align-items: center; gap: 0.5em; }
+/* open the room, and under it the volume: a vertical slider over the mute
+   button, as on the site's stage */
+.st-sound { display: flex; flex-direction: column; align-items: center; gap: 0.5em; }
 
 /* ─── Lower left: live, and who's here, level with the line of DJs on the
    right (3em circles, 0.5em up: in this 0.7em text, 4.29em tall, 0.71em up) */
@@ -227,9 +229,10 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 .st-icon:hover { background: rgba(255, 255, 255, 0.16); }
 .st-vol {
   display: flex;
+  flex-direction: column-reverse; /* the slider above, mute below */
   align-items: center;
-  gap: 0.4em;
-  padding-right: 0.9em;
+  gap: 0.5em;
+  padding-top: 0.9em;
   border: 0.06em solid var(--glass-line);
   border-radius: 999em;
   background: var(--glass);
@@ -239,12 +242,15 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 .st-vol.is-muted .off { display: block; }
 #st-volume {
   --fill: 80%;
-  width: 6em;
-  height: 0.3em;
+  /* vertical, louder at the top */
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 0.3em;
+  height: 6em;
   margin: 0;
   appearance: none;
   border-radius: 999em;
-  background: linear-gradient(to right, var(--light) var(--fill), rgba(255, 255, 255, 0.25) var(--fill));
+  background: linear-gradient(to top, var(--light) var(--fill), rgba(255, 255, 255, 0.25) var(--fill));
   cursor: pointer;
 }
 #st-volume::-webkit-slider-thumb { appearance: none; width: 0.9em; height: 0.9em; border-radius: 50%; background: var(--light); }
