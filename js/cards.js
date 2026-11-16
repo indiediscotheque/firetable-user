@@ -522,6 +522,32 @@ firetable.actions.displayCard = function (data, chatid, opts) {
   var heroW = 193;
   var heroH = 150;
 
+  /**
+   * The part of the artwork to show in a square album slot. A YouTube
+   * thumbnail is a 16:9 frame (with black bars above and below on the 4:3
+   * sizes), and on art tracks the cover sits square in its middle, so take
+   * that centre square: the cover then fills the slot edge to edge. Other
+   * artwork is centre-cropped to a square.
+   */
+  function albumCrop(image) {
+    var w = image.naturalWidth || image.width;
+    var h = image.naturalHeight || image.height;
+    var frameY = 0;
+    var frameH = h;
+    if (/ytimg\.com/i.test(image.src) && w / h < 16 / 9 - 0.05) {
+      frameH = w * 9 / 16; // the video frame inside the letterbox bars
+      frameY = (h - frameH) / 2;
+    }
+    var side = Math.min(w, frameH);
+    return { x: (w - side) / 2, y: frameY + (frameH - side) / 2, size: side };
+  }
+
+  /** Draw the artwork into the classic card's 50×50 slot, cropped square. */
+  function drawClassicAlbum(c, image) {
+    var crop = albumCrop(image);
+    c.drawImage(image, crop.x, crop.y, crop.size, crop.size, 10, 230, 50, 50);
+  }
+
   // ── Classic card theme (default, id8, id9) ─────────────────────────────
   if (!isV2Theme) {
     // Base layers
@@ -587,8 +613,7 @@ firetable.actions.displayCard = function (data, chatid, opts) {
           var legAlbum = new Image();
           legAlbum.onload = function () {
             if (!ctx) return;
-            var legH = data.image.match(/ytimg\.com/i) ? 28 : 50;
-            ctx.drawImage(this, 10, 230, 50, legH);
+            drawClassicAlbum(ctx, this);
             ctx = null;
             finishCardRender();
           };
@@ -661,8 +686,7 @@ firetable.actions.displayCard = function (data, chatid, opts) {
             legAlbum2.onload = function () {
               var c4 = canvas.getContext('2d');
               if (!c4) return;
-              var legH2 = data.image.match(/ytimg\.com/i) ? 28 : 50;
-              c4.drawImage(this, 10, 230, 50, legH2);
+              drawClassicAlbum(c4, this);
               ctx = null;
               finishCardRender();
             };
@@ -889,26 +913,6 @@ firetable.actions.displayCard = function (data, chatid, opts) {
     ctx.restore();
 
     onDone && onDone();
-  }
-
-  /**
-   * The part of the artwork to show in the square album window. A YouTube
-   * thumbnail is a 16:9 frame (with black bars above and below on the 4:3
-   * sizes), and on art tracks the cover sits square in its middle, so take
-   * that centre square: the cover then fills the window edge to edge. Other
-   * artwork is centre-cropped to a square.
-   */
-  function albumCrop(image) {
-    var w = image.naturalWidth || image.width;
-    var h = image.naturalHeight || image.height;
-    var frameY = 0;
-    var frameH = h;
-    if (/ytimg\.com/i.test(image.src) && w / h < 16 / 9 - 0.05) {
-      frameH = w * 9 / 16; // the video frame inside the letterbox bars
-      frameY = (h - frameH) / 2;
-    }
-    var side = Math.min(w, frameH);
-    return { x: (w - side) / 2, y: frameY + (frameH - side) / 2, size: side };
   }
 
   function drawAlbumBadge(image) {
