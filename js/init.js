@@ -78,7 +78,9 @@ firetable.init = function () {
   if (ftconfigs.logoImage) {
     $("#roomlogo").css("background-image", "url(" + ftconfigs.logoImage + ")");
   }
-  document.title = ftconfigs.roomName + " | firetable";
+  // The page's own title stands when it already names the room (index.html,
+  // and each library page under /music/); otherwise the room's name.
+  if (ftconfigs.roomName && document.title.indexOf(ftconfigs.roomName) === -1) document.title = ftconfigs.roomName + " | firetable";
   if (ftconfigs.roomInfoUrl.length) {
     $("#roomInfo").attr("href", ftconfigs.roomInfoUrl);
   }

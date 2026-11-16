@@ -416,11 +416,11 @@ firetable.ui.setupRoomEvents = function () {
       if (!deckHtml) {
         var stepUpBtn = isSelfOnDeck
           ? '&nbsp;'
-          : '<button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button>';
+          : '<button type="button" class="butt graybutt small addmeButt">Play <span class="material-symbols-filled">queue_music</span></button>';
         deckHtml = '<div class="spot empty"><div class="djplaque">' + stepUpBtn + '</div></div>';
       }
     } else {
-      deckHtml = '<div class="spot empty"><div class="djplaque"><button class="butt graybutt small addmeButt" role="button">Play <span class="material-symbols-filled">queue_music</span></button></div></div>';
+      deckHtml = '<div class="spot empty"><div class="djplaque"><button type="button" class="butt graybutt small addmeButt">Play <span class="material-symbols-filled">queue_music</span></button></div></div>';
     }
 
     // Always render exactly 3 on-deck slots to the right of the active DJ;

@@ -3,8 +3,20 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<title>firetable</title>
-	<meta name="description" content="Collaborative radio." />
+	<title>Indie Discotheque · collaborative radio</title>
+	<meta name="description" content="A live room where DJs take turns playing songs for each other. Listen in, dig through the room's charts and library, or join and DJ." />
+	<!-- Link previews (Discord, iMessage, Slack, search). tools/plain-pages.mjs swaps in each library page's own. -->
+	<link rel="canonical" href="https://www.indiediscotheque.com/" />
+	<meta property="og:site_name" content="Indie Discotheque" />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="Indie Discotheque · collaborative radio" />
+	<meta property="og:description" content="A live room where DJs take turns playing songs for each other. Listen in, dig through the room's charts and library, or join and DJ." />
+	<meta property="og:url" content="https://www.indiediscotheque.com/" />
+	<meta property="og:image" content="https://www.indiediscotheque.com/img/og.png" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image:alt" content="The :id: logo and Indie Discotheque" />
+	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
 	<script src="js/viewport.js?v=01.12.08"></script>
 	<meta name="theme-color" content="#181818" />
@@ -41,7 +53,7 @@
 			</div>
 			<div class="flexpacer"></div>
 			<div id="topbarUtils">
-				<button id="socialTrigger" type="button" role="button" class="header_icon" aria-label="Community" popovertarget="socialPopover" style="anchor-name: --tip-socialTrigger" aria-describedby="tip-socialTrigger">
+				<button id="socialTrigger" type="button" class="header_icon" aria-label="Community" popovertarget="socialPopover" style="anchor-name: --tip-socialTrigger" aria-describedby="tip-socialTrigger">
 					<i class="material-symbols-outlined">share</i>
 				</button>
 				<span id="tip-socialTrigger" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-socialTrigger">Community</span>
@@ -121,18 +133,18 @@
 			<div id="deck"></div>
 			<div id="ondeck"></div>
 			<div id="stageTopRight">
-				<button role="button" class="butt graybutt iconbutt" id="screenControl" aria-label="Screen: synced" tabindex="0" style="anchor-name: --tip-screenControl" aria-describedby="screenControlTip">
+				<button class="butt graybutt iconbutt" id="screenControl" aria-label="Screen: synced" tabindex="0" style="anchor-name: --tip-screenControl" aria-describedby="screenControlTip">
 					<i class="material-symbols-outlined">microwave</i><!-- updated by updateScreenBtn on init -->
 				</button>
 				<span id="screenControlTip" role="tooltip" class="ft-tip" style="position-anchor: --tip-screenControl">Screen: synced</span>
 				<div id="volplace">
 					<input type="range" id="slider" min="0" max="100" step="5" value="80" aria-label="Volume" />
 				</div>
-				<button role="button" class="butt graybutt iconbutt" id="volstatus" aria-label="Mute" tabindex="0" style="anchor-name: --tip-volstatus" aria-describedby="tip-volstatus">
+				<button class="butt graybutt iconbutt" id="volstatus" aria-label="Mute" tabindex="0" style="anchor-name: --tip-volstatus" aria-describedby="tip-volstatus">
 					<i class="material-symbols-outlined"> &#xE050; </i>
 				</button>
 				<span id="tip-volstatus" role="tooltip" class="ft-tip" style="position-anchor: --tip-volstatus">Mute</span>
-				<button role="button" class="butt graybutt iconbutt" id="reloadtrack" aria-label="Reload audio" tabindex="0" style="anchor-name: --tip-reloadtrack" aria-describedby="tip-reloadtrack">
+				<button class="butt graybutt iconbutt" id="reloadtrack" aria-label="Reload audio" tabindex="0" style="anchor-name: --tip-reloadtrack" aria-describedby="tip-reloadtrack">
 					<i class="material-symbols-outlined"> refresh </i>
 				</button>
 				<span id="tip-reloadtrack" role="tooltip" class="ft-tip" style="position-anchor: --tip-reloadtrack">Reload audio</span>
@@ -140,17 +152,17 @@
 					<i class="material-symbols-outlined">cast</i>
 				</button>
 				<span id="tip-st-cast" role="tooltip" class="ft-tip" style="position-anchor: --tip-st-cast">Play on a speaker or TV</span>
-				<button role="button" class="butt graybutt iconbutt" id="fullscreenBtn" aria-label="Full screen" tabindex="0" hidden style="anchor-name: --tip-fullscreenBtn" aria-describedby="tip-fullscreenBtn">
+				<button class="butt graybutt iconbutt" id="fullscreenBtn" aria-label="Full screen" tabindex="0" hidden style="anchor-name: --tip-fullscreenBtn" aria-describedby="tip-fullscreenBtn">
 					<i class="material-symbols-outlined">fullscreen</i>
 				</button>
 				<span id="tip-fullscreenBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-fullscreenBtn">Full screen</span>
 			</div>
 			<div id="stageActions">
-				<button role="button" class="butt graybutt iconbutt" id="fire" aria-label="Fire!" tabindex="0" style="anchor-name: --tip-fire" aria-describedby="tip-fire">
+				<button class="butt graybutt iconbutt" id="fire" aria-label="Fire!" tabindex="0" style="anchor-name: --tip-fire" aria-describedby="tip-fire">
 					<i class="material-symbols-outlined"> mode_heat </i>
 				</button>
 				<span id="tip-fire" role="tooltip" class="ft-tip" style="position-anchor: --tip-fire">Fire!</span>
-				<button role="button" class="butt graybutt iconbutt" id="grab" aria-label="Add to playlist" tabindex="0" style="anchor-name: --tip-grab" aria-describedby="tip-grab">
+				<button class="butt graybutt iconbutt" id="grab" aria-label="Add to playlist" tabindex="0" style="anchor-name: --tip-grab" aria-describedby="tip-grab">
 					<i class="material-symbols-outlined"> &#xE03B; </i>
 				</button>
 				<span id="tip-grab" role="tooltip" class="ft-tip" style="position-anchor: --tip-grab">Add to playlist</span>
@@ -159,7 +171,7 @@
 				</a>
 				<span id="tip-songlink" role="tooltip" class="ft-tip" style="position-anchor: --tip-songlink">Song link</span>
 				<!-- Only for the DJ playing now, to skip their own track; mods skip from Mod tools (#233) -->
-				<button id="skipTrigger" type="button" role="button" class="butt graybutt iconbutt" aria-label="Skip your track" popovertarget="skipPopover" tabindex="0" style="anchor-name: --tip-skipTrigger" aria-describedby="tip-skipTrigger">
+				<button id="skipTrigger" type="button" class="butt graybutt iconbutt" aria-label="Skip your track" popovertarget="skipPopover" tabindex="0" style="anchor-name: --tip-skipTrigger" aria-describedby="tip-skipTrigger">
 					<i class="material-symbols-outlined">skip_next</i>
 				</button>
 				<span id="tip-skipTrigger" role="tooltip" class="ft-tip" style="position-anchor: --tip-skipTrigger">Skip your track</span>
@@ -280,7 +292,7 @@
 			</div>
 			<div id="typingIndicator" aria-live="polite"></div>
 			<div id="chatbottom">
-				<button role="button" class="butt graybutt iconbutt" id="pickEmoji" aria-label="Emoji" style="anchor-name: --tip-pickEmoji" aria-describedby="tip-pickEmoji">
+				<button class="butt graybutt iconbutt" id="pickEmoji" aria-label="Emoji" style="anchor-name: --tip-pickEmoji" aria-describedby="tip-pickEmoji">
 					<i class="material-symbols-outlined"> insert_emoticon </i>
 				</button>
 				<span id="tip-pickEmoji" role="tooltip" class="ft-tip" style="position-anchor: --tip-pickEmoji">Emoji</span>
@@ -296,7 +308,7 @@
 					</div>
 				</div>
 				<div id="morechats">
-					<button class="butt graybutt" role="button">
+					<button class="butt graybutt">
 						<i class="material-symbols-outlined">arrow_downward</i> new messages
 						<i class="material-symbols-outlined">arrow_downward</i>
 					</button>
@@ -362,23 +374,23 @@
 						</div>
 					</div>
 					<div id="qControlButtons">
-						<button role="button" class="butt graybutt iconbutt" id="plIndexBtn" aria-label="All playlists" aria-haspopup="dialog" style="anchor-name: --tip-plIndexBtn" aria-describedby="tip-plIndexBtn">
+						<button class="butt graybutt iconbutt" id="plIndexBtn" aria-label="All playlists" aria-haspopup="dialog" style="anchor-name: --tip-plIndexBtn" aria-describedby="tip-plIndexBtn">
 							<i class="material-symbols-outlined">library_music</i>
 						</button>
 						<span id="tip-plIndexBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-plIndexBtn">All playlists</span>
-						<button role="button" class="butt graybutt iconbutt" id="shuffleQueue" aria-label="Shuffle list" style="anchor-name: --tip-shuffleQueue" aria-describedby="tip-shuffleQueue">
+						<button class="butt graybutt iconbutt" id="shuffleQueue" aria-label="Shuffle list" style="anchor-name: --tip-shuffleQueue" aria-describedby="tip-shuffleQueue">
 							<i class="material-symbols-outlined"> shuffle </i>
 						</button>
 						<span id="tip-shuffleQueue" role="tooltip" class="ft-tip" style="position-anchor: --tip-shuffleQueue">Shuffle list</span>
-						<button role="button" class="butt graybutt iconbutt" id="mergeLists" aria-label="Merge playlists" style="anchor-name: --tip-mergeLists" aria-describedby="tip-mergeLists">
+						<button class="butt graybutt iconbutt" id="mergeLists" aria-label="Merge playlists" style="anchor-name: --tip-mergeLists" aria-describedby="tip-mergeLists">
 							<i class="material-symbols-outlined"> merge_type </i>
 						</button>
 						<span id="tip-mergeLists" role="tooltip" class="ft-tip" style="position-anchor: --tip-mergeLists">Merge playlists</span>
-						<button role="button" class="butt graybutt iconbutt" id="plAddLauncher" aria-label="New or Import playlist" aria-haspopup="menu" aria-expanded="false" style="anchor-name: --tip-plAddLauncher" aria-describedby="tip-plAddLauncher">
+						<button class="butt graybutt iconbutt" id="plAddLauncher" aria-label="New or Import playlist" aria-haspopup="menu" aria-expanded="false" style="anchor-name: --tip-plAddLauncher" aria-describedby="tip-plAddLauncher">
 							<i class="material-symbols-outlined">add</i>
 						</button>
 						<span id="tip-plAddLauncher" role="tooltip" class="ft-tip" style="position-anchor: --tip-plAddLauncher">New / Import playlist</span>
-						<button role="button" class="butt graybutt iconbutt" id="plDeleteLauncher" aria-label="Delete playlist" style="anchor-name: --tip-plDeleteLauncher" aria-describedby="tip-plDeleteLauncher">
+						<button class="butt graybutt iconbutt" id="plDeleteLauncher" aria-label="Delete playlist" style="anchor-name: --tip-plDeleteLauncher" aria-describedby="tip-plDeleteLauncher">
 							<i class="material-symbols-outlined">delete</i>
 						</button>
 						<span id="tip-plDeleteLauncher" role="tooltip" class="ft-tip" style="position-anchor: --tip-plDeleteLauncher">Delete playlist</span>
@@ -387,12 +399,12 @@
 							<i class="material-symbols-outlined">more_vert</i>
 						</button>
 						<span id="tip-cr-listBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-listBtn">Playlist options</span>
-						<button role="button" class="butt graybutt iconbutt" id="addToQueueBttn" aria-label="Find tracks" style="anchor-name: --tip-addToQueueBttn" aria-describedby="tip-addToQueueBttn">
+						<button class="butt graybutt iconbutt" id="addToQueueBttn" aria-label="Find tracks" style="anchor-name: --tip-addToQueueBttn" aria-describedby="tip-addToQueueBttn">
 							<i class="material-symbols-outlined">add</i>
 						</button>
 						<span id="tip-addToQueueBttn" role="tooltip" class="ft-tip" style="position-anchor: --tip-addToQueueBttn">Find tracks</span>
 					</div>
-					<button role="button" class="butt graybutt" id="cancelqsearch">Done</button>
+					<button class="butt graybutt" id="cancelqsearch">Done</button>
 				</div>
 				<div id="mergeContain">
 					<div id="mergeArrow"></div>
@@ -405,12 +417,12 @@
 							<select id="mergepicker2">
 								<option value="0">Default Playlist</option>
 							</select>
-							<button role="button" class="butt" id="startMerge">Merge</button>
+							<button class="butt" id="startMerge">Merge</button>
 						</div>
 						<div id="mergeHappening">Merge in progress… please stand by.</div>
 						<div id="mergeCompleted">
 							Congratulations! Merge completed.
-							<button role="button" class="butt" id="mergeOK">Ok Fine</button>
+							<button class="butt" id="mergeOK">Ok Fine</button>
 						</div>
 					</div>
 				</div>
@@ -722,7 +734,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2 id="plIndexTitle">Your Playlists <span id="cr-plTotal" class="plx-total"></span></h2>
-				<button role="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
 			</div>
 			<div class="modalContent">
 				<div class="plx-tools">
@@ -812,15 +824,15 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2>Delete Playlist</h2>
-				<button role="button" class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined">close</i></button>
+				<button class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined">close</i></button>
 			</div>
 			<div class="modalContent">
 				<p>This is <strong>irreversible.</strong> This playlist will be permanently deleted.</p>
 				<p>Type the playlist name &#8220;<strong id="deleteConfirmTarget"></strong>&#8221; to confirm:</p>
 				<input type="text" id="deleteConfirmInput" placeholder="Type playlist name here" autocomplete="off" />
 				<div class="modal-actions">
-					<button role="button" class="butt graybutt closeModal" id="deleteCancelButton">Cancel</button>
-					<button role="button" class="butt redbutt" id="pldeleteButton" disabled>Delete</button>
+					<button class="butt graybutt closeModal" id="deleteCancelButton">Cancel</button>
+					<button class="butt redbutt" id="pldeleteButton" disabled>Delete</button>
 				</div>
 			</div>
 		</div>
@@ -828,7 +840,7 @@
 
 	<dialog id="cardViewLargerModal" aria-labelledby="cardViewLargerTitle">
 		<div class="modalBox">
-			<button role="button" class="butt graybutt iconbutt closeModal" id="cardViewLargerClose" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			<button class="butt graybutt iconbutt closeModal" id="cardViewLargerClose" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
 			<div class="cardStage">
 				<button type="button" class="butt graybutt iconbutt cardNav" id="cardPrev" aria-label="Previous card"><i class="material-symbols-outlined">chevron_left</i></button>
 				<div class="cardTilt">
@@ -1067,7 +1079,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2>Playlist Import Machine</h2>
-				<button role="button" class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined">close</i></button>
+				<button class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined">close</i></button>
 			</div>
 			<div class="modalContent">
 				<div id="importSources" class="tabs">

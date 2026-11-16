@@ -192,6 +192,27 @@ try {
     new Promise((r) => setTimeout(() => r(false), 15000))
   ]));
   check(swReady === SITE, "sw.js registers for the whole site, under the policy");
+  {
+    // no connection: the site's own pages show offline.html (with its logo), other paths are left alone.
+    // A context of its own, with no page of the room open while offline (the room's database falls back
+    // to other transports when it loses its connection)
+    const offCtx = await browser.newContext();
+    const first = await offCtx.newPage();
+    await first.goto(SITE + "about/");
+    await first.evaluate(() => navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(() => navigator.serviceWorker.ready));
+    await first.close();
+    const off = await offCtx.newPage();
+    await offCtx.setOffline(true);
+    const shown = {};
+    for (const path of ["", "music/genres/nu-disco/", "about/"]) {
+      await off.goto(SITE + path).catch(() => {});
+      shown[path || "/"] = (await off.title().catch(() => "")) + "|" + await off.$eval("img", (i) => i.complete && i.naturalWidth > 0).catch(() => false);
+    }
+    const other = await off.goto(SITE + "basement/").then(() => "loaded", () => "browser error");
+    await offCtx.close();
+    check(Object.values(shown).every((v) => v === "Offline · Indie Discotheque|true") && other === "browser error",
+      "offline, the site's pages show the offline page with its logo; other sites in the folder don't (" + JSON.stringify({ shown, other }) + ")");
+  }
   check(await page.$eval("#pushMentionsToggle", () => true).catch(() => false), "the settings have the push toggle");
   await page.evaluate(() => {
     window.__swMessages = [];
@@ -2000,11 +2021,16 @@ try {
     dj: /href="\/music\/djs\/dj1\/"/.test(raw),
     ld: /"@type":"MusicPlaylist"/.test(raw),
     ytm: /class="butt graybutt d-ytm" href="https:\/\/music\.youtube\.com\/playlist\?list=PLsmokeNuDisco"/.test(raw) && /"sameAs":"https:\/\/music\.youtube\.com\/playlist\?list=PLsmokeNuDisco"/.test(raw),
-    site: /id="mainGrid"/.test(raw) && /<base href="\/"/.test(raw) && /class="ft-has-discover ft-discover"/.test(raw)
+    site: /id="mainGrid"/.test(raw) && /<base href="\/"/.test(raw) && /class="ft-has-discover ft-discover"/.test(raw),
+    // one of each link-preview tag: the page's own, none left over from the home page
+    once: ["<link rel=\"canonical\"", "og:title", "og:url", "og:image\"", "twitter:card", "name=\"description\""].every((t) => raw.split(t).length === 2)
   };
   check(/^Nu-Disco songs/.test(read.title) && read.canonical && read.h1 && read.rows === 4 && read.ld && read.site,
     "a genre page as sent: the site itself, with the genre's songs already in Discover, and its own title and address (" + JSON.stringify(read) + ")");
   check(read.artist && read.dj, "artists and DJs link to their pages, only where a page exists");
+  const home = readFileSync(join(ROOT, "index.html"), "utf8");
+  check(read.once && /<meta property="og:image" content="https:\/\/[^"]+\/img\/og\.png"/.test(home) && /<link rel="canonical"/.test(home) && !/<title>firetable<\/title>/.test(home),
+    "the home page and each library page have one set of link-preview tags, their own (" + read.once + ")");
   check(read.ytm, "a genre page as sent links to its YouTube Music playlist");
   // what a visitor gets: the real site, on the same Discover page
   await plain.goto(SITE + "music/genres/nu-disco/", { waitUntil: "load" });

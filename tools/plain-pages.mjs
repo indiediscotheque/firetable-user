@@ -137,16 +137,22 @@ function page({ path, title, description, image, ld, route, body }) {
 	<meta property="og:title" content="${esc(title)}" />
 	<meta property="og:description" content="${esc(description)}" />
 	<meta property="og:url" content="${esc(url)}" />
-${image ? `	<meta property="og:image" content="${esc(image)}" />\n` : ""}${ld ? `	<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n` : ""}`;
+	<meta property="og:image" content="${esc(image || SITE + "img/og.png")}" />
+	<meta name="twitter:card" content="${image ? "summary" : "summary_large_image"}" />
+${ld ? `	<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n` : ""}`;
   const foot = `<p class="d-fact d-plainfoot">${esc(ROOM)} is a live room where DJs take turns playing songs for each other. This page comes from the room's play history and is updated every week.</p>`;
   let html = TEMPLATE
     // every link in the page is the site's, from wherever this page sits
     .replace(/(<head>\s*\n?)/i, `$1\t<base href="/" />\n`)
     .replace(/<title>[^<]*<\/title>/i, `<title>${esc(title)} · ${esc(ROOM)}</title>`)
     .replace(/\s*<meta name="description"[^>]*>/i, "")
+    // the home page's own link-preview tags: this page brings its own
+    .replace(/\s*<!-- Link previews[^>]*-->/i, "")
+    .replace(/\s*<link rel="canonical"[^>]*>/gi, "")
+    .replace(/\s*<meta (?:property="og:|name="twitter:)[^>]*>/gi, "")
     .replace(/<\/head>/i, head + "</head>")
     .replace(/<body([^>]*)>/i, (m, attrs) => /class=/.test(attrs) ? m.replace(/class="/, 'class="ft-has-discover ft-discover ') : `<body${attrs} class="ft-has-discover ft-discover">`)
-    .replace(/(<div id="mainGrid"[^>]*>)/i, `$1\n\t\t<div id="discoverPage" role="region" aria-label="Discover"><div id="dRail"></div><div id="dBrowse" class="scroll-view" data-prerendered="${esc(route || "discover")}">${body}${foot}</div><aside id="dSide" aria-label="Player"></aside></div>`);
+    .replace(/(<div id="mainGrid"[^>]*>)/i, `$1\n\t\t<div id="discoverPage" role="region" aria-label="Discover"><div id="dRail"></div><div id="dBrowse" class="scroll-view" data-prerendered="${esc(route || "discover")}">${body}${foot}</div><section id="dSide" aria-label="Playlists and chat"></section></div>`);
   if (!/<base href/.test(html) || !/id="discoverPage"/.test(html)) throw new Error("the template isn't the site's index.html");
   pages.push({ path, html });
 }

@@ -7,18 +7,63 @@
  * opens the room's @ inbox (focusing the app if it's already open), and the
  * app icon shows the number of unread mentions where the phone supports it.
  *
- * No fetch handler: pages, scripts and media load exactly as without it.
+ * It also shows offline.html when one of the site's own pages can't be
+ * reached (no connection), instead of the browser's error page. That's all it
+ * does with requests: the site's pages load from the network as always (it
+ * keeps no copies of them), and scripts, styles, media and other sites never
+ * pass through it.
+ *
  * It lives at the site's root so its scope covers the whole app; the site
- * registers it from js/push.js.
+ * registers it on every visit (js/install.js, through js/push.js).
  */
 "use strict";
 
-self.addEventListener("install", function () {
-  self.skipWaiting();
+// offline.html and the one image it shows. Bump the version when changing either.
+var OFFLINE_CACHE = "ft-offline-v1";
+var OFFLINE_PAGE = "offline.html";
+var OFFLINE_LOGO = "img/idlogo2.png";
+// The site's own pages (as in .htaccess); other sites share this folder
+var OWN_PAGES = /^\/(?:index\.html|about|privacy|terms|music)?(?:\/|$)/;
+
+self.addEventListener("install", function (event) {
+  event.waitUntil(caches.open(OFFLINE_CACHE).then(function (cache) {
+    return cache.addAll([new Request(OFFLINE_PAGE, { cache: "reload" }), new Request(OFFLINE_LOGO, { cache: "reload" })]);
+  }).catch(function () { /* no offline page this time; push still works */ }).then(function () {
+    return self.skipWaiting();
+  }));
 });
 
 self.addEventListener("activate", function (event) {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(caches.keys().then(function (keys) {
+    return Promise.all(keys.filter(function (k) { return k.indexOf("ft-offline-") === 0 && k !== OFFLINE_CACHE; })
+      .map(function (k) { return caches.delete(k); }));
+  }).then(function () { return self.clients.claim(); }));
+});
+
+/** The path of a URL below this worker's scope ("/" for the scope itself). */
+function ownPath(url) {
+  var scope = new URL(self.registration.scope);
+  if (url.origin !== scope.origin || url.pathname.indexOf(scope.pathname) !== 0) return null;
+  return "/" + url.pathname.slice(scope.pathname.length);
+}
+
+self.addEventListener("fetch", function (event) {
+  var req = event.request;
+  if (req.method !== "GET") return;
+  var path = ownPath(new URL(req.url));
+  if (path === null) return;
+  if (req.mode === "navigate" && OWN_PAGES.test(path)) {
+    event.respondWith(fetch(req).catch(function () {
+      return caches.match(OFFLINE_PAGE, { cacheName: OFFLINE_CACHE }).then(function (page) {
+        return page || Response.error();
+      });
+    }));
+  } else if (path.slice(-OFFLINE_LOGO.length - 1) === "/" + OFFLINE_LOGO) {
+    // the offline page's logo, from wherever that page was shown
+    event.respondWith(fetch(req).catch(function () {
+      return caches.match(OFFLINE_LOGO, { cacheName: OFFLINE_CACHE }).then(function (img) { return img || Response.error(); });
+    }));
+  }
 });
 
 /** All open windows of the app (also ones opened before this worker took over). */
