@@ -11,7 +11,7 @@
 import { readFileSync, existsSync } from "fs";
 import { join, resolve } from "path";
 import { chromium } from "playwright";
-import { ROOT, DB, AUTH, policy, config, putAs, serveSite, launchOptions, sleep } from "./harness.mjs";
+import { ROOT, DB, AUTH, policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs } from "./harness.mjs";
 
 const NS = "demo-rules";
 const put = putAs(NS);
@@ -26,16 +26,7 @@ const set = await fetch(DB + "/.settings/rules.json?ns=" + NS, { method: "PUT", 
 if (!set.ok) { console.error("The emulator refused the rules: " + await set.text()); process.exit(1); }
 
 /** A real account in the auth emulator (made, or reused from an earlier run); resolves its uid. */
-async function account(email) {
-  const call = (what) => fetch(AUTH + "/identitytoolkit.googleapis.com/v1/accounts:" + what + "?key=fake-key", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: "rules-pass-1", returnSecureToken: true })
-  }).then((r) => r.json());
-  let j = await call("signUp");
-  if (j.error && j.error.message === "EMAIL_EXISTS") j = await call("signInWithPassword");
-  if (!j.localId) throw new Error("auth emulator: " + JSON.stringify(j));
-  return j.localId;
-}
+const account = (email) => authAccount(email, "rules-pass-1");
 await fetch(AUTH + "/emulator/v1/projects/" + NS + "/accounts", { method: "DELETE" }).catch(() => {});
 const FAN = await account("fan@rules.test");
 const MOD = await account("modsy@rules.test");
@@ -72,29 +63,9 @@ async function signedIn(email, uid) {
   const denied = [], errors = [];
   page.on("console", (m) => { if (/permission[_ ]denied/i.test(m.text())) denied.push(m.text().replace(/^.*FIREBASE WARNING:\s*/, "")); });
   page.on("pageerror", (e) => errors.push(e.message));
-  // Point the site's Firebase app at the auth emulator the moment it's made,
-  // before anything signs in (no change to the site's code)
-  await page.addInitScript((authUrl) => {
-    let fb;
-    Object.defineProperty(window, "firebase", {
-      configurable: true,
-      get() { return fb; },
-      set(v) {
-        fb = v;
-        const init = v.initializeApp;
-        v.initializeApp = function () {
-          const app = init.apply(this, arguments);
-          app.auth().useEmulator(authUrl, { disableWarnings: true });
-          return app;
-        };
-      }
-    });
-  }, AUTH);
+  await useAuthEmulator(page);
   await page.goto(SITE, { waitUntil: "load", timeout: 60000 });
-  await page.waitForFunction(() => window.ftapi && ftapi.started, null, { timeout: 30000 });
-  await page.evaluate((e) => ftapi.actions.logIn(e, "rules-pass-1", (err) => { window.__loginError = String(err && err.message); }), email);
-  await page.waitForFunction((u) => ftapi.uid === u && ftapi.queueRef && !window.__loginError, uid, { timeout: 30000 })
-    .catch(async () => { throw new Error("couldn't sign in as " + email + ": " + await page.evaluate(() => window.__loginError)); });
+  await logInAs(page, email, "rules-pass-1", uid);
   await sleep(1500); // presence, idle, join date, playlist and inbox listeners settle
   return { page, denied, errors };
 }
