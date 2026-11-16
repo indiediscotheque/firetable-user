@@ -1420,7 +1420,18 @@ try {
     await wait(200);
     return out;
   });
+  // a narrow desktop (the stage's middle column under 520px) keeps the DJ in the middle
+  await dPage.setViewportSize({ width: 1024, height: 768 });
+  const narrowDesk = await dPage.evaluate(async () => {
+    await new Promise((r) => setTimeout(r, 400));
+    document.body.classList.remove("screen");
+    await new Promise((r) => setTimeout(r, 300));
+    const st = document.getElementById("djStage").getBoundingClientRect(), spot = document.querySelector("#deck .spot").getBoundingClientRect();
+    return { w: Math.round(st.width), h: Math.round(st.height), spotMid: Math.round(spot.left + spot.width / 2 - st.left) };
+  });
   await dPage.setViewportSize(desk);
+  check(narrowDesk.w < 520 && Math.abs(narrowDesk.spotMid - narrowDesk.w / 2) < narrowDesk.w * 0.2 && narrowDesk.h >= 200,
+    "a narrow desktop stage is left as it was: the DJ in the middle, the stage full height (" + JSON.stringify(narrowDesk) + ")");
   check(deskSide.w >= 520 && !deskSide.side && djSide.side, "only a narrow stage stands its DJ at the side (desktop " + JSON.stringify(deskSide) + ", phone " + djSide.side + ")");
   check(djSide.up.spotMid > djSide.up.w * 0.6 && djSide.up.spotRight < 24 && djSide.up.clearOfSong && djSide.up.avatarIn && djSide.up.h < djSide.up.w * 9 / 16 - 40,
     "screen up: the DJ is at the right, clear of the song, whole, and the stage is shorter than 16:9 (" + JSON.stringify(djSide.up) + ")");

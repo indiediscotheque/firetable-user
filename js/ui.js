@@ -2166,7 +2166,7 @@ firetable.ui.init = function () {
     firetable.ui._deckIsNarrow = false;
 
     firetable.ui.applyDeckPlacement = function () {
-      // a narrow stage stands the DJ at its right, beside the song (discover.css)
+      // a phone's narrow stage stands the DJ at its right, beside the song (discover.css)
       if (roomEl) roomEl.classList.toggle('dj-side', firetable.ui._deckIsNarrow);
       var ondeckEl = firetable.ui.ondeckEl();
       if (!ondeckEl) return;
