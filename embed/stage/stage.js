@@ -7,14 +7,14 @@
  * Unlisted: nothing links here, it's never indexed, and .htaccess lets only
  * this site and QueUp frame it. It plays the room as it plays: the song's
  * video in step with everyone (muted until "Listen live", since browsers
- * won't start sound without a tap), SoundCloud songs on a spinning record,
- * the song and who picked it, the DJs on the decks bobbing to the beat, the
+ * won't start sound without a tap), the cover art filling the screen while
+ * there's no video (SoundCloud songs), the song and who picked it, the DJs on the decks bobbing to the beat, the
  * theme and how many are in the room, in the playing song's colours.
  *
  * It reads the room's public nodes over Firebase's REST streaming API
  * (EventSource): no sign-in, no Firebase library, nothing written.
  *
- * Options: ?video=0 (the record and cover art, never the video),
+ * Options: ?video=0 (the cover art, never the video),
  * ?volume=0-100 (the starting volume; a listener's own choice wins).
  */
 (function () {
@@ -149,11 +149,26 @@
     setTimeout(get, 3000);
   }
 
+  /** The biggest cover there is, for the whole screen: YouTube's full-size
+   *  frame and SoundCloud's original, else the usual size. */
+  function bigArt(s, cb) {
+    var small = artFor(s);
+    var big = isYT(s) ? "https://i.ytimg.com/vi/" + encodeURIComponent(s.cid) + "/maxresdefault.jpg"
+      : isSC(s) && /-t500x500\./.test(small) ? small.replace("-t500x500.", "-original.") : null;
+    if (!big) return cb(small);
+    var img = new Image();
+    // YouTube answers a missing size with a 120 × 90 placeholder
+    img.onload = function () { cb(img.naturalWidth > 200 ? big : small); };
+    img.onerror = function () { cb(small); };
+    img.src = big;
+  }
+
   function artFor(s) {
     if (!s) return "";
     var img = s.image && s.image !== "img/idlogo.png" ? String(s.image) : (cfg.defaultAlbumArtUrl || "");
     if (isSC(s) && img) img = img.replace("-large", "-t500x500");
-    if (isYT(s) && (!img || /mqdefault|default\.jpg$/.test(img))) img = "https://i.ytimg.com/vi/" + encodeURIComponent(s.cid) + "/hqdefault.jpg";
+    // YouTube's widescreen frame: no black bars baked in (hqdefault has them), so cropped to the box it fills it
+    if (isYT(s) && (!img || /ytimg\.com/.test(img))) img = "https://i.ytimg.com/vi/" + encodeURIComponent(s.cid) + "/mqdefault.jpg";
     return absolute(img || "img/idlogo.png");
   }
 
@@ -170,6 +185,7 @@
       stopAll();
       showVideo(false);
       el("st-blur").style.backgroundImage = "";
+      el("st-cover").style.backgroundImage = "";
       el("st-listen").hidden = true;
       renderDeck();
       return;
@@ -191,8 +207,15 @@
     var fill = function () {
       var art = artFor(s);
       el("st-art").style.backgroundImage = cssUrl(art);
-      el("st-label").style.backgroundImage = cssUrl(art);
       el("st-blur").style.backgroundImage = cssUrl(art);
+      if (!same) {
+        el("st-cover").style.backgroundImage = cssUrl(art);
+        bigArt(s, function (u) {
+          if (S.song !== s || u === art) return;
+          el("st-cover").style.backgroundImage = cssUrl(u);
+          el("st-art").style.backgroundImage = cssUrl(u);
+        });
+      }
       el("st-title").textContent = text(s.title) || "Untitled";
       el("st-artist").textContent = text(s.artist);
       renderKicker();
@@ -253,7 +276,8 @@
   function escAttr(s) { return escHtml(s); }
 
   function renderCount() {
-    var n = Object.keys(S.users || {}).filter(function (k) { return S.users[k] && !S.users[k].hostbot; }).length;
+    // who's online (status true), not the bot: the site's own count (js/users.js)
+    var n = Object.keys(S.users || {}).filter(function (k) { return S.users[k] && S.users[k].status === true && !S.users[k].hostbot; }).length;
     var c = el("st-count");
     c.hidden = !n;
     c.textContent = n.toLocaleString("en-US") + " in the room";
@@ -315,7 +339,7 @@
     S.yt = new YT.Player("st-yt", {
       width: "100%",
       height: "100%",
-      playerVars: { autoplay: 1, mute: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, cc_load_policy: 0, playsinline: 1, rel: 0, origin: location.origin },
+      playerVars: { autoplay: 1, mute: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, cc_load_policy: 0, playsinline: 1, rel: 0, origin: location.origin !== "null" ? location.origin : undefined },
       events: {
         onReady: function () {
           S.ytReady = true;
@@ -473,6 +497,26 @@
   setInterval(tick, 500);
   setInterval(sync, 5000);
   document.addEventListener("visibilitychange", function () { if (!document.hidden) { sync(); beat(); } });
+
+  // ─── When something's in the way ────────────────────────────────────────
+
+  setTimeout(function () {
+    if (!S.ytReady && isYT(S.song)) note("YouTube's player didn't load here, so this song can't play. It's still on in the room.");
+  }, 15000);
+  document.addEventListener("securitypolicyviolation", function (e) {
+    console.warn("Blocked by this page's policy:", e.violatedDirective, e.blockedURI);
+  });
+  // a new tab the frame isn't allowed to open: say where the room is instead
+  root.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[target=_blank]");
+    if (!a) return;
+    e.preventDefault();
+    var w = null;
+    try { w = window.open(a.href, "_blank"); } catch (x) { /* not allowed here */ }
+    if (w) { try { w.opener = null; } catch (x) { /* another site's window */ } return; }
+    note("This screen can't open a new tab. The room is at " + new URL(site).host.replace(/^www\./, "") + ".");
+    setTimeout(function () { note(""); }, 8000);
+  });
 
   // ─── Start ──────────────────────────────────────────────────────────────
 

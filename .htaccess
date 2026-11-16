@@ -40,8 +40,10 @@ Options -Indexes
   </If>
 
   # The room chart for other sites (embed/): any site may show it in a frame.
-  # It only reads the public chart, so its own policy allows just that.
-  <If "%{REQUEST_URI} =~ m#^/embed/#">
+  # It only reads the public chart, so its own policy allows just that. Not
+  # the live stage (embed/stage/, below): a browser given two policies obeys
+  # both, and this one would block its players and avatars.
+  <If "%{REQUEST_URI} =~ m#^/embed/(?!stage/)#">
     Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://i.ytimg.com; font-src 'self'; connect-src https://*.firebaseio.com https://*.firebasedatabase.app; base-uri 'none'; form-action 'none'; frame-ancestors *"
     Header always unset X-Frame-Options
   </If>
@@ -50,7 +52,7 @@ Options -Indexes
   # and QueUp may frame it. It plays the room's YouTube and SoundCloud songs,
   # reads the room over Firebase's streaming REST API, and shows avatars and
   # cover art from other hosts. To let another site show it, add it to
-  # frame-ancestors. (After the block above, so its policy wins here.)
+  # frame-ancestors.
   <If "%{REQUEST_URI} =~ m#^/embed/stage/#">
     Header always set Content-Security-Policy "default-src 'none'; script-src 'self' https://www.youtube.com/iframe_api https://www.youtube.com/s/player/ https://w.soundcloud.com/player/api.js; style-src 'self' 'unsafe-inline'; style-src-elem 'self'; img-src 'self' data: https:; font-src 'self'; connect-src https://*.firebaseio.com https://*.firebasedatabase.app; frame-src https://www.youtube.com https://w.soundcloud.com; media-src 'self' blob: https:; base-uri 'none'; form-action 'none'; frame-ancestors 'self' https://queup.net https://*.queup.net; upgrade-insecure-requests"
     Header always set X-Robots-Tag "noindex, nofollow"

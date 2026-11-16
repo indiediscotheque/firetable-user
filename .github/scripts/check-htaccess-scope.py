@@ -52,8 +52,15 @@ def main(path=".htaccess"):
         if any(f.startswith(name + "/") for f in tracked):
             if scope.search(f"/{name}/index.html"):
                 errors.append(f"/{name}/ has a policy of its own but also gets the site's")
-            if not re.search(r'<If\s+"%\{REQUEST_URI\}\s*=~\s*m#\^/' + re.escape(name) + r'/#">\s*\n\s*Header always set Content-Security-Policy', text):
+            own = [re.compile(m.group(1)) for m in re.finditer(
+                r'<If\s+"%\{REQUEST_URI\}\s*=~\s*m#(\^/' + re.escape(name) + r'/[^#]*)#">\s*\n\s*Header always set Content-Security-Policy', text)]
+            if not own:
                 errors.append(f"/{name}/ is published but has no policy of its own in {path}")
+            # a browser given two policies obeys both: each page gets exactly one
+            for page in sorted({f.rsplit("/", 1)[0] + "/" for f in tracked if f.startswith(name + "/") and f.endswith(".html")}):
+                hits = sum(1 for r in own if r.search("/" + page))
+                if hits != 1:
+                    errors.append(f"/{page} gets {hits} of {path}'s {name}/ policies (it needs exactly one)")
     for e in errors:
         print(f"::error file={path}::{e}")
     if errors:
