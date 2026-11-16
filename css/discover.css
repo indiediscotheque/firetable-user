@@ -1890,6 +1890,12 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     /* a square as wide as the page, giving way to the words on a short screen; the two stay together, centred */
     .pvf-visual { flex: 0 1 100cqw; min-height: 9rem; justify-content: flex-end; }
     .pvf.is-video .pvf-body { overflow: hidden; }
+    /* over the video the words keep the page's width (the wide screen's
+       lower-left "end" would push them off the left edge here), and the
+       cover's place keeps the screen's own height, so the words sit under
+       the video, never over it */
+    body:not(.yt-stalled) .pvf.is-video .pvf-now { align-items: stretch; }
+    body:not(.yt-stalled) .pvf.is-video .pvf-visual { flex: none; height: calc(100vw * 9 / 16); min-height: 0; }
     /* the screen comes down where the cover is, as wide as the page (renderFull measures it) */
     body.pv-full-on #mainGrid #screenFrame {
         position: absolute;
