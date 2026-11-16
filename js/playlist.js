@@ -424,11 +424,8 @@ firetable.actions.normalizeQueueLink = function (link) {
 firetable.actions.queueYoutubeWithFallback = function (youtubeId) {
   var settled = false;
 
-  var queueFromTitle = function (id, rawTitle, rawArtist) {
-    var artist = String(rawArtist || "").replace(" - Topic", "");
-    var title = firetable.utilities.decodeEntities(rawTitle || ("YouTube - " + id));
-    var parsed = firetable.utilities.parseArtistTitle(title, firetable.utilities.decodeEntities(artist));
-    firetable.actions.queueTrack(id, parsed.artist + " - " + parsed.title, MEDIA_YOUTUBE);
+  var queueFromTitle = function (id, rawTitle, rawArtist, description) {
+    firetable.actions.queueTrack(id, firetable.utilities.youtubeTrackName(rawTitle || ("YouTube - " + id), rawArtist, description), MEDIA_YOUTUBE);
   };
 
   var queueFallback = function (reason) {
@@ -462,7 +459,7 @@ firetable.actions.queueYoutubeWithFallback = function (youtubeId) {
     if (items && items.length) {
       settled = true;
       var item = items[0];
-      queueFromTitle(item.id || youtubeId, item.snippet.title, item.snippet.channelTitle);
+      queueFromTitle(item.id || youtubeId, item.snippet.title, item.snippet.channelTitle, item.snippet.description);
       return;
     }
     queueFromOEmbed("no items");
@@ -659,9 +656,13 @@ firetable.actions.importList = function (id, name, type) {
           var listid = ftapi.actions.createList(name);
           firetable.utilities.addPlaylistToPickers(listid, name);
           for (var i = 0; i < finalList.length; i++) {
-            var goodTitle = firetable.utilities.decodeEntities(finalList[i].snippet.title);
-            if (goodTitle !== "Private video" && goodTitle !== "Deleted video") {
-              ftapi.actions.addToList(MEDIA_YOUTUBE, goodTitle, finalList[i].snippet.resourceId.videoId, listid);
+            var sn = finalList[i].snippet;
+            var rawTitle = firetable.utilities.decodeEntities(sn.title);
+            if (rawTitle !== "Private video" && rawTitle !== "Deleted video") {
+              // the same page already says who uploaded each video and its
+              // description: the artist comes free ("Band - Topic" -> "Band")
+              ftapi.actions.addToList(MEDIA_YOUTUBE, firetable.utilities.youtubeTrackName(sn.title, sn.videoOwnerChannelTitle, sn.description),
+                sn.resourceId.videoId, listid);
             }
           }
         }

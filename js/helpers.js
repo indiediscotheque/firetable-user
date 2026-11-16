@@ -300,6 +300,71 @@ firetable.utilities = {
     return { artist: artist, title: title };
   },
 
+  // ─── YouTube upload names ─────────────────────────────────────────────────
+
+  /**
+   * Is this one of YouTube's stand-in channel names ("Release", "Various
+   * Artists", with or without " - Topic")? YouTube files new releases there
+   * before it sorts them into the artist's own "Artist - Topic" channel.
+   * @param {string} name
+   * @returns {boolean}
+   */
+  isStandInArtist: function (name) {
+    return /^(?:release|various artists)$/i.test(String(name || "").replace(/\s+-\s+Topic$/, "").trim());
+  },
+
+  /**
+   * The artist a YouTube Music audio track's description names. YouTube writes
+   * "Provided to YouTube by Label\n\nSong · Artist · Featured Artist\n\n℗ …":
+   * the first artist after the song. Search results cut the description short
+   * and onto one line, so there the song's title finds the line, and an artist
+   * cut off at the end isn't trusted. (The hostbot's lib/swaps.js
+   * descriptionArtist reads it the same way.)
+   * @param {string} description - decoded text
+   * @param {string} [title] - the video's title (the song, on audio tracks)
+   * @returns {string} "" when it names none
+   */
+  descriptionArtist: function (description, title) {
+    var d = String(description || "");
+    if (d.indexOf(" · ") === -1) return "";
+    var t = String(title || "").trim();
+    var at = t ? d.indexOf(t + " · ") : -1;
+    var rest;
+    if (at !== -1) {
+      rest = d.slice(at + t.length + 3);
+    } else {
+      if (!/^\s*Provided to YouTube by /.test(d)) return "";
+      var line = d.split(/\r?\n/).filter(function (l) { return l.indexOf(" · ") !== -1; })[0] || "";
+      if (!line || /^\s*Provided to YouTube by /.test(line)) return "";
+      rest = line.slice(line.indexOf(" · ") + 3) + "\n";
+    }
+    var m = /^(.*?)(?: · |\r?\n|\s+℗|\s+©|\s+Released on:)/.exec(rest);
+    var artist = m ? m[1].trim() : "";
+    return artist && artist.length <= 200 && !firetable.utilities.isStandInArtist(artist) ? artist : "";
+  },
+
+  /**
+   * "Artist - Title" for a YouTube upload, from what the Data API already
+   * answered (search, videos or playlistItems snippets, no extra calls): the
+   * title's own "Artist - Song", else the uploader's channel as the artist
+   * ("Band - Topic" -> "Band"). YouTube's stand-in "Release - Topic" and
+   * "Various Artists - Topic" channels give the artist the description names,
+   * or none (just the title; the hostbot fills it in when it plays).
+   * @param {string} title - the video's title (HTML entities are decoded)
+   * @param {string} [channel] - its channel (videoOwnerChannelTitle on playlist items)
+   * @param {string} [description]
+   * @returns {string}
+   */
+  youtubeTrackName: function (title, channel, description) {
+    var u = firetable.utilities;
+    var t = u.decodeEntities(title).trim();
+    var ch = u.decodeEntities(channel).trim();
+    var artist = ch.replace(/\s+-\s+Topic$/, "").trim();
+    if (u.isStandInArtist(ch)) artist = / - Topic$/.test(ch) ? u.descriptionArtist(u.decodeEntities(description), t) : "";
+    var parsed = u.parseArtistTitle(t, artist);
+    return parsed.artist ? parsed.artist + " - " + parsed.title : parsed.title;
+  },
+
   // ─── Hex ↔ RGB ───────────────────────────────────────────────────────────
 
   /**
