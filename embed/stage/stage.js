@@ -264,9 +264,9 @@
     var nameOf = function (d) { return text((S.users[d.id] && S.users[d.id].username) || d.name || "DJ"); };
     var playing = seats.filter(function (d) { return String(d.id) === String(on); })[0] || (S.song ? null : seats[0]);
     var html = playing ? '<li class="st-spot" aria-current="true"><span class="st-avtr" style="background-image:' +
-      escHtml(cssUrl(avatar(playing.id, nameOf(playing), 6))) + '"></span><span class="st-plaque">' + escHtml(nameOf(playing)) + "</span></li>" : "";
+      escHtml(cssUrl(avatar(playing.id, nameOf(playing), 8))) + '"></span><span class="st-plaque">' + escHtml(nameOf(playing)) + "</span></li>" : "";
     var line = seats.filter(function (d) { return d !== playing; }).slice(0, 6).map(function (d) {
-      return '<li title="' + escHtml(nameOf(d)) + '" aria-label="' + escHtml(nameOf(d)) + '" style="background-image:' + escHtml(cssUrl(avatar(d.id, nameOf(d), 3.2))) + '"></li>';
+      return '<li title="' + escHtml(nameOf(d)) + '" aria-label="' + escHtml(nameOf(d)) + '" style="background-image:' + escHtml(cssUrl(avatar(d.id, nameOf(d), 3.8))) + '"></li>';
     }).join("");
     if (html !== deckHtml) { el("st-deck").innerHTML = html; deckHtml = html; }
     if (line !== lineHtml) { el("st-ondeck").innerHTML = line; lineHtml = line; }
@@ -319,7 +319,7 @@
     }
     renderKicker();
   }
-  /** The fire is drawn for a stage the site's size: scale it with the box (the site's #fyre is 216px wide). */
+  /** The fire is drawn for a stage the site's size: scale it with the box (the site's #fyre is 216px wide, for its 160px deck spot). */
   function fyreScale() { if (flame) flame.setScale(el("fyre").clientWidth / 216); }
   window.addEventListener("resize", fyreScale);
 

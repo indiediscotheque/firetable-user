@@ -65,33 +65,72 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   pointer-events: none;
 }
 
+/* Stage lighting: a soft spotlight from above onto the DJ, the floor lit in
+   the song's colour where they stand, and the corners falling into shadow */
+.st-lights {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(28% 16% at 50% 100%, color-mix(in srgb, var(--acc) 55%, rgba(255, 255, 255, 0.25)), transparent 75%),
+    radial-gradient(42% 85% at 50% 0%, color-mix(in srgb, var(--acc) 22%, rgba(255, 255, 255, 0.07)), transparent 72%),
+    radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.5));
+  transition: background 1.5s ease;
+}
+.st-lights::after {
+  /* the beam itself: narrow at the lamp, wide at the floor */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 1em;
+  width: 30em;
+  translate: -50% 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.02), color-mix(in srgb, var(--acc) 10%, transparent) 80%, transparent);
+  clip-path: polygon(46% 0, 54% 0, 70% 100%, 30% 100%);
+  filter: blur(0.8em);
+}
+
+/* ─── The top: the song on the left, the room's status and sound on the
+   right, in one row, so a long title gives way instead of running under ─── */
+
+.st-head {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25em;
+  padding: 1.25em 1.25em 0 1.5em;
+}
+
 /* ─── Now playing (top left): cover, song, artist, who picked it ───────── */
 
 .st-now {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 30%;
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1em;
-  padding: 1.5em 0 0 1.5em;
 }
 .st-art {
   flex: none;
-  width: 4em;
+  width: 5em;
   aspect-ratio: 1;
-  margin-left: 0.25em;
   border-radius: 0.5em;
   background: #222 center / cover no-repeat;
-  box-shadow: 0 0.4em 1.2em -0.45em rgba(0, 0, 0, 0.75);
+  box-shadow: 0 0.5em 1.4em -0.4em rgba(0, 0, 0, 0.8), 0 0 0 0.06em rgba(255, 255, 255, 0.1);
 }
 .st-npText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .st-title, .st-artist { text-shadow: 0 0.06em 0.3em rgba(0, 0, 0, 0.6); }
 .st-title {
   margin: 0;
-  font-size: 1.125em;
-  font-weight: 400;
+  font-size: 1.4em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1.1;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -100,18 +139,22 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   overflow: hidden;
 }
 .st-artist {
-  margin: 0 0 0.6em;
-  font-size: 0.875em;
+  margin: 0.1em 0 0.45em;
+  font-size: 1em;
   font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .st-kicker {
   margin: 0;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.75em;
-  font-weight: 300;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .st-now .st-art, .st-npText { transition: opacity 0.2s ease, translate 0.2s ease; }
 .st-now.is-changing .st-art,
@@ -120,14 +163,14 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 /* ─── Top right: live, who's here, sound, open the room ────────────────── */
 
 .st-top {
-  position: absolute;
-  top: 1.5em;
-  right: 1.5em;
+  flex: none;
   display: flex;
-  align-items: center;
-  gap: 0.5em;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6em;
   font-size: 0.7em;
 }
+.st-status, .st-sound { display: flex; align-items: center; gap: 0.5em; }
 .st-live {
   display: inline-flex;
   align-items: baseline;
@@ -153,7 +196,7 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 @keyframes st-blink { 50% { opacity: 0.3; } }
 #st.is-quiet .st-live { background: rgba(255, 255, 255, 0.16); }
 #st.is-quiet .st-live i { animation: none; opacity: 0.5; }
-.st-count { color: rgba(255, 255, 255, 0.75); white-space: nowrap; margin-right: 0.25em; }
+.st-count { color: rgba(255, 255, 255, 0.75); white-space: nowrap; }
 .st-icon {
   display: inline-grid;
   place-items: center;
@@ -248,8 +291,8 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  width: 10em;
-  height: 7.2em;
+  width: 12em;
+  height: 9.3em;
 }
 /* the robot stands at the table, its base tucked just below the table's top
    edge (the table is 1.5em tall), so it never shows a gap; the bob only goes
@@ -257,9 +300,9 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 .st-avtr {
   position: absolute;
   z-index: 0;
-  bottom: 1.2em;
+  bottom: 1.3em;
   width: 100%;
-  height: 6em;
+  height: 8em;
   background: center bottom / contain no-repeat;
 }
 /* the site's bob: down behind the table and back, to the beat when it's known */
@@ -278,7 +321,8 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
     inset 0 0.12em rgba(255, 255, 255, 0.35),
     0 -0.25em 0.8em -0.3em rgba(0, 0, 0, 0.6);
   color: var(--acc-txt);
-  font-size: 0.75em;
+  font-size: 0.8em;
+  font-weight: 600;
   line-height: 2em;
   text-align: center;
   white-space: nowrap;
@@ -294,9 +338,9 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   position: absolute;
   z-index: 1;
   left: 50%;
-  bottom: -4em;
-  width: 13.5em;
-  height: 16.7em; /* the site's: 216 × 267px on its stage, in its 16px em */
+  bottom: -4.8em;
+  width: 16.2em;
+  height: 20em; /* the site's (216 × 267px on its stage, 16px em) for a deck spot 1.2 × the site's */
   translate: -50% 0;
   pointer-events: none;
   overflow: visible;
@@ -320,8 +364,8 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   list-style: none;
 }
 .st-ondeck li {
-  width: 2.5em;
-  height: 2.5em;
+  width: 3em;
+  height: 3em;
   margin-bottom: 0.5em;
   border-radius: 50%;
   background: #000 50% 66% / auto 125% no-repeat;
