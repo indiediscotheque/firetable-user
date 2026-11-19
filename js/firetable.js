@@ -915,9 +915,9 @@ ftapi.actions = {
       // every copy removed in one write
       var updates = {};
       dupes.forEach(function(key) { updates[key] = null; });
-      return dupes.length ? ref.update(updates) : null;
-    }).then(function() {
-      if (callback) callback();
+      return dupes.length ? ref.update(updates).then(function() { return dupes.length; }) : 0;
+    }).then(function(removed) {
+      if (callback) callback(null, removed);
     }, function(err) {
       console.error("[firetable] duplicate cleanup failed:", err);
       if (callback) callback(err || true);

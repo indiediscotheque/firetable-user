@@ -290,7 +290,8 @@ firetable.actions.formatTrackDuration = function (seconds) {
 firetable.actions.queueFilterActive = function () {
   return !!(String($("#queueFilter").val() || "").trim() ||
     $("#queueFilterRemixOnly").is(":checked") ||
-    $("#queueFilterBrokenOnly").is(":checked"));
+    $("#queueFilterBrokenOnly").is(":checked") ||
+    $("#cr-dupesOnly").is(":checked"));
 };
 
 /**
@@ -305,9 +306,19 @@ firetable.actions.filterQueue = function (val, rows) {
   var textFilter = String(typeof val === "string" ? val : $("#queueFilter").val() || "").toLowerCase().trim();
   var remixOnly = $("#queueFilterRemixOnly").is(":checked");
   var brokenOnly = $("#queueFilterBrokenOnly").is(":checked");
+  var dupesOnly = $("#cr-dupesOnly").is(":checked");
   var container = document.getElementById("mainqueue");
   if (!container) return;
   var list = rows || container.querySelectorAll(".pvbar");
+  // songs in the list more than once (the same type and id, as Remove duplicates counts them)
+  var copies = {};
+  if (dupesOnly) {
+    var every = container.querySelectorAll(".pvbar");
+    for (var d = 0; d < every.length; d++) {
+      var k = every[d].getAttribute("data-type") + ":" + every[d].getAttribute("data-cid");
+      copies[k] = (copies[k] || 0) + 1;
+    }
+  }
 
   // Decide every row first, then write, so the browser never recalculates
   // styles between rows.
@@ -317,7 +328,8 @@ firetable.actions.filterQueue = function (val, rows) {
     var tags = row.getAttribute("data-tags") || "";
     var show = (!textFilter || tags.toLowerCase().indexOf(textFilter) !== -1) &&
       (!remixOnly || /\([^)]*\)/.test(tags)) &&
-      (!brokenOnly || row.getAttribute("data-broken") === "1");
+      (!brokenOnly || row.getAttribute("data-broken") === "1") &&
+      (!dupesOnly || copies[row.getAttribute("data-type") + ":" + row.getAttribute("data-cid")] > 1);
     var hidden = row.classList.contains("ft-filtered");
     if (show && hidden) toShow.push(row);
     else if (!show && !hidden) toHide.push(row);
@@ -1398,6 +1410,14 @@ firetable.ui.setupPlaylistEvents = function () {
       if (act === "shuffle") return firetable.actions.shuffleQueuePrompt(listBtn);
       if (act === "merge") return toggleMerge(listBtn);
       if (act === "delete") return $("#plDeleteLauncher").trigger("click");
+      if (act === "rename") return firetable.actions.openRenameList(id);
+      if (act === "dupes") {
+        return ftapi.actions.removeDuplicatesFromList(id, function (err, removed) {
+          if (err) return firetable.ui.toast("Couldn't remove the duplicates. Try again in a moment.", "error");
+          firetable.ui.toast(removed ? "Removed " + firetable.utilities.pluralize(removed, "duplicate", "duplicates") : "No duplicates in this playlist", "success");
+        });
+      }
+      if (act === "export") return firetable.actions.exportList(id, $("#listpicker option:selected").text());
       if (act === "check") {
         firetable.ui.toast("Checking " + $("#listpicker option:selected").text() + " for broken tracks…", "notice");
         firetable.actions.checkBrokenTracks(id).then(function (r) {
@@ -1409,18 +1429,19 @@ firetable.ui.setupPlaylistEvents = function () {
     });
   }
 
-  // ── Show only (#cr-showOnlyMenu): Remixes and Broken, behind one button with a count ──
+  // ── Show only (#cr-showOnlyMenu): Remixes, Broken and Duplicates, behind one button with a count ──
   var showMenu = document.getElementById("cr-showOnlyMenu");
   var showBtn = document.getElementById("cr-showOnly");
   var renderShowOnly = function () {
-    var n = ["#queueFilterRemixOnly", "#queueFilterBrokenOnly"].filter(function (q) { return $(q).is(":checked"); }).length;
+    var n = ["#queueFilterRemixOnly", "#queueFilterBrokenOnly", "#cr-dupesOnly"].filter(function (q) { return $(q).is(":checked"); }).length;
     $("#cr-showOnlyCount").text(n || "").prop("hidden", !n);
     if (!showBtn) return;
     showBtn.classList.toggle("is-on", !!n);
     showBtn.setAttribute("aria-label", n ? "Show only (" + n + " on)" : "Show only");
     $("#tip-cr-showOnly").text(n ? "Show only: " + $(".cr-showOnlyBox input:checked + span").map(function () { return this.textContent; }).get().join(", ") : "Show only");
   };
-  $("#queueFilterRemixOnly, #queueFilterBrokenOnly").on("change", renderShowOnly);
+  $("#queueFilterRemixOnly, #queueFilterBrokenOnly, #cr-dupesOnly").on("change", renderShowOnly);
+  $("#cr-dupesOnly").on("change", function () { firetable.actions.filterQueue(); });
   renderShowOnly();
   if (showMenu && showBtn) {
     showMenu.addEventListener("toggle", function (e) {
@@ -2117,3 +2138,68 @@ firetable.ui.setupSwaps = function () {
     $("#swapShowBtn").text(this.checked ? "Show all" : "Show them");
   });
 };
+
+// ─── Rename and Export, from the playlist's ⋮ menu (redesign step 1.16) ──────
+
+/** The list's own name, as its owner typed it. */
+function crListName(listID) {
+  if (String(listID) === "0") return firetable.utilities.defaultListName();
+  var pl = firetable.allPlaylists && firetable.allPlaylists[listID];
+  return pl ? firetable.utilities.decodeEntities(String(pl.name || "")) : "";
+}
+
+/** Rename the list on screen: a small dialog with its name, saved by renameList. */
+firetable.actions.openRenameList = function (listID) {
+  var box = document.getElementById("cr-renameBox");
+  var input = document.getElementById("cr-renameInput");
+  if (!box || !input) return;
+  box.setAttribute("data-list", String(listID));
+  input.value = crListName(listID);
+  box.showModal();
+  input.focus();
+  input.select();
+};
+
+/**
+ * Download a playlist as plain text, one "Artist - Title" line per song in its
+ * play order (the list's own order in the database). Nothing leaves the
+ * browser; the file is made here.
+ */
+firetable.actions.exportList = function (listID, label) {
+  return ftapi.lookup.listRef(listID).once("value").then(function (snap) {
+    var lines = [];
+    snap.forEach(function (child) {
+      var t = child.val();
+      if (t && t.name) lines.push(firetable.utilities.decodeEntities(String(t.name)));
+    });
+    if (!lines.length) { firetable.ui.toast("This playlist has no songs to export.", "notice"); return; }
+    var name = (crListName(listID) || String(label || "playlist")).replace(/[\\/:*?"<>|]+/g, " ").trim() || "playlist";
+    var url = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/plain;charset=utf-8" }));
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = name + ".txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    firetable.ui.toast("Exported " + firetable.utilities.pluralize(lines.length, "song", "songs") + " as " + name + ".txt", "success");
+  }, function () {
+    firetable.ui.toast("Couldn't read the playlist to export it. Try again in a moment.", "error");
+  });
+};
+
+$(function () {
+  $("#cr-renameForm").on("submit", function (e) {
+    e.preventDefault();
+    var box = document.getElementById("cr-renameBox");
+    var id = box.getAttribute("data-list");
+    var name = $("#cr-renameInput").val().trim();
+    if (!name) { $("#cr-renameInput").focus(); return; }
+    box.close();
+    Promise.resolve(firetable.actions.renameList(id, name)).then(function () {
+      firetable.ui.toast("Renamed to " + name, "success");
+    }, function () {
+      firetable.ui.toast("Couldn't rename the playlist. Try again in a moment.", "error");
+    });
+  });
+});

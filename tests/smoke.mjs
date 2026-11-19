@@ -492,6 +492,66 @@ try {
     "every ⋮ item reaches what its old button did: All playlists, Shuffle, Check, Import, New (with Cancel), Merge, Delete (" + JSON.stringify(tools) + ")");
   check(tools.showOpen && tools.badge === "1/Show only (1 on)" && tools.badgeOff, "Show only holds Remixes and Broken, and counts what's on (" + tools.badge + ")");
 
+  console.log("-- the playlist's ⋮: Rename, Remove duplicates, Export; Show only: Duplicates");
+  const listBefore = await listNow(); // put back after: the drag test below goes on from it
+  await put("/queues/smoke", { d1: { type: 1, cid: "dupe000001", name: "Aa - One" }, d2: { type: 1, cid: "dupe000002", name: "Bb - Two" }, d3: { type: 1, cid: "dupe000001", name: "Aa - One" } });
+  const listTools = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    const realUid = ftapi.uid;
+    ftapi.uid = "smoke";
+    ftapi.queueRef = ftapi.db().ref("queues/smoke");
+    await ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+    $("#listpicker").val("0");
+    await wait(200);
+    const out = {};
+    const menu = document.getElementById("cr-listMenu");
+    const pick = async (act) => { document.getElementById("cr-listBtn").click(); await wait(80); menu.querySelector('[data-act="' + act + '"]').click(); await wait(100); };
+    out.items = [...menu.querySelectorAll("[data-act]")].map((b) => b.getAttribute("data-act")).join();
+    // Show only: Duplicates leaves both copies of the song that's in twice
+    $("#cr-dupesOnly").prop("checked", true).trigger("change");
+    await wait(50);
+    out.dupesShown = [...document.querySelectorAll("#mainqueue .pvbar:not(.ft-filtered)")].map((r) => r.getAttribute("data-cid")).join();
+    out.badge = document.getElementById("cr-showOnlyCount").textContent;
+    $("#cr-dupesOnly").prop("checked", false).trigger("change");
+    out.allBack = document.querySelectorAll("#mainqueue .pvbar:not(.ft-filtered)").length;
+    // Export: the list as "Artist - Title" lines, in play order
+    const made = URL.createObjectURL;
+    let file = null;
+    URL.createObjectURL = (blob) => { file = blob; return made.call(URL, blob); };
+    await pick("export");
+    await until(() => file);
+    URL.createObjectURL = made;
+    out.exported = file ? (await file.text()).trim().split("\n").join("|") : null;
+    // Rename: a dialog with the name, saved for the built-in list in the preferences
+    await pick("rename");
+    const box = document.getElementById("cr-renameBox");
+    out.renameOpen = box.open && document.getElementById("cr-renameInput").value;
+    document.getElementById("cr-renameInput").value = "Smoke Crate";
+    document.getElementById("cr-renameSave").click();
+    await until(() => firetable.plPrefs && firetable.plPrefs.defaultName === "Smoke Crate");
+    out.renamed = firetable.plPrefs.defaultName + "|" + !box.open;
+    await firetable.actions.renameList("0", "Default Playlist");
+    // Remove duplicates: the later copy goes, in one write
+    await pick("dupes");
+    await until(() => /duplicate/.test(document.getElementById("ft-toast")?.textContent || ""));
+    out.toast = document.getElementById("ft-toast")?.textContent || "";
+    out.left = Object.values((await ftapi.db().ref("queues/smoke").once("value")).val() || {}).map((t) => t.cid).join();
+    ftapi.uid = realUid;
+    return out;
+  });
+  check(/rename/.test(listTools.items) && /dupes/.test(listTools.items) && /export/.test(listTools.items), "the playlist's ⋮ has Rename, Remove duplicates and Export (" + listTools.items + ")");
+  check(listTools.dupesShown === "dupe000001,dupe000001" && listTools.badge === "1" && listTools.allBack === 3, "Show only: Duplicates shows the songs that are in twice (" + JSON.stringify(listTools) + ")");
+  check(listTools.exported === "Aa - One|Bb - Two|Aa - One", "Export downloads the list as Artist - Title lines in play order (" + listTools.exported + ")");
+  check(listTools.renameOpen === "Default Playlist" && listTools.renamed === "Smoke Crate|true", "Rename opens with the list's name and saves the new one (" + JSON.stringify(listTools) + ")");
+  check(/Removed 1 duplicate/.test(listTools.toast) && listTools.left === "dupe000001,dupe000002", "Remove duplicates keeps the first copy and says how many went (" + JSON.stringify(listTools) + ")");
+  await put("/queues/smoke", listBefore);
+  await page.evaluate(async () => {
+    await new Promise((r) => setTimeout(r, 300));
+    return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+  });
+
   console.log("-- drag to reorder the playlist: mouse, Alt+arrow keys, and a finger held on a row");
   await page.evaluate(() => {
     $("#mainGrid").removeClass("login");

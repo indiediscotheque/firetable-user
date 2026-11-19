@@ -125,6 +125,10 @@ const FEATURES = [
   { row: "CR-13", name: "Delete this playlist", who: IN, via: listMenu, target: '#cr-listMenu [data-act="delete"]' },
   { row: "CR-14", name: "All playlists", who: IN, via: [...listMenu, '#cr-listMenu [data-act="all"]'], target: "#plIndexList" },
   { row: "CR-17", name: "Check for broken tracks", who: IN, via: listMenu, target: '#cr-listMenu [data-act="check"]' },
+  { row: "CR-21", name: "Remove duplicates", who: IN, via: listMenu, target: '#cr-listMenu [data-act="dupes"]' },
+  { row: "CR-25", name: "Rename this playlist", who: IN, via: [...listMenu, '#cr-listMenu [data-act="rename"]'], target: "#cr-renameInput" },
+  { row: "CR-28", name: "Export the playlist as a list of songs", who: IN, via: listMenu, target: '#cr-listMenu [data-act="export"]' },
+  { row: "CR-07", name: "Show only: Duplicates", who: IN, via: [...playlists, "#cr-showOnly"], target: "#cr-dupesOnly" },
 
   // ── Recent, Fresh, Cards (RE) ──
   { row: "RE-01", name: "Recent plays", who: IN, via: ["#mm-history"], target: "#thehistory .pvbar" },

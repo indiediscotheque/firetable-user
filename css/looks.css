@@ -2692,7 +2692,8 @@ input.ft-filter {
 }
 
 .queueFilterRemixOnly,
-.queueFilterBrokenOnly {
+.queueFilterBrokenOnly,
+.cr-dupesOnly {
     display: inline-flex;
     align-items: center;
     gap: var(--pad1);
@@ -2711,7 +2712,8 @@ input.ft-filter {
 }
 
 .queueFilterRemixOnly input,
-.queueFilterBrokenOnly input {
+.queueFilterBrokenOnly input,
+.cr-dupesOnly input {
     margin: 0;
     appearance: none;
     -webkit-appearance: none;
@@ -2727,7 +2729,8 @@ input.ft-filter {
 }
 
 .queueFilterRemixOnly input::before,
-.queueFilterBrokenOnly input::before {
+.queueFilterBrokenOnly input::before,
+.cr-dupesOnly input::before {
     content: "";
     width: 0.5rem;
     height: 0.5rem;
@@ -2738,7 +2741,8 @@ input.ft-filter {
 }
 
 .queueFilterRemixOnly input:checked,
-.queueFilterBrokenOnly input:checked {
+.queueFilterBrokenOnly input:checked,
+.cr-dupesOnly input:checked {
     border-color: var(--color-accent);
     background-color: var(--color-accent);
 
@@ -2748,17 +2752,20 @@ input.ft-filter {
 }
 
 .queueFilterRemixOnly input:checked::before,
-.queueFilterBrokenOnly input:checked::before {
+.queueFilterBrokenOnly input:checked::before,
+.cr-dupesOnly input:checked::before {
     transform: scale(1);
 }
 
 .queueFilterRemixOnly:hover,
-.queueFilterBrokenOnly:hover {
+.queueFilterBrokenOnly:hover,
+.cr-dupesOnly:hover {
     background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg) 100%);
 }
 
 .queueFilterRemixOnly:focus-visible,
-.queueFilterBrokenOnly:focus-visible {
+.queueFilterBrokenOnly:focus-visible,
+.cr-dupesOnly:focus-visible {
     box-shadow: 0 0 0.5rem var(--color-accent);
 }
 
@@ -2983,8 +2990,9 @@ input.ft-filter {
 
 /* ─── The crate's tools, two rows at every width ───────────────────────────
    1. the playlist, its ⋮ menu (#cr-listMenu: all playlists, new, import,
-      shuffle, merge, check for broken tracks, delete) and Find tracks (+);
-   2. the filter and Show only (#cr-showOnlyMenu: Remixes, Broken).
+      rename, shuffle, remove duplicates, merge, check for broken tracks,
+      export, delete) and Find tracks (+);
+   2. the filter and Show only (#cr-showOnlyMenu: Remixes, Broken, Duplicates).
    The old buttons stay in the DOM for the menu to use. Shuffle keeps its own
    button on a computer, where there's room. While a new playlist is named,
    the row is the name box and Cancel. */
@@ -3022,7 +3030,7 @@ input.ft-filter {
 .cr-badge[hidden] { display: none; }
 /* Show only's choices read as menu rows */
 .cr-showOnlyBox .queueFilterExtras { flex-direction: column; align-items: stretch; gap: 0; }
-.cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly) {
+.cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly) {
     gap: 0.75rem;
     height: auto;
     min-height: 2.25rem;
@@ -3034,13 +3042,13 @@ input.ft-filter {
     font-size: var(--fs-title);
 }
 @media (hover: hover) {
-    .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly):hover { background: rgba(255, 255, 255, 0.08); }
+    .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly):hover { background: rgba(255, 255, 255, 0.08); }
 }
 @media (pointer: coarse) {
-    .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly) { min-height: var(--tap-min); }
+    .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly) { min-height: var(--tap-min); }
 }
-.cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly) input { width: 1.1rem; height: 1.1rem; }
-.cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly) input::before { width: 0.6rem; height: 0.6rem; }
+.cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly) input { width: 1.1rem; height: 1.1rem; }
+.cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly) input::before { width: 0.6rem; height: 0.6rem; }
 .ft-menu-sep { width: auto; height: 1px; margin: var(--pad1) 0.5rem; border: 0; background: var(--color-border); }
 
 #cancelqsearch { margin-left: auto; }
