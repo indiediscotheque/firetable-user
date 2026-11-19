@@ -287,6 +287,34 @@ firetable.actions.formatTrackDuration = function (seconds) {
 
 
 /** True when the text filter or either filter checkbox is in use. */
+/**
+ * The playlist's keys in the order to show them: play order, or by artist or
+ * title while Sort (#cr-sort) is on. View only; ties keep their play order.
+ * @param {Object} list - The playlist's tracks by key
+ * @returns {string[]}
+ */
+firetable.actions.sortedQueueKeys = function (list) {
+  var keys = list ? Object.keys(list) : [];
+  var by = firetable.queueSort;
+  if (!keys.length || (by !== "artist" && by !== "title")) return keys;
+  var collator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
+  var part = function (k) {
+    var name = firetable.utilities.decodeEntities(String(list[k].name || "")).trim();
+    var sep = name.indexOf(" - ");
+    var artist = sep > 0 ? name.slice(0, sep) : name;
+    var title = sep > 0 ? name.slice(sep + 3) : "";
+    // "The Cure" sorts under C
+    artist = artist.replace(/^the\s+/i, "");
+    return by === "artist" ? [artist, title] : [title || artist, artist];
+  };
+  var cache = {};
+  keys.forEach(function (k, i) { cache[k] = { p: part(k), i: i }; });
+  return keys.slice().sort(function (a, b) {
+    var x = cache[a], y = cache[b];
+    return collator.compare(x.p[0], y.p[0]) || collator.compare(x.p[1], y.p[1]) || x.i - y.i;
+  });
+};
+
 firetable.actions.queueFilterActive = function () {
   return !!(String($("#queueFilter").val() || "").trim() ||
     $("#queueFilterRemixOnly").is(":checked") ||
@@ -867,6 +895,8 @@ firetable.ui.setupPlaylistEvents = function () {
     items: '.pvbar',
     cancel: 'button, a, input, textarea, select, label, [contenteditable], .edittags',
     keys: true,
+    // off while the list is sorted for viewing: a drop there has no play-order meaning
+    disabled: function () { return firetable.queueSort && firetable.queueSort !== "order"; },
     onStart: function (row) {
       var block = row.closest('.pvchunk');
       if (block) block.classList.add('sort-src');
@@ -1043,13 +1073,19 @@ firetable.ui.setupPlaylistEvents = function () {
   ftapi.events.on("playlistChanged", function (okdata, listID) {
     firetable.saved.setOpen(okdata, listID);
     firetable.queue = okdata;
+    firetable._queueList = listID;
     firetable.ui.renderListCount(okdata, listID);
+    renderQueue(okdata, listID);
+  });
+
+  /** Draw the playlist on screen, in play order or the view-only sort. */
+  function renderQueue(okdata, listID) {
     // Each render gets a number; chunks from an older render stop when a
     // newer one starts, so stale rows never get appended to the new list.
     var renderGen = firetable._queueRenderGen = (firetable._queueRenderGen || 0) + 1;
 
     var container = document.getElementById('mainqueue');
-    var keys = okdata ? Object.keys(okdata) : [];
+    var keys = firetable.actions.sortedQueueKeys(okdata);
 
     // Is this an update to the playlist already on screen (send to top/bottom,
     // delete, reorder, add) rather than a playlist being opened?
@@ -1119,7 +1155,57 @@ firetable.ui.setupPlaylistEvents = function () {
     }
 
     schedule(renderNextChunk);
+  }
+
+  // ── Sort (#cr-sort): view only. The list is shown by artist or title; the
+  // play order isn't touched, and dragging is off until it's back. ──
+  var sortMenu = document.getElementById("cr-sortMenu");
+  var sortBtn = document.getElementById("cr-sort");
+  var SORT_NAMES = { order: "Your order", artist: "Artist", title: "Title" };
+  function setSort(by) {
+    by = SORT_NAMES[by] ? by : "order";
+    var changed = by !== firetable.queueSort;
+    firetable.queueSort = by;
+    var sorted = by !== "order";
+    $('input[name="cr-sortBy"][value="' + by + '"]').prop("checked", true);
+    $("#mainqueue").toggleClass("cr-sorted", sorted);
+    $("#cr-sortBar").prop("hidden", !sorted);
+    $("#cr-sortBarText").text(sorted ? "Showing by " + SORT_NAMES[by].toLowerCase() + ". Your play order hasn't changed." : "");
+    if (sortBtn) {
+      sortBtn.classList.toggle("is-on", sorted);
+      sortBtn.setAttribute("aria-label", "Sort: " + SORT_NAMES[by]);
+    }
+    $("#tip-cr-sort").text(sorted ? "Sort: " + SORT_NAMES[by] : "Sort");
+    if (changed && firetable.queue) {
+      firetable._queueShownList = null; // draw it fresh, from the top
+      var scroller = document.getElementById("queuelist");
+      if (scroller) scroller.scrollTop = 0;
+      renderQueue(firetable.queue, firetable._queueList);
+    }
+  }
+  firetable.actions.setQueueSort = setSort;
+  $(document).on("change", 'input[name="cr-sortBy"]', function () {
+    setSort(this.value);
+    if (sortMenu && sortMenu.matches(":popover-open")) sortMenu.hidePopover();
   });
+  $("#cr-sortBack").on("click", function () {
+    setSort("order");
+    if (sortBtn) sortBtn.focus();
+  });
+  if (sortMenu && sortBtn) {
+    sortMenu.addEventListener("toggle", function (e) {
+      var open = e.newState === "open";
+      sortBtn.classList.toggle("on", open);
+      sortBtn.setAttribute("aria-expanded", String(open));
+      if (!open) return;
+      sortMenu.style.visibility = "hidden";
+      firetable.ui.positionPopover(sortBtn, sortMenu, document.getElementById("cr-sortArrow"), "bottom-end").then(function () {
+        var on = sortMenu.querySelector("input:checked") || sortMenu.querySelector("input");
+        if (on) on.focus();
+      });
+    });
+  }
+  setSort("order");
 
   // ── Queue filter input ──
   // "input" covers typing, paste, cut, undo and the search box's clear (X)

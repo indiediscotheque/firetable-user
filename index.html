@@ -434,6 +434,10 @@
 							<span id="cr-showOnlyCount" class="cr-badge" hidden></span>
 						</button>
 						<span id="tip-cr-showOnly" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-showOnly">Show only</span>
+						<button type="button" class="butt graybutt iconbutt" id="cr-sort" aria-label="Sort: Your order" aria-haspopup="true" aria-expanded="false" popovertarget="cr-sortMenu" style="anchor-name: --tip-cr-sort" aria-describedby="tip-cr-sort">
+							<i class="material-symbols-outlined">sort</i>
+						</button>
+						<span id="tip-cr-sort" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-sort">Sort</span>
 					</form>
 				</div>
 				<div id="searchMachine">
@@ -451,6 +455,13 @@
 						<span class="swapBarActions">
 							<button type="button" id="swapShowBtn" class="butt graybutt small">Show them</button>
 							<button type="button" id="swapAllBtn" class="butt small">Swap all</button>
+						</span>
+					</div>
+					<div id="cr-sortBar" class="swapBar cr-sortBar" role="status" hidden>
+						<i class="material-symbols-outlined" aria-hidden="true">sort</i>
+						<span id="cr-sortBarText"></span>
+						<span class="swapBarActions">
+							<button type="button" id="cr-sortBack" class="butt graybutt small">Back to your order</button>
 						</span>
 					</div>
 					<div id="mainqueue" class="innr">
@@ -815,6 +826,17 @@
 					<span>Duplicates</span>
 				</label>
 			</div>
+		</div>
+	</div>
+
+	<!-- Sort (#cr-sort): how the playlist on screen is shown. View only: the play order never changes -->
+	<div id="cr-sortMenu" popover="auto" class="ft-popover">
+		<div id="cr-sortArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu cr-sortBox" role="radiogroup" aria-labelledby="cr-sortTitle">
+			<div class="ft-menu-title" id="cr-sortTitle">Sort</div>
+			<label class="cr-sortOpt"><input type="radio" name="cr-sortBy" value="order" checked /><span>Your order</span></label>
+			<label class="cr-sortOpt"><input type="radio" name="cr-sortBy" value="artist" /><span>Artist</span></label>
+			<label class="cr-sortOpt"><input type="radio" name="cr-sortBy" value="title" /><span>Title</span></label>
 		</div>
 	</div>
 

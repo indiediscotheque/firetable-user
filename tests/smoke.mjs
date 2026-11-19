@@ -632,6 +632,41 @@ try {
   check(t.swipe === "k1,k2,k3,k4" && t.hold === "k2,k3,k1,k4" && t.saved === "k2,k3,k1,k4",
     "on a phone, holding a row drags it and saves the order; a swipe doesn't (" + JSON.stringify(t) + ")");
   await touchPhone.close();
+
+  console.log("-- Sort: by artist or title, view only");
+  await page.evaluate(() => { window.__saved = []; return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")); });
+  const sortOpen = async () => { await page.click("#cr-sort"); await page.waitForFunction(() => document.getElementById("cr-sortMenu").matches(":popover-open")); };
+  const srt = {};
+  srt.before = await rowOrder();
+  await sortOpen();
+  srt.focus = await page.evaluate(() => document.activeElement.value);
+  await page.click('#cr-sortMenu input[value="artist"]');
+  srt.artist = await rowOrder();
+  srt.menuShut = await page.evaluate(() => !document.getElementById("cr-sortMenu").matches(":popover-open"));
+  srt.bar = await page.evaluate(() => !document.getElementById("cr-sortBar").hidden && document.getElementById("cr-sortBarText").textContent);
+  srt.label = await page.evaluate(() => document.getElementById("cr-sort").getAttribute("aria-label") + "|" + document.getElementById("cr-sort").classList.contains("is-on"));
+  await sortOpen();
+  await page.click('#cr-sortMenu input[value="title"]');
+  srt.title = await rowOrder();
+  // dragging is off while sorted: a drag and Alt+↑ change nothing and save nothing
+  const d1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords');
+  const d4 = await box('#mainqueue .pvbar[data-key="k4"] .listwords');
+  await page.mouse.move(d1.x, d1.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(d1.x, d1.y + (d4.y + d4.h * 0.4 - d1.y) * i / 8);
+  await page.mouse.up();
+  await page.focus('#mainqueue .pvbar[data-key="k4"] .bumpsongs');
+  await page.keyboard.press("Alt+ArrowUp");
+  srt.afterDrag = await rowOrder();
+  srt.saved = await page.evaluate(() => window.__saved.length);
+  srt.stored = Object.keys(await listNow()).join();
+  await page.click("#cr-sortBack");
+  srt.back = await rowOrder();
+  srt.barGone = await page.evaluate(() => document.getElementById("cr-sortBar").hidden && document.getElementById("cr-sort").getAttribute("aria-label"));
+  check(srt.before === "k1,k2,k3,k4" && srt.focus === "order" && srt.artist === "k3,k2,k4,k1" && srt.menuShut && /^Showing by artist\. Your play order hasn't changed\.$/.test(srt.bar) && srt.label === "Sort: Artist|true" && srt.title === "k1,k3,k2,k4",
+    "Sort shows the playlist by artist or title, says so over the list, and marks its button (" + JSON.stringify(srt) + ")");
+  check(srt.afterDrag === "k1,k3,k2,k4" && srt.saved === 0 && srt.stored === "k1,k2,k3,k4" && srt.back === "k1,k2,k3,k4" && srt.barGone === "Sort: Your order",
+    "a sorted view never changes the play order: dragging is off, and Back to your order brings it back (" + JSON.stringify(srt) + ")");
   await page.evaluate(() => { ftapi.actions.reorderList = window.__reorder; $("#mainGrid").addClass("login"); });
 
   console.log("-- the stage's volume slider (a native range input)");

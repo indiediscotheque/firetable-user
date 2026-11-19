@@ -129,6 +129,7 @@ const FEATURES = [
   { row: "CR-25", name: "Rename this playlist", who: IN, via: [...listMenu, '#cr-listMenu [data-act="rename"]'], target: "#cr-renameInput" },
   { row: "CR-28", name: "Export the playlist as a list of songs", who: IN, via: listMenu, target: '#cr-listMenu [data-act="export"]' },
   { row: "CR-07", name: "Show only: Duplicates", who: IN, via: [...playlists, "#cr-showOnly"], target: "#cr-dupesOnly" },
+  { row: "CR-29", name: "Sort the playlist (view only)", who: IN, via: [...playlists, "#cr-sort"], target: '#cr-sortMenu input[value="artist"]' },
 
   // ── Recent, Fresh, Cards (RE) ──
   { row: "RE-01", name: "Recent plays", who: IN, via: ["#mm-history"], target: "#thehistory .pvbar" },

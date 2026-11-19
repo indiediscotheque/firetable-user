@@ -2992,7 +2992,8 @@ input.ft-filter {
    1. the playlist, its ⋮ menu (#cr-listMenu: all playlists, new, import,
       rename, shuffle, remove duplicates, merge, check for broken tracks,
       export, delete) and Find tracks (+);
-   2. the filter and Show only (#cr-showOnlyMenu: Remixes, Broken, Duplicates).
+   2. the filter, Show only (#cr-showOnlyMenu: Remixes, Broken, Duplicates)
+      and Sort (#cr-sortMenu: view only).
    The old buttons stay in the DOM for the menu to use. Shuffle keeps its own
    button on a computer, where there's room. While a new playlist is named,
    the row is the name box and Cancel. */
@@ -3049,6 +3050,54 @@ input.ft-filter {
 }
 .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly) input { width: 1.1rem; height: 1.1rem; }
 .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly) input::before { width: 0.6rem; height: 0.6rem; }
+/* Sort (#cr-sortMenu): view only, as menu rows with a radio each */
+#cr-sort { flex: none; }
+#cr-sort.is-on { color: var(--color-accent); }
+.cr-sortOpt {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-size: var(--fs-title);
+    cursor: pointer;
+}
+@media (hover: hover) {
+    .cr-sortOpt:hover { background: rgba(255, 255, 255, 0.08); }
+}
+@media (pointer: coarse) {
+    .cr-sortOpt { min-height: var(--tap-min); }
+}
+.cr-sortOpt input {
+    margin: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-grid;
+    place-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 1px solid var(--color-bg-t3);
+    border-radius: 50%;
+    background-color: var(--color-bg);
+    cursor: pointer;
+}
+.cr-sortOpt input::before {
+    content: "";
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: var(--color-accent);
+    transform: scale(0);
+    transition: transform var(--dur-fast) var(--ease-out);
+}
+.cr-sortOpt input:checked { border-color: var(--color-accent); }
+.cr-sortOpt input:checked::before { transform: scale(1); }
+.cr-sortOpt input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+/* The sorted view's note sits over the list; it doesn't stick, so the swap bar can */
+.cr-sortBar { position: relative; z-index: auto; }
+#mainqueue.cr-sorted .pvbar { cursor: default; }
 .ft-menu-sep { width: auto; height: 1px; margin: var(--pad1) 0.5rem; border: 0; background: var(--color-border); }
 
 #cancelqsearch { margin-left: auto; }
