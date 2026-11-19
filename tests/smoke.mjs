@@ -2001,6 +2001,29 @@ try {
   check(/current password/.test(acct.passMsg) && acct.shortPass === "bad", "changing the password checks what's typed first (" + acct.passMsg + " / " + acct.shortPass + ")");
   check(acct.nextTab === "settings-tab" && /^bad:/.test(acct.nameMsg), "the tabs follow the arrow keys; an empty name change says so (" + acct.nextTab + " / " + acct.nameMsg + ")");
 
+  console.log("-- Everyone's avatar style: a supermod picks one for the whole room");
+  const avatars = async () => dPage.evaluate(() => ({
+    style: firetable.roomAvatarStyle,
+    menu: document.getElementById("mo-avatarStyle").value,
+    options: document.getElementById("mo-avatarStyle").options.length,
+    // the DJ on the stage and the first person in the list (the header's is a placeholder in this pretend sign-in)
+    stage: (document.querySelector("#deck .avtr") || { style: {} }).style.backgroundImage || "",
+    people: ((document.querySelector("#allUsers .ft-avatar") || { style: {} }).style.backgroundImage || ""),
+    picker: !document.getElementById("avatarPickerSection").hidden
+  }));
+  const avDefault = await avatars();
+  await put("/roomSettings", { avatarStyle: "robohash:set4" });
+  await dPage.waitForFunction(() => firetable.roomAvatarStyle === "robohash:set4", null, { timeout: 5000 }).catch(() => {});
+  await sleep(300);
+  const avCats = await avatars();
+  await put("/roomSettings", null);
+  await dPage.waitForFunction((d) => firetable.roomAvatarStyle === d, avDefault.style, { timeout: 5000 }).catch(() => {});
+  const avBack = await avatars();
+  check(avDefault.menu === "" && avDefault.options === 17 && !avDefault.picker, "Mod tools offers the room's default and the 16 sets; members have no picker of their own (" + JSON.stringify(avDefault) + ")");
+  check(avCats.style === "robohash:set4" && avCats.menu === "robohash:set4" && /set=set4/.test(avCats.stage) && (!avCats.people || /set=set4/.test(avCats.people)) && !/set=set4/.test(avDefault.stage),
+    "a supermod's choice dresses everyone at once: the stage and the people redrawn (" + JSON.stringify({ before: avDefault.stage.slice(-40), after: avCats.stage.slice(-40), people: avCats.people.slice(-40) }) + ")");
+  check(avBack.style === avDefault.style && avBack.menu === "", "clearing it goes back to the room's default (" + avBack.style + ")");
+
   console.log("-- Discover: members pick cards to feature on their DJ page");
   await put("/users/dj1/featured", ["cardP", "cardA"]); // cardA isn't dj1's: left out
   const featured = await dPage.evaluate(async () => {

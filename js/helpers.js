@@ -63,6 +63,26 @@ firetable.utilities = {
   },
 
   /**
+   * Draw every avatar on the page again, after the room's avatar style
+   * changed (a supermod's choice in Mod tools): those marked data-avatar-uid,
+   * your own in the header, and the people list and the stage.
+   */
+  redrawAvatars: function () {
+    var known = firetable.knownNames || {};
+    // avatars drawn with data-avatar-uid (chat, Recent, the inbox, Discover's faces)
+    var els = document.querySelectorAll("[data-avatar-uid]");
+    for (var i = 0; i < els.length; i++) {
+      var id = els[i].getAttribute("data-avatar-uid");
+      var size = els[i].getAttribute("data-avatar-size") || null;
+      els[i].style.backgroundImage = "url(" + JSON.stringify(firetable.utilities.avatarURL(id, known[id], size)) + ")";
+    }
+    // your own in the header, then the people and the stage drawn again
+    if (ftapi.uid) $("#loggedInUser .ft-avatar").css("background-image", "url(" + firetable.utilities.avatarURL(ftapi.uid, firetable.uname) + ")");
+    if (ftapi.users) ftapi.events.emit("usersChanged", ftapi.users);
+    if (firetable.tableData) ftapi.events.emit("tableChanged", firetable.tableData);
+  },
+
+  /**
    * Remember everyone's latest name, and redraw every avatar already on the
    * page (chat, Recent, inbox) for anyone whose name changed, since robohash
    * faces are made from the name. Avatars opt in with data-avatar-uid (and

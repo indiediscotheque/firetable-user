@@ -2019,7 +2019,28 @@ firetable.ui.setupMiscEvents = function () {
     if (wasAtBottom) firetable.utilities.scrollToBottom();
   });
 
-  // ── Avatar style picker ──
+  // ── Everyone's avatar style: a supermod's choice (Mod tools), else the room's default ──
+  // the choices are the Profile picker's (members no longer choose their own)
+  $('#avatarStylePicker option').each(function () { $('#mo-avatarStyle').append($(this).clone()); });
+  function applyRoomAvatars(settings) {
+    var chosen = firetable.utilities.normalizeAvatarStyle(settings && settings.avatarStyle);
+    $('#mo-avatarStyle').val(chosen || '');
+    var style = chosen || firetable.roomAvatarDefault || null;
+    if (style === firetable.roomAvatarStyle) return;
+    firetable.roomAvatarStyle = style;
+    if (style && style.indexOf('robohash:') === 0) firetable.avatarset = style.slice(9);
+    firetable.utilities.redrawAvatars();
+  }
+  ftapi.events.on('roomSettingsChanged', applyRoomAvatars);
+  if (ftapi.roomSettings) applyRoomAvatars(ftapi.roomSettings);
+  $('#mo-avatarStyle').on('change', function () {
+    var box = this, val = box.value || null, label = $(box).find('option:selected').text();
+    ftapi.actions.setRoomSetting('avatarStyle', val).then(function (saved) {
+      if (saved) firetable.ui.toast(val ? 'Everyone is ' + label + ' now' : 'Avatars are back to the room\'s default', 'success');
+      else applyRoomAvatars(ftapi.roomSettings);
+    });
+  });
+
   $('#avatarStylePicker').on('change', function () {
     var val = $(this).val();
     firetable.avatarStyle = val;

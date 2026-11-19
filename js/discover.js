@@ -2952,8 +2952,26 @@ firetable.discover = (function () {
   function openSearch() {
     if (D.mode !== "discover") setMode("discover", { remember: true });
     var input = document.getElementById("dQ");
-    if (input) { input.focus(); input.select(); }
+    if (input) { input.focus(); input.select(); keepFocusFromPlayers(input); }
     lib("artistIndex"); // ready for the first letters
+  }
+
+  /**
+   * YouTube's player takes the focus itself when it finishes loading, so
+   * opening search while the room's video starts sent the first letters to
+   * the video. For a moment after, focus that jumps from `el` into a player's
+   * frame comes back to `el`; anything the person does themselves stands.
+   */
+  function keepFocusFromPlayers(el) {
+    var until = Date.now() + 2000;
+    function back() {
+      setTimeout(function () {
+        var a = document.activeElement;
+        if (Date.now() < until && a && a.tagName === "IFRAME" && el.isConnected) el.focus();
+      }, 0);
+    }
+    el.addEventListener("blur", back);
+    setTimeout(function () { el.removeEventListener("blur", back); }, 2000);
   }
 
   function setView(view, sub) {

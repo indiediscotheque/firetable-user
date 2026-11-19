@@ -888,7 +888,7 @@
 						<h3 class="ac-label" id="ac-grabLabel">Your grabs</h3>
 						<div class="grabStatsBox"><i class="material-symbols-outlined" aria-hidden="true">playlist_add</i><p id="grabStats" aria-live="polite"></p></div>
 					</section>
-					<div id="avatarPickerSection" class="ac-section">
+					<div id="avatarPickerSection" class="ac-section" hidden><!-- members don't choose: a supermod sets everyone's (Mod tools, #mo-avatarStyle) -->
 					<h3 class="ac-label"><label for="avatarStylePicker">Avatar</label></h3>
 					<select id="avatarStylePicker">
 						<optgroup label="Robohash">
@@ -1051,6 +1051,13 @@
 					<section class="ac-section" aria-labelledby="mo-activeLabel">
 						<h3 class="ac-label" id="mo-activeLabel">Active suspensions</h3>
 						<div id="activeSuspensions"></div>
+					</section>
+					<section class="ac-section" aria-labelledby="mo-avatarLabel">
+						<h3 class="ac-label" id="mo-avatarLabel"><label for="mo-avatarStyle">Everyone's avatars</label></h3>
+						<select id="mo-avatarStyle" aria-describedby="mo-avatarHint">
+							<option value="">The room's default</option>
+						</select>
+						<p class="settingHint" id="mo-avatarHint">One style for everyone in the room: the stage, the people, chat and Discover. It changes for everyone at once. The room's default is the season's (monsters in October), or config.js's avatarset.</p>
 					</section>
 				</div>
 			</div>

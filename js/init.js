@@ -41,8 +41,10 @@ firetable.init = function () {
 
   // Room avatar theme: config.js avatarset (e.g. "set2") if set, otherwise the
   // seasonal theme (monsters in October). It overrides every user's saved style.
-  firetable.roomAvatarStyle = firetable.utilities.normalizeAvatarStyle(ftconfigs.avatarset)
+  // A supermod's choice (roomSettings/avatarStyle, Mod tools) wins over both once it loads (ui.js).
+  firetable.roomAvatarDefault = firetable.utilities.normalizeAvatarStyle(ftconfigs.avatarset)
     || firetable.utilities.seasonalAvatarStyle(new Date());
+  firetable.roomAvatarStyle = firetable.roomAvatarDefault;
   if (firetable.roomAvatarStyle && firetable.roomAvatarStyle.indexOf("robohash:") === 0) {
     firetable.avatarset = firetable.roomAvatarStyle.slice(9);
   }
