@@ -52,6 +52,22 @@ function onYouTubeIframeAPIReady() {
       }
     }
   });
+  keepFocusOut('playerArea');
+}
+
+/**
+ * The YouTube players only show video (the stage's screen takes no clicks, the
+ * preview player is off screen), but YouTube's own page can take the keyboard
+ * focus as a video loads: out of the chat box mid-message, out of the search
+ * box just opened. Inert, they never can; they still play, and the site still
+ * runs them through the API.
+ * @param {string} id - the element YT.Player replaced with its iframe
+ */
+function keepFocusOut(id) {
+  var frame = document.getElementById(id);
+  if (!frame || frame.tagName !== 'IFRAME') return;
+  frame.inert = true;
+  frame.setAttribute('tabindex', '-1');
 }
 
 /**
@@ -324,6 +340,7 @@ firetable.overlayPreview = (function () {
         onError: function () { stop(); firetable.ui.toast("That song can't be previewed here."); }
       }
     });
+    keepFocusOut("pvOverPlayer");
   }
   function stop() {
     if (!state.id) return;

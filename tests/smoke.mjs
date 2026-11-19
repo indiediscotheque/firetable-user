@@ -133,6 +133,10 @@ try {
 
   console.log("-- Settings: previews play over the room");
   await page.waitForFunction(() => firetable.ytLoaded, null, { timeout: 30000 }).catch(() => {});
+  // YouTube's page can take the keyboard focus as a video loads (out of the chat
+  // or search box); the stage's player is inert, so it never can
+  const ytFrame = await page.evaluate(() => { const f = document.getElementById("playerArea"); return f && f.tagName === "IFRAME" ? { inert: f.inert, tab: f.getAttribute("tabindex") } : null; });
+  check(!ytFrame || (ytFrame.inert && ytFrame.tab === "-1"), "the stage's YouTube player can't take the keyboard focus (" + JSON.stringify(ytFrame) + ")");
   const over = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     if (!firetable.ytLoaded) return { skipped: true };
