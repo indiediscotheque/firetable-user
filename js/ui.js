@@ -1145,7 +1145,9 @@ firetable.ui.tooltip = (function () {
 
     // ── Queue list: overflow-only title tooltip for track names ──
     $('#queuelist').on('mouseenter.ft-tooltip', '.listwords', function () {
-      if (this.scrollWidth > this.offsetWidth) show(this, $(this).text().trim());
+      // rows show Title · Artist; the tip gives the stored "Artist - Title"
+      var name = this.querySelector('.q-name') || this;
+      if (name.scrollWidth > name.offsetWidth) show(this, $(this).closest('.pvbar').attr('data-tags') || $(this).text().trim());
     }).on('mouseleave.ft-tooltip', '.listwords', hide);
 
     // ── Queue list: title-based tooltips for song action buttons ──
