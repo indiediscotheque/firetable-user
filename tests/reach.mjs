@@ -173,12 +173,16 @@ async function onScreen(page, sel, timeout = 3000) {
   return loc.evaluate((el) => {
     const r = el.getBoundingClientRect();
     if (r.bottom <= 0 || r.top >= innerHeight || r.right <= 0 || r.left >= innerWidth) return "off screen";
-    // near the top left of the part that's on screen: a long list's middle can sit under the player bar
+    // something a person can tap: the middle of the part on screen, or near its top left
+    // (a long list's middle can sit under the player bar; an avatar's corner is see-through)
     const top = Math.max(r.top, 0), left = Math.max(r.left, 0);
-    const x = Math.min(innerWidth - 1, left + Math.min((Math.min(r.right, innerWidth) - left) / 2, 20));
-    const y = Math.min(innerHeight - 1, top + Math.min((Math.min(r.bottom, innerHeight) - top) / 2, 20));
-    const hit = document.elementFromPoint(x, y);
-    if (!hit || el === hit || el.contains(hit) || hit.contains(el)) return "";
+    const bottom = Math.min(r.bottom, innerHeight), right = Math.min(r.right, innerWidth);
+    const points = [[(left + right) / 2, (top + bottom) / 2], [left + Math.min((right - left) / 2, 20), top + Math.min((bottom - top) / 2, 20)]];
+    let hit = null;
+    for (const [x, y] of points) {
+      hit = document.elementFromPoint(Math.min(innerWidth - 1, x), Math.min(innerHeight - 1, y));
+      if (!hit || el === hit || el.contains(hit) || hit.contains(el)) return "";
+    }
     return "covered by " + (hit.id ? "#" + hit.id : hit.tagName.toLowerCase() + (hit.className && typeof hit.className === "string" ? "." + hit.className.trim().split(/\s+/).join(".") : ""));
   });
 }
