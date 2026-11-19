@@ -34,7 +34,7 @@ Keep this table current as steps ship (one line per step in [04-step-plan.md](04
 |---|---|
 | 0 Foundations | done: 0.1 (tokens), 0.2 (the screenshot harness), 0.4 (nothing lost) and 0.6 (accessibility) shipped; 0.3 (the opt-in switch) and 0.5 (icons up front) dropped |
 | 1 Inside today's layout | 1.15 and 1.16 shipped in part (the owner's request, November 15, 2026); 1.8 superseded; 1.14 dropped; 1.9 moved to Phase 2; 1.3, 1.5 and 1.10 narrowed by what Phase 2 did (see the step plan's notes) |
-| 2 Discover (round 4) | 2.5 shipped (joining, logging in, the account menu and Account tab); 2.1 and 2.3 shipped (the player bar along the bottom, the On Air card, and the right column for Playlists and Chat); 2.3b shipped (the full-screen player, for TVs and second screens, in Discover and Live, replacing the Now playing tab); 2.3c shipped (the player along the bottom of the whole site with the stage's utilities in it, audio that stays put between Discover and Live, modern buttons and sliders, the chat for members only) |
+| 2 Discover (round 4) | 2.4 shipped (Home leads with New this week, Not played live yet, the top DJs); 2.5 shipped (joining, logging in, the account menu and Account tab); 2.1 and 2.3 shipped (the player bar along the bottom, the On Air card, and the right column for Playlists and Chat); 2.3b shipped (the full-screen player, for TVs and second screens, in Discover and Live, replacing the Now playing tab); 2.3c shipped (the player along the bottom of the whole site with the stage's utilities in it, audio that stays put between Discover and Live, modern buttons and sliders, the chat for members only) |
 | 3 The new room | on hold |
 | 4 Phones | not started; 4.6 (the mini player) mostly shipped with 2.3 and 2.3c; 4.0, measure first, added. Live on a phone got Chat first, −m:ss time left and two-tap remove (November 15, 2026) |
 | 5 Clean-up | not started (5.1, the default switch, dropped; 5.3, Discover always on, approved and moved up the order) |
@@ -47,7 +47,7 @@ Phase 2's player work is in, plus a stream of owner requests. What isn't in is t
 
 1. ~~0.2 Screenshot harness~~ ✅ and ~~0.4 "Nothing lost"~~ ✅ (`tests/reach.mjs`: where every control lives, checked in CI).
 2. ~~0.6 Accessibility check~~ ✅ (`tests/a11y.mjs`) and ~~0.1 tokens~~ ✅ (type, space, radius, targets and motion on `:root`; colours stay).
-3. **2.4 Home leads with new releases** and **2.6 New and Charts, with 1.9's tied ranks.** New and Charts matter most (the owner, November 15, 2026).
+3. ~~2.4 Home leads with new releases~~ ✅, then **2.6 New and Charts, with 1.9's tied ranks.** New and Charts matter most (the owner, November 15, 2026).
 4. **The crate: finish 1.16 and 1.15, then 1.17 Select several.** The owner started these; each stays in today's skin.
 5. **5.3 Discover always on.** Approved; done early because every later step then has one way to work instead of two. Safe once 0.4 guards the controls.
 6. **2.8 One song menu everywhere.** The crate row's ⋮ grew in 1.15; Recent's and Discover's menus now lag it.

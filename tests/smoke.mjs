@@ -1050,6 +1050,8 @@ try {
     on: document.body.classList.contains("ft-discover"),
     tabs: [...document.querySelectorAll("#modeTabs .tab")].map((b) => b.textContent.trim() + (b.classList.contains("on") ? "*" : "")).join(),
     cards: document.querySelectorAll("#dBrowse .ft-cards .pvbar").length,
+    befirst: [...document.querySelectorAll("#dBrowse section")].filter((sec) => /Not played live yet/.test(sec.querySelector("h2")?.textContent || ""))
+      .map((sec) => sec.querySelectorAll(".pvbar").length + ":" + [...sec.querySelectorAll(".d-befirst")].map((e) => e.textContent).join() + ":" + sec.querySelector("[data-newfilter]")?.textContent).join(),
     chart: [...document.querySelectorAll("#dBrowse .ft-rows .hist-timestamp")].slice(0, 2).map((e) => e.textContent).join(),
     unplayed: [...document.querySelectorAll("#dBrowse .fresh-meta .histdj")].some((e) => e.textContent === "Not played live yet"),
     stageHidden: getComputedStyle(document.getElementById("stage")).opacity === "0",
@@ -1066,11 +1068,61 @@ try {
       return text;
     })()
   }));
-  check(home.on && home.tabs === "Discover*,Live" && home.cards === 3 && home.chart === "#1,#2" && home.unplayed && home.stageHidden,
+  check(home.on && home.tabs === "Discover*,Live" && home.cards === 4 && home.befirst === "1:Be the first:All 1" && home.chart === "#1,#2" && home.unplayed && home.stageHidden,
     "a visitor lands on Discover: new releases, the week's chart, the stage out of sight (" + JSON.stringify(home) + ")");
   check(!/messages this hour|great tune/.test(home.card), "the chat is for members: a visitor's full-screen player shows none of it");
   check(home.noLine && /On air|Live/.test(home.bar) && /Listen in|Stop listening/.test(home.bar) && /here/.test(home.card),
     "the room is in the bar (On air / Live, Listen in) and the full-screen player (who is here), with no second room line above search (" + JSON.stringify({ bar: home.bar, line: !home.noLine }) + ")");
+
+  console.log("-- Discover Home leads with New this week: the most played, who found it, Play the week's");
+  {
+    // seven releases since Friday; two have 5 plays, and the newer of them leads
+    const DAYMS = 86400000, fri = new Date();
+    fri.setDate(fri.getDate() - ((fri.getDay() + 2) % 7));
+    const day = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    const today = day(new Date()), friday = day(fri);
+    const week = [["wk01", "Week One", 2], ["wk02", "Week Two", 5], ["wk03", "Week Three", 5], ["wk04", "Week Four", 0], ["wk05", "Week Five", 1], ["wk06", "Week Six", 0], ["wk07", "Week Seven", 3]]
+      .map(([cid, t, plays], i) => Object.assign({ cid: cid + "aaaaa", a: "Band " + (i + 1), t, dur: 200 + i, rel: i === 2 ? today : friday, relSrc: "yt", plays },
+        plays ? { first: now - DAYMS, dj: "dj1", djid: "dj1" } : {}));
+    const tracks = week.concat(discover(now).new.tracks);
+    const inWeek = tracks.filter((t) => t.rel >= friday).length; // the seed's own recent releases count too
+    await put("/discover/new", { at: now, days: 90, tracks });
+    await dPage.evaluate(() => { location.hash = "#discover"; });
+    await dPage.waitForFunction(() => document.querySelector("#dBrowse .d-lead"), null, { timeout: 10000 }).catch(() => {});
+    const lead = await dPage.evaluate(async () => {
+      const el = document.querySelector("#dBrowse .d-lead");
+      if (!el) return null;
+      const out = {
+        title: el.querySelector(".d-leadtitle").textContent,
+        kicker: el.querySelector(".d-kicker").textContent,
+        found: el.querySelector(".d-found").textContent.replace(/\s+/g, " ").trim(),
+        playAll: el.querySelector(".d-playall span").textContent,
+        under: el.parentElement.querySelectorAll(".ft-cards .pvbar").length,
+        all: el.parentElement.querySelector("[data-newfilter]").getAttribute("data-newfilter"),
+        order: [...document.querySelectorAll("#dBrowse section h2")].map((h) => h.textContent).slice(0, 4).join("|")
+      };
+      // the test's videos aren't real: keep the player from skipping past them (the skip waits 800ms)
+      window.__skip = firetable.discover.onFailed;
+      firetable.discover.onFailed = () => {};
+      el.querySelector(".d-playall").click();
+      await new Promise((r) => setTimeout(r, 300));
+      out.playing = firetable.discover.state().playing;
+      return out;
+    });
+    // on a Friday both came out today: then the first of them leads
+    const want = today === friday ? "Week Two" : "Week Three";
+    check(lead && lead.title === want && lead.kicker === "The week's most played" && /Found by dj1/.test(lead.found) && /5 plays/.test(lead.found),
+      "the lead is the week's most played release (the newer on a tie), with who found it (" + JSON.stringify(lead) + ")");
+    check(lead && lead.playAll === "Play the week's " + inWeek && lead.under === 6 && lead.all === "days90" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),
+      "Play the week's " + inWeek + " plays from the lead; the next six sit under it (" + JSON.stringify(lead) + ")");
+    check(lead && /^New this week\|Not played live yet\|Room chart/.test(lead.order), "Home's order: New this week, Not played live yet, the chart (" + (lead && lead.order) + ")");
+    await dPage.evaluate(async () => {
+      if (firetable.discover.state().playing) document.querySelector("#dMini .pb-main")?.click();
+      await new Promise((r) => setTimeout(r, 1000));
+      firetable.discover.onFailed = window.__skip;
+    });
+    await put("/discover/new", discover(now).new);
+  }
 
   console.log("-- Discover: playing a song uses the room's player, and keeps playing in Live");
   const playing = await dPage.evaluate(async () => {

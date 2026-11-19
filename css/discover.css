@@ -1997,3 +1997,116 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     .pvf-visual { display: none; }
     .pvf-now { grid-template-columns: minmax(0, 1fr); align-items: end; }
 }
+
+/* ============================================
+   Home: New this week leads (redesign step 2.4)
+   ============================================ */
+#dBrowse .pvbar.d-lead {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-4);
+    padding: 0;
+    background: none;
+}
+#dBrowse .d-lead .d-leadart {
+    flex: none;
+    width: clamp(8.5rem, 28vw, 13rem); /* 208px at 1440 */
+    aspect-ratio: 1;
+    margin: 0;
+    border-radius: var(--radius-btn);
+    background-size: cover;
+    background-position: center;
+}
+.d-leadtext {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+}
+.d-kicker {
+    margin: 0;
+    color: var(--color-text-subtle);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.d-leadtitle {
+    margin: 0;
+    color: var(--color-text-light);
+    font-size: var(--fs-h2);
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.d-leadtitle .d-sheetlink { cursor: pointer; }
+.d-leadartist {
+    margin: 0;
+    color: var(--color-text-subtle);
+    font-size: var(--fs-body);
+}
+.d-leadfound {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) 0.35rem;
+    margin: 0;
+    color: var(--color-text-subtle);
+    font-size: var(--fs-meta);
+}
+#dBrowse .d-leadfound .ft-avatar { width: 1.25rem; height: 1.25rem; flex: none; }
+#dBrowse .d-lead .d-leadart .previewicon { width: 3.25rem; height: 3.25rem; font-size: 2rem; }
+/* the panel's main action: a dark button with gold text (round 4: no big gold fills) */
+#dBrowse .d-leadacts .butt.d-playall {
+    background: var(--color-bg-t2);
+    color: var(--color-accent);
+    box-shadow: none;
+}
+#dBrowse .d-leadacts .butt.d-playall:hover,
+#dBrowse .d-leadacts .butt.d-playall:focus-visible { background: var(--color-bg-t3); }
+.d-leadacts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+.d-leadacts .row-icon { position: static; }
+@media only screen and (max-width: 639px) {
+    #dBrowse .pvbar.d-lead { align-items: flex-start; gap: var(--space-3); }
+    .d-leadtitle { font-size: var(--fs-h3); }
+}
+
+/* Home: the DJs with the most plays, as faces */
+.d-djrow {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--space-3);
+}
+@media only screen and (max-width: 639px) {
+    .d-djrow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.d-djtile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    color: var(--color-text);
+    text-align: center;
+    text-decoration: none;
+}
+#dBrowse .d-djtile .ft-avatar { width: 4rem; height: 4rem; }
+.d-djname {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.d-djtile .d-num { color: var(--color-text-subtle); font-size: var(--fs-meta); }
+.d-djtile:hover .d-djname,
+.d-djtile:focus-visible .d-djname { color: var(--color-accent); }
+
+/* Home: a card's "Be the first" */
+.fresh-meta .d-befirst { flex: none; }

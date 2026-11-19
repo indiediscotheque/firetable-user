@@ -152,7 +152,18 @@ export function livedIn(now, people) {
     queues: Object.fromEntries(Object.values(people).map((p) => [p.uid, queue()])),
     playlists: Object.fromEntries(Object.values(people).map((p) => [p.uid, playlists])),
     tagUpdate: { cid: song.cid, adamData: { track_name: song.title, artist: song.artist, playcount: 67 } },
-    discover: withArt(Object.assign(discover(now), { lib: library(now) }))
+    discover: withArt(Object.assign(discover(now), { new: thisWeek(discover(now).new), lib: library(now) }))
   });
-    return { data, decks, song };
+    /** A full week of new releases since Friday (Home leads with them from six), before the seed's own. */
+  function thisWeek(feed) {
+    const fri = new Date(now);
+    fri.setDate(fri.getDate() - ((fri.getDay() + 2) % 7));
+    const friday = fri.getFullYear() + "-" + String(fri.getMonth() + 1).padStart(2, "0") + "-" + String(fri.getDate()).padStart(2, "0");
+    const week = [["Kartell", "Riviera", 4], ["Moods", "Wildflower", 2], ["Glider", "Night Drive", 1], ["Satin Jackets", "You Make Me Feel Good", 0],
+      ["Poolside", "Harvest Moon", 3], ["Breakbot", "Baby I'm Yours", 0], ["Kraak & Smaak", "Squeeze Me", 1]].map(([a, t, plays], i) =>
+      Object.assign({ cid: VIDS[(i + 3) % VIDS.length], a, t, dur: 180 + i * 17, rel: friday, relSrc: "yt", plays, g: "Nu-Disco" },
+        plays ? { first: now - (i + 1) * 3600000, dj: i % 2 ? "dj2" : "dj1", djid: i % 2 ? "dj2" : "dj1" } : {}));
+    return Object.assign({}, feed, { tracks: week.concat(feed.tracks) });
+  }
+  return { data, decks, song };
 }

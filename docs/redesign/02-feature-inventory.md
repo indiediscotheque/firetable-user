@@ -230,7 +230,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| DI-01 | Home: New this month, Room chart, Rising, Theme nights, Genres, On this day, Recent plays | All | `viewHome` | 2.4 |
+| DI-01 | Home: New this week (or New this month), Not played live yet, Room chart, DJs, Rising, Theme nights, Genres, On this day, Recent plays | All | `viewHome`, `leadCard`, `weekNew`, `unplayedNew`, `topDjs` | ✅ 2.4 (November 19, 2026) |
 | DI-02 | New (this month, 90 days, not played live yet; grid or list) | All | `viewNew` | 2.6 one filter menu instead of chips |
 | DI-03 | Charts (week, month, year, all time; previous/next; genre; new releases only; movement; weeks; fires; share image; embed) | All | `viewCharts`, `chartImage`, `embedDialog`, `embed/chart/` | 2.6 two drop-downs + Share; ties shown as "=" (1.9) |
 | DI-04 | Genres: sound map and tiles | All | `viewGenres`, `layoutMap`, `spreadMap`, `mosaic` | 2.7 label collisions, distinct covers |
@@ -255,7 +255,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | DI-23 | (new) On Air card: the room in Discover's right column while you're not in it | All | today: "Pick any song to play it here" | ✅ 2.1: `#pv-onair` (`roomPanel`); since 2.3b the room in full is the full-screen player: the room's song and facts, decks, Listen in, the chat, Just played; the bar keeps On air / Listen in (`roomPanel` removed) |
 | DI-24 | (new) Found by, and Play it in the room, in the player | All / M | today: first and last plays in the Now playing panel; Save | ✅ 2.3: Play it in the room (`.pb-toroom`, `toRoom` / `undoToRoom`); since 2.3b Found by is in the full-screen player (`#pv-fhist`), with the note and Undo (`#pv-toRoomNote`) |
 | DI-27 | (new) The full-screen player: for a TV or a second screen, in Discover and Live | All | — | ✅ 2.3b, 2.3c: `#pv-full` (`openFull`, `renderFull`, `closeFull`), from the bar (`#fullscreenBtn`, `.pb-expand`, `#pv-art`) or F; the stage's `#screenControl` moved in (screen off: the song's own artwork; on: the video). Since November 15, 2026 (the owner: a passive listening mode) no DJs / Chat tabs or side panel: the cover beside the words on wide screens, filling the width on phones; under the song, Next (Play now), Play it in the room's Undo, and Listen in / Back to it (`fullNext`, `#pv-fnext`). The decks, Just played and the chat stay in Live and Discover |
-| DI-25 | (new) New this week leads Home; Not played live yet, "Be the first" | All | today: New's "not played live yet" filter | 2.4, 2.6 |
+| DI-25 | (new) New this week leads Home; Not played live yet, "Be the first" | All | `weekNew` (releases since Friday), `leadCard`, `unplayedNew`, `newHead` (links into New on a filter) | ✅ 2.4 (November 19, 2026); New's own "This week" filter comes with 2.6 |
 | DI-26 | (new) The room on the sound map | All | — | 2.7 (the trail needs the bot's genre on recent plays) |
 | DI-28 | (new) Tempo pages: a song's BPM tag (sheet, full-screen player) opens the songs played here at that tempo, most played first, then those within 2 BPM; slower / faster, half and double time, Play all, Save all | All | `viewTempo`, `tempoPage`, `tempoTag`, `#discover/bpm/<n>`, reads `bpm/` (indexed by `bpm` in the hostbot's rules) | ✅ added November 15, 2026; the BPM tag is in the tags' own font |
 
