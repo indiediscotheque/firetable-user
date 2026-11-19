@@ -6,11 +6,14 @@
 # - reach ("nothing lost"): every control people use is still there and can
 #   be reached, as a visitor, a member, the DJ on deck and a supermod, at 390,
 #   1024 and 1440 wide (the redesign's step 0.4)
+# - a11y: axe-core and a contrast check in each main view, as a visitor, a
+#   member and a supermod, at 390 and 1440 wide; fails on a serious or
+#   critical finding not in its allowlist (the redesign's step 0.6)
 # - rules: the site's reads and writes, as real signed-in accounts, against
 #   the hostbot's database rules (firetable-hostbot master). Fails on any write
 #   or read the rules refuse
 # Run the same locally (Java 21 needed):
-#   cd tests && npm ci && npx playwright install chromium && npm run unit && npm run smoke && npm run reach
+#   cd tests && npm ci && npx playwright install chromium && npm run unit && npm run smoke && npm run reach && npm run a11y
 #   HOSTBOT_RULES=../../firetable-hostbot/firebase-rules.json npm run rules
 # They load the CDN libraries and YouTube's player API, so each suite gets a
 # second try before it fails. On master they run as part of the deploy
@@ -74,6 +77,13 @@ jobs:
           export JAVA_HOME="$JAVA_HOME_21_X64" PATH="$JAVA_HOME_21_X64/bin:$PATH"
           cd tests
           npm run reach || { echo "::warning::Nothing-lost check failed; one more try (CDNs and YouTube can be slow)"; npm run reach; }
+
+      - name: Accessibility
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64" PATH="$JAVA_HOME_21_X64/bin:$PATH"
+          cd tests
+          npm run a11y || { echo "::warning::Accessibility check failed; one more try (CDNs and YouTube can be slow)"; npm run a11y; }
 
       - name: Check out the hostbot's database rules
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
