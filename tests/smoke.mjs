@@ -7,7 +7,7 @@
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { chromium } from "playwright";
-import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep, openPage } from "./harness.mjs";
+import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep, openPage, stubAvatars } from "./harness.mjs";
 import { youtubeSong as seedSong, room, discover, library } from "./seed.mjs";
 
 const NS = "demo-smoke";
@@ -25,6 +25,9 @@ let failures = 0;
 const check = (ok, msg) => { console.log((ok ? "  PASS " : "  FAIL ") + msg); if (!ok) failures++; };
 
 const browser = await chromium.launch(launchOptions());
+// every context answers avatar requests itself (see stubAvatars)
+const newContext = browser.newContext.bind(browser);
+browser.newContext = async (opts) => { const c = await newContext(opts); await stubAvatars(c); return c; };
 const context = await browser.newContext();
 await context.grantPermissions(["notifications"], { origin: SITE.slice(0, -1) });
 const page = await context.newPage();

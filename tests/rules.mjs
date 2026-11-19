@@ -11,7 +11,7 @@
 import { readFileSync, existsSync } from "fs";
 import { join, resolve } from "path";
 import { chromium } from "playwright";
-import { ROOT, DB, AUTH, policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, openPage } from "./harness.mjs";
+import { ROOT, DB, AUTH, policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, openPage, stubAvatars } from "./harness.mjs";
 
 const NS = "demo-rules";
 const put = putAs(NS);
@@ -59,7 +59,9 @@ const check = (ok, msg) => { console.log((ok ? "  PASS " : "  FAIL ") + msg); if
 
 /** A page signed in as `email`, recording every read or write the database refuses. */
 async function signedIn(email, uid) {
-  const page = await (await browser.newContext()).newPage();
+  const ctx = await browser.newContext();
+  await stubAvatars(ctx);
+  const page = await ctx.newPage();
   const denied = [], errors = [];
   page.on("console", (m) => { if (/permission[_ ]denied/i.test(m.text())) denied.push(m.text().replace(/^.*FIREBASE WARNING:\s*/, "")); });
   page.on("pageerror", (e) => errors.push(e.message));

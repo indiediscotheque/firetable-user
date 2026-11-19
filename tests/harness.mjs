@@ -136,6 +136,20 @@ export async function logInAs(page, email, password, uid) {
     .catch(async () => { throw new Error("couldn't sign in as " + email + ": " + await page.evaluate(() => window.__loginError)); });
 }
 
+/** Avatars from other sites: the live site's robots and DiceBear's. */
+const AVATARS = /^https:\/\/((www\.)?indiediscotheque\.com\/robots\/|api\.dicebear\.com\/)/;
+
+/**
+ * Answer every avatar request with a local picture. Tests that don't look at
+ * the avatars themselves shouldn't wait on the live site's avatar server: on
+ * one CI runner its requests hung, the page's load event never came, and
+ * whatever waits for it (p5.js's glitch canvas) never started.
+ */
+export async function stubAvatars(context) {
+  const png = readFileSync(join(ROOT, "favicon.png"));
+  await context.route(AVATARS, (route) => route.fulfill({ status: 200, contentType: "image/png", body: png }));
+}
+
 /** Pictures from other sites: avatars (the live site's robots), YouTube's and SoundCloud's covers. */
 export const PICTURES = /^https:\/\/((www\.)?indiediscotheque\.com\/robots\/|api\.dicebear\.com\/|i\.ytimg\.com\/|img\.youtube\.com\/|i\d*\.sndcdn\.com\/)/;
 const CACHE = join(ROOT, "tests", "screens", ".cache");
