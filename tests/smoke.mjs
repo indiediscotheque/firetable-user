@@ -137,6 +137,17 @@ try {
   // or search box); the stage's player is inert, so it never can
   const ytFrame = await page.evaluate(() => { const f = document.getElementById("playerArea"); return f && f.tagName === "IFRAME" ? { inert: f.inert, tab: f.getAttribute("tabindex") } : null; });
   check(!ytFrame || (ytFrame.inert && ytFrame.tab === "-1"), "the stage's YouTube player can't take the keyboard focus (" + JSON.stringify(ytFrame) + ")");
+  // and if it takes it all the same, the focus goes back where it was
+  const focusBack = await page.evaluate(async () => {
+    const f = document.getElementById("playerArea");
+    const box = document.getElementById("chatText") || document.querySelector("input[type=text], textarea");
+    if (!f || f.tagName !== "IFRAME" || !box) return { skipped: true };
+    box.focus();
+    f.inert = false; f.focus(); f.inert = true; // as YouTube's page taking it
+    await new Promise((r) => setTimeout(r, 50));
+    return { back: document.activeElement === box, was: box.id || box.name || box.tagName };
+  });
+  check(focusBack.skipped || focusBack.back, "if YouTube's player takes the focus all the same, it goes back where it was (" + JSON.stringify(focusBack) + ")");
   const over = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     if (!firetable.ytLoaded) return { skipped: true };
