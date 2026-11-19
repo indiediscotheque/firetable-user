@@ -154,11 +154,10 @@ export function livedIn(now, people) {
     tagUpdate: { cid: song.cid, adamData: { track_name: song.title, artist: song.artist, playcount: 67 } },
     discover: withArt(Object.assign(discover(now), { new: thisWeek(discover(now).new), lib: library(now) }))
   });
-    /** A full week of new releases since Friday (Home leads with them from six), before the seed's own. */
+    /** A full week of new releases from the last few days (Home leads with them from six), before the seed's own. */
   function thisWeek(feed) {
-    const fri = new Date(now);
-    fri.setDate(fri.getDate() - ((fri.getDay() + 2) % 7));
-    const friday = fri.getFullYear() + "-" + String(fri.getMonth() + 1).padStart(2, "0") + "-" + String(fri.getDate()).padStart(2, "0");
+    const day = new Date(now - 3 * DAY);
+    const friday = day.getFullYear() + "-" + String(day.getMonth() + 1).padStart(2, "0") + "-" + String(day.getDate()).padStart(2, "0");
     const week = [["Kartell", "Riviera", 4], ["Moods", "Wildflower", 2], ["Glider", "Night Drive", 1], ["Satin Jackets", "You Make Me Feel Good", 0],
       ["Poolside", "Harvest Moon", 3], ["Breakbot", "Baby I'm Yours", 0], ["Kraak & Smaak", "Squeeze Me", 1]].map(([a, t, plays], i) =>
       Object.assign({ cid: VIDS[(i + 3) % VIDS.length], a, t, dur: 180 + i * 17, rel: friday, relSrc: "yt", plays, g: "Nu-Disco" },

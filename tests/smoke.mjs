@@ -1076,16 +1076,15 @@ try {
 
   console.log("-- Discover Home leads with New this week: the most played, who found it, Play the week's");
   {
-    // seven releases since Friday; two have 5 plays, and the newer of them leads
-    const DAYMS = 86400000, fri = new Date();
-    fri.setDate(fri.getDate() - ((fri.getDay() + 2) % 7));
+    // seven releases in the last 8 days; two have 5 plays, and the newer of them leads
+    const DAYMS = 86400000;
     const day = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-    const today = day(new Date()), friday = day(fri);
+    const today = day(new Date()), friday = day(new Date(Date.now() - 6 * DAYMS)), from = day(new Date(Date.now() - 7 * DAYMS));
     const week = [["wk01", "Week One", 2], ["wk02", "Week Two", 5], ["wk03", "Week Three", 5], ["wk04", "Week Four", 0], ["wk05", "Week Five", 1], ["wk06", "Week Six", 0], ["wk07", "Week Seven", 3]]
       .map(([cid, t, plays], i) => Object.assign({ cid: cid + "aaaaa", a: "Band " + (i + 1), t, dur: 200 + i, rel: i === 2 ? today : friday, relSrc: "yt", plays },
         plays ? { first: now - DAYMS, dj: "dj1", djid: "dj1" } : {}));
     const tracks = week.concat(discover(now).new.tracks);
-    const inWeek = tracks.filter((t) => t.rel >= friday).length; // the seed's own recent releases count too
+    const inWeek = tracks.filter((t) => t.rel >= from).length; // the seed's own recent releases count too
     await put("/discover/new", { at: now, days: 90, tracks });
     await dPage.evaluate(() => { location.hash = "#discover"; });
     await dPage.waitForFunction(() => document.querySelector("#dBrowse .d-lead"), null, { timeout: 10000 }).catch(() => {});
@@ -1095,7 +1094,7 @@ try {
       const out = {
         title: el.querySelector(".d-leadtitle").textContent,
         kicker: el.querySelector(".d-kicker").textContent,
-        found: el.querySelector(".d-found").textContent.replace(/\s+/g, " ").trim(),
+        found: el.querySelector(".d-leadfound").textContent.replace(/\s+/g, " ").trim(),
         playAll: el.querySelector(".d-playall span").textContent,
         under: el.parentElement.querySelectorAll(".ft-cards .pvbar").length,
         all: el.parentElement.querySelector("[data-newfilter]").getAttribute("data-newfilter"),
@@ -1109,8 +1108,7 @@ try {
       out.playing = firetable.discover.state().playing;
       return out;
     });
-    // on a Friday both came out today: then the first of them leads
-    const want = today === friday ? "Week Two" : "Week Three";
+    const want = "Week Three"; // the newer of the two with 5 plays
     check(lead && lead.title === want && lead.kicker === "The week's most played" && /Found by dj1/.test(lead.found) && /5 plays/.test(lead.found),
       "the lead is the week's most played release (the newer on a tie), with who found it (" + JSON.stringify(lead) + ")");
     check(lead && lead.playAll === "Play the week's " + inWeek && lead.under === 6 && lead.all === "days90" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),

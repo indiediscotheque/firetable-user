@@ -266,15 +266,18 @@ firetable.discover = (function () {
       .slice(0, 18).map(function (t) { return Object.assign({ type: 1 }, t); });
   }
 
-  /** The Friday this week's releases count from (today, on a Friday), as YYYY-MM-DD in local time. */
-  function lastFriday() {
+  // New this week: the last 8 days (today and the 7 before), so last Friday's
+  // releases stay until the next Friday's arrive, and the shelf never empties at once
+  var WEEK_DAYS = 8;
+  /** The first day of New this week, as YYYY-MM-DD in local time. */
+  function weekStart() {
     var d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 2) % 7));
+    d.setDate(d.getDate() - (WEEK_DAYS - 1));
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
-  /** New this week: releases since Friday, the most played first (newest first on ties). */
+  /** New this week: releases from the last 8 days, the most played first (newest first on ties). */
   function weekNew() {
-    var from = lastFriday();
+    var from = weekStart();
     return ((D.data.new && D.data.new.tracks) || []).filter(function (t) { return t.rel && String(t.rel).slice(0, 10) >= from; })
       .sort(function (x, y) { return (y.plays || 0) - (x.plays || 0) || String(y.rel || "").localeCompare(String(x.rel || "")); })
       .map(function (t) { return Object.assign({ type: 1 }, t); });
