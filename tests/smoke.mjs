@@ -133,6 +133,10 @@ try {
 
   console.log("-- Settings: previews play over the room");
   await page.waitForFunction(() => firetable.ytLoaded, null, { timeout: 30000 }).catch(() => {});
+  // YouTube's page can take the keyboard focus as a video loads (out of the chat
+  // or search box); the stage's player is inert, so it never can
+  const ytFrame = await page.evaluate(() => { const f = document.getElementById("playerArea"); return f && f.tagName === "IFRAME" ? { inert: f.inert, tab: f.getAttribute("tabindex") } : null; });
+  check(!ytFrame || (ytFrame.inert && ytFrame.tab === "-1"), "the stage's YouTube player can't take the keyboard focus (" + JSON.stringify(ytFrame) + ")");
   const over = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     if (!firetable.ytLoaded) return { skipped: true };
@@ -2115,7 +2119,10 @@ console.log("-- the live stage for other sites (embed/stage/)");
       gone: { username: "gone", status: false } },
     table: [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }],
     songToPlay: Object.assign({}, youtubeSong, { title: "Stage &amp; Song", started: t0 - 30000 }),
-    songBpm: { bpm: 120, started: t0 - 30000 }, theme: "stage night", colors: { color: "#1c6ccc", txt: "#fff" }
+    songBpm: { bpm: 120, started: t0 - 30000 }, theme: "stage night", colors: { color: "#1c6ccc", txt: "#fff" },
+    // the bot's facts on the song: its plays, first and last (noon UTC, so the day is the same anywhere)
+    tagUpdate: { cid: youtubeSong.cid, adamData: { track_name: "Stage & Song", artist: "Smoke Artist", playcount: 12, all_versions_playcount: 31,
+      first_play: Date.UTC(2013, 3, 14, 12), first_play_dj: "matt", last_play: Date.UTC(2020, 4, 2, 12), last_play_dj: "dj2" } }
   });
   const stageCtx = await browser.newContext({ viewport: { width: 1120, height: 630 } });
   const sp = await stageCtx.newPage();
@@ -2126,10 +2133,11 @@ console.log("-- the live stage for other sites (embed/stage/)");
     await sp.goto(site2.SITE + "embed/stage/", { waitUntil: "load" });
     await sp.waitForFunction(() => document.querySelectorAll("#st-deck .st-spot").length === 1 && document.querySelectorAll("#st-ondeck li").length === 1 &&
       !document.getElementById("st-theme").classList.contains("no-theme") && /BPM/.test(document.getElementById("st-kicker").textContent) &&
-      document.getElementById("st-title").textContent === "Stage & Song" && document.getElementById("st-at").textContent, null, { timeout: 15000 }).catch(() => {});
+      document.getElementById("st-title").textContent === "Stage & Song" && document.getElementById("st-at").textContent &&
+      /plays/.test(document.getElementById("st-kicker").textContent), null, { timeout: 15000 }).catch(() => {});
     const on = await sp.evaluate(() => ({
       title: document.getElementById("st-title").textContent, artist: document.getElementById("st-artist").textContent,
-      kicker: document.getElementById("st-kicker").textContent, count: document.getElementById("st-count").textContent,
+      kicker: document.getElementById("st-kicker").textContent, plays: document.getElementById("st-plays").textContent, count: document.getElementById("st-count").textContent,
       theme: document.getElementById("st-themeText").textContent, acc: document.getElementById("st").style.getPropertyValue("--acc"),
       deck: document.querySelector("#st-deck .st-plaque") && document.querySelector("#st-deck .st-plaque").textContent,
       line: [...document.querySelectorAll("#st-ondeck li")].map((li) => li.title).join(),
@@ -2139,8 +2147,9 @@ console.log("-- the live stage for other sites (embed/stage/)");
       links: [...document.querySelectorAll("#st a")].every((a) => a.target === "_blank" && /#live$/.test(a.href)),
       video: !!document.querySelector("iframe")
     }));
-    check(on.title === "Stage & Song" && on.artist === "Smoke Artist" && on.kicker === "Picked by dj1 · 120 BPM" && on.art,
-      "the stage shows the room's song, its cover and who picked it, with its tempo (" + JSON.stringify(on) + ")");
+    check(on.title === "Stage & Song" && on.artist === "Smoke Artist" && on.art && on.kicker === "120 BPM · 12 plays · 31 all versions" &&
+      on.plays === "first Apr 14, 2013 by matt · last May 2, 2020 by dj2",
+      "the stage shows the room's song and cover, and under it the room's plays line: tempo, plays, first and last (" + JSON.stringify(on) + ")");
     check(on.deck === "dj1" && on.avatar && on.line === "dj2" && on.count === "2 in the room" && on.theme === "stage night" && on.acc === "#1c6ccc",
       "the DJ playing stands at their plaque, the next in line beside it; who's online (not the bot), the theme and the song's colours (" + JSON.stringify(on) + ")");
     check(/^00:3\d$/.test(on.at) && /^−04:[23]\d$/.test(on.left) && on.links && !on.video,

@@ -156,6 +156,8 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.st-kicker:empty { display: none; }
+.st-plays { margin-top: 0.2em; }
 .st-now .st-art, .st-npText { transition: opacity 0.2s ease, translate 0.2s ease; }
 .st-now.is-changing .st-art,
 .st-now.is-changing .st-npText { opacity: 0; translate: 0 0.2em; }
