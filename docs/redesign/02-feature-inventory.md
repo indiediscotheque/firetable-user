@@ -231,8 +231,8 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
 | DI-01 | Home: New this week (or New this month), Not played live yet, Room chart, DJs, Rising, Theme nights, Genres, On this day, Recent plays | All | `viewHome`, `leadCard`, `weekNew`, `unplayedNew`, `topDjs` | ✅ 2.4 (November 19, 2026) |
-| DI-02 | New (this month, 90 days, not played live yet; grid or list) | All | `viewNew` | 2.6 one filter menu instead of chips |
-| DI-03 | Charts (week, month, year, all time; previous/next; genre; new releases only; movement; weeks; fires; share image; embed) | All | `viewCharts`, `chartImage`, `embedDialog`, `embed/chart/` | 2.6 two drop-downs + Share; ties shown as "=" (1.9) |
+| DI-02 | New (this week, this month, 90 days, not played live yet; grid or list) | All | `viewNew`, `#dNewShow` | ✅ 2.6 (November 19, 2026): one Show menu instead of chips; This week first |
+| DI-03 | Charts (week, month, year, all time; previous/next; genre; new releases only; movement; weeks; fires; share image; embed) | All | `viewCharts`, `chartImage`, `embedDialog`, `embed/chart/` | ✅ 2.6 and 1.9 (November 19, 2026): the period as one control, genre and new releases as drop-downs, Play the chart, Save as playlist, Share, who played each first, ties as "=n" |
 | DI-04 | Genres: sound map and tiles | All | `viewGenres`, `layoutMap`, `spreadMap`, `mosaic` | 2.7 label collisions, distinct covers |
 | DI-05 | Genre page: Room favorites / New here / Deep cuts, by year, who plays it, next door, genre radio, YouTube Music playlist | All | `viewGenre`, `playRadio`, `ytmButton` | 2.7 overview strip above the list |
 | DI-06 | DJs (sort by plays, firsts, fires, newest, name; find) | All | `viewDjs` | 2.7 |
