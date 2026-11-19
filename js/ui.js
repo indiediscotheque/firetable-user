@@ -2019,29 +2019,25 @@ firetable.ui.setupMiscEvents = function () {
     if (wasAtBottom) firetable.utilities.scrollToBottom();
   });
 
-  // ── Avatar style picker: shown when a supermod lets members choose ──
-  function showAvatarPicker(settings) {
-    var on = !!(settings && settings.avatarPicker === true);
-    var section = document.getElementById('avatarPickerSection');
-    if (section) section.hidden = !on;
-    $('#mo-avatarPicker').prop('checked', on);
-    // a room-wide set (config.js avatarset, or the season's) dresses everyone for now
-    var hint = document.getElementById('avatarPickerHint');
-    if (hint) {
-      var room = firetable.roomAvatarStyle;
-      var name = room && $('#avatarStylePicker option[value="' + room + '"]').text();
-      hint.hidden = !room;
-      hint.textContent = room ? 'Right now everyone wears the room\'s ' + (name || 'avatars') + '. Yours shows again after.' : '';
-    }
+  // ── Everyone's avatar style: a supermod's choice (Mod tools), else the room's default ──
+  // the choices are the Profile picker's (members no longer choose their own)
+  $('#avatarStylePicker option').each(function () { $('#mo-avatarStyle').append($(this).clone()); });
+  function applyRoomAvatars(settings) {
+    var chosen = firetable.utilities.normalizeAvatarStyle(settings && settings.avatarStyle);
+    $('#mo-avatarStyle').val(chosen || '');
+    var style = chosen || firetable.roomAvatarDefault || null;
+    if (style === firetable.roomAvatarStyle) return;
+    firetable.roomAvatarStyle = style;
+    if (style && style.indexOf('robohash:') === 0) firetable.avatarset = style.slice(9);
+    firetable.utilities.redrawAvatars();
   }
-  ftapi.events.on('roomSettingsChanged', showAvatarPicker);
-  if (ftapi.roomSettings) showAvatarPicker(ftapi.roomSettings);
-  // Mod tools (supermods): let members choose, or not
-  $('#mo-avatarPicker').on('change', function () {
-    var box = this, on = box.checked;
-    ftapi.actions.setRoomSetting('avatarPicker', on).then(function (saved) {
-      if (saved) firetable.ui.toast(on ? 'Members can choose their avatar style in Profile' : 'The avatar picker is hidden', 'success');
-      else box.checked = !on;
+  ftapi.events.on('roomSettingsChanged', applyRoomAvatars);
+  if (ftapi.roomSettings) applyRoomAvatars(ftapi.roomSettings);
+  $('#mo-avatarStyle').on('change', function () {
+    var box = this, val = box.value || null, label = $(box).find('option:selected').text();
+    ftapi.actions.setRoomSetting('avatarStyle', val).then(function (saved) {
+      if (saved) firetable.ui.toast(val ? 'Everyone is ' + label + ' now' : 'Avatars are back to the room\'s default', 'success');
+      else applyRoomAvatars(ftapi.roomSettings);
     });
   });
 

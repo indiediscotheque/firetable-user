@@ -67,12 +67,11 @@ const FEATURES = [
   { row: "TB-08", name: "Discover / Live: to Discover", who: ALL, via: ['#modeTabs [data-mode="discover"]'], target: "#dBrowse", hash: "#discover" },
   { row: "AU-02", name: "Join or log in", who: ["visitor"], via: ["#nav-signin"], target: "#joinBox #newemail", notFor: IN, notTarget: "#nav-signin" },
   { row: "AU-07", name: "Profile: change username", who: IN, via: [...account, '#nav-accountMenu [data-acct="profile-tab"]'], target: "#changeUsername" },
-  // (while a supermod lets members choose: roomSettings/avatarPicker, on in the test room)
-  { row: "AU-08", name: "Avatar style", who: IN, via: [...account, '#nav-accountMenu [data-acct="profile-tab"]'], target: "#avatarStylePicker" },
+  // AU-08, members choosing their avatar style: retired (the owner, November 19, 2026); a supermod sets everyone's (MO-05)
   { row: "AU-11", name: "Account: email, password", who: IN, via: [...account, '#nav-accountMenu [data-acct="account-tab"]'], target: "#ac-passForm" },
   { row: "AU-09", name: "Log out", who: IN, via: account, target: "#nav-logout" },
   { row: "SE-*", name: "Settings", who: IN, via: [...account, '#nav-accountMenu [data-acct="settings-tab"]'], target: "#densityPicker" },
-  { row: "MO-05", name: "Mod tools: let members choose their avatar style (supermods)", who: ["mod"], via: [...account, '#nav-accountMenu [data-acct="mod-tab"]'], target: "#mo-avatarPicker" },
+  { row: "MO-05", name: "Mod tools: everyone's avatar style (supermods)", who: ["mod"], via: [...account, '#nav-accountMenu [data-acct="mod-tab"]'], target: "#mo-avatarStyle" },
   { row: "MO-01", name: "Mod tools: suspend a user (supermods)", who: ["mod"], via: [...account, '#nav-accountMenu [data-acct="mod-tab"]'], target: "#supercopSearch" },
 
   // ── the stage and its tools (ST, NP), in the player bar since 2.3c ──

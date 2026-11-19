@@ -1986,32 +1986,28 @@ try {
   check(/current password/.test(acct.passMsg) && acct.shortPass === "bad", "changing the password checks what's typed first (" + acct.passMsg + " / " + acct.shortPass + ")");
   check(acct.nextTab === "settings-tab" && /^bad:/.test(acct.nameMsg), "the tabs follow the arrow keys; an empty name change says so (" + acct.nextTab + " / " + acct.nameMsg + ")");
 
-  console.log("-- Avatar style: the picker shows in Profile when a supermod lets members choose");
-  const picker = async () => dPage.evaluate(() => ({
-    shown: !document.getElementById("avatarPickerSection").hidden,
-    modBox: document.getElementById("mo-avatarPicker").checked,
-    hint: document.getElementById("avatarPickerHint").hidden ? "" : document.getElementById("avatarPickerHint").textContent
+  console.log("-- Everyone's avatar style: a supermod picks one for the whole room");
+  const avatars = async () => dPage.evaluate(() => ({
+    style: firetable.roomAvatarStyle,
+    menu: document.getElementById("mo-avatarStyle").value,
+    options: document.getElementById("mo-avatarStyle").options.length,
+    // the DJ on the stage and the first person in the list (the header's is a placeholder in this pretend sign-in)
+    stage: (document.querySelector("#deck .avtr") || { style: {} }).style.backgroundImage || "",
+    people: ((document.querySelector("#allUsers .ft-avatar") || { style: {} }).style.backgroundImage || ""),
+    picker: !document.getElementById("avatarPickerSection").hidden
   }));
-  await put("/roomSettings", null);
+  const avDefault = await avatars();
+  await put("/roomSettings", { avatarStyle: "robohash:set4" });
+  await dPage.waitForFunction(() => firetable.roomAvatarStyle === "robohash:set4", null, { timeout: 5000 }).catch(() => {});
   await sleep(300);
-  const pickerOff = await picker();
-  await put("/roomSettings", { avatarPicker: true });
-  await dPage.waitForFunction(() => !document.getElementById("avatarPickerSection").hidden, null, { timeout: 5000 }).catch(() => {});
-  const pickerOn = await picker();
-  // October: the season's monsters dress everyone, and the picker says so
-  const seasonal = await dPage.evaluate(() => {
-    const was = firetable.roomAvatarStyle;
-    firetable.roomAvatarStyle = "robohash:set2";
-    ftapi.events.emit("roomSettingsChanged", { avatarPicker: true });
-    const hint = document.getElementById("avatarPickerHint").textContent;
-    firetable.roomAvatarStyle = was;
-    ftapi.events.emit("roomSettingsChanged", ftapi.roomSettings);
-    return hint;
-  });
+  const avCats = await avatars();
   await put("/roomSettings", null);
-  check(!pickerOff.shown && !pickerOff.modBox && pickerOn.shown && pickerOn.modBox && !pickerOn.hint,
-    "the avatar picker and Mod tools' switch follow roomSettings/avatarPicker (" + JSON.stringify({ pickerOff, pickerOn }) + ")");
-  check(/everyone wears the room's Robohash Monster Busts/.test(seasonal), "a room-wide set is named under the picker (" + seasonal + ")");
+  await dPage.waitForFunction((d) => firetable.roomAvatarStyle === d, avDefault.style, { timeout: 5000 }).catch(() => {});
+  const avBack = await avatars();
+  check(avDefault.menu === "" && avDefault.options === 17 && !avDefault.picker, "Mod tools offers the room's default and the 16 sets; members have no picker of their own (" + JSON.stringify(avDefault) + ")");
+  check(avCats.style === "robohash:set4" && avCats.menu === "robohash:set4" && /set=set4/.test(avCats.stage) && (!avCats.people || /set=set4/.test(avCats.people)) && !/set=set4/.test(avDefault.stage),
+    "a supermod's choice dresses everyone at once: the stage and the people redrawn (" + JSON.stringify({ before: avDefault.stage.slice(-40), after: avCats.stage.slice(-40), people: avCats.people.slice(-40) }) + ")");
+  check(avBack.style === avDefault.style && avBack.menu === "", "clearing it goes back to the room's default (" + avBack.style + ")");
 
   console.log("-- Discover: members pick cards to feature on their DJ page");
   await put("/users/dj1/featured", ["cardP", "cardA"]); // cardA isn't dj1's: left out
