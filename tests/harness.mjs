@@ -58,6 +58,36 @@ export async function serveSite({ csp, configJs }) {
   return { server, SITE: "http://127.0.0.1:" + server.address().port + "/" };
 }
 
+/**
+ * Open a page of the site. Waits for the document (DOMContentLoaded), then up
+ * to 15s for the load event, which also waits on third-party frames (the
+ * YouTube and SoundCloud players): a CI runner where one of those hangs
+ * otherwise times out every page with no clue why. When even the document
+ * doesn't arrive, the error names the requests still loading.
+ */
+export async function openPage(page, url, { timeout = 60000 } = {}) {
+  const pending = new Set();
+  const add = (r) => pending.add(r);
+  const done = (r) => pending.delete(r);
+  const still = () => [...pending].map((r) => r.url().slice(0, 140)).join(", ") || "nothing";
+  page.on("request", add);
+  page.on("requestfinished", done);
+  page.on("requestfailed", done);
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout }).catch((e) => {
+      e.message += "\n  still loading: " + still();
+      throw e;
+    });
+    await page.waitForLoadState("load", { timeout: 15000 }).catch(() => {
+      console.log("  note: no load event 15s after " + url + "; still loading: " + still());
+    });
+  } finally {
+    page.off("request", add);
+    page.off("requestfinished", done);
+    page.off("requestfailed", done);
+  }
+}
+
 /** Chromium options: through the HTTPS proxy when there is one (CDN files), never for the local servers. */
 export const launchOptions = () =>
   process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: "127.0.0.1,localhost" } } : {};

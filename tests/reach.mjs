@@ -22,7 +22,7 @@
 // Narrow a run: ROLES=member,mod WIDTHS=390 ONLY=CR-,ST-11
 // Never deployed. CI: .github/workflows/smoke.yml
 import { chromium } from "playwright";
-import { policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures } from "./harness.mjs";
+import { policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures, openPage } from "./harness.mjs";
 import { livedIn } from "./seed.mjs";
 
 const NS = "demo-reach";
@@ -223,7 +223,7 @@ try {
       const errors = [];
       page.on("pageerror", (e) => errors.push(e.message));
       await useAuthEmulator(page);
-      await page.goto(SITE, { waitUntil: "load", timeout: 60000 });
+      await openPage(page, SITE);
       if (role === "visitor") await page.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 30000 });
       else {
         await logInAs(page, people[role].email, PASSWORD, people[role].uid);

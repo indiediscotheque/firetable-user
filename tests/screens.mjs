@@ -23,7 +23,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from "fs";
 import { join, relative, sep } from "path";
 import { execSync } from "child_process";
 import { chromium } from "playwright";
-import { ROOT, policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures, PICTURES } from "./harness.mjs";
+import { ROOT, policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures, PICTURES, openPage } from "./harness.mjs";
 import { livedIn } from "./seed.mjs";
 
 const NS = "demo-screens";
@@ -150,7 +150,7 @@ try {
       page.on("requestfailed", (r) => inflight.delete(r));
       page.on("pageerror", (e) => problems.push(role + " " + w + ": " + e.message));
       await useAuthEmulator(page);
-      await page.goto(SITE, { waitUntil: "load", timeout: 60000 });
+      await openPage(page, SITE);
       if (role === "visitor") await page.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 30000 });
       else {
         const p = people[role];

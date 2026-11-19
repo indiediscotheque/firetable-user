@@ -7,7 +7,7 @@
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { chromium } from "playwright";
-import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep } from "./harness.mjs";
+import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep, openPage } from "./harness.mjs";
 import { youtubeSong as seedSong, room, discover, library } from "./seed.mjs";
 
 const NS = "demo-smoke";
@@ -39,7 +39,7 @@ const loaded = (part) => requested.some((u) => u.includes(part));
 
 try {
   console.log("-- page load (" + SITE + ")");
-  await page.goto(SITE, { waitUntil: "load", timeout: 60000 });
+  await openPage(page, SITE);
   await page.waitForFunction(() => /Smoke Song/.test(document.getElementById("track").textContent), null, { timeout: 30000 });
   check(true, "the playing song shows (from the database)");
   check(await page.$eval("#themePillText", (el) => /smoke tests/.test(el.textContent)).catch(() => false), "the theme shows");
@@ -593,7 +593,7 @@ try {
   const touchPhone = await browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true });
   const tPage = await touchPhone.newPage();
   tPage.on("pageerror", (e) => pageErrors.push("phone: " + e.message));
-  await tPage.goto(SITE, { waitUntil: "load", timeout: 60000 });
+  await openPage(tPage, SITE);
   await tPage.waitForFunction(() => window.firetable && firetable.started && window.ftapi && ftapi.started, null, { timeout: 30000 });
   await tPage.evaluate(() => {
     if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
@@ -1139,7 +1139,7 @@ try {
     body: CONFIG.replace(/roomName:/, 'discover: true, signInProviders: ["google"], roomName:') }));
   await put("/discover", discover(now));
   await put("/discover/lib", library(now));
-  await dPage.goto(SITE, { waitUntil: "load", timeout: 60000 });
+  await openPage(dPage, SITE);
   await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
   const home = await dPage.evaluate(async () => ({
     on: document.body.classList.contains("ft-discover"),
@@ -1695,7 +1695,7 @@ try {
   const embed = await context.newPage();
   embed.on("pageerror", (e) => pageErrors.push("Embed: " + e.message));
   await embed.route("**/config.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: CONFIG }));
-  await embed.goto(SITE + "embed/chart/?period=week", { waitUntil: "load" });
+  await openPage(embed, SITE + "embed/chart/?period=week");
   await embed.waitForFunction(() => document.querySelectorAll("#chart li").length > 0, null, { timeout: 15000 }).catch(() => {});
   const shown = await embed.evaluate(() => ({
     rows: [...document.querySelectorAll("#chart .e-song b")].map((e) => e.textContent).join(),
@@ -2312,7 +2312,7 @@ try {
     "the home page and each library page have one set of link-preview tags, their own (" + read.once + ")");
   check(read.ytm, "a genre page as sent links to its YouTube Music playlist");
   // what a visitor gets: the real site, on the same Discover page
-  await plain.goto(SITE + "music/genres/nu-disco/", { waitUntil: "load" });
+  await openPage(plain, SITE + "music/genres/nu-disco/");
   await plain.waitForFunction(() => document.querySelector("#dBrowse .d-radio"), null, { timeout: 20000 }).catch(() => {});
   const live = await plain.evaluate(() => ({
     url: location.pathname + location.hash,
@@ -2370,7 +2370,7 @@ console.log("-- the live stage for other sites (embed/stage/)");
   await sp.exposeFunction("__cspViolation", (v) => violations.push("Stage: " + v));
   await sp.addInitScript(() => document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI)));
   try {
-    await sp.goto(site2.SITE + "embed/stage/", { waitUntil: "load" });
+    await openPage(sp, site2.SITE + "embed/stage/");
     await sp.waitForFunction(() => document.querySelectorAll("#st-deck .st-spot").length === 1 && document.querySelectorAll("#st-ondeck li").length === 1 &&
       !document.getElementById("st-theme").classList.contains("no-theme") && /BPM/.test(document.getElementById("st-kicker").textContent) &&
       document.getElementById("st-title").textContent === "Stage & Song" && document.getElementById("st-at").textContent &&

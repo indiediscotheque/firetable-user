@@ -20,7 +20,7 @@
 import { readFileSync } from "fs";
 import { createRequire } from "module";
 import { chromium } from "playwright";
-import { policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures } from "./harness.mjs";
+import { policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures, openPage } from "./harness.mjs";
 import { livedIn } from "./seed.mjs";
 
 const NS = "demo-a11y";
@@ -186,7 +186,7 @@ try {
       await cachePictures(context);
       const page = await context.newPage();
       await useAuthEmulator(page);
-      await page.goto(SITE, { waitUntil: "load", timeout: 60000 });
+      await openPage(page, SITE);
       if (role === "visitor") await page.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 30000 });
       else {
         await logInAs(page, people[role].email, PASSWORD, people[role].uid);
