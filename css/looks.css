@@ -124,30 +124,69 @@
     --color-danger: #c43;
     --color-success: #43b581;
 
-    /* Spacing */
-    --pad1: 0.25rem;
-    --pad2: 0.5rem;
-    --pad3: 1rem;
-    --pad4: 1.5rem;
+    /* The redesign's tokens (docs/redesign/03-target-design.md, "Design
+       tokens"). In rem, so they match the design's pixels at 16px and grow
+       with the page on wide screens like everything else (html's font-size).
+       New work uses these; the older names below point at them where they
+       mean the same thing. Colours stay as they are (round 4). */
+
+    /* Space: a 4px grid */
+    --space-1: 0.25rem;  /* 4px */
+    --space-2: 0.5rem;   /* 8px */
+    --space-3: 0.75rem;  /* 12px */
+    --space-4: 1rem;     /* 16px */
+    --space-5: 1.25rem;  /* 20px */
+    --space-6: 1.5rem;   /* 24px */
+    --space-8: 2rem;     /* 32px */
+
+    /* Type: nothing smaller than --fs-label anywhere */
+    --fs-display: 1.75rem;  /* 28px / 700: page titles (Discover pages, dialogs) */
+    --fs-h2: 1.25rem;       /* 20px / 700: section titles */
+    --fs-h3: 1rem;          /* 16px / 700: the song on stage, card titles */
+    --fs-body: 0.875rem;    /* 14px: chat, rows, menus */
+    --fs-row: 0.8125rem;    /* 13px / 600 + 400: dense rows (crate, Recent, charts) */
+    --fs-meta: 0.75rem;     /* 12px: metadata, timestamps, tags */
+    --fs-label: 0.6875rem;  /* 11px / 600, +0.08em, uppercase: section and tab labels only */
+
+    /* Shape: not every button is a pill */
+    --radius-art: 0.25rem;     /* album art in rows */
+    --radius-row: 0.375rem;    /* rows, inputs, small buttons */
+    --radius-btn: 0.5rem;      /* buttons, menus, tags */
+    --radius-panel: 0.625rem;  /* the stage, panels */
+    --radius-dialog: 0.875rem; /* dialogs */
+    --radius-pill: 999px;      /* avatars, the theme pill, live dots, badges, the + */
+
+    /* Targets */
+    --tap: 2rem;          /* 32px: icon buttons in dense desktop rows */
+    --tap-stage: 2.75rem; /* 44px: the stage, and everything on phones */
+
+    /* Motion: menus and hovers (with a reduced-motion version for anything new) */
+    --dur-fast: 120ms;
+    --dur: 180ms;
+    --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+    /* Spacing (older names) */
+    --pad1: var(--space-1);
+    --pad2: var(--space-2);
+    --pad3: var(--space-4);
+    --pad4: var(--space-6);
     --pad5: 4rem;
     --pad6: 8rem;
 
     /* Layout */
     --height-footer: 3.5rem;
     --panel-gap: var(--pad2);
-    --tap-min: 2.5rem;
+    --tap-min: 2.5rem; /* 40px, between --tap and --tap-stage: today's controls */
 
-    /* Radii */
-    --radius-sm: 0.25rem;
-    --radius-md: 0.5rem;
-    --radius-pill: 999px;
+    /* Radii (older names) */
+    --radius-sm: var(--radius-art);
+    --radius-md: var(--radius-btn);
     --theme-pill-h: 2.25rem;
 
-    /* Typography */
+    /* Typography (older names) */
     --font-family: "Inter", "Open Sans", helvetica, arial, sans-serif;
-    --fs-title: 0.875rem;
-    --fs-meta: 0.75rem;
-    --fs-micro: 0.6875rem;
+    --fs-title: var(--fs-body);
+    --fs-micro: var(--fs-label);
 
     /* Shadows */
     --shadow-drop: 0 0.25rem 0.5rem -0.25rem black;
