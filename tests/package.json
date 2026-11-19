@@ -7,9 +7,11 @@
     "smoke": "firebase emulators:exec --only database --project demo-smoke \"node smoke.mjs\"",
     "rules": "firebase emulators:exec --only database,auth --project demo-rules \"node rules.mjs\"",
     "screens": "firebase emulators:exec --only database,auth --project demo-screens \"node screens.mjs\"",
-    "reach": "firebase emulators:exec --only database,auth --project demo-reach \"node reach.mjs\""
+    "reach": "firebase emulators:exec --only database,auth --project demo-reach \"node reach.mjs\"",
+    "a11y": "firebase emulators:exec --only database,auth --project demo-a11y \"node a11y.mjs\""
   },
   "devDependencies": {
+    "axe-core": "4.14.0",
     "firebase-tools": "^15.34.2",
     "playwright": "1.63.0"
   }

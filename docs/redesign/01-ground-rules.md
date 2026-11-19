@@ -120,7 +120,7 @@ Do this for every step in [04-step-plan.md](04-step-plan.md):
    ```bash
    cd tests && HOSTBOT_RULES=../../firetable-hostbot/firebase-rules.json npm run rules
    ```
-   Add smoke checks for what the step adds (each step lists them). If the step moves a control, adds one or hides one behind a menu, update its route in `tests/reach.mjs` ("nothing lost") in the same change; `npm run reach` must pass. A step that writes something new to the database adds it to `tests/rules.mjs` too, so the hostbot's rules are checked for it. In a Claude cloud session the Firebase emulator's own requests trip the network proxy; start the emulators without the proxy and run the tests against them:
+   Add smoke checks for what the step adds (each step lists them). If the step moves a control, adds one or hides one behind a menu, update its route in `tests/reach.mjs` ("nothing lost") in the same change; `npm run reach` must pass, and so must `npm run a11y` (a step that fixes an accessibility finding takes its line out of the allowlist in `tests/a11y.mjs`; nothing new goes in). A step that writes something new to the database adds it to `tests/rules.mjs` too, so the hostbot's rules are checked for it. In a Claude cloud session the Firebase emulator's own requests trip the network proxy; start the emulators without the proxy and run the tests against them:
    ```bash
    cd tests && (env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx firebase emulators:start --only database,auth --project demo-smoke > /tmp/emu.log 2>&1 &)
    ```
