@@ -15,8 +15,9 @@
 # Run the same locally (Java 21 needed):
 #   cd tests && npm ci && npx playwright install chromium && npm run unit && npm run smoke && npm run reach && npm run a11y
 #   HOSTBOT_RULES=../../firetable-hostbot/firebase-rules.json npm run rules
-# They load the CDN libraries and YouTube's player API, so each suite gets a
-# second try before it fails. On master they run as part of the deploy
+# Each suite runs as its own job, side by side. They load the CDN libraries
+# and YouTube's player API, so each suite gets a second try before it fails.
+# On master they run as part of the deploy
 # (.github/workflows/deploy.yml), which only publishes if they pass.
 
 name: Browser tests
@@ -31,9 +32,18 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
+  # Each suite on its own runner, at the same time: one slow suite (or a retry)
+  # can't push the others past the time limit, and the whole run is quicker.
+  browser:
+    name: ${{ matrix.suite }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [smoke, reach, a11y, rules]
+    env:
+      SUITE: ${{ matrix.suite }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -60,33 +70,13 @@ jobs:
           done
 
       - name: Unit tests
+        if: ${{ matrix.suite == 'smoke' }}
         run: |
           cd tests
           npm run unit || { echo "::warning::Unit tests failed; one more try (CDNs can be slow)"; npm run unit; }
 
-      - name: Smoke test
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: |
-          export JAVA_HOME="$JAVA_HOME_21_X64" PATH="$JAVA_HOME_21_X64/bin:$PATH"
-          cd tests
-          npm run smoke || { echo "::warning::Smoke test failed; one more try (CDNs and YouTube can be slow)"; npm run smoke; }
-
-      - name: Nothing lost
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: |
-          export JAVA_HOME="$JAVA_HOME_21_X64" PATH="$JAVA_HOME_21_X64/bin:$PATH"
-          cd tests
-          npm run reach || { echo "::warning::Nothing-lost check failed; one more try (CDNs and YouTube can be slow)"; npm run reach; }
-
-      - name: Accessibility
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: |
-          export JAVA_HOME="$JAVA_HOME_21_X64" PATH="$JAVA_HOME_21_X64/bin:$PATH"
-          cd tests
-          npm run a11y || { echo "::warning::Accessibility check failed; one more try (CDNs and YouTube can be slow)"; npm run a11y; }
-
       - name: Check out the hostbot's database rules
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        if: ${{ matrix.suite == 'rules' && !cancelled() && steps.install.outcome == 'success' }}
         uses: actions/checkout@v7
         with:
           repository: indiediscotheque/firetable-hostbot
@@ -96,10 +86,10 @@ jobs:
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
-      - name: Rules test
+      - name: Run the suite
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           export JAVA_HOME="$JAVA_HOME_21_X64" PATH="$JAVA_HOME_21_X64/bin:$PATH"
           cd tests
-          export HOSTBOT_RULES=../.hostbot/firebase-rules.json
-          npm run rules || { echo "::warning::Rules test failed; one more try (CDNs can be slow)"; npm run rules; }
+          if [ "$SUITE" = rules ]; then export HOSTBOT_RULES=../.hostbot/firebase-rules.json; fi
+          npm run "$SUITE" || { echo "::warning::The $SUITE suite failed; one more try (CDNs and YouTube can be slow)"; npm run "$SUITE"; }

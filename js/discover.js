@@ -221,7 +221,7 @@ firetable.discover = (function () {
       '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, i) ? "Pause" : "Play") + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
       '<div class="qtxt"><div class="listwords"><div class="fresh-title"><span class="fresh-track-title d-sheetlink" role="button" tabindex="0">' + esc(t.t) + '</span><span class="fresh-track-artist">' + artistLinks(t.a) + "</span></div>" +
       moreButton() + saveButton(t) + "</div>" +
-      '<div class="fresh-meta">' + robotLink(meta.dj) + '<span class="histdj">' + esc(meta.who || "") + '</span><span class="histdate">' + esc(meta.date || "") + '</span><span class="histtime">' + esc(meta.extra || "") + "</span></div></div></div>";
+      '<div class="fresh-meta">' + robotLink(meta.dj) + (meta.tag ? '<span class="d-tag d-befirst">' + esc(meta.tag) + "</span>" : "") + '<span class="histdj">' + esc(meta.who || "") + '</span><span class="histdate">' + esc(meta.date || "") + '</span><span class="histtime">' + esc(meta.extra || "") + "</span></div></div></div>";
   }
 
   /** A song as a Recent row on the timeline. */
@@ -264,6 +264,66 @@ firetable.discover = (function () {
     var all = (D.data.new && D.data.new.tracks) || [];
     return all.slice().sort(function (x, y) { return String(y.rel || "").localeCompare(String(x.rel || "")); })
       .slice(0, 18).map(function (t) { return Object.assign({ type: 1 }, t); });
+  }
+
+  // New this week: the last 8 days (today and the 7 before), so last Friday's
+  // releases stay until the next Friday's arrive, and the shelf never empties at once
+  var WEEK_DAYS = 8;
+  /** The first day of New this week, as YYYY-MM-DD in local time. */
+  function weekStart() {
+    var d = new Date();
+    d.setDate(d.getDate() - (WEEK_DAYS - 1));
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  /** New this week: releases from the last 8 days, the most played first (newest first on ties). */
+  function weekNew() {
+    var from = weekStart();
+    return ((D.data.new && D.data.new.tracks) || []).filter(function (t) { return t.rel && String(t.rel).slice(0, 10) >= from; })
+      .sort(function (x, y) { return (y.plays || 0) - (x.plays || 0) || String(y.rel || "").localeCompare(String(x.rel || "")); })
+      .map(function (t) { return Object.assign({ type: 1 }, t); });
+  }
+  /** New releases nobody has played here yet, the newest first. */
+  function unplayedNew() {
+    return ((D.data.new && D.data.new.tracks) || []).filter(function (t) { return !t.plays; })
+      .sort(function (x, y) { return String(y.rel || "").localeCompare(String(x.rel || "")); })
+      .map(function (t) { return Object.assign({ type: 1 }, t); });
+  }
+  /** A heading whose link opens New on one of its filters. */
+  function newHead(title, link, filter) {
+    return '<div class="d-head"><h2>' + esc(title) + '</h2><a href="#discover/new" data-newfilter="' + esc(filter) + '">' + esc(link) + "</a></div>";
+  }
+  /** Home's lead: the week's most played new release, big, with who found it. */
+  function leadCard(t, list, count) {
+    var u = firetable.utilities;
+    var dj = t.plays && t.dj ? djShown(t.djid, t.dj) : null;
+    var found = t.plays
+      ? '<p class="d-leadfound">' + (dj ? robotLink(dj) + "<span>Found by " + nameLink(dj) + "</span>" : "<span>First played here</span>") +
+        (t.first ? "<span>·</span><span>" + esc(u.shortDate(t.first)) + "</span>" : "") +
+        "<span>·</span><span>" + esc(u.pluralize(t.plays, "play", "plays")) + (t.plays === 1 ? " so far" : "") + "</span></p>"
+      : '<p class="d-leadfound"><span class="d-tag d-befirst">Be the first</span><span>Nobody has played it here yet</span></p>';
+    var tags = (t.g ? '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(t.g)) + '">' + esc(t.g) + "</a>" : "") + (t.dur ? '<span class="d-tag d-numtag">' + esc(clock(t.dur)) + "</span>" : "") +
+      (t.rel ? '<span class="d-tag d-numtag">out ' + esc(u.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime())) + "</span>" : "");
+    return '<div class="pvbar d-lead' + (isPlaying(list, 0) ? " previewing" : "") + '"' + rowAttrs(t, list, 0) + ">" +
+      '<div class="pv-art discart d-leadart" style="background-image:url(' + esc(artOf(t)) + ')">' +
+      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, 0) ? "Pause" : "Play") + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button></div>" +
+      '<div class="d-leadtext"><p class="d-kicker">' + (t.plays ? "The week's most played" : "New this week") + "</p>" +
+      '<h3 class="d-leadtitle"><span class="d-sheetlink" role="button" tabindex="0">' + esc(t.t) + "</span></h3>" +
+      '<p class="d-leadartist">' + artistLinks(t.a) + "</p>" +
+      (tags ? '<div class="d-tags">' + tags + "</div>" : "") + found +
+      '<div class="d-leadacts">' + playAllButton(list, "Play the week's " + count) + moreButton() + saveButton(t) + "</div></div></div>";
+  }
+  /** Home: the six DJs with the most plays here, as faces with names. */
+  function topDjs() {
+    var all = lib("djs");
+    if (!all) return "";
+    var top = Object.keys(all).map(function (k) { return Object.assign({ key: k }, all[k]); })
+      .filter(function (d) { return d.name && djShown(d.djid, d.name); })
+      .sort(function (x, y) { return (y.plays || 0) - (x.plays || 0); }).slice(0, 6);
+    if (!top.length) return "";
+    return "<section>" + head("DJs", "All DJs", "discover/djs") + '<div class="d-djrow">' + top.map(function (d) {
+      return '<a class="d-djtile" href="#discover/djs/' + esc(d.key) + '">' + robot({ uid: d.djid, name: d.name }, "110x110") +
+        '<span class="d-djname">' + esc(d.name) + '</span><span class="d-num">' + esc(firetable.utilities.pluralize(d.plays || 0, "play", "plays")) + "</span></a>";
+    }).join("") + "</div></section>";
   }
 
   function newMeta(t) {
@@ -440,8 +500,25 @@ firetable.discover = (function () {
     setList("home-rising", "Rising", rising);
     setList("home-today", "On this day", today);
     setList("home-recent", "Recent plays", recent);
-    h += "<section>" + head(newTitle, "All new releases", "discover/new") + newList(nt, "grid", "home-new", 18, true) + "</section>";
+    // New this week leads, once there are six; until then the newest releases
+    var week = weekNew();
+    if (week.length >= 6) {
+      setList("home-week", "New this week", week);
+      h += '<section class="d-week">' + newHead("New this week", "All new releases", "days90") + leadCard(week[0], "home-week", week.length) +
+        '<div class="ft-cards d-compact">' + week.slice(1, 7).map(function (t, i) { return card(t, "home-week", i + 1, newMeta(t)); }).join("") + "</div></section>";
+    } else {
+      h += "<section>" + newHead(newTitle, "All new releases", "days90") + newList(nt, "grid", "home-new", 18, true) + "</section>";
+    }
+    var unplayed = unplayedNew();
+    if (unplayed.length) {
+      setList("home-unplayed", "Not played live yet", unplayed);
+      h += "<section>" + newHead("Not played live yet", "All " + unplayed.length, "unplayed") +
+        '<div class="ft-cards d-compact">' + unplayed.slice(0, 4).map(function (t, i) {
+          return card(t, "home-unplayed", i, { tag: "Be the first", date: t.rel ? "out " + firetable.utilities.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime()) : "" });
+        }).join("") + "</div></section>";
+    }
     h += "<section>" + head("Room chart · this week", "Full chart", "discover/charts") + chartList(chart, "home-chart", 5, "week") + "</section>";
+    h += topDjs();
     if (rising.length) {
       var rn = D.homeMore.rising ? rising.length : 5;
       h += "<section>" + head("Rising") + '<p class="d-fact">Played more in the last four weeks than the four before</p>' +
@@ -3174,6 +3251,8 @@ firetable.discover = (function () {
     if ((b = t.closest("#dLocked [data-locked]"))) { lockedTab = b.getAttribute("data-locked"); return lockedTabs(); }
     if ((b = t.closest(".d-chatnav"))) { D.sideTab = "chat"; D.unread = 0; renderSide(); document.body.classList.add("d-sheet-open"); return; }
     if ((b = t.closest(".d-chip[data-new]"))) { D.newFilter = b.getAttribute("data-new"); return renderBrowse(); }
+    // Home's links into New pick its filter, then the address takes them there
+    if ((b = t.closest("a[data-newfilter]"))) D.newFilter = b.getAttribute("data-newfilter");
     if ((b = t.closest(".d-chip[data-period]"))) { D.chart = { period: b.getAttribute("data-period"), id: null }; renderBrowse(); return writeAddress(); }
     if ((b = t.closest(".d-chip[data-cgenre]"))) { D.chartGenre = b.getAttribute("data-cgenre") || null; return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-cnew]"))) { D.chartNew = !!b.getAttribute("data-cnew"); return renderBrowse(); }

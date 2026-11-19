@@ -15,8 +15,9 @@
 # with a server error the old file is put back and the run fails.
 #
 # It runs the lint checks (.github/workflows/lint.yml) and the browser tests
-# (.github/workflows/smoke.yml: unit, smoke and the database rules test, each
-# tried twice since they load CDNs and YouTube) first, and only publishes if
+# (.github/workflows/smoke.yml: unit and smoke, nothing lost, accessibility and
+# the database rules test, side by side, each tried twice since they load CDNs
+# and YouTube) first, and only publishes if
 # they pass. A manual run can skip the browser tests ("Skip the browser
 # tests"), e.g. while a CDN is down. Each "?v=" link in the pages and stylesheets is set
 # to a hash of the file it points at (.github/scripts/cache-bust.py), so
