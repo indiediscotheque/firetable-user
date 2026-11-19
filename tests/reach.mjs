@@ -22,7 +22,7 @@
 // Narrow a run: ROLES=member,mod WIDTHS=390 ONLY=CR-,ST-11
 // Never deployed. CI: .github/workflows/smoke.yml
 import { chromium } from "playwright";
-import { policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs } from "./harness.mjs";
+import { policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures } from "./harness.mjs";
 import { livedIn } from "./seed.mjs";
 
 const NS = "demo-reach";
@@ -213,6 +213,7 @@ try {
       await setDecks(role === "dj" ? decks.mine(people.dj) : decks.normal());
       const phone = w < 640;
       const context = await browser.newContext({ viewport: SIZES[w] || { width: w, height: 900 }, isMobile: phone, hasTouch: phone });
+      await cachePictures(context);
       const page = await context.newPage();
       const errors = [];
       page.on("pageerror", (e) => errors.push(e.message));

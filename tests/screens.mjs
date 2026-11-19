@@ -16,13 +16,14 @@
 // With BASE, the sheet puts the earlier picture beside each changed one, with
 // the share of pixels that changed and a diff picture (in diff/). Clocks and
 // the times in chat and Recent are masked and the YouTube frame is hidden, so
-// two runs of the same code match; SHOW_VIDEO=1 keeps the frame.
+// two runs of the same code match; SHOW_VIDEO=1 keeps the frame. Take the before
+// and the after in the same session: whether YouTube's player plays on the
+// machine changes the phone stage's layout.
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "fs";
 import { join, relative, sep } from "path";
 import { execSync } from "child_process";
-import { createHash } from "crypto";
 import { chromium } from "playwright";
-import { ROOT, policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs } from "./harness.mjs";
+import { ROOT, policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures, PICTURES } from "./harness.mjs";
 import { livedIn } from "./seed.mjs";
 
 const NS = "demo-screens";
@@ -101,30 +102,6 @@ const VIEWS = [
 ].filter((v) => !VIEW_FILTER || VIEW_FILTER.some((f) => (f.endsWith("*") ? v.name.startsWith(f.slice(0, -1)) : v.name === f)));
 const roleDecks = (role) => (role === "dj" ? decks.mine(people.dj) : decks.normal());
 
-// Pictures from other sites (avatars, covers) come from a disk cache after the first
-// run: the same bytes every time, and nothing left loading when a picture is taken
-const CACHE = join(ROOT, "tests", "screens", ".cache");
-const CACHED = /^https:\/\/((www\.)?indiediscotheque\.com\/robots\/|api\.dicebear\.com\/|i\.ytimg\.com\/|img\.youtube\.com\/|i\d*\.sndcdn\.com\/)/;
-async function cachedPicture(route) {
-  const url = route.request().url();
-  const file = join(CACHE, createHash("sha1").update(url).digest("hex"));
-  if (existsSync(file + ".json")) {
-    const m = JSON.parse(readFileSync(file + ".json", "utf8"));
-    return route.fulfill({ status: m.status, headers: m.headers, body: readFileSync(file) });
-  }
-  try {
-    const res = await route.fetch();
-    const body = await res.body();
-    const headers = Object.fromEntries(Object.entries(res.headers()).filter(([k]) => !/^(content-length|content-encoding|transfer-encoding|set-cookie)$/i.test(k)));
-    mkdirSync(CACHE, { recursive: true });
-    writeFileSync(file, body);
-    writeFileSync(file + ".json", JSON.stringify({ url, status: res.status(), headers }));
-    return route.fulfill({ status: res.status(), headers, body });
-  } catch (e) {
-    return route.abort();
-  }
-}
-
 /**
  * Wait for the page to settle: fonts, the images on screen, every avatar and
  * cover the page asked for (cards draw theirs onto a canvas), a moment for fades.
@@ -165,10 +142,10 @@ try {
       await setDecks(roleDecks(role));
       const phone = w < 640;
       const context = await browser.newContext({ viewport: SIZES[w] || { width: w, height: 900 }, deviceScaleFactor: phone ? 2 : 1, isMobile: phone, hasTouch: phone });
-      await context.route(CACHED, cachedPicture);
+      await cachePictures(context);
       const page = await context.newPage();
       const inflight = new Set();
-      page.on("request", (r) => { if (CACHED.test(r.url())) inflight.add(r); });
+      page.on("request", (r) => { if (PICTURES.test(r.url())) inflight.add(r); });
       page.on("requestfinished", (r) => inflight.delete(r));
       page.on("requestfailed", (r) => inflight.delete(r));
       page.on("pageerror", (e) => problems.push(role + " " + w + ": " + e.message));

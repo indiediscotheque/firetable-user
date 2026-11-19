@@ -2,7 +2,8 @@
 // locally under the real Content-Security-Policy from .htaccess, with a
 // config.js that points at the local Firebase emulators. Never deployed.
 import http from "http";
-import { readFileSync, existsSync, statSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from "fs";
+import { createHash } from "crypto";
 import { join, extname, normalize } from "path";
 import { fileURLToPath } from "url";
 
@@ -103,4 +104,40 @@ export async function logInAs(page, email, password, uid) {
   await page.evaluate(([e, p]) => ftapi.actions.logIn(e, p, (err) => { window.__loginError = String(err && err.message); }), [email, password]);
   await page.waitForFunction((u) => ftapi.uid === u && ftapi.queueRef && !window.__loginError, uid, { timeout: 30000 })
     .catch(async () => { throw new Error("couldn't sign in as " + email + ": " + await page.evaluate(() => window.__loginError)); });
+}
+
+/** Pictures from other sites: avatars (the live site's robots), YouTube's and SoundCloud's covers. */
+export const PICTURES = /^https:\/\/((www\.)?indiediscotheque\.com\/robots\/|api\.dicebear\.com\/|i\.ytimg\.com\/|img\.youtube\.com\/|i\d*\.sndcdn\.com\/)/;
+const CACHE = join(ROOT, "tests", "screens", ".cache");
+
+/**
+ * Serve PICTURES from a disk cache (tests/screens/.cache, not committed) after
+ * the first fetch: the same bytes every run, nothing left loading, and no
+ * load on the live site's avatar server, which rate-limits. Only a good answer
+ * is kept; a refusal (429 and the like) gets one more try, then passes through
+ * uncached.
+ */
+export async function cachePictures(context) {
+  await context.route(PICTURES, async (route) => {
+    const url = route.request().url();
+    const file = join(CACHE, createHash("sha1").update(url).digest("hex"));
+    if (existsSync(file + ".json")) {
+      const m = JSON.parse(readFileSync(file + ".json", "utf8"));
+      return route.fulfill({ status: m.status, headers: m.headers, body: readFileSync(file) });
+    }
+    try {
+      let res = await route.fetch();
+      if (!res.ok()) { await sleep(1500); res = await route.fetch(); }
+      const body = await res.body();
+      const headers = Object.fromEntries(Object.entries(res.headers()).filter(([k]) => !/^(content-length|content-encoding|transfer-encoding|set-cookie)$/i.test(k)));
+      if (res.ok() && body.length) {
+        mkdirSync(CACHE, { recursive: true });
+        writeFileSync(file, body);
+        writeFileSync(file + ".json", JSON.stringify({ url, status: res.status(), headers }));
+      }
+      return route.fulfill({ status: res.status(), headers, body });
+    } catch (e) {
+      return route.abort();
+    }
+  });
 }
