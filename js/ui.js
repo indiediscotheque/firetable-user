@@ -2019,7 +2019,32 @@ firetable.ui.setupMiscEvents = function () {
     if (wasAtBottom) firetable.utilities.scrollToBottom();
   });
 
-  // ── Avatar style picker ──
+  // ── Avatar style picker: shown when a supermod lets members choose ──
+  function showAvatarPicker(settings) {
+    var on = !!(settings && settings.avatarPicker === true);
+    var section = document.getElementById('avatarPickerSection');
+    if (section) section.hidden = !on;
+    $('#mo-avatarPicker').prop('checked', on);
+    // a room-wide set (config.js avatarset, or the season's) dresses everyone for now
+    var hint = document.getElementById('avatarPickerHint');
+    if (hint) {
+      var room = firetable.roomAvatarStyle;
+      var name = room && $('#avatarStylePicker option[value="' + room + '"]').text();
+      hint.hidden = !room;
+      hint.textContent = room ? 'Right now everyone wears the room\'s ' + (name || 'avatars') + '. Yours shows again after.' : '';
+    }
+  }
+  ftapi.events.on('roomSettingsChanged', showAvatarPicker);
+  if (ftapi.roomSettings) showAvatarPicker(ftapi.roomSettings);
+  // Mod tools (supermods): let members choose, or not
+  $('#mo-avatarPicker').on('change', function () {
+    var box = this, on = box.checked;
+    ftapi.actions.setRoomSetting('avatarPicker', on).then(function (saved) {
+      if (saved) firetable.ui.toast(on ? 'Members can choose their avatar style in Profile' : 'The avatar picker is hidden', 'success');
+      else box.checked = !on;
+    });
+  });
+
   $('#avatarStylePicker').on('change', function () {
     var val = $(this).val();
     firetable.avatarStyle = val;

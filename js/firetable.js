@@ -379,6 +379,16 @@ ftapi.init = function(firebaseConfig) {
     ftapi.events.emit("danceStateChanged", data);
   });
 
+  // the room's settings that supermods change in Mod tools (roomSettings/*)
+  ftapi.db().ref("roomSettings").on("value", function (dataSnapshot) {
+    ftapi.roomSettings = dataSnapshot.val() || {};
+    ftapi.events.emit("roomSettingsChanged", ftapi.roomSettings);
+  }, function () {
+    // older hostbot rules have no roomSettings to read: everything stays off
+    ftapi.roomSettings = {};
+    ftapi.events.emit("roomSettingsChanged", ftapi.roomSettings);
+  });
+
   // festive lights emitter
   var lightsCheck = ftapi.db().ref("lights");
   lightsCheck.on('value', function(dataSnapshot) {
@@ -1122,6 +1132,17 @@ ftapi.actions = {
   banUser: function(userid) {
     var ref = ftapi.db().ref("banned/" + userid);
     return ref.set(true).catch(ftapi.saveFailed("the ban"));
+  },
+  /**
+   * A room-wide setting (supermods, Mod tools): roomSettings/<key>. Resolves
+   * true when saved, false when the database refused it (older rules, or
+   * not a supermod), having said so.
+   */
+  setRoomSetting: function(key, value) {
+    return ftapi.db().ref("roomSettings/" + key).set(value).then(function () { return true; }, function (err) {
+      ftapi.saveFailed("that room setting")(err);
+      return false;
+    });
   },
   modUser: function(userid) {
     var modp = ftapi.db().ref("users/" + userid + "/mod");

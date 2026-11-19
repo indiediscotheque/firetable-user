@@ -1986,6 +1986,33 @@ try {
   check(/current password/.test(acct.passMsg) && acct.shortPass === "bad", "changing the password checks what's typed first (" + acct.passMsg + " / " + acct.shortPass + ")");
   check(acct.nextTab === "settings-tab" && /^bad:/.test(acct.nameMsg), "the tabs follow the arrow keys; an empty name change says so (" + acct.nextTab + " / " + acct.nameMsg + ")");
 
+  console.log("-- Avatar style: the picker shows in Profile when a supermod lets members choose");
+  const picker = async () => dPage.evaluate(() => ({
+    shown: !document.getElementById("avatarPickerSection").hidden,
+    modBox: document.getElementById("mo-avatarPicker").checked,
+    hint: document.getElementById("avatarPickerHint").hidden ? "" : document.getElementById("avatarPickerHint").textContent
+  }));
+  await put("/roomSettings", null);
+  await sleep(300);
+  const pickerOff = await picker();
+  await put("/roomSettings", { avatarPicker: true });
+  await dPage.waitForFunction(() => !document.getElementById("avatarPickerSection").hidden, null, { timeout: 5000 }).catch(() => {});
+  const pickerOn = await picker();
+  // October: the season's monsters dress everyone, and the picker says so
+  const seasonal = await dPage.evaluate(() => {
+    const was = firetable.roomAvatarStyle;
+    firetable.roomAvatarStyle = "robohash:set2";
+    ftapi.events.emit("roomSettingsChanged", { avatarPicker: true });
+    const hint = document.getElementById("avatarPickerHint").textContent;
+    firetable.roomAvatarStyle = was;
+    ftapi.events.emit("roomSettingsChanged", ftapi.roomSettings);
+    return hint;
+  });
+  await put("/roomSettings", null);
+  check(!pickerOff.shown && !pickerOff.modBox && pickerOn.shown && pickerOn.modBox && !pickerOn.hint,
+    "the avatar picker and Mod tools' switch follow roomSettings/avatarPicker (" + JSON.stringify({ pickerOff, pickerOn }) + ")");
+  check(/everyone wears the room's Robohash Monster Busts/.test(seasonal), "a room-wide set is named under the picker (" + seasonal + ")");
+
   console.log("-- Discover: members pick cards to feature on their DJ page");
   await put("/users/dj1/featured", ["cardP", "cardA"]); // cardA isn't dj1's: left out
   const featured = await dPage.evaluate(async () => {

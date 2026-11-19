@@ -193,7 +193,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | AU-05 | Pick a username after Google sign-in | V | `#pickNameBox`, `setupPickName` | keep |
 | AU-06 | Join box over the page (stay where you are) | V | `#joinBox` in `index.html`, `users.js` `openAuth` / `closeAuth`; `discover.js` `showSignIn` adds the crate note | 2.5 shipped: every page, Discover and Live |
 | AU-07 | Change username | M | `#ac-nameForm` (`#changeUsername`, `#ac-saveName`), `#usernameResponse`, `nameClaim` | keep (Profile tab) |
-| AU-08 | Avatar style (16 sets: Robohash robots, monsters, heads, cats; DiceBear sets) | M | `#avatarStylePicker`, `STORAGE.avatarStyle`, `users/<uid>/avatarStyle` | keep; every stage state checked with each family. ⚠ **Not reachable today** (found by 0.4, November 19, 2026): `#avatarPickerSection` is `display: none` in `looks.css` and nothing shows it, so nobody can change their avatar style. Owner to decide: show it in the Profile tab, or retire it |
+| AU-08 | Avatar style (16 sets: Robohash robots, monsters, heads, cats; DiceBear sets) | M | `#avatarStylePicker`, `STORAGE.avatarStyle`, `users/<uid>/avatarStyle` | keep; every stage state checked with each family. Found unreachable by 0.4 (November 19, 2026: `#avatarPickerSection` was `display: none`); now shown in Profile when a supermod lets members choose (MO-05, the owner's call) |
 | AU-09 | Log out | M | `#logOutButton` (Account tab), `#nav-logout` (account menu) | 2.5 shipped |
 | AU-10 | Banned / suspended state | All | `userBanned`, `userUnbanned`, `banned/` | keep |
 | AU-11 | (new) Account: email and sign-in method, change password (or a reset link), change email (confirmed by a link) | M | `#account-tab`, `ftapi.actions.accountInfo` / `changePassword` / `changeEmail` | 2.5 |
@@ -224,6 +224,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | MO-02 | Mod check (mod-only buttons show) | `modCheck` event | keep |
 | MO-03 | Fix tags, flag, skip the playing song | `#npModMenu` | 1.7 |
 | MO-04 | Mod bot commands: `!skip`, `!remove`, `!add`, `!fixtags`, `!flagplay`, `!settheme`, `!lights*`, `!screen*`, `!killscreen`, `!review`/`!same`/`!different`, `!swapscan`, `!ytsync`, `!genrelists run`, `!ytmtest`, `!upbot`/`!downbot` | bot | keep; 1.18 mod help lists them |
+| MO-05 | Let members choose their avatar style (supermods), room-wide | `#mo-avatarPicker` in `#mod-tab`, `ftapi.actions.setRoomSetting`, `roomSettings/avatarPicker` (hostbot rules), `roomSettingsChanged` → `#avatarPickerSection` | ✅ added November 19, 2026 (the owner's request); keep |
 
 ## DI · Discover (`js/discover.js`, `css/discover.css`)
 

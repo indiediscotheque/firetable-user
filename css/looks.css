@@ -4915,10 +4915,6 @@ dialog::backdrop {
     border-radius: 0;
 }
 
-#avatarPickerSection {
-    display: none;
-}
-
 .tabPanel {
     display: none;
     flex-direction: column;

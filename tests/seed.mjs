@@ -152,6 +152,8 @@ export function livedIn(now, people) {
     queues: Object.fromEntries(Object.values(people).map((p) => [p.uid, queue()])),
     playlists: Object.fromEntries(Object.values(people).map((p) => [p.uid, playlists])),
     tagUpdate: { cid: song.cid, adamData: { track_name: song.title, artist: song.artist, playcount: 67 } },
+    // a supermod has let members choose their avatar style (Mod tools)
+    roomSettings: { avatarPicker: true },
     discover: withArt(Object.assign(discover(now), { lib: library(now) }))
   });
     return { data, decks, song };

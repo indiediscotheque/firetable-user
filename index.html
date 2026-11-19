@@ -888,7 +888,7 @@
 						<h3 class="ac-label" id="ac-grabLabel">Your grabs</h3>
 						<div class="grabStatsBox"><i class="material-symbols-outlined" aria-hidden="true">playlist_add</i><p id="grabStats" aria-live="polite"></p></div>
 					</section>
-					<div id="avatarPickerSection" class="ac-section">
+					<div id="avatarPickerSection" class="ac-section" hidden><!-- shown when a supermod lets members choose (Mod tools) -->
 					<h3 class="ac-label"><label for="avatarStylePicker">Avatar</label></h3>
 					<select id="avatarStylePicker">
 						<optgroup label="Robohash">
@@ -912,6 +912,7 @@
 							<option value="dicebear:toon-head">DiceBear Toon Head</option>
 						</optgroup>
 					</select>
+					<p class="settingHint" id="avatarPickerHint" hidden></p>
 					</div><!-- /#avatarPickerSection -->
 				</div>
 				<div id="account-tab" class="tabPanel" role="tabpanel">
@@ -1051,6 +1052,14 @@
 					<section class="ac-section" aria-labelledby="mo-activeLabel">
 						<h3 class="ac-label" id="mo-activeLabel">Active suspensions</h3>
 						<div id="activeSuspensions"></div>
+					</section>
+					<section class="ac-section" aria-labelledby="mo-avatarLabel">
+						<h3 class="ac-label" id="mo-avatarLabel">Avatars</h3>
+						<div class="settingline">
+							<input type="checkbox" id="mo-avatarPicker" name="mo-avatarPicker">
+							<label for="mo-avatarPicker">Let members choose their avatar style</label>
+						</div>
+						<p class="settingHint">Adds an Avatar picker to everyone's Profile. Choices people already made keep showing either way. A room-wide set (config.js, or the season's) still dresses everyone while it's on.</p>
 					</section>
 				</div>
 			</div>
