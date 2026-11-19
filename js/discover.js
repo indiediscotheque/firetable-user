@@ -63,7 +63,7 @@ firetable.discover = (function () {
     view: "home",        // home | new | charts | genres | djs | years | recent | artist
     sub: null,           // the genre, DJ, artist or year a page is about
     chart: { period: "week", id: null },
-    newFilter: "month",  // month | days90 | unplayed
+    newFilter: null,     // week | month | days90 | unplayed (null: this week when it has any, else this month)
     newLayout: "grid",
     sideTab: "list",     // list | chat
     chartGenre: null,    // the chart, narrowed to one genre
@@ -254,6 +254,7 @@ firetable.discover = (function () {
     var now = Date.now();
     return all.filter(function (t) {
       if (D.newFilter === "unplayed") return !t.plays;
+      if (D.newFilter === "week") return t.rel && String(t.rel).slice(0, 10) >= weekStart();
       if (D.newFilter === "month") return t.rel && now - new Date(t.rel).getTime() <= NEW_MONTH_DAYS * 86400000;
       return true;
     }).map(function (t) { return Object.assign({ type: 1 }, t); });
@@ -328,15 +329,31 @@ firetable.discover = (function () {
 
   function newMeta(t) {
     var dj = t.dj ? djShown(t.djid, t.dj) : null;
-    if (!t.plays) return { who: "Not played live yet", date: "", extra: "" };
+    if (!t.plays) return { tag: "Be the first", who: "Nobody has played it yet", date: "", extra: "" };
     return { dj: dj, who: "", date: "first " + firetable.utilities.shortDate(t.first), extra: firetable.utilities.pluralize(t.plays, "play", "plays") };
   }
 
   function chartRows(chart) {
-    return ((chart && chart.rows) || []).map(function (r, i) {
-      return { type: r.type || 1, cid: r.cid, a: r.a, t: r.t, plays: r.plays, fires: r.fires || 0, mv: r.mv, wks: r.wks, dj: r.dj, djid: r.djid, first: r.first, g: r.g || null, rank: i + 1 };
-    });
+    return ranked(((chart && chart.rows) || []).map(function (r) {
+      return { type: r.type || 1, cid: r.cid, a: r.a, t: r.t, plays: r.plays, fires: r.fires || 0, mv: r.mv, wks: r.wks, dj: r.dj, djid: r.djid, first: r.first, g: r.g || null };
+    }), "plays");
   }
+  /**
+   * Standard competition ranking (redesign step 1.9): songs with the same count
+   * share a rank ("=3", and the next is 5th). Adds rank and tie to each row of
+   * a list already sorted by `key`, most first.
+   */
+  function ranked(rows, key) {
+    rows.forEach(function (r, i) {
+      var prev = rows[i - 1], next = rows[i + 1];
+      r.rank = prev && prev[key] === r[key] ? prev.rank : i + 1;
+      r.tie = !!((prev && prev[key] === r[key]) || (next && next[key] === r[key]));
+    });
+    return rows;
+  }
+  /** A rank as shown: "#3", or "=3" when it's shared. */
+  function rankStamp(r, i) { return (r.tie ? "=" : "#") + (r.rank || i + 1); }
+  var TIE_NOTE = '<p class="d-fact d-tienote">Songs with the same number of plays share a rank.</p>';
 
   function recentTracks() {
     var cache = (firetable._historyCache || []).slice().reverse();
@@ -377,7 +394,7 @@ firetable.discover = (function () {
       '<button type="button" class="butt graybutt iconbutt' + (on === "list" ? " on" : "") + '" data-layout="list" title="List" aria-label="List">' + ms("view_list") + "</button></div>";
   }
 
-  function newList(tracks, layout, listName, max, compact) {
+  function newList(tracks, layout, listName, max, compact, page) {
     tracks = max ? tracks.slice(0, max) : tracks;
     if (!tracks.length) return D.data.new ? emptyNote("No new releases here yet. The bot adds them once a day.") : loading();
     if (layout === "list") {
@@ -386,7 +403,7 @@ firetable.discover = (function () {
         return row(t, listName, i, { stamp: firetable.utilities.shortDate(t.rel), dj: m.dj, right: m.extra || "new" });
       }).join("") + "</div>";
     }
-    return '<div class="ft-cards' + (compact ? " d-compact" : "") + '">' + tracks.map(function (t, i) { return card(t, listName, i, newMeta(t)); }).join("") + "</div>";
+    return '<div class="ft-cards' + (compact ? " d-compact" : "") + (page ? " d-newgrid" : "") + '">' + tracks.map(function (t, i) { return card(t, listName, i, newMeta(t)); }).join("") + "</div>";
   }
 
   function movement(mv) {
@@ -401,12 +418,14 @@ firetable.discover = (function () {
     tracks = max ? tracks.slice(0, max) : tracks;
     if (!tracks.length) return emptyNote("No plays in this chart yet.");
     return '<div class="ft-rows d-rowlist">' + tracks.map(function (t, i) {
+      var first = t.first ? djShown(t.djid, t.dj) : null;
       var right = genreLink(t.g) +
+        (t.first ? '<span class="d-firsthere" title="First played here">' + (first ? esc(first.name) + " · " : "") + esc(firetable.utilities.shortDate(t.first)) + "</span>" : "") +
         (t.fires ? '<span class="d-fires" title="' + esc(firetable.utilities.pluralize(t.fires, "fire", "fires")) + ' (not counted)">' + ms("local_fire_department") + '<span class="d-num">' + esc(t.fires) + "</span></span>" : "") +
         (period === "week" ? movement(t.mv) + (t.wks > 1 ? '<span class="d-num d-wks" title="weeks in a row on the chart">' + esc(t.wks) + " wks</span>" : "") : "") +
         '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>";
-      return row(t, listName, i, { stamp: "#" + (t.rank || i + 1), rank: true, dj: djShown(t.djid, t.dj), right: right });
-    }).join("") + "</div>";
+      return row(t, listName, i, { stamp: rankStamp(t, i), rank: true, dj: djShown(t.djid, t.dj), right: right });
+    }).join("") + "</div>" + (tracks.some(function (t) { return t.tie; }) ? TIE_NOTE : "");
   }
 
   function genreLink(g) {
@@ -504,7 +523,7 @@ firetable.discover = (function () {
     var week = weekNew();
     if (week.length >= 6) {
       setList("home-week", "New this week", week);
-      h += '<section class="d-week">' + newHead("New this week", "All new releases", "days90") + leadCard(week[0], "home-week", week.length) +
+      h += '<section class="d-week">' + newHead("New this week", "All " + week.length + " from this week", "week") + leadCard(week[0], "home-week", week.length) +
         '<div class="ft-cards d-compact">' + week.slice(1, 7).map(function (t, i) { return card(t, "home-week", i + 1, newMeta(t)); }).join("") + "</div></section>";
     } else {
       h += "<section>" + newHead(newTitle, "All new releases", "days90") + newList(nt, "grid", "home-new", 18, true) + "</section>";
@@ -521,9 +540,10 @@ firetable.discover = (function () {
     h += topDjs();
     if (rising.length) {
       var rn = D.homeMore.rising ? rising.length : 5;
+      ranked(rising, "recent");
       h += "<section>" + head("Rising") + '<p class="d-fact">Played more in the last four weeks than the four before</p>' +
         '<div class="ft-rows d-rowlist">' + rising.slice(0, rn).map(function (t, i) {
-          return row(t, "home-rising", i, { stamp: "#" + (i + 1), rank: true, dj: djShown(t.djid, t.dj),
+          return row(t, "home-rising", i, { stamp: rankStamp(t, i), rank: true, dj: djShown(t.djid, t.dj),
             right: '<span class="d-mv up">▲' + esc(t.up) + '</span><span class="d-num">' + esc(firetable.utilities.pluralize(t.recent, "play", "plays")) + "</span>" });
         }).join("") + "</div>" + more("rising", rising.length, 5) + "</section>";
     }
@@ -546,12 +566,20 @@ firetable.discover = (function () {
     return h;
   }
 
+  // New's one Show menu (round 4: filters behind one button, no rows of chips)
+  var NEW_SHOW = [["week", "This week"], ["month", "This month"], ["days90", "Last 90 days"], ["unplayed", "Not played live yet"]];
+  var NEW_FACT = { week: "released in the last 8 days", month: "released this month", days90: "released in the last 90 days", unplayed: "nobody has played here yet" };
   function viewNew() {
+    if (!D.newFilter) D.newFilter = weekNew().length ? "week" : "month";
     var tracks = newTracks();
-    setList("new", "New releases", tracks);
-    return '<div class="d-headrow"><h2>New</h2>' + chips("new", [["month", "This month"], ["days90", "Last 90 days"], ["unplayed", "Not played live yet"]], D.newFilter) + layoutButtons(D.newLayout) + "</div>" +
-      '<p class="d-fact">' + esc(firetable.utilities.pluralize(tracks.length, "song", "songs")) + " from this year's playlist, newest first</p>" +
-      newList(tracks, D.newLayout, "new");
+    var label = (NEW_SHOW.filter(function (o) { return o[0] === D.newFilter; })[0] || NEW_SHOW[1])[1];
+    setList("new", "New · " + label.toLowerCase(), tracks);
+    return '<div class="d-headrow"><h2>New</h2>' +
+      '<label class="d-show"><span>Show</span><select id="dNewShow" class="d-select">' + NEW_SHOW.map(function (o) {
+        return '<option value="' + o[0] + '"' + (o[0] === D.newFilter ? " selected" : "") + ">" + esc(o[1]) + "</option>";
+      }).join("") + "</select></label>" + layoutButtons(D.newLayout) + "</div>" +
+      '<p class="d-fact">' + esc(firetable.utilities.pluralize(tracks.length, "song", "songs")) + " " + esc(NEW_FACT[D.newFilter] || "") + ", newest first</p>" +
+      newList(tracks, D.newLayout, "new", 0, false, true);
   }
 
   function viewCharts() {
@@ -572,7 +600,10 @@ firetable.discover = (function () {
     ((D.data.new && D.data.new.tracks) || []).forEach(function (t) { fresh[t.cid] = true; });
     var rows = all.filter(function (r) { return (!D.chartGenre || r.g === D.chartGenre) && (!D.chartNew || fresh[r.cid]); });
     setList("chart", "Room chart · " + chartTitle(period, id) + (D.chartNew ? " · new releases" : "") + (D.chartGenre ? " · " + D.chartGenre : ""), rows);
-    h += '<div class="d-headrow"><h2>Room chart</h2>' + chips("period", [["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All time"]], period) + "</div>";
+    h += '<div class="d-headrow"><h2>Room chart</h2><div class="d-seg" role="group" aria-label="Period">' +
+      [["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All time"]].map(function (o) {
+        return '<button type="button" class="d-segbtn' + (o[0] === period ? " on" : "") + '" data-period="' + o[0] + '" aria-pressed="' + (o[0] === period) + '">' + o[1] + "</button>";
+      }).join("") + "</div></div>";
     var stepper = "";
     if (period !== "all") {
       var ids = Object.keys(D.data.chartIds[period] || {}).sort();
@@ -581,18 +612,16 @@ firetable.discover = (function () {
         '<button type="button" class="butt graybutt iconbutt" data-step="1" title="Later" aria-label="Later"' + (at > -1 && at < ids.length - 1 ? "" : " disabled") + ">" + ms("chevron_right") + "</button>";
     }
     var fact = c && c.plays ? " · " + firetable.utilities.pluralize(c.plays, "play", "plays") + " by " + firetable.utilities.pluralize(c.djs || 0, "DJ", "DJs") : "";
-    h += '<div class="d-headrow">' + stepper + '<p class="d-fact"><b>' + esc(chartTitle(period, id)) + "</b>" + esc(fact) + (period === "all" ? " · from the room's whole history" : "") + "</p>" +
-      '<button type="button" class="butt graybutt iconbutt d-share" title="Copy a link to this chart" aria-label="Copy a link to this chart">' + ms("share") + "</button></div>";
-    h += '<div class="d-chips" role="group" aria-label="Which songs">' +
-      '<button type="button" class="d-chip' + (D.chartNew ? "" : " on") + '" data-cnew="" aria-pressed="' + !D.chartNew + '">All songs</button>' +
-      '<button type="button" class="d-chip' + (D.chartNew ? " on" : "") + '" data-cnew="1" aria-pressed="' + !!D.chartNew + '">New releases</button></div>';
-    if (gs.length > 1) {
-      h += '<div class="d-chips" role="group" aria-label="Genre">' +
-        '<button type="button" class="d-chip' + (D.chartGenre ? "" : " on") + '" data-cgenre="" aria-pressed="' + !D.chartGenre + '">All genres</button>' +
-        gs.map(function (g) {
-          return '<button type="button" class="d-chip' + (D.chartGenre === g ? " on" : "") + '" data-cgenre="' + esc(g) + '" aria-pressed="' + (D.chartGenre === g) + '">' + esc(g) + "</button>";
-        }).join("") + "</div>";
-    }
+    h += '<div class="d-headrow">' + stepper + '<p class="d-fact"><b>' + esc(chartTitle(period, id)) + "</b>" + esc(fact) + (period === "all" ? " · from the room's whole history" : "") + "</p></div>";
+    // genre and new releases only: two drop-downs (round 4: no rows of chips)
+    h += '<div class="d-headrow d-chartctl">' +
+      (gs.length > 1 ? '<label class="d-show"><span class="sr-only">Genre</span><select id="dChartGenre" class="d-select"><option value="">All genres</option>' +
+        gs.map(function (g) { return '<option value="' + esc(g) + '"' + (D.chartGenre === g ? " selected" : "") + ">" + esc(g) + "</option>"; }).join("") + "</select></label>" : "") +
+      '<label class="d-show"><span class="sr-only">Which songs</span><select id="dChartWhich" class="d-select"><option value="">All songs</option>' +
+        '<option value="new"' + (D.chartNew ? " selected" : "") + ">New releases only</option></select></label>" +
+      '<span class="d-chartacts">' + (rows.length ? '<button type="button" class="butt d-playall d-panelmain" data-list="chart">' + ms("play_arrow", true) + "<span>Play the chart</span></button>" +
+        saveAllButton("chart", "Save as playlist") : "") +
+      '<button type="button" class="butt graybutt d-share" title="Share this chart: a link, a picture or an embed" aria-label="Share this chart">' + ms("share") + "<span>Share</span></button></span></div>";
     h += c === undefined ? loading() : rows.length || !all.length ? chartList(rows, "chart", 0, period)
       : emptyNote(D.chartNew ? "No new releases on this chart." : "Nothing in this genre on this chart.");
     return h;
@@ -658,15 +687,18 @@ firetable.discover = (function () {
     return '<a class="butt graybutt d-ytm" href="https://music.youtube.com/playlist?list=' + esc(id) + '" target="_blank" rel="noopener" title="' + esc("The " + name + " room favorites as a playlist on YouTube Music") + '">' +
       ms("open_in_new") + "<span>YouTube Music</span></a>";
   }
-  function saveAllButton(listName) {
+  function saveAllButton(listName, label) {
     return '<button type="button" class="butt graybutt d-saveall" data-list="' + esc(listName) + '" title="' + (D.signedIn ? "Save these songs as a new playlist" : "Save these songs to your crate") + '">' +
-      ms("playlist_add") + "<span>Save all</span></button>";
+      ms("playlist_add") + "<span>" + esc(label || "Save all") + "</span></button>";
   }
   function rankedRows(tracks, listName, rightOf) {
     if (!tracks.length) return emptyNote("Nothing here yet.");
+    // ranked by plays when the list is in play order; a list in another order keeps its places
+    var byPlays = tracks.every(function (t, i) { return !i || (tracks[i - 1].plays || 0) >= (t.plays || 0); });
+    var ranks = byPlays ? ranked(tracks.map(function (t) { return { plays: t.plays || 0 }; }), "plays") : [];
     return '<div class="ft-rows d-rowlist">' + tracks.map(function (t, i) {
-      return row(t, listName, i, { stamp: "#" + (i + 1), rank: true, dj: djShown(t.djid, t.dj), right: rightOf ? rightOf(t) : '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" });
-    }).join("") + "</div>";
+      return row(t, listName, i, { stamp: ranks[i] ? rankStamp(ranks[i], i) : "#" + (i + 1), rank: true, dj: djShown(t.djid, t.dj), right: rightOf ? rightOf(t) : '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" });
+    }).join("") + "</div>" + (ranks.some(function (r) { return r.tie; }) ? TIE_NOTE : "");
   }
   function datedRows(tracks, listName) {
     if (!tracks.length) return emptyNote("Nothing here yet.");
@@ -1228,7 +1260,7 @@ firetable.discover = (function () {
     h += "<section>" + head("Most played here") + rankedRows(top, "year") + "</section>";
     if (extra.length) {
       h += "<section>" + head("Not played here yet") + '<p class="d-fact">From ' + esc(y) + "'s playlist. Play one for the room.</p>" +
-        '<div class="ft-cards">' + extra.map(function (t, i) { return card(t, "year-more", i, { who: "Not played live yet" }); }).join("") + "</div></section>";
+        '<div class="ft-cards">' + extra.map(function (t, i) { return card(t, "year-more", i, { tag: "Be the first", who: "Nobody has played it yet" }); }).join("") + "</div></section>";
     }
     return h;
   }
@@ -3253,9 +3285,7 @@ firetable.discover = (function () {
     if ((b = t.closest(".d-chip[data-new]"))) { D.newFilter = b.getAttribute("data-new"); return renderBrowse(); }
     // Home's links into New pick its filter, then the address takes them there
     if ((b = t.closest("a[data-newfilter]"))) D.newFilter = b.getAttribute("data-newfilter");
-    if ((b = t.closest(".d-chip[data-period]"))) { D.chart = { period: b.getAttribute("data-period"), id: null }; renderBrowse(); return writeAddress(); }
-    if ((b = t.closest(".d-chip[data-cgenre]"))) { D.chartGenre = b.getAttribute("data-cgenre") || null; return renderBrowse(); }
-    if ((b = t.closest(".d-chip[data-cnew]"))) { D.chartNew = !!b.getAttribute("data-cnew"); return renderBrowse(); }
+    if ((b = t.closest("[data-period]"))) { D.chart = { period: b.getAttribute("data-period"), id: null }; renderBrowse(); return writeAddress(); }
     if ((b = t.closest(".d-chip[data-gtab]"))) { D.genreTab = b.getAttribute("data-gtab"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-djtab]"))) { D.djTab = b.getAttribute("data-djtab"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-djsort]"))) { D.djSort = b.getAttribute("data-djsort"); return renderBrowse(); }
@@ -3989,6 +4019,9 @@ firetable.discover = (function () {
       });
       document.addEventListener("change", function (e) {
         if (e.target.id === "pv-seek" || e.target.id === "pv-fseek") { D.seeking = false; return seek(Number(e.target.value)); }
+        if (e.target.id === "dNewShow") { D.newFilter = e.target.value; return renderBrowse(); }
+        if (e.target.id === "dChartGenre") { D.chartGenre = e.target.value || null; return renderBrowse(); }
+        if (e.target.id === "dChartWhich") { D.chartNew = e.target.value === "new"; return renderBrowse(); }
         if (e.target.id === "pv-listpick") {
           D.plFilter = ""; D.plAll = false;
           // the same switch as Live's Playlists picker: one list on screen across the site

@@ -155,7 +155,7 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke: `#timr` equals the song's duration (the seeded song is 300s: "5:00").
 - **Undo:** revert.
 
-### 1.9 Tied ranks → ships with 2.6 (realigned November 15, 2026)
+### 1.9 Tied ranks ✅ shipped with 2.6
 - **Goal:** songs with the same plays share a rank ("=3") on charts, DJ pages and Rising.
 - **Rows:** DI-03, DI-07.
 - **Files and change:** `discover.js` `chartRows`, `rankedRows` and the Home chart: compute standard competition ranking; show `=n` when the previous or next row has the same plays. A note under the chart when ties exist: "Songs with the same number of plays share a rank."
@@ -331,7 +331,9 @@ Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the
 - **Change:** tidy `#login`, `#authBox`, `#oauthBox`, the join box in Discover and `#pickNameBox`: one column, 44px fields, the existing copy, today's colours.
 - **Check:** smoke's existing auth flow checks.
 
-### 2.6 New and Charts controls
+### 2.6 New and Charts controls ✅ shipped (with 1.9)
+- **Shipped, New:** one **Show** menu (`#dNewShow`, a select styled as a button) in place of the row of chips: This week (the last 8 days, as Home's), This month, Last 90 days and Not played live yet. New opens on This week while it has releases, else This month; Home's links open it on This week, Last 90 days or Not played live yet. Four covers across at 1440 and up, three under, two on phones, with Save and ⋮ over the cover's corner (so the title has the card's width), shown on hover and focus with a mouse and always on touch; the saved mark stays. Under each cover who played it first and when, or "Be the first" and "Nobody has played it yet" (Home's covers and the Years page say the same). Smoke checks the menu, This week first, Be the first and Last 90 days; New joined the accessibility check's views.
+- **Shipped, Charts:** the period (Week, Month, Year, All time) is one segmented control (`.d-seg`); genre and new releases only are two drop-downs (`#dChartGenre`, only when the chart has more than one genre; `#dChartWhich`); the actions are **Play the chart** (the panel's dark button with gold text), **Save as playlist** and **Share** (the link, picture and embed menu, now labelled). Rows add who played each song here first and when (`.d-firsthere`, from 1024 up), beside rank (with ties), movement, cover, song, genre, fires, weeks and plays. **Peak** waits for the bot to publish it. **Tied ranks (1.9):** `ranked` gives standard competition ranks to the charts (and Home's chart), Rising and the play-ordered lists on DJ, genre and year pages; a shared rank reads "=3", and a note under the list says "Songs with the same number of plays share a rank." Smoke seeds a week with a tie (=1, =1, #3) and checks the controls, the actions and the first-here column.
 - **Rows:** DI-02, DI-03, DI-20.
 - **Change:** New: one **Show** menu (This week, Last 90 days, Not played live yet) instead of chips; four covers across at 1440, three at 1024, two on phones; under each cover who played it first and when, or "Nobody has played it yet" with the "Be the first" tag; Save and ⋮ show on hover and focus, and always on touch. Charts: the period stays a segmented control, genre and new-only become two drop-downs, actions **Play the chart**, **Save as playlist**, **Share**; columns rank (=), move, cover, song, genre, first here (avatar · DJ · date), weeks, plays; **peak** only once the bot publishes it.
 - **Check:** smoke's chart checks; the chart image and embed unchanged.

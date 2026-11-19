@@ -69,6 +69,7 @@ const hash = (h) => (page) => page.evaluate((x) => { if (location.hash !== x) lo
 const liveTab = (id) => async (page) => { await hash("#live")(page); await page.evaluate((t) => firetable.nav.setMobileTab(t), id); };
 const VIEWS = [
   { name: "d-home", run: hash("#discover") },
+  { name: "d-new", run: hash("#discover/new") },
   { name: "d-charts", run: hash("#discover/charts") },
   { name: "d-genre", run: hash("#discover/genres/nu-disco") },
   { name: "d-dj", run: hash("#discover/djs/dj1") },

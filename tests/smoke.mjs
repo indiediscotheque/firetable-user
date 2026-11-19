@@ -1053,7 +1053,7 @@ try {
     befirst: [...document.querySelectorAll("#dBrowse section")].filter((sec) => /Not played live yet/.test(sec.querySelector("h2")?.textContent || ""))
       .map((sec) => sec.querySelectorAll(".pvbar").length + ":" + [...sec.querySelectorAll(".d-befirst")].map((e) => e.textContent).join() + ":" + sec.querySelector("[data-newfilter]")?.textContent).join(),
     chart: [...document.querySelectorAll("#dBrowse .ft-rows .hist-timestamp")].slice(0, 2).map((e) => e.textContent).join(),
-    unplayed: [...document.querySelectorAll("#dBrowse .fresh-meta .histdj")].some((e) => e.textContent === "Not played live yet"),
+    unplayed: [...document.querySelectorAll("#dBrowse .fresh-meta")].some((e) => /Be the first/.test(e.textContent) && /Nobody has played it yet/.test(e.textContent)),
     stageHidden: getComputedStyle(document.getElementById("stage")).opacity === "0",
     noLine: !document.getElementById("dLive"),
     bar: document.getElementById("pv-src").textContent + "|" + document.querySelector("#dMini .pb-main").getAttribute("aria-label"),
@@ -1111,7 +1111,7 @@ try {
     const want = "Week Three"; // the newer of the two with 5 plays
     check(lead && lead.title === want && lead.kicker === "The week's most played" && /Found by dj1/.test(lead.found) && /5 plays/.test(lead.found),
       "the lead is the week's most played release (the newer on a tie), with who found it (" + JSON.stringify(lead) + ")");
-    check(lead && lead.playAll === "Play the week's " + inWeek && lead.under === 6 && lead.all === "days90" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),
+    check(lead && lead.playAll === "Play the week's " + inWeek && lead.under === 6 && lead.all === "week" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),
       "Play the week's " + inWeek + " plays from the lead; the next six sit under it (" + JSON.stringify(lead) + ")");
     check(lead && /^New this week\|Not played live yet\|Room chart/.test(lead.order), "Home's order: New this week, Not played live yet, the chart (" + (lead && lead.order) + ")");
     await dPage.evaluate(async () => {
@@ -1120,6 +1120,32 @@ try {
       firetable.discover.onFailed = window.__skip;
     });
     await put("/discover/new", discover(now).new);
+  }
+
+  console.log("-- Discover New: one Show menu, This week first, Be the first on what nobody has played");
+  {
+    await dPage.waitForFunction(() => !document.querySelector("#dBrowse .d-lead"), null, { timeout: 10000 }).catch(() => {});
+    const shown = await dPage.evaluate(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      location.hash = "#discover/new";
+      await wait(300);
+      const show = document.getElementById("dNewShow");
+      const out = { options: [...show.options].map((o) => o.textContent).join("|"), first: show.value, chips: document.querySelectorAll("#dBrowse .d-chip[data-new]").length,
+        weekCount: document.querySelectorAll("#dBrowse .d-newgrid .pvbar").length, fact: document.querySelector("#dBrowse .d-fact").textContent };
+      show.value = "unplayed";
+      show.dispatchEvent(new Event("change", { bubbles: true }));
+      await wait(200);
+      const cards = [...document.querySelectorAll("#dBrowse .d-newgrid .pvbar")];
+      out.unplayed = cards.length + ":" + cards.every((c) => /Be the first/.test(c.textContent) && /Nobody has played it yet/.test(c.textContent));
+      document.getElementById("dNewShow").value = "days90";
+      document.getElementById("dNewShow").dispatchEvent(new Event("change", { bubbles: true }));
+      await wait(200);
+      out.all = document.querySelectorAll("#dBrowse .d-newgrid .pvbar").length;
+      return out;
+    });
+    check(shown.options === "This week|This month|Last 90 days|Not played live yet" && shown.first === "week" && !shown.chips && shown.weekCount === 2 && /last 8 days/.test(shown.fact),
+      "New has one Show menu, on This week while the week has releases (" + JSON.stringify(shown) + ")");
+    check(shown.unplayed === "1:true" && shown.all === 3, "Not played live yet shows Be the first; Last 90 days shows them all (" + JSON.stringify(shown) + ")");
   }
 
   console.log("-- Discover: playing a song uses the room's player, and keeps playing in Live");
@@ -1464,7 +1490,9 @@ try {
   const crate = await dPage.evaluate(async () => {
     location.hash = "#discover/new";
     await new Promise((r) => setTimeout(r, 300));
-    document.querySelector('.d-chip[data-new="days90"]').click();
+    const show = document.getElementById("dNewShow");
+    show.value = "days90";
+    show.dispatchEvent(new Event("change", { bubbles: true }));
     const saves = () => document.querySelectorAll("#dBrowse .histeal");
     for (let i = 0; i < 3; i++) { saves()[i].click(); await new Promise((r) => setTimeout(r, 100)); }
     await new Promise((r) => setTimeout(r, 900));
@@ -1486,9 +1514,12 @@ try {
     await until(() => document.querySelectorAll("#dBrowse .ft-rows .pvbar").length === 3);
     out.fires = [...document.querySelectorAll("#dBrowse .d-fires .d-num")].map((e) => e.textContent).join();
     out.wks = [...document.querySelectorAll("#dBrowse .d-wks")].map((e) => e.textContent).join();
-    document.querySelector('.d-chip[data-cnew="1"]').click();
+    const which = document.getElementById("dChartWhich");
+    which.value = "new";
+    which.dispatchEvent(new Event("change", { bubbles: true }));
     out.newOnly = [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join() + "|" + [...document.querySelectorAll("#dBrowse .hist-timestamp")].map((e) => e.textContent).join();
-    document.querySelector('.d-chip[data-cnew=""]').click();
+    document.getElementById("dChartWhich").value = "";
+    document.getElementById("dChartWhich").dispatchEvent(new Event("change", { bubbles: true }));
     location.hash = "#discover/themes";
     await until(() => document.querySelector("#dBrowse .d-night"));
     out.nights = [...document.querySelectorAll("#dBrowse .d-night b")].map((e) => e.textContent).join();
@@ -1521,6 +1552,36 @@ try {
   check(extras.saved === "One,Two,Three", "Save all puts a whole list in the crate (" + extras.saved + ")");
   check(extras.savedLong === 100, "Save all saves every song on screen, not just the first 50 (" + extras.savedLong + " of 100)");
   check(extras.playing === "night:night00001" && extras.source && extras.reload, "Play the night; the player names the source and can reload (" + JSON.stringify(extras) + ")");
+
+  console.log("-- Charts: the period as one control, two drop-downs, Play the chart, Save as playlist, Share; tied songs share a rank");
+  await put("/discover/charts/week/2026-W46", { at: now, from: now - 3 * 86400000, to: now + 4 * 86400000, plays: 20, djs: 2, rows: [
+    { key: "t1", type: 1, cid: "tie0000001", a: "Tie", t: "One", plays: 6, dj: "dj1", djid: "dj1", first: now - 86400000, mv: "new", wks: 1 },
+    { key: "t2", type: 1, cid: "tie0000002", a: "Tie", t: "Two", plays: 6, mv: "new", wks: 1 },
+    { key: "t3", type: 1, cid: "tie0000003", a: "Tie", t: "Three", plays: 4, mv: "new", wks: 1 }] });
+  await put("/discover/chartIds/week/2026-W46", true);
+  const ties = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    location.hash = "#discover/home";
+    await wait(200);
+    location.hash = "#discover/charts";
+    await until(() => document.getElementById("dChartWhich") && [...document.querySelectorAll("#dBrowse .hist-track-title")].some((e) => e.textContent === "Three"));
+    return {
+      ranks: [...document.querySelectorAll("#dBrowse .ft-rows .hist-timestamp")].map((e) => e.textContent).join(),
+      note: !!document.querySelector("#dBrowse .d-tienote"),
+      period: [...document.querySelectorAll("#dBrowse .d-seg .d-segbtn")].map((b) => b.textContent + (b.classList.contains("on") ? "*" : "")).join(),
+      chips: document.querySelectorAll("#dBrowse .d-chip[data-cnew], #dBrowse .d-chip[data-cgenre], #dBrowse .d-chip[data-period]").length,
+      which: [...((document.getElementById("dChartWhich") || {}).options || [])].map((o) => o.textContent).join("|"),
+      acts: [...document.querySelectorAll("#dBrowse .d-chartacts button span")].map((e) => e.textContent).join("|"),
+      first: (document.querySelector("#dBrowse .d-firsthere") || {}).textContent || ""
+    };
+  });
+  check(ties.ranks === "=1,=1,#3" && ties.note, "songs with the same plays share a rank, and the chart says so (" + JSON.stringify(ties) + ")");
+  check(ties.period === "Week*,Month,Year,All time" && !ties.chips && ties.which === "All songs|New releases only" && ties.acts === "Play the chart|Save as playlist|Share" && /^dj1 · /.test(ties.first),
+    "the chart's period is one control, genre and new releases are drop-downs, with Play the chart, Save as playlist and Share, and who played each first (" + JSON.stringify(ties) + ")");
+  await put("/discover/chartIds/week/2026-W46", null);
+  await put("/discover/charts/week/2026-W46", null);
+  await dPage.evaluate(() => { location.hash = "#discover/home"; });
 
   console.log("-- Discover: share a chart as a link, an image or an embed");
   await dPage.evaluate(async () => { location.hash = "#discover/charts"; await new Promise((r) => setTimeout(r, 400)); });

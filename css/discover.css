@@ -2110,3 +2110,108 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 
 /* Home: a card's "Be the first" */
 .fresh-meta .d-befirst { flex: none; }
+
+/* ============================================
+   New: one Show menu, and the covers (redesign step 2.6)
+   ============================================ */
+.d-show {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-subtle);
+    font-size: var(--fs-meta);
+}
+.d-select {
+    height: var(--tap-min);
+    padding: 0 var(--space-8) 0 var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-btn);
+    background-color: var(--color-bg-t1);
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--fs-body);
+    line-height: calc(var(--tap-min) - 2px); /* after font, which resets it: the site draws selects (appearance: none), so centre the words */
+}
+.d-select:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+/* four covers across at 1440, three at 1024, two on phones */
+#dBrowse .ft-cards.d-newgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media only screen and (min-width: 1440px) {
+    #dBrowse .ft-cards.d-newgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media only screen and (max-width: 639px) {
+    #dBrowse .ft-cards.d-newgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* the song's buttons over the corner of its cover, so the title has the card's width */
+#dBrowse .d-newgrid .pvbar { position: relative; }
+#dBrowse .d-newgrid .listwords .row-icon {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    border-radius: var(--radius-pill);
+    background: rgb(0 0 0 / 0.6);
+    color: #fff;
+    font-size: 1.15rem;
+}
+#dBrowse .d-newgrid .listwords .d-more { right: 2.85rem; }
+#dBrowse .d-newgrid .listwords button.histeal.is-saved { color: var(--color-accent); }
+#dBrowse .d-newgrid .fresh-track-title { font-size: var(--fs-body); }
+#dBrowse .d-newgrid .fresh-track-artist { font-size: var(--fs-meta); }
+/* Save and ⋮ show on hover and focus with a mouse, always on touch */
+@media (hover: hover) and (pointer: fine) {
+    #dBrowse .d-newgrid .listwords .row-icon { opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
+    #dBrowse .d-newgrid .pvbar:hover .listwords .row-icon,
+    #dBrowse .d-newgrid .pvbar:focus-within .listwords .row-icon,
+    #dBrowse .d-newgrid .listwords .row-icon.is-saved { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #dBrowse .d-newgrid .listwords .row-icon { transition: none; }
+}
+
+/* ============================================
+   Charts: the period as one segmented control, two drop-downs, the actions
+   (redesign step 2.6)
+   ============================================ */
+.d-seg {
+    display: inline-flex;
+    padding: 2px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-btn);
+    background: var(--color-bg-s2);
+}
+.d-seg .d-segbtn {
+    height: calc(var(--tap-min) - 6px);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-row);
+    background: none;
+    box-shadow: none;
+    color: var(--color-text-subtle);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.d-seg .d-segbtn.on { background: var(--color-bg-t3); color: var(--color-text-light); }
+.d-seg .d-segbtn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.d-chartctl { gap: var(--space-2); }
+.d-chartacts { display: inline-flex; flex-wrap: wrap; gap: var(--space-2); margin-left: auto; }
+/* a panel's main action: a dark button with gold text (round 4: no big gold fills) */
+#dBrowse .butt.d-panelmain { background: var(--color-bg-t2); color: var(--color-accent); box-shadow: none; }
+#dBrowse .butt.d-panelmain:hover,
+#dBrowse .butt.d-panelmain:focus-visible { background: var(--color-bg-t3); }
+/* first played here: who and when, on wide rows */
+.d-firsthere {
+    color: var(--color-text-subtle);
+    font-size: var(--fs-meta);
+    white-space: nowrap;
+}
+@media only screen and (max-width: 1023px) {
+    .d-firsthere { display: none; }
+}
+.d-tienote { font-size: var(--fs-meta); }
