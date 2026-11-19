@@ -727,6 +727,60 @@ try {
     "Sort shows the playlist by artist or title, says so over the list, and marks its button (" + JSON.stringify(srt) + ")");
   check(srt.afterDrag === "k1,k3,k2,k4" && srt.saved === 0 && srt.stored === "k1,k2,k3,k4" && srt.back === "k1,k2,k3,k4" && srt.barGone === "Sort: Your order",
     "a sorted view never changes the play order: dragging is off, and Back to your order brings it back (" + JSON.stringify(srt) + ")");
+  console.log("-- Select several: tick songs, then Top, Delete (with Undo), Copy to…");
+  const beforeSel = await listNow();
+  await put("/queues/smoke", { s1: { type: 1, cid: "selvideo001", name: "Aa - One" }, s2: { type: 1, cid: "selvideo002", name: "Bb - Two" },
+    s3: { type: 1, cid: "selvideo003", name: "Cc - Three" }, s4: { type: 1, cid: "selvideo004", name: "Dd - Four" }, s5: { type: 1, cid: "selvideo005", name: "Ee - Five" } });
+  const fresh = () => page.evaluate(() => ftapi.queueRef.once("value").then((s) => { ftapi.events.emit("playlistChanged", s.val(), "0"); }));
+  const dbNames = () => page.evaluate(async () => Object.entries((await ftapi.queueRef.once("value")).val() || {}).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map((e) => e[1].name.slice(0, 2)).join());
+  const waitDb = async (want) => { for (let i = 0; i < 40; i++) { if ((await dbNames()) === want) return want; await sleep(100); } return dbNames(); };
+  const keyOf = (name) => page.evaluate((n) => { return Object.keys(firetable.queue).find((k) => firetable.queue[k].name.startsWith(n)); }, name);
+  await fresh();
+  const sel = {};
+  await page.click("#cr-select");
+  sel.on = await page.evaluate(() => !document.getElementById("cr-bulk").hidden && $("#mainqueue").hasClass("cr-selecting") &&
+    getComputedStyle(document.querySelector("#mainqueue .q-check")).display !== "none" && $("#cr-bulkTop").prop("disabled") && $("#cr-bulkCount").text());
+  await page.click('#mainqueue .pvbar[data-key="s2"] .q-name');
+  await page.click('#mainqueue .pvbar[data-key="s4"] .q-check');
+  sel.count = await page.evaluate(() => $("#cr-bulkCount").text() + "|" + $("#mainqueue .pvbar.is-picked").map(function () { return this.getAttribute("data-key"); }).get().join());
+  await page.click("#cr-bulkTop");
+  sel.top = await waitDb("Bb,Dd,Aa,Cc,Ee");
+  sel.kept = await page.evaluate(() => $("#cr-bulkCount").text());
+  await fresh();
+  sel.pickedTop = await page.evaluate(() => [...document.querySelectorAll("#mainqueue .pvbar")].slice(0, 2).every((r) => r.classList.contains("is-picked")));
+  // Delete asks once, then Undo puts them back where they were
+  await page.click("#cr-bulkDelete");
+  sel.ask = await page.evaluate(() => $("#cr-bulkDelete span").text().trim());
+  await page.click("#cr-bulkDelete");
+  sel.deleted = await waitDb("Aa,Cc,Ee");
+  sel.toast = await page.evaluate(() => document.getElementById("ft-toast")?.textContent || "");
+  await page.evaluate(() => { const b = [...document.querySelectorAll("#ft-toast button")].find((x) => /Undo/.test(x.textContent)); if (b) b.click(); });
+  sel.undone = await waitDb("Bb,Dd,Aa,Cc,Ee");
+  // Copy to…: the ticked songs go to the top of another playlist, in their order
+  await fresh();
+  const a1 = await keyOf("Aa"), c3 = await keyOf("Cc");
+  await page.click('#mainqueue .pvbar[data-key="' + c3 + '"] .q-check');
+  await page.click('#mainqueue .pvbar[data-key="' + a1 + '"] .q-check');
+  await page.click("#cr-bulkCopy");
+  await page.waitForFunction(() => $("#stealContain").is(":visible"));
+  await page.evaluate(() => { $("#stealpicker").append(new Option("Copy dest", "copyDest")).val("copyDest").trigger("change"); });
+  sel.copied = await page.evaluate(async () => {
+    for (let i = 0; i < 40; i++) {
+      const v = (await ftapi.lookup.listRef("copyDest").once("value")).val();
+      if (v) return Object.entries(v).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map((e) => e[1].name.slice(0, 2)).join();
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
+  });
+  await page.click("#cr-bulkDone");
+  sel.off = await page.evaluate(() => document.getElementById("cr-bulk").hidden && !$("#mainqueue").hasClass("cr-selecting") && !document.querySelector("#mainqueue .pvbar.is-picked") && Object.keys(firetable.queueSel || {}).length === 0);
+  check(sel.on === "0 selected" && sel.count === "2 selected|s2,s4" && sel.top === "Bb,Dd,Aa,Cc,Ee" && sel.kept === "2 selected" && sel.pickedTop,
+    "Select several: tick two songs, Top puts them first in their order and they stay ticked (" + JSON.stringify(sel) + ")");
+  check(sel.ask === "Delete 2 songs?" && sel.deleted === "Aa,Cc,Ee" && /Deleted 2 songs/.test(sel.toast) && sel.undone === "Bb,Dd,Aa,Cc,Ee",
+    "Select several: Delete asks once, deletes both in one go, and Undo puts them back where they were (" + JSON.stringify(sel) + ")");
+  check(sel.copied === "Aa,Cc" && sel.off, "Select several: Copy to… adds them to another playlist's top in play order; × ends it and clears the ticks (" + JSON.stringify(sel) + ")");
+  await put("/queues/smoke", beforeSel);
+  await fresh();
   await page.evaluate(() => { ftapi.actions.reorderList = window.__reorder; $("#mainGrid").addClass("login"); });
 
   console.log("-- the stage's volume slider (a native range input)");
