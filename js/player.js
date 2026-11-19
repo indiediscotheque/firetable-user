@@ -65,10 +65,27 @@ function onYouTubeIframeAPIReady() {
  */
 function keepFocusOut(id) {
   var frame = document.getElementById(id);
-  if (!frame || frame.tagName !== 'IFRAME') return;
+  if (!frame || frame.tagName !== 'IFRAME') return; // not swapped in yet: onReady calls this again
   frame.inert = true;
   frame.setAttribute('tabindex', '-1');
 }
+
+// And if YouTube's page takes the focus all the same (a browser that lets an
+// inert frame's own page focus itself), it goes straight back where it was.
+(function () {
+  var last = null;
+  document.addEventListener('focusin', function (e) {
+    if (e.target && e.target.tagName !== 'IFRAME') last = e.target;
+  });
+  window.addEventListener('blur', function () {
+    setTimeout(function () {
+      var now = document.activeElement;
+      if (!now || now.tagName !== 'IFRAME' || (now.id !== 'playerArea' && now.id !== 'pvOverPlayer')) return;
+      if (last && last.isConnected && typeof last.focus === 'function') last.focus({ preventScroll: true });
+      else now.blur();
+    }, 0);
+  });
+})();
 
 /**
  * Called when the YouTube player is ready. Sets up:
@@ -80,6 +97,7 @@ function keepFocusOut(id) {
  */
 function onPlayerReady(event) {
   firetable.ytLoaded = true;
+  keepFocusOut('playerArea'); // the iframe is certainly in place now
   player.setVolume(firetable.utilities.getEffectiveVolume());
 
   // ── Resume song if one was already playing when YT loaded ──
@@ -335,7 +353,7 @@ firetable.overlayPreview = (function () {
       height: 180,
       playerVars: { autoplay: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, rel: 0, playsinline: 1 },
       events: {
-        onReady: function () { ready = true; var f = pending; pending = null; if (f) f(); },
+        onReady: function () { ready = true; keepFocusOut("pvOverPlayer"); var f = pending; pending = null; if (f) f(); },
         onStateChange: function (e) { if (e.data === YT.PlayerState.ENDED) stop(); },
         onError: function () { stop(); firetable.ui.toast("That song can't be previewed here."); }
       }
