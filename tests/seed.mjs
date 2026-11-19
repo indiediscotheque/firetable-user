@@ -65,3 +65,94 @@ export const library = (now) => {
     year: { 2026: { top: [row("lib0000002", "Gamma", "Fav Two", 20)], more: [{ type: 1, cid: "lib0000009", a: "Zed", t: "Unplayed Find", plays: 0 }] } }
   };
 };
+
+// real YouTube videos, so covers load (the titles are made up)
+export const VIDS = ["kJQP7kiw5Fk", "9bZkp7q19f0", "JGwWNGJdvx8", "fJ9rUzIMcZQ", "OPf0YbXqDm0", "hTWKbfoikeg", "YQHsXMglC9A", "RgKAFK5djSk", "CevxZvSJLk8", "60ItHLz5WEA"];
+export const art = (cid) => "https://i.ytimg.com/vi/" + cid + "/mqdefault.jpg";
+
+
+/**
+ * The room as people find it on a busy evening, for screens.mjs and reach.mjs:
+ * smoke.mjs's room plus people on the decks and in the list, playlists, Recent,
+ * Fresh, chat, cards, and Discover with real covers. `people` maps a role
+ * (member, dj, mod) to { name, uid, mod? }: real accounts in the auth emulator.
+ * Returns the data to write at the root, the decks' states (written over the
+ * root's as a test goes) and the room's song.
+ */
+export function livedIn(now, people) {
+  const song = youtubeSong(now);
+  const base = room(now, song);
+  const users = Object.assign({}, base.users, {
+    bot: { username: "hostbot", hostbot: true, status: true },
+    scytheria: { username: "scytheria", status: true }, matt: { username: "matt", status: true },
+    wl1: { username: "wl1", status: true }, wl2: { username: "wl2", status: true }
+  });
+  const nameClaim = { dj1: "dj1", dj2: "dj2", bot: "hostbot", scytheria: "scytheria", matt: "matt" };
+  for (const p of Object.values(people)) {
+    users[p.uid] = Object.assign({ username: p.name, status: true }, p.mod ? { mod: true } : {}, p.supermod ? { supermod: true } : {});
+    nameClaim[p.name] = p.uid;
+  }
+  const tracks = ["Glider - Night Drive", "Röyksopp - Me & Youphoria", "Romain Muller - Dernière", "Supertaste - Closer to the Ground",
+    "Poolside - Harvest Moon", "Breakbot - Baby I'm Yours (Remix)", "Kraak & Smaak - Squeeze Me", "Satin Jackets - You Make Me Feel Good"];
+  const queue = () => Object.fromEntries(tracks.map((name, i) => ["q" + i, Object.assign({ type: 1, cid: VIDS[i % VIDS.length], name },
+    i === 5 ? { flagged: { date: now - DAY, code: 1 } } : {})]));
+  const playlists = { p1: { name: "Nu-disco keepers", list: { a: { type: 1, cid: VIDS[8], name: "Kartell - Riviera" }, b: { type: 1, cid: VIDS[9], name: "Moods - Wildflower" } } }, p2: { name: "Theme: Italo" } };
+  // Recent groups plays by the hour: the history starts at 8 pm (yesterday's, before 9 pm)
+  // so the groups are the same whenever the pictures are taken
+  const evening = new Date(now);
+  evening.setHours(20, 0, 0, 0);
+  if (evening.getTime() > now - 3600000) evening.setDate(evening.getDate() - 1);
+  const history = Object.fromEntries(tracks.slice(0, 6).map((name, i) => {
+    const [artist, title] = name.split(" - ");
+    return ["h" + i, { type: 1, cid: VIDS[i], artist, title, dj: i % 2 ? "dj2" : "dj1", djid: i % 2 ? "dj2" : "dj1", when: evening.getTime() + (6 - i) * 6 * 60000, img: art(VIDS[i]) }];
+  }));
+  const fresh = Object.fromEntries(tracks.slice(2, 6).map((name, i) => {
+    const [artist, title] = name.split(" - ");
+    return ["f" + i, { artist, title, dj: "dj1", djid: "dj1", type: 1, cid: VIDS[i + 2], when: evening.getTime() - i * 3600000, url: "https://www.youtube.com/watch?v=" + VIDS[i + 2], img: art(VIDS[i + 2]) }];
+  }));
+  const chatLines = [["dj1", "dj1", "evening all"], ["scytheria", "scytheria", "this one is a banger"], ["bot", "hostbot", "dj1 started playing Smoke Song by Smoke Artist"],
+    ["matt", "matt", "🔥🔥"], ["dj2", "dj2", "next up something italo"]];
+  const chatData = {}, chatFeed = {};
+  chatLines.forEach(([id, name, txt], i) => {
+    chatData["c" + i] = { id, name, txt, time: now - (chatLines.length - i) * 60000, feedID: "f" + i };
+    chatFeed["f" + i] = { chatID: "c" + i };
+  });
+  const cards = {};
+  Object.values(people).forEach((p, i) => [0, 1, 2].forEach((n) => {
+    cards["card" + i + n] = { owner: p.uid, cardnum: i * 3 + n + 1, djname: "dj1", djid: "dj1", title: tracks[n].split(" - ")[1], artist: tracks[n].split(" - ")[0], image: art(VIDS[n]), date: now - n * DAY, set: "set1" };
+  }));
+
+  // smoke.mjs's Discover songs have made-up ids: give them real ones here so their covers load
+  function withArt(data) {
+    const ids = {};
+    const real = (fake) => (ids[fake] = ids[fake] || VIDS[Object.keys(ids).length % VIDS.length]);
+    return JSON.parse(JSON.stringify(data).replace(/"(1_)?((?:newrel|chart|night|long|hot|lib)\d+)"/g, (m, pre, fake) => '"' + (pre || "") + real(fake) + '"'));
+  }
+
+  // the room's song, started just now (a run takes longer than the five-minute song)
+  const playing = (over) => {
+    const at = Date.now();
+    return { songToPlay: Object.assign({}, song, { started: at, postedDate: at }, over), songBpm: { started: at, bpm: 118, src: "deezer" } };
+  };
+  const decks = {
+    // as most visits find it: two DJs, nobody waiting
+    normal: () => Object.assign({ table: base.table, waitlist: null, playdex: 0 }, playing()),
+    // the DJ role's own song on: they're on deck and playing
+    mine: (p) => Object.assign({ table: [{ name: p.name, id: p.uid, plays: 1 }, { name: "dj1", id: "dj1", plays: 2 }, { name: "dj2", id: "dj2", plays: 0 }],
+      waitlist: null, playdex: 0 }, playing({ djid: p.uid, djname: p.name })),
+    empty: () => ({ table: null, waitlist: null, songToPlay: null, playdex: 0 }),
+    // four DJs and two waiting (the song stays as it is)
+    full: () => ({ table: [{ name: "dj1", id: "dj1", plays: 2 }, { name: "dj2", id: "dj2", plays: 1 }, { name: "scytheria", id: "scytheria", plays: 1 }, { name: "matt", id: "matt", plays: 0 }],
+      waitlist: [{ name: "wl1", id: "wl1", plays: 0 }, { name: "wl2", id: "wl2", plays: 0 }], playdex: 0 })
+  };
+
+
+  const data = Object.assign({}, base, {
+    users, nameClaim, cards, chatData, chatFeed, songHistory: history, newMusic: fresh,
+    queues: Object.fromEntries(Object.values(people).map((p) => [p.uid, queue()])),
+    playlists: Object.fromEntries(Object.values(people).map((p) => [p.uid, playlists])),
+    tagUpdate: { cid: song.cid, adamData: { track_name: song.title, artist: song.artist, playcount: 67 } },
+    discover: withArt(Object.assign(discover(now), { lib: library(now) }))
+  });
+    return { data, decks, song };
+}

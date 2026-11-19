@@ -193,7 +193,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | AU-05 | Pick a username after Google sign-in | V | `#pickNameBox`, `setupPickName` | keep |
 | AU-06 | Join box over the page (stay where you are) | V | `#joinBox` in `index.html`, `users.js` `openAuth` / `closeAuth`; `discover.js` `showSignIn` adds the crate note | 2.5 shipped: every page, Discover and Live |
 | AU-07 | Change username | M | `#ac-nameForm` (`#changeUsername`, `#ac-saveName`), `#usernameResponse`, `nameClaim` | keep (Profile tab) |
-| AU-08 | Avatar style (16 sets: Robohash robots, monsters, heads, cats; DiceBear sets) | M | `#avatarStylePicker`, `STORAGE.avatarStyle`, `users/<uid>/avatarStyle` | keep; every stage state checked with each family |
+| AU-08 | Avatar style (16 sets: Robohash robots, monsters, heads, cats; DiceBear sets) | M | `#avatarStylePicker`, `STORAGE.avatarStyle`, `users/<uid>/avatarStyle` | keep; every stage state checked with each family. ⚠ **Not reachable today** (found by 0.4, November 19, 2026): `#avatarPickerSection` is `display: none` in `looks.css` and nothing shows it, so nobody can change their avatar style. Owner to decide: show it in the Profile tab, or retire it |
 | AU-09 | Log out | M | `#logOutButton` (Account tab), `#nav-logout` (account menu) | 2.5 shipped |
 | AU-10 | Banned / suspended state | All | `userBanned`, `userUnbanned`, `banned/` | keep |
 | AU-11 | (new) Account: email and sign-in method, change password (or a reset link), change email (confirmed by a link) | M | `#account-tab`, `ftapi.actions.accountInfo` / `changePassword` / `changeEmail` | 2.5 |
