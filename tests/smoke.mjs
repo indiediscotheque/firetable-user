@@ -635,7 +635,11 @@ try {
 
   console.log("-- Sort: by artist or title, view only");
   await page.evaluate(() => { window.__saved = []; return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")); });
-  const sortOpen = async () => { await page.click("#cr-sort"); await page.waitForFunction(() => document.getElementById("cr-sortMenu").matches(":popover-open")); };
+  // the menu moves focus once it's placed (a frame or two after it opens)
+  const sortOpen = async () => {
+    await page.click("#cr-sort");
+    await page.waitForFunction(() => { const m = document.getElementById("cr-sortMenu"); return m.matches(":popover-open") && m.contains(document.activeElement); });
+  };
   const srt = {};
   srt.before = await rowOrder();
   await sortOpen();
