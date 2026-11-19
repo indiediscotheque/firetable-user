@@ -155,13 +155,29 @@
     el("st-themeText").textContent = t || ROOM;
   }
   /** Colours and theme change with the song: read them as it starts, and again once the bot has set them. */
+  /**
+   * What the bot sets for each song, read when it starts and again as the bot
+   * fills it in (its colours at once, the tempo and the plays a few seconds
+   * later), then every minute for a mod's fix. Read, not streamed: a browser
+   * keeps only six connections to one server, and the live streams (the song,
+   * the decks, who's here, the fires) take four.
+   */
+  var looksTimers = [];
+  function readLooks() {
+    once("colors").then(colors, function () { /* keep what's there */ });
+    once("theme").then(theme, function () { /* keep what's there */ });
+    once("songBpm").then(function (b) { S.bpmData = b; beat(); }, function () { /* keep what's there */ });
+    once("tagUpdate").then(tagged, function () { /* keep what's there */ });
+  }
   function roomLooks() {
-    var get = function () {
-      once("colors").then(colors, function () { /* keep what's there */ });
-      once("theme").then(theme, function () { /* keep what's there */ });
-    };
-    get();
-    setTimeout(get, 3000);
+    looksTimers.forEach(clearTimeout);
+    looksTimers = [0, 3000, 10000, 30000].map(function (ms) { return setTimeout(readLooks, ms); });
+  }
+  setInterval(function () { if (S.song) readLooks(); }, 60000);
+  /** The bot's facts on the song (and a mod's tag fix): the words follow. */
+  function tagged(t) {
+    S.tag = t;
+    if (S.song && tagFor(S.song)) nowPlaying(S.song, true);
   }
 
   function artFor(s) {
@@ -211,8 +227,9 @@
       var art = artFor(s);
       el("st-art").style.backgroundImage = cssUrl(art);
       if (!same) bigArt(s, function (u) { if (S.song === s) el("st-art").style.backgroundImage = cssUrl(u); });
-      el("st-title").textContent = text(s.title) || "Untitled";
-      el("st-artist").textContent = text(s.artist);
+      var t = tagFor(s);
+      el("st-title").textContent = text(t && t.track_name || s.title) || "Untitled";
+      el("st-artist").textContent = text(t && t.artist || s.artist);
       renderKicker();
       renderDeck();
       box.classList.remove("is-changing");
@@ -223,15 +240,44 @@
     setTimeout(fill, 200);
   }
 
+  /**
+   * The bot's facts on the playing song (tagUpdate.adamData, public): its
+   * plays in the room, and its first and last; a mod's tag fix too.
+   */
+  function tagFor(s) {
+    var t = S.tag;
+    return t && s && t.adamData && String(t.cid) === String(s.cid) ? t.adamData : null;
+  }
+  /** As the site's stage: "Apr 14" this year, "Apr 14, 2013" before (js/helpers.js shortDate). */
+  function shortDate(d) {
+    var date = new Date(d);
+    if (isNaN(date)) return "";
+    var out = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][date.getMonth()] + " " + date.getDate();
+    return date.getFullYear() === new Date().getFullYear() ? out : out + ", " + date.getFullYear();
+  }
+  /** "first Apr 14, 2013 by matt", the DJ only when known (js/room.js playLine). */
+  function playLine(word, date, dj) { return word + " " + shortDate(date) + (dj ? " by " + text(dj) : ""); }
+  /**
+   * Under the artist, as the room's stage shows it: the tempo, the room's
+   * plays and the fires; then the first and last plays. (Who picked it is on
+   * the deck.)
+   */
   function renderKicker() {
     var s = S.song;
     if (!s) return;
-    var dj = s.djid && S.users[s.djid] && S.users[s.djid].username || s.djname;
-    var bits = [];
-    if (dj) bits.push("Picked by " + text(dj));
-    if (S.bpm) bits.push(S.bpm + " BPM");
-    if (S.fires) bits.push("\uD83D\uDD25 " + S.fires);
-    el("st-kicker").textContent = bits.join(" · ");
+    var a = tagFor(s) || {};
+    var stats = [];
+    if (S.bpm) stats.push(S.bpm + " BPM");
+    if (Number(a.playcount) > 0) {
+      stats.push(Number(a.playcount).toLocaleString("en-US") + (Number(a.playcount) === 1 ? " play" : " plays") +
+        (Number(a.all_versions_playcount) > Number(a.playcount) ? " · " + Number(a.all_versions_playcount).toLocaleString("en-US") + " all versions" : ""));
+    }
+    if (S.fires) stats.push("\uD83D\uDD25 " + S.fires);
+    el("st-kicker").textContent = stats.join(" · ");
+    var plays = [];
+    if (a.first_play) plays.push(playLine("first", a.first_play, a.first_play_dj));
+    if (a.last_play) plays.push(playLine("last", a.last_play, a.last_play_dj));
+    el("st-plays").textContent = plays.join(" · ");
   }
 
   // Avatars, as the room shows them: the room's theme (config.js avatarset, or
@@ -479,6 +525,5 @@
   watch("songToPlay", onSong);
   watch("table", function (t) { S.table = t || []; renderDeck(); });
   watch("users", function (u) { S.users = u || {}; renderCount(); renderDeck(); });
-  watch("songBpm", function (b) { S.bpmData = b; beat(); });
   watch("songFires", function (f) { S.firesData = f; fire(); });
 })();
