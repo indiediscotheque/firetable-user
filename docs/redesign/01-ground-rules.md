@@ -71,7 +71,7 @@ JS binds to element ids everywhere (`$("#grab")`, `document.getElementById("plIn
 ### Styles
 
 - `css/reset.css`, `css/fonts-local.css` (Inter, Open Sans, Roboto Mono, self-hosted variable fonts in `fonts/`, split by `tools/subset-fonts.py`: rerun it after adding text with new characters), `css/looks.css` (about 7,100 lines, the room), `css/discover.css` (Discover).
-- Tokens live on `:root` near the top of `looks.css` (`--color-bg`, `--color-accent` (the gold, `#cc9933`), `--color-text`, `--color-text-muted`, `--fs-title`, `--fs-meta`, `--fs-micro`, `--radius-*`, `--pad*`, `--col-left`, `--col-mid`, `--font-family`, `--font-numbers`). The room's accent can change per theme night (`colorsChanged` in `js/room.js` sets `--color-accent`), so anything accent-coloured must use the variable, never a literal gold.
+- Tokens live on `:root` near the top of `looks.css`: the redesign's (step 0.1: `--space-*`, `--fs-display` … `--fs-label`, `--radius-art` … `--radius-dialog`, `--radius-pill`, `--tap`, `--tap-stage`, `--dur-fast`, `--dur`, `--ease-out`), which new work uses, and the older names, which point at them where they mean the same (`--pad*`, `--radius-sm` / `--radius-md`, `--fs-title`, `--fs-micro`); the colours (`--color-bg`, `--color-accent` (the gold, `#cc9933`), `--color-text`, `--color-text-muted`, …), `--col-left`, `--col-mid`, `--font-family`, `--font-numbers`. The room's accent can change per theme night (`colorsChanged` in `js/room.js` sets `--color-accent`), so anything accent-coloured must use the variable, never a literal gold.
 - Native CSS nesting is used. `!important` exists (about 24 uses); don't add more.
 - Density (`#densityPicker`: compact, cozy, comfortable) sets classes the CSS reads; keep all three working.
 
