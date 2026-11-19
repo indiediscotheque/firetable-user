@@ -7,7 +7,7 @@
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { chromium } from "playwright";
-import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep } from "./harness.mjs";
+import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep, openPage, stubAvatars } from "./harness.mjs";
 import { youtubeSong as seedSong, room, discover, library } from "./seed.mjs";
 
 const NS = "demo-smoke";
@@ -25,6 +25,9 @@ let failures = 0;
 const check = (ok, msg) => { console.log((ok ? "  PASS " : "  FAIL ") + msg); if (!ok) failures++; };
 
 const browser = await chromium.launch(launchOptions());
+// every context answers avatar requests itself (see stubAvatars)
+const newContext = browser.newContext.bind(browser);
+browser.newContext = async (opts) => { const c = await newContext(opts); await stubAvatars(c); return c; };
 const context = await browser.newContext();
 await context.grantPermissions(["notifications"], { origin: SITE.slice(0, -1) });
 const page = await context.newPage();
@@ -39,7 +42,7 @@ const loaded = (part) => requested.some((u) => u.includes(part));
 
 try {
   console.log("-- page load (" + SITE + ")");
-  await page.goto(SITE, { waitUntil: "load", timeout: 60000 });
+  await openPage(page, SITE);
   await page.waitForFunction(() => /Smoke Song/.test(document.getElementById("track").textContent), null, { timeout: 30000 });
   check(true, "the playing song shows (from the database)");
   check(await page.$eval("#themePillText", (el) => /smoke tests/.test(el.textContent)).catch(() => false), "the theme shows");
@@ -492,6 +495,66 @@ try {
     "every ⋮ item reaches what its old button did: All playlists, Shuffle, Check, Import, New (with Cancel), Merge, Delete (" + JSON.stringify(tools) + ")");
   check(tools.showOpen && tools.badge === "1/Show only (1 on)" && tools.badgeOff, "Show only holds Remixes and Broken, and counts what's on (" + tools.badge + ")");
 
+  console.log("-- the playlist's ⋮: Rename, Remove duplicates, Export; Show only: Duplicates");
+  const listBefore = await listNow(); // put back after: the drag test below goes on from it
+  await put("/queues/smoke", { d1: { type: 1, cid: "dupe000001", name: "Aa - One" }, d2: { type: 1, cid: "dupe000002", name: "Bb - Two" }, d3: { type: 1, cid: "dupe000001", name: "Aa - One" } });
+  const listTools = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    const realUid = ftapi.uid;
+    ftapi.uid = "smoke";
+    ftapi.queueRef = ftapi.db().ref("queues/smoke");
+    await ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+    $("#listpicker").val("0");
+    await wait(200);
+    const out = {};
+    const menu = document.getElementById("cr-listMenu");
+    const pick = async (act) => { document.getElementById("cr-listBtn").click(); await wait(80); menu.querySelector('[data-act="' + act + '"]').click(); await wait(100); };
+    out.items = [...menu.querySelectorAll("[data-act]")].map((b) => b.getAttribute("data-act")).join();
+    // Show only: Duplicates leaves both copies of the song that's in twice
+    $("#cr-dupesOnly").prop("checked", true).trigger("change");
+    await wait(50);
+    out.dupesShown = [...document.querySelectorAll("#mainqueue .pvbar:not(.ft-filtered)")].map((r) => r.getAttribute("data-cid")).join();
+    out.badge = document.getElementById("cr-showOnlyCount").textContent;
+    $("#cr-dupesOnly").prop("checked", false).trigger("change");
+    out.allBack = document.querySelectorAll("#mainqueue .pvbar:not(.ft-filtered)").length;
+    // Export: the list as "Artist - Title" lines, in play order
+    const made = URL.createObjectURL;
+    let file = null;
+    URL.createObjectURL = (blob) => { file = blob; return made.call(URL, blob); };
+    await pick("export");
+    await until(() => file);
+    URL.createObjectURL = made;
+    out.exported = file ? (await file.text()).trim().split("\n").join("|") : null;
+    // Rename: a dialog with the name, saved for the built-in list in the preferences
+    await pick("rename");
+    const box = document.getElementById("cr-renameBox");
+    out.renameOpen = box.open && document.getElementById("cr-renameInput").value;
+    document.getElementById("cr-renameInput").value = "Smoke Crate";
+    document.getElementById("cr-renameSave").click();
+    await until(() => firetable.plPrefs && firetable.plPrefs.defaultName === "Smoke Crate");
+    out.renamed = firetable.plPrefs.defaultName + "|" + !box.open;
+    await firetable.actions.renameList("0", "Default Playlist");
+    // Remove duplicates: the later copy goes, in one write
+    await pick("dupes");
+    await until(() => /duplicate/.test(document.getElementById("ft-toast")?.textContent || ""));
+    out.toast = document.getElementById("ft-toast")?.textContent || "";
+    out.left = Object.values((await ftapi.db().ref("queues/smoke").once("value")).val() || {}).map((t) => t.cid).join();
+    ftapi.uid = realUid;
+    return out;
+  });
+  check(/rename/.test(listTools.items) && /dupes/.test(listTools.items) && /export/.test(listTools.items), "the playlist's ⋮ has Rename, Remove duplicates and Export (" + listTools.items + ")");
+  check(listTools.dupesShown === "dupe000001,dupe000001" && listTools.badge === "1" && listTools.allBack === 3, "Show only: Duplicates shows the songs that are in twice (" + JSON.stringify(listTools) + ")");
+  check(listTools.exported === "Aa - One|Bb - Two|Aa - One", "Export downloads the list as Artist - Title lines in play order (" + listTools.exported + ")");
+  check(listTools.renameOpen === "Default Playlist" && listTools.renamed === "Smoke Crate|true", "Rename opens with the list's name and saves the new one (" + JSON.stringify(listTools) + ")");
+  check(/Removed 1 duplicate/.test(listTools.toast) && listTools.left === "dupe000001,dupe000002", "Remove duplicates keeps the first copy and says how many went (" + JSON.stringify(listTools) + ")");
+  await put("/queues/smoke", listBefore);
+  await page.evaluate(async () => {
+    await new Promise((r) => setTimeout(r, 300));
+    return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+  });
+
   console.log("-- drag to reorder the playlist: mouse, Alt+arrow keys, and a finger held on a row");
   await page.evaluate(() => {
     $("#mainGrid").removeClass("login");
@@ -533,7 +596,7 @@ try {
   const touchPhone = await browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true });
   const tPage = await touchPhone.newPage();
   tPage.on("pageerror", (e) => pageErrors.push("phone: " + e.message));
-  await tPage.goto(SITE, { waitUntil: "load", timeout: 60000 });
+  await openPage(tPage, SITE);
   await tPage.waitForFunction(() => window.firetable && firetable.started && window.ftapi && ftapi.started, null, { timeout: 30000 });
   await tPage.evaluate(() => {
     if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
@@ -572,6 +635,45 @@ try {
   check(t.swipe === "k1,k2,k3,k4" && t.hold === "k2,k3,k1,k4" && t.saved === "k2,k3,k1,k4",
     "on a phone, holding a row drags it and saves the order; a swipe doesn't (" + JSON.stringify(t) + ")");
   await touchPhone.close();
+
+  console.log("-- Sort: by artist or title, view only");
+  await page.evaluate(() => { window.__saved = []; return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")); });
+  // the menu moves focus once it's placed (a frame or two after it opens)
+  const sortOpen = async () => {
+    await page.click("#cr-sort");
+    await page.waitForFunction(() => { const m = document.getElementById("cr-sortMenu"); return m.matches(":popover-open") && m.contains(document.activeElement); });
+  };
+  const srt = {};
+  srt.before = await rowOrder();
+  await sortOpen();
+  srt.focus = await page.evaluate(() => document.activeElement.value);
+  await page.click('#cr-sortMenu input[value="artist"]');
+  srt.artist = await rowOrder();
+  srt.menuShut = await page.evaluate(() => !document.getElementById("cr-sortMenu").matches(":popover-open"));
+  srt.bar = await page.evaluate(() => !document.getElementById("cr-sortBar").hidden && document.getElementById("cr-sortBarText").textContent);
+  srt.label = await page.evaluate(() => document.getElementById("cr-sort").getAttribute("aria-label") + "|" + document.getElementById("cr-sort").classList.contains("is-on"));
+  await sortOpen();
+  await page.click('#cr-sortMenu input[value="title"]');
+  srt.title = await rowOrder();
+  // dragging is off while sorted: a drag and Alt+↑ change nothing and save nothing
+  const d1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords');
+  const d4 = await box('#mainqueue .pvbar[data-key="k4"] .listwords');
+  await page.mouse.move(d1.x, d1.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(d1.x, d1.y + (d4.y + d4.h * 0.4 - d1.y) * i / 8);
+  await page.mouse.up();
+  await page.focus('#mainqueue .pvbar[data-key="k4"] .bumpsongs');
+  await page.keyboard.press("Alt+ArrowUp");
+  srt.afterDrag = await rowOrder();
+  srt.saved = await page.evaluate(() => window.__saved.length);
+  srt.stored = Object.keys(await listNow()).join();
+  await page.click("#cr-sortBack");
+  srt.back = await rowOrder();
+  srt.barGone = await page.evaluate(() => document.getElementById("cr-sortBar").hidden && document.getElementById("cr-sort").getAttribute("aria-label"));
+  check(srt.before === "k1,k2,k3,k4" && srt.focus === "order" && srt.artist === "k3,k2,k4,k1" && srt.menuShut && /^Showing by artist\. Your play order hasn't changed\.$/.test(srt.bar) && srt.label === "Sort: Artist|true" && srt.title === "k1,k3,k2,k4",
+    "Sort shows the playlist by artist or title, says so over the list, and marks its button (" + JSON.stringify(srt) + ")");
+  check(srt.afterDrag === "k1,k3,k2,k4" && srt.saved === 0 && srt.stored === "k1,k2,k3,k4" && srt.back === "k1,k2,k3,k4" && srt.barGone === "Sort: Your order",
+    "a sorted view never changes the play order: dragging is off, and Back to your order brings it back (" + JSON.stringify(srt) + ")");
   await page.evaluate(() => { ftapi.actions.reorderList = window.__reorder; $("#mainGrid").addClass("login"); });
 
   console.log("-- the stage's volume slider (a native range input)");
@@ -1044,7 +1146,7 @@ try {
     body: CONFIG.replace(/roomName:/, 'discover: true, signInProviders: ["google"], roomName:') }));
   await put("/discover", discover(now));
   await put("/discover/lib", library(now));
-  await dPage.goto(SITE, { waitUntil: "load", timeout: 60000 });
+  await openPage(dPage, SITE);
   await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
   const home = await dPage.evaluate(async () => ({
     on: document.body.classList.contains("ft-discover"),
@@ -1600,7 +1702,7 @@ try {
   const embed = await context.newPage();
   embed.on("pageerror", (e) => pageErrors.push("Embed: " + e.message));
   await embed.route("**/config.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: CONFIG }));
-  await embed.goto(SITE + "embed/chart/?period=week", { waitUntil: "load" });
+  await openPage(embed, SITE + "embed/chart/?period=week");
   await embed.waitForFunction(() => document.querySelectorAll("#chart li").length > 0, null, { timeout: 15000 }).catch(() => {});
   const shown = await embed.evaluate(() => ({
     rows: [...document.querySelectorAll("#chart .e-song b")].map((e) => e.textContent).join(),
@@ -2217,7 +2319,7 @@ try {
     "the home page and each library page have one set of link-preview tags, their own (" + read.once + ")");
   check(read.ytm, "a genre page as sent links to its YouTube Music playlist");
   // what a visitor gets: the real site, on the same Discover page
-  await plain.goto(SITE + "music/genres/nu-disco/", { waitUntil: "load" });
+  await openPage(plain, SITE + "music/genres/nu-disco/");
   await plain.waitForFunction(() => document.querySelector("#dBrowse .d-radio"), null, { timeout: 20000 }).catch(() => {});
   const live = await plain.evaluate(() => ({
     url: location.pathname + location.hash,
@@ -2275,7 +2377,7 @@ console.log("-- the live stage for other sites (embed/stage/)");
   await sp.exposeFunction("__cspViolation", (v) => violations.push("Stage: " + v));
   await sp.addInitScript(() => document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI)));
   try {
-    await sp.goto(site2.SITE + "embed/stage/", { waitUntil: "load" });
+    await openPage(sp, site2.SITE + "embed/stage/");
     await sp.waitForFunction(() => document.querySelectorAll("#st-deck .st-spot").length === 1 && document.querySelectorAll("#st-ondeck li").length === 1 &&
       !document.getElementById("st-theme").classList.contains("no-theme") && /BPM/.test(document.getElementById("st-kicker").textContent) &&
       document.getElementById("st-title").textContent === "Stage & Song" && document.getElementById("st-at").textContent &&

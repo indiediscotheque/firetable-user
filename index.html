@@ -434,6 +434,10 @@
 							<span id="cr-showOnlyCount" class="cr-badge" hidden></span>
 						</button>
 						<span id="tip-cr-showOnly" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-showOnly">Show only</span>
+						<button type="button" class="butt graybutt iconbutt" id="cr-sort" aria-label="Sort: Your order" aria-haspopup="true" aria-expanded="false" popovertarget="cr-sortMenu" style="anchor-name: --tip-cr-sort" aria-describedby="tip-cr-sort">
+							<i class="material-symbols-outlined">sort</i>
+						</button>
+						<span id="tip-cr-sort" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-sort">Sort</span>
 					</form>
 				</div>
 				<div id="searchMachine">
@@ -451,6 +455,13 @@
 						<span class="swapBarActions">
 							<button type="button" id="swapShowBtn" class="butt graybutt small">Show them</button>
 							<button type="button" id="swapAllBtn" class="butt small">Swap all</button>
+						</span>
+					</div>
+					<div id="cr-sortBar" class="swapBar cr-sortBar" role="status" hidden>
+						<i class="material-symbols-outlined" aria-hidden="true">sort</i>
+						<span id="cr-sortBarText"></span>
+						<span class="swapBarActions">
+							<button type="button" id="cr-sortBack" class="butt graybutt small">Back to your order</button>
 						</span>
 					</div>
 					<div id="mainqueue" class="innr">
@@ -785,15 +796,18 @@
 			<button type="button" role="menuitem" class="butt graybutt" data-act="new"><i class="material-symbols-outlined">library_add</i> New playlist</button>
 			<button type="button" role="menuitem" class="butt graybutt" data-act="import"><i class="material-symbols-outlined">download</i> Import a playlist…</button>
 			<hr class="ft-menu-sep" />
+			<button type="button" role="menuitem" class="butt graybutt" data-act="rename"><i class="material-symbols-outlined">edit</i> Rename this playlist…</button>
 			<button type="button" role="menuitem" class="butt graybutt" data-act="shuffle"><i class="material-symbols-outlined">shuffle</i> Shuffle this playlist</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="dupes"><i class="material-symbols-outlined">filter_none</i> Remove duplicates</button>
 			<button type="button" role="menuitem" class="butt graybutt" data-act="merge"><i class="material-symbols-outlined">merge_type</i> Merge playlists…</button>
 			<button type="button" role="menuitem" class="butt graybutt" data-act="check"><i class="material-symbols-outlined">troubleshoot</i> Check for broken tracks</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="export"><i class="material-symbols-outlined">file_download</i> Export as a list of songs</button>
 			<hr class="ft-menu-sep" />
 			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete this playlist…</button>
 		</div>
 	</div>
 
-	<!-- Show only (#cr-showOnly): the playlist filter's Remixes and Broken -->
+	<!-- Show only (#cr-showOnly): the playlist filter's Remixes, Broken and Duplicates -->
 	<div id="cr-showOnlyMenu" popover="auto" class="ft-popover">
 		<div id="cr-showOnlyArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box ft-menu cr-showOnlyBox" role="group" aria-labelledby="cr-showOnlyTitle">
@@ -807,7 +821,22 @@
 					<input type="checkbox" id="queueFilterBrokenOnly" />
 					<span>Broken</span>
 				</label>
+				<label class="cr-dupesOnly" for="cr-dupesOnly">
+					<input type="checkbox" id="cr-dupesOnly" />
+					<span>Duplicates</span>
+				</label>
 			</div>
+		</div>
+	</div>
+
+	<!-- Sort (#cr-sort): how the playlist on screen is shown. View only: the play order never changes -->
+	<div id="cr-sortMenu" popover="auto" class="ft-popover">
+		<div id="cr-sortArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu cr-sortBox" role="radiogroup" aria-labelledby="cr-sortTitle">
+			<div class="ft-menu-title" id="cr-sortTitle">Sort</div>
+			<label class="cr-sortOpt"><input type="radio" name="cr-sortBy" value="order" checked /><span>Your order</span></label>
+			<label class="cr-sortOpt"><input type="radio" name="cr-sortBy" value="artist" /><span>Artist</span></label>
+			<label class="cr-sortOpt"><input type="radio" name="cr-sortBy" value="title" /><span>Title</span></label>
 		</div>
 	</div>
 
@@ -819,6 +848,23 @@
 			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete…</button>
 		</div>
 	</div>
+
+	<dialog id="cr-renameBox" aria-labelledby="cr-renameTitle">
+		<div class="modalBox">
+			<div class="modalHeader">
+				<h2 id="cr-renameTitle">Rename playlist</h2>
+				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			</div>
+			<form class="modalContent" id="cr-renameForm" novalidate>
+				<label for="cr-renameInput">New name</label>
+				<input type="text" id="cr-renameInput" maxlength="60" autocomplete="off" enterkeyhint="done" />
+				<div class="modal-actions">
+					<button type="button" class="butt graybutt closeModal">Cancel</button>
+					<button type="submit" class="butt darkbutt" id="cr-renameSave">Rename</button>
+				</div>
+			</form>
+		</div>
+	</dialog>
 
 	<dialog id="deletePromptBox">
 		<div class="modalBox">

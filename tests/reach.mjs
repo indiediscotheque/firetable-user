@@ -22,7 +22,7 @@
 // Narrow a run: ROLES=member,mod WIDTHS=390 ONLY=CR-,ST-11
 // Never deployed. CI: .github/workflows/smoke.yml
 import { chromium } from "playwright";
-import { policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures } from "./harness.mjs";
+import { policy, config, putAs, serveSite, launchOptions, sleep, authAccount, useAuthEmulator, logInAs, cachePictures, openPage } from "./harness.mjs";
 import { livedIn } from "./seed.mjs";
 
 const NS = "demo-reach";
@@ -125,6 +125,11 @@ const FEATURES = [
   { row: "CR-13", name: "Delete this playlist", who: IN, via: listMenu, target: '#cr-listMenu [data-act="delete"]' },
   { row: "CR-14", name: "All playlists", who: IN, via: [...listMenu, '#cr-listMenu [data-act="all"]'], target: "#plIndexList" },
   { row: "CR-17", name: "Check for broken tracks", who: IN, via: listMenu, target: '#cr-listMenu [data-act="check"]' },
+  { row: "CR-21", name: "Remove duplicates", who: IN, via: listMenu, target: '#cr-listMenu [data-act="dupes"]' },
+  { row: "CR-25", name: "Rename this playlist", who: IN, via: [...listMenu, '#cr-listMenu [data-act="rename"]'], target: "#cr-renameInput" },
+  { row: "CR-28", name: "Export the playlist as a list of songs", who: IN, via: listMenu, target: '#cr-listMenu [data-act="export"]' },
+  { row: "CR-07", name: "Show only: Duplicates", who: IN, via: [...playlists, "#cr-showOnly"], target: "#cr-dupesOnly" },
+  { row: "CR-29", name: "Sort the playlist (view only)", who: IN, via: [...playlists, "#cr-sort"], target: '#cr-sortMenu input[value="artist"]' },
 
   // ── Recent, Fresh, Cards (RE) ──
   { row: "RE-01", name: "Recent plays", who: IN, via: ["#mm-history"], target: "#thehistory .pvbar" },
@@ -218,7 +223,7 @@ try {
       const errors = [];
       page.on("pageerror", (e) => errors.push(e.message));
       await useAuthEmulator(page);
-      await page.goto(SITE, { waitUntil: "load", timeout: 60000 });
+      await openPage(page, SITE);
       if (role === "visitor") await page.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 30000 });
       else {
         await logInAs(page, people[role].email, PASSWORD, people[role].uid);

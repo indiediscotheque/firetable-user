@@ -7,7 +7,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
-import { policy, config, serveSite, launchOptions } from "./harness.mjs";
+import { policy, config, serveSite, launchOptions, openPage } from "./harness.mjs";
 
 let browser, page, server;
 const errors = [];
@@ -18,7 +18,7 @@ before(async () => {
   browser = await chromium.launch(launchOptions());
   page = await (await browser.newContext()).newPage();
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto(site.SITE, { waitUntil: "load", timeout: 60000 });
+  await openPage(page, site.SITE);
   await page.waitForFunction(() => window.firetable && firetable.started && firetable.parser && typeof linkifyStr === "function", null, { timeout: 30000 });
 });
 

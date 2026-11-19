@@ -58,6 +58,36 @@ export async function serveSite({ csp, configJs }) {
   return { server, SITE: "http://127.0.0.1:" + server.address().port + "/" };
 }
 
+/**
+ * Open a page of the site. Waits for the document (DOMContentLoaded), then up
+ * to 15s for the load event, which also waits on third-party frames (the
+ * YouTube and SoundCloud players): a CI runner where one of those hangs
+ * otherwise times out every page with no clue why. When even the document
+ * doesn't arrive, the error names the requests still loading.
+ */
+export async function openPage(page, url, { timeout = 60000 } = {}) {
+  const pending = new Set();
+  const add = (r) => pending.add(r);
+  const done = (r) => pending.delete(r);
+  const still = () => [...pending].map((r) => r.url().slice(0, 140)).join(", ") || "nothing";
+  page.on("request", add);
+  page.on("requestfinished", done);
+  page.on("requestfailed", done);
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout }).catch((e) => {
+      e.message += "\n  still loading: " + still();
+      throw e;
+    });
+    await page.waitForLoadState("load", { timeout: 15000 }).catch(() => {
+      console.log("  note: no load event 15s after " + url + "; still loading: " + still());
+    });
+  } finally {
+    page.off("request", add);
+    page.off("requestfinished", done);
+    page.off("requestfailed", done);
+  }
+}
+
 /** Chromium options: through the HTTPS proxy when there is one (CDN files), never for the local servers. */
 export const launchOptions = () =>
   process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: "127.0.0.1,localhost" } } : {};
@@ -104,6 +134,20 @@ export async function logInAs(page, email, password, uid) {
   await page.evaluate(([e, p]) => ftapi.actions.logIn(e, p, (err) => { window.__loginError = String(err && err.message); }), [email, password]);
   await page.waitForFunction((u) => ftapi.uid === u && ftapi.queueRef && !window.__loginError, uid, { timeout: 30000 })
     .catch(async () => { throw new Error("couldn't sign in as " + email + ": " + await page.evaluate(() => window.__loginError)); });
+}
+
+/** Avatars from other sites: the live site's robots and DiceBear's. */
+const AVATARS = /^https:\/\/((www\.)?indiediscotheque\.com\/robots\/|api\.dicebear\.com\/)/;
+
+/**
+ * Answer every avatar request with a local picture. Tests that don't look at
+ * the avatars themselves shouldn't wait on the live site's avatar server: on
+ * one CI runner its requests hung, the page's load event never came, and
+ * whatever waits for it (p5.js's glitch canvas) never started.
+ */
+export async function stubAvatars(context) {
+  const png = readFileSync(join(ROOT, "favicon.png"));
+  await context.route(AVATARS, (route) => route.fulfill({ status: 200, contentType: "image/png", body: png }));
 }
 
 /** Pictures from other sites: avatars (the live site's robots), YouTube's and SoundCloud's covers. */
