@@ -460,7 +460,7 @@ firetable.ui.showAuth = function (which, opts) {
   });
   // Google/Apple work for both, so they stay above Create and Log in
   $("#authBox").attr("data-auth", which);
-  $("#login .formMessage").text("").removeClass("is-success");
+  $("#authBox .formMessage").text("").removeClass("is-success");
   firetable.ui.titleAuth(which);
   if (which === "reset" && !$("#theAddress").val()) $("#theAddress").val($("#loginemail").val());
   if (opts.focus) setTimeout(function () { $(panes[which]).find("input").filter(":visible").first().trigger("focus"); }, 0);
@@ -485,7 +485,8 @@ firetable.ui.fieldNote = function (input, text, state) {
  * submit (the button or Enter).
  */
 firetable.ui.loginEventsInit = function () {
-  var $login = $("#login");
+  var $login = $("#authBox");
+  $login.off(".auth");
   firetable.ui.showAuth(firetable.ui.authDefault());
 
   $login.on("click.auth", "[data-auth]", function () {
@@ -613,7 +614,7 @@ firetable.ui.loginEventsInit = function () {
  * Unbind the sign-in forms (before removing them from the page).
  */
 firetable.ui.loginEventsDestroy = function () {
-  $("#login").off(".auth");
+  $("#authBox").off(".auth");
 };
 
 /** Remember that this device has an account, so the form opens on Log in. */
@@ -622,21 +623,11 @@ firetable.ui.rememberAuth = function () {
 };
 
 // ─── Join or log in from anywhere (#joinBox) ────────────────────────────────
-// The sign-in form (#login) moves into the dialog while it's open and goes
-// back where it was when it closes, so there's one form and one set of
-// handlers. Every "Join" and "Log in" on the site opens it: the header's
-// button, Discover's crate and chat, Live's locked tabs.
+// The site's one sign-in form lives in this dialog. Every "Join" and "Log in"
+// opens it: the header's button, the You tab, Live's welcome and locked tabs,
+// Discover's crate, chat and Fire.
 
-var authHome = null;  // a comment node marking #login's place in the page
 var authNote = null;  // a line for this opening (Discover: your crate comes with you)
-
-function putLoginBack() {
-  if (!authHome) return;
-  var login = document.getElementById("login");
-  if (login && login.closest("#joinBox") && authHome.parentNode) authHome.parentNode.insertBefore(login, authHome);
-  if (authHome.parentNode) authHome.parentNode.removeChild(authHome);
-  authHome = null;
-}
 
 /** The room's name, for "Join …". */
 function roomTitle() {
@@ -651,29 +642,16 @@ function roomTitle() {
  */
 firetable.ui.openAuth = function (which, opts) {
   opts = opts || {};
-  var login = document.getElementById("login");
   var dlg = document.getElementById("joinBox");
-  if (!login || ftapi.uid) return; // signed in: nothing to open
+  if (!dlg || ftapi.uid) return; // signed in: nothing to open
   if (!which || which === "auto") which = firetable.ui.authDefault();
-  if (!dlg) { // no dialog (an old cached page): go to the form where it is
-    firetable.ui.showAuth(which);
-    login.scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(function () { firetable.ui.showAuth(which, { focus: true }); }, 300);
-    return;
-  }
   authNote = opts.note || null;
-  if (!login.closest("#joinBox")) {
-    authHome = document.createComment("login");
-    login.parentNode.insertBefore(authHome, login);
-    dlg.querySelector(".modalContent").appendChild(login);
-  }
   if (!dlg.open) dlg.showModal();
   firetable.ui.showAuth(which, { focus: true });
 };
 
-/** Close the sign-in dialog, with the form back in its place right away. */
+/** Close the sign-in dialog. */
 firetable.ui.closeAuth = function () {
-  putLoginBack();
   var dlg = document.getElementById("joinBox");
   if (dlg && dlg.open) dlg.close();
 };
@@ -768,7 +746,7 @@ firetable.ui.setupAccount = function () {
 
   var dlg = document.getElementById("joinBox");
   if (dlg) {
-    dlg.addEventListener("close", function () { putLoginBack(); authNote = null; });
+    dlg.addEventListener("close", function () { authNote = null; });
   }
 
   // ── The menu under the header avatar ──

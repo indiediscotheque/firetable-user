@@ -1021,7 +1021,6 @@ body.ft-discover #dSide #actualChat {
 /* Visitors in Live: what joining opens */
 #dLocked { justify-content: flex-start; gap: 0; margin-bottom: var(--pad3); border-bottom: 1px solid var(--color-border); }
 #dLocked .tab { flex: 1; min-height: 2.75rem; }
-#joinBox #dLocked, #joinBox #dLockedPane { display: none !important; }
 .d-locked { display: flex; flex-direction: column; gap: var(--pad2); max-width: 36rem; }
 .d-locked > i { font-size: 2rem; color: var(--color-accent); }
 .d-locked h3 { margin: 0; color: var(--color-text-light); font-size: 1.1rem; }
@@ -1584,6 +1583,106 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
 }
 @media only screen and (max-width: 639px) and (pointer: coarse) {
     .pl-acts .row-icon { width: var(--tap-min); height: var(--tap-min); }
+}
+
+/* ── The bottom tab bar (4.1): Home · Discover · Live · Library · You, on phones ──
+   It stands in for the Discover / Live switch, Discover's row of pages and
+   Live's Playlists tab, which stay in the page (and on wider screens). */
+#nav-tabs { display: none; }
+@media only screen and (max-width: 639px) {
+    body.ft-has-discover #nav-tabs {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        flex: none;
+        padding: 0 var(--space-1) env(safe-area-inset-bottom, 0px);
+        background: var(--color-bg-s2);
+        border-top: 1px solid var(--color-border);
+        position: relative;
+        z-index: 41;
+    }
+    .nt-tab {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.125rem;
+        min-width: 0;
+        min-height: 3.5rem;
+        padding: var(--space-1) 0;
+        font-size: var(--fs-label);
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--color-text-subtle);
+        background: none;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .nt-tab i:not(.nt-dot) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 4rem;
+        height: 1.75rem;
+        font-size: 1.5rem;
+        border-radius: var(--radius-pill);
+        transition: background-color var(--dur-fast) var(--ease-out);
+    }
+    .nt-tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nt-tab.on { color: var(--color-text-light); }
+    .nt-tab.on i:not(.nt-dot) {
+        color: var(--color-accent);
+        background: var(--color-orange33);
+        font-variation-settings: "FILL" 1;
+    }
+    .nt-tab:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+    .nt-dot { position: absolute; top: 0.5rem; left: calc(50% + 0.75rem); }
+
+    /* the bar's own room for the phone's home indicator moves to the tabs */
+    body.ft-has-discover .pb { padding-bottom: var(--pad2); }
+    body.ft-has-discover #modeTabs { display: none; }
+
+    /* Discover: the pages are the Discover tab's list; search stays on top */
+    body.ft-has-discover #dNav { display: none; }
+    body.ft-discover.nt-browse #dBrowse { display: none; }
+    body.ft-discover.nt-browse #dRail { flex: 1; min-height: 0; overflow: auto; }
+    body.ft-discover.nt-browse #dNav {
+        display: flex;
+        flex-direction: column;
+        padding: var(--space-2) var(--space-3) var(--space-4);
+        overflow: visible;
+        border-bottom: 0;
+    }
+    body.nt-browse .d-nav {
+        justify-content: flex-start;
+        gap: var(--space-3);
+        min-height: 3.25rem;
+        padding: 0 var(--space-2);
+        font-size: var(--fs-body);
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--color-text);
+        border-bottom: 1px solid var(--color-border);
+        border-radius: 0;
+    }
+    body.nt-browse .d-nav i { display: inline-flex; font-size: 1.375rem; color: var(--color-icon); }
+    body.nt-browse .d-nav.on { color: var(--color-text); border-bottom-color: var(--color-border); }
+
+    /* Live: Playlists is the Library tab, which has the screen to itself */
+    body.ft-has-discover #mm-playlists { display: none; }
+    body.nt-library #minimodeoptions { display: none; }
+    body.nt-library:not(.pv-full-on) #stage {
+        position: fixed !important;
+        left: -10000px;
+        top: 0;
+        width: 640px;
+        height: 360px;
+        opacity: 0;
+        pointer-events: none;
+    }
 }
 
 /* ============================================
