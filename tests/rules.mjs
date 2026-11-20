@@ -97,6 +97,14 @@ try {
   await step(fan, "chat: send a message (message and feed entry in one write)", () => ftapi.actions.sendChat("hello from the rules test"));
   await step(fan, "chat: a bot command", () => ftapi.actions.sendBotCommand("!rulescheck"));
   await step(fan, "chat: typing, then stop", async () => { firetable.actions.setTyping(true); await new Promise((r) => setTimeout(r, 300)); firetable.actions.setTyping(false); });
+  await step(fan, "chat: still typing (just the time refreshed), then stop", async () => {
+    firetable.actions.setTyping(true);
+    await new Promise((r) => setTimeout(r, 300));
+    firetable.typing.last -= 6000; // as if 6 s had passed
+    firetable.actions.setTyping(true);
+    await new Promise((r) => setTimeout(r, 300));
+    firetable.actions.setTyping(false);
+  });
   await step(fan, "chat: react, then take it back", async () => {
     firetable.actions.toggleReaction("other1", "fire");
     await new Promise((r) => setTimeout(r, 500));

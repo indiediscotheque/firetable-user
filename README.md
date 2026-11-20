@@ -113,6 +113,14 @@ Broken tracks get a one-tap fix when there's a working copy. Every night the [in
 - Clearing a flag (by hand, or when the checker finds the track plays again) clears its suggestion.
 - **What a list is kept to:** in All Playlists each list can be set to **YouTube Music**, **YouTube videos** or **SoundCloud** (or left at **Any source**), saved in `playlistPrefs/<uid>/format/<listID>` (`js/playlists.js`). A SoundCloud list takes SoundCloud tracks only and a YouTube Music or videos list YouTube tracks only: adding from search, Grab or a Recent row says so instead. Opening a list points Find tracks at its source. The bot's swaps follow it: YouTube Music and Any source lists get YouTube Music audio tracks, a list of videos gets the artist's videos (never audio tracks), and SoundCloud lists are skipped. Needs the hostbot's current `firebase-rules.json`; with older rules the setting doesn't save.
 
+## database costs
+The Realtime Database bills every byte it sends, to every browser, so the site asks for as little as it can:
+- **Playlist tracks are saved lean.** A YouTube track doesn't keep its thumbnail or watch page; both are built from its id wherever they're shown (`ftapi.utilities.leanTrack`, the same rules as the hostbot's `lib/tracks.js`). Your open playlist downloads on every visit, so every track counts.
+- **Playlist counts:** each list's length is counted on load (every track's key, but never the tracks). Coming back to the tab later fetches only the flagged counts again: playing from a list moves a track, it doesn't add or take one away.
+- **Grab stats** in Profile come from the hostbot's sum (`grabCount/<uid>`), not every grab you've ever had; until the hostbot keeps that sum, the site counts them itself.
+- **Typing:** "is typing" writes your name once and then only refreshes the time, at most every 5 s; an entry older than 11 s is ignored.
+- **Discover** follows its live data (new releases, the week's chart) only while it's open. **The live stage for other sites** reads the hostbot's small `stage` summary, never `users/`.
+
 ## checks
 `npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every push and pull request, and before every deploy. None of these tooling files are deployed.
 
