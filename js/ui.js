@@ -1620,50 +1620,6 @@ firetable.ui.setupMiscEvents = function () {
     firetable.nav.apply();
   });
 
-  // ── Full-screen video, with the room's info floating over it (#155) ──
-  // With Discover on, this button opens the full-screen player instead
-  // (js/discover.js), which has the video and fills the screen itself.
-  (function () {
-    var discoverHasIt = function () { return !!(firetable.discover && firetable.discover.fullPlayer && firetable.discover.fullPlayer()); };
-    var stage = document.getElementById('stage');
-    var $btn = $('#fullscreenBtn');
-    var request = stage.requestFullscreen || stage.webkitRequestFullscreen;
-    var exit = document.exitFullscreen || document.webkitExitFullscreen;
-    var current = function () { return document.fullscreenElement || document.webkitFullscreenElement || null; };
-    if (!request || !(document.fullscreenEnabled || document.webkitFullscreenEnabled)) return; // e.g. iPhone
-    $btn.prop('hidden', false);
-    var idleTimer = null, screenWasDown = false;
-    var wake = function () {
-      stage.classList.remove('fs-idle');
-      clearTimeout(idleTimer);
-      if (current() === stage) idleTimer = setTimeout(function () { stage.classList.add('fs-idle'); }, 3000);
-    };
-    $btn.on('click', function () {
-      if (discoverHasIt()) return;
-      if (current() === stage) exit.call(document);
-      else request.call(stage);
-    });
-    $(document).on('fullscreenchange webkitfullscreenchange', function () {
-      var on = current() === stage;
-      if (!on && discoverHasIt() && !$('#stage').hasClass('is-fullscreen')) return; // the full player's, not the stage's
-      $('#stage').toggleClass('is-fullscreen', on);
-      $btn.attr('aria-label', on ? 'Exit full screen' : 'Full screen').find('i').text(on ? 'fullscreen_exit' : 'fullscreen');
-      $('#tip-fullscreenBtn').text(on ? 'Exit full screen' : 'Full screen');
-      if (on) {
-        // the point of full screen is the video: lower the screen while in it
-        screenWasDown = document.body.classList.contains('screen');
-        firetable.utilities.screenDown();
-        wake();
-      } else {
-        clearTimeout(idleTimer);
-        stage.classList.remove('fs-idle');
-        if (!screenWasDown) firetable.ui.applyScreenSetting();
-      }
-      $(window).trigger('resize');
-    });
-    $(stage).on('mousemove touchstart keydown', wake);
-  })();
-
   // ── Open the DJ playlist in the Playlists view (#162) ──
   $("#djlistOpen").on("click", function () {
     var listID = $("#djlistpicker").val() || "0";

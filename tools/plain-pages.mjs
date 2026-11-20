@@ -13,7 +13,7 @@
 // my name on public pages" are already left out of that data.
 //
 //   node tools/plain-pages.mjs --site https://indiediscotheque.com/ [--out music]
-//     [--template index.html] [--artists 500] [--always (even with discover off)]
+//     [--template index.html] [--artists 500]
 //   FIREBASE_DATABASE_URL overrides config.js's database address.
 //
 // The deploy (.github/workflows/deploy.yml) runs it after versioning the
@@ -59,10 +59,6 @@ const pick = (re) => (config.match(re) || [])[1];
 const DB = String(process.env.FIREBASE_DATABASE_URL || pick(/databaseURL:\s*["']([^"']+)["']/) || "").replace(/\/$/, "");
 const ROOM = pick(/roomName:\s*["']([^"']+)["']/) || "the room";
 if (!DB) throw new Error("no databaseURL in config.js");
-if (!/discover:\s*true/.test(config) && !args.includes("--always")) {
-  console.log("Discover is off in config.js (discover: true), so no plain pages.");
-  process.exit(0);
-}
 
 const read = async (path) => {
   const url = new URL(DB); // keeps a ?ns= (the local emulator)

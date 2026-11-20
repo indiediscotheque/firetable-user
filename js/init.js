@@ -116,7 +116,7 @@ firetable.init = function () {
   // ── Firebase Init ──
   ftapi.init(ftconfigs.firebase);
 
-  // ── Discover (off unless config.js sets discover: true). Sign-in is
+  // ── Discover (always on since 5.3). Sign-in is
   // reported later, so its listeners are in place in time. ──
   if (firetable.discover) firetable.discover.init();
 

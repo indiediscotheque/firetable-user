@@ -173,7 +173,7 @@ const { data, decks } = livedIn(now, people);
 await put("/", data);
 
 const browser = await chromium.launch(launchOptions());
-const { server, SITE } = await serveSite({ csp: policy({ auth: true }), configJs: config(NS).replace(/roomName:/, "discover: true, roomName:") });
+const { server, SITE } = await serveSite({ csp: policy({ auth: true }), configJs: config(NS) });
 const found = {}; // "rule kind" -> { rule, impact, help, where: Set of "view role width" }
 const small = new Set();
 const failures = [];

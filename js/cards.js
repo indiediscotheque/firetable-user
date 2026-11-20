@@ -209,7 +209,7 @@ firetable.actions.cardCase = function () {
         '<button type="button" class="butt graybutt cardShareChat">Share In Chat</button>' +
         '<button type="button" class="butt graybutt cardGiftChat">Gift to DJ</button>' +
         '<button type="button" class="butt graybutt cardViewLarger">View Larger</button>' +
-        (firetable.featured.on() ? '<button type="button" class="butt graybutt cardFeature" aria-pressed="false">Feature on my DJ page</button>' : '') +
+        '<button type="button" class="butt graybutt cardFeature" aria-pressed="false">Feature on my DJ page</button>' +
         '</div>' +
         '</span>'
       );
@@ -251,11 +251,9 @@ firetable.actions.cardCase = function () {
 firetable.featured = {
   MAX: 6,
   ids: [],
-  /** Only with Discover on: that's where DJ pages are. */
-  on: function () { return typeof ftconfigs !== 'undefined' && ftconfigs.discover === true; },
   load: function (done) {
     var f = firetable.featured;
-    if (!f.on() || !ftapi.uid) return;
+    if (!ftapi.uid) return;
     ftapi.db().ref('users/' + ftapi.uid + '/featured').once('value').then(function (s) {
       f.ids = (s.val() ? Object.keys(s.val()).sort().map(function (k) { return s.val()[k]; }) : []).filter(Boolean);
       if (done) done();

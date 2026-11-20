@@ -209,7 +209,7 @@ async function reset(page, mode) {
 }
 
 const browser = await chromium.launch(launchOptions());
-const { server, SITE } = await serveSite({ csp: policy({ auth: true }), configJs: config(NS).replace(/roomName:/, "discover: true, roomName:") });
+const { server, SITE } = await serveSite({ csp: policy({ auth: true }), configJs: config(NS) });
 let checked = 0;
 const failures = [];
 const known = new Set();

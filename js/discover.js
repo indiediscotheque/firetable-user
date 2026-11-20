@@ -1,8 +1,8 @@
 /**
  * discover.js — Discover: the library side of the site.
  *
- * Off unless config.js sets `discover: true`. When on, a Discover / Live
- * switch sits under the room theme. Visitors open the site on Discover,
+ * Always on (it was the config.js option `discover: true` until 5.3). A
+ * Discover / Live switch sits under the room theme. Visitors open the site on Discover,
  * members on Live, and each person's last choice is remembered.
  *
  * Discover is its own page with the site's own parts: the left column keeps
@@ -2905,7 +2905,7 @@ firetable.discover = (function () {
 
   function openFull(from) {
     var el = fullEl();
-    if (!el || !D.on || F.open) return;
+    if (!el || F.open) return;
     F.open = true;
     F.closing = null;
     F.from = from || document.activeElement;
@@ -3228,7 +3228,7 @@ firetable.discover = (function () {
       return play(P.list, P.i, P.at);
     }
     // the full-screen player
-    if ((b = t.closest("#fullscreenBtn")) && D.on) return F.open ? closeFull() : openFull(b);
+    if ((b = t.closest("#fullscreenBtn"))) return F.open ? closeFull() : openFull(b);
     if (F.open && t.closest("#pv-full a[href^='#discover']")) closeFull(); // an artist, genre or DJ page: show it
     if ((b = t.closest(".pvf-main"))) return fullMain();
     if ((b = t.closest("#pv-fclose"))) return closeFull();
@@ -3924,14 +3924,7 @@ firetable.discover = (function () {
 
   return {
     init: function () {
-      D.on = typeof ftconfigs !== "undefined" && ftconfigs.discover === true;
-      if (!D.on) {
-        // a page from search, with Discover since turned off: just the room
-        var filled = document.getElementById("discoverPage");
-        if (filled) filled.parentNode.removeChild(filled);
-        document.body.classList.remove("ft-discover", "ft-has-discover");
-        return;
-      }
+      // Discover is part of the site (5.3): no config.js switch any more
       document.body.classList.add("ft-has-discover");
       D.newLayout = store.get("ft-new-layout", "grid") === "list" ? "list" : "grid";
       build();
@@ -3992,7 +3985,7 @@ firetable.discover = (function () {
           try { pop = document.querySelector(".ft-popover:popover-open"); } catch (x) { /* no popovers */ }
           if (!pop) { e.preventDefault(); closeFull(); return; }
         }
-        if (D.on && plainKey && !inText && (e.key === "f" || e.key === "F") && !document.querySelector("dialog[open]")) { e.preventDefault(); if (F.open) closeFull(); else openFull(document.activeElement); return; }
+        if (plainKey && !inText && (e.key === "f" || e.key === "F") && !document.querySelector("dialog[open]")) { e.preventDefault(); if (F.open) closeFull(); else openFull(document.activeElement); return; }
         if (F.open && plainKey && !inText && (e.key === "v" || e.key === "V")) { e.preventDefault(); setFullView(fullView() === "video" ? "audio" : "video"); return; }
         if (F.open && e.key === " " && !typing && fullKind() !== "quiet") { e.preventDefault(); fullMain(); return; }
         if (e.key === " " && !typing && barKind() !== "quiet") {
@@ -4120,13 +4113,12 @@ firetable.discover = (function () {
     onEnded: onEnded,
     onFailed: onFailed,
     /** True when the full-screen player is here (Discover on): the stage's full-screen button opens it. */
-    fullPlayer: function () { return D.on; },
+    fullPlayer: function () { return true; },
     /** Open or close the full-screen player (for tests, and a way in from elsewhere). */
     openFull: function () { openFull(); },
     closeFull: function () { closeFull(); },
     /** A member's DJ page address, when they have one (for the room's user card). */
     djPage: function (uid, name) {
-      if (!D.on) return null;
       var key = djKey(uid, name);
       return key ? "#discover/djs/" + key : null;
     },
