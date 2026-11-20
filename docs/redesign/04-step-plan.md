@@ -163,7 +163,9 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke: seed two songs with equal plays and check both show "=1".
 - **Undo:** revert.
 
-### 1.10 Stage floor and states
+### 1.10 Stage floor and states ✅ the states shipped (the owner's yes, November 20, 2026)
+- **Shipped, the states:** with nobody on the decks, `#djStage.st-empty` and a line just above the deck's own join button (`#st-state`): "The decks are open. Hop on and the room plays from your ★ playlist." with how many people are here; with only the room's bot on the decks, `.st-botonly` and "The bot keeps the music going until someone hops on." (`firetable.ui.renderStageState`, on `tableChanged`, `usersChanged` and `newSong`; never shown to someone on the decks). Audio blocked: `#tapToPlay` says **Listen to the room** with "[DJ] is playing [song] · N people here" under it, and the decks' line waits until the sound is on. Smoke: empty decks, the bot alone, neither, and the Listen line.
+- **Not done (not in the owner's yes):** the stage floor gradient and the light name plate, and the waitlist chip; Live's look stays.
 - **Goal:** DJs stand on the stage, not behind a window; every state reads clearly.
 - **Rows:** ST-02, ST-03, ST-15, ST-21, ST-23, DJ-03, DJ-07.
 - **Files and change:**

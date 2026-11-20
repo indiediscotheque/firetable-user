@@ -907,6 +907,29 @@ try {
     "keys: H fires, G grabs, M mutes and ? lists them; in the chat box H is just an h (" + JSON.stringify(hotkeys) + ")");
   await page.keyboard.press("m"); // unmute again
 
+  console.log("-- the stage's states: the decks open, the bot keeping the music going, Listen to the room");
+  const tableBefore = await (await fetch(DB + "/table.json?ns=" + NS)).json();
+  const stageState = async () => page.evaluate(() => {
+    const box = document.getElementById("st-state");
+    return (document.getElementById("djStage").className.match(/st-(empty|botonly)/) || [""])[0] + "|" + (box.hidden ? "" : document.getElementById("st-stateText").textContent);
+  });
+  const states = {};
+  await put("/table", null);
+  await page.waitForFunction(() => document.getElementById("djStage").classList.contains("st-empty"), null, { timeout: 10000 }).catch(() => {});
+  states.open = await stageState();
+  await put("/users/smokebot", { username: "smokebot", hostbot: true, status: true });
+  await put("/table", { b1: { id: "smokebot", name: "smokebot" } });
+  await page.waitForFunction(() => document.getElementById("djStage").classList.contains("st-botonly"), null, { timeout: 10000 }).catch(() => {});
+  states.bot = await stageState();
+  await put("/table", tableBefore);
+  await put("/users/smokebot", null);
+  await page.waitForFunction(() => !/st-(empty|botonly)/.test(document.getElementById("djStage").className), null, { timeout: 10000 }).catch(() => {});
+  states.after = await stageState();
+  states.listen = await page.evaluate(() => { firetable.ui.renderStageState(); return document.querySelector("#tapToPlay b").textContent + "|" + document.getElementById("tapToPlaySub").textContent; });
+  check(/^st-empty\|The decks are open\. Hop on and the room plays from your ★ playlist\./.test(states.open) && states.bot === "st-botonly|The bot keeps the music going until someone hops on." && states.after === "|",
+    "the stage says when the decks are open and when the bot is keeping the music going, and nothing otherwise (" + JSON.stringify(states) + ")");
+  check(/^Listen to the room\|.+ is playing .+/.test(states.listen), "audio blocked: Listen to the room, with who's playing what (" + states.listen + ")");
+
   console.log("-- the stage's volume slider (a native range input)");
   const vol = await page.evaluate(async () => {
     const s = document.getElementById("slider");
