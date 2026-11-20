@@ -830,6 +830,7 @@ firetable.ui.setupChatEvents = function () {
       // markup or selectors)
       var $line = $('<div class="chatText"></div>').attr('id', "chattxt" + chatData.chatID).html(txtOut);
       byId("chat" + firetable.lastChatId).find(".chatContent").append($line);
+      if (ftapi.users[chatData.id] && ftapi.users[chatData.id].hostbot) byId("chat" + firetable.lastChatId).addClass('ch-bot'); // (1.13)
       byId("chatTime" + firetable.lastChatId).text(firetable.utilities.format_time(chatData.time)).attr('data-time', chatData.time);
       $('<div class="chatReactions"></div>').attr('id', 'reactions' + chatData.chatID).insertAfter($line);
 
@@ -859,6 +860,8 @@ firetable.ui.setupChatEvents = function () {
         .attr('data-time', chatData.time)
         .html(firetable.utilities.format_time(chatData.time));
       if (hasMention) $chatthing.addClass('badoop');
+      // the room's bot: its lines are quieter, so people's talk stands out (1.13)
+      if (ftapi.users[chatData.id] && ftapi.users[chatData.id].hostbot) $chatthing.addClass('ch-bot');
 
       $chatthing.find(".chatText").html(txtOut).attr('id', "chattxt" + chatData.chatID);
       $('<div class="chatReactions"></div>').attr('id', 'reactions' + chatData.chatID).insertAfter($chatthing.find(".chatText"));

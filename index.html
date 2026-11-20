@@ -185,8 +185,13 @@
 				<span id="tip-npModBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-npModBtn">Mod tools</span>
 			</div>
 			<button type="button" id="tapToPlay" class="butt">
-				<i class="material-symbols-filled">play_arrow</i> Tap to start audio
+				<i class="material-symbols-filled">play_arrow</i>
+				<span class="ttp-text"><b>Listen to the room</b><span id="tapToPlaySub"></span></span>
 			</button>
+			<!-- The decks' state (1.10): open, or the bot keeping the music going -->
+			<div id="st-state" class="st-state" role="status" hidden>
+				<p id="st-stateText"></p>
+			</div>
 			<!-- In Live while you hear Discover: you're not hearing the room (js/discover.js renderNotLive) -->
 			<aside id="st-notlive" aria-label="Not listening live" hidden></aside>
 		</div>

@@ -1318,6 +1318,7 @@ firetable.ui.setupRoomEvents = function () {
     firetable.tableData = data;
     var _activeIdx = (firetable.displayedPlaydex !== undefined) ? firetable.displayedPlaydex : firetable.playdex;
     renderDeckAndQueue(data, _activeIdx, true);
+    firetable.ui.renderStageState();
 
     $('#usersWaitlist').off('click.wladdme').on('click.wladdme', '.waitlist-addme-row .ft-avatar, .wlAddMeBtn', function () {
       ftapi.actions.sendBotCommand('!addme');
@@ -1354,6 +1355,10 @@ firetable.ui.setupRoomEvents = function () {
       ftapi.events.emit('waitlistChanged', firetable.waitlistData);
     }
   });
+
+  // the count of people here, and who's playing what, in the stage's notes (1.10)
+  ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () { firetable.ui.renderStageState(); }));
+  ftapi.events.on("newSong", function () { setTimeout(firetable.ui.renderStageState, 0); });
 
   // Re-render deck when user data arrives (mod status affects button visibility),
   // at most once per frame however many updates arrive together
@@ -1444,4 +1449,40 @@ firetable.ui.setupRoomEvents = function () {
     root.classList.add("room-colors");
 
   });
+};
+
+/**
+ * The stage's states (1.10): with nobody on the decks, "The decks are open"
+ * over the deck's own join button; with only the room's bot there, that it keeps the music going
+ * until someone hops on; and on "Listen to the room" (audio blocked), who's
+ * playing what and how many are here.
+ */
+firetable.ui.renderStageState = function () {
+  var users = ftapi.users || {};
+  var here = 0;
+  for (var uid in users) if (users.hasOwnProperty(uid) && users[uid] && !users[uid].hostbot) here++;
+  var hereText = here ? firetable.utilities.pluralize(here, "person", "people") + " here" : "";
+  var djs = [];
+  var table = firetable.tableData || {};
+  for (var k in table) if (table.hasOwnProperty(k) && table[k]) djs.push(table[k]);
+  var people = djs.filter(function (d) { return !(users[d.id] && users[d.id].hostbot); });
+  var mine = djs.some(function (d) { return d.id === ftapi.uid; });
+  var state = !djs.length ? "open" : !people.length ? "bot" : null;
+  var stage = document.getElementById("djStage");
+  if (stage) {
+    stage.classList.toggle("st-empty", state === "open");
+    stage.classList.toggle("st-botonly", state === "bot");
+  }
+  var box = document.getElementById("st-state");
+  if (box) {
+    box.hidden = !state || mine;
+    $("#st-stateText").text(state === "open"
+      ? "The decks are open. Hop on and the room plays from your ★ playlist." + (hereText ? " " + hereText + "." : "")
+      : state === "bot" ? "The bot keeps the music going until someone hops on." : "");
+  }
+  var s = firetable.song;
+  var playing = s && s.cid && s.cid != 0
+    ? (s.djname ? s.djname + " is playing " : "Playing ") + firetable.utilities.decodeEntities(s.title || "")
+    : "";
+  $("#tapToPlaySub").text([playing, hereText].filter(Boolean).join(" · "));
 };

@@ -907,6 +907,29 @@ try {
     "keys: H fires, G grabs, M mutes and ? lists them; in the chat box H is just an h (" + JSON.stringify(hotkeys) + ")");
   await page.keyboard.press("m"); // unmute again
 
+  console.log("-- the stage's states: the decks open, the bot keeping the music going, Listen to the room");
+  const tableBefore = await (await fetch(DB + "/table.json?ns=" + NS)).json();
+  const stageState = async () => page.evaluate(() => {
+    const box = document.getElementById("st-state");
+    return (document.getElementById("djStage").className.match(/st-(empty|botonly)/) || [""])[0] + "|" + (box.hidden ? "" : document.getElementById("st-stateText").textContent);
+  });
+  const states = {};
+  await put("/table", null);
+  await page.waitForFunction(() => document.getElementById("djStage").classList.contains("st-empty"), null, { timeout: 10000 }).catch(() => {});
+  states.open = await stageState();
+  await put("/users/smokebot", { username: "smokebot", hostbot: true, status: true });
+  await put("/table", { b1: { id: "smokebot", name: "smokebot" } });
+  await page.waitForFunction(() => document.getElementById("djStage").classList.contains("st-botonly"), null, { timeout: 10000 }).catch(() => {});
+  states.bot = await stageState();
+  await put("/table", tableBefore);
+  await put("/users/smokebot", null);
+  await page.waitForFunction(() => !/st-(empty|botonly)/.test(document.getElementById("djStage").className), null, { timeout: 10000 }).catch(() => {});
+  states.after = await stageState();
+  states.listen = await page.evaluate(() => { firetable.ui.renderStageState(); return document.querySelector("#tapToPlay b").textContent + "|" + document.getElementById("tapToPlaySub").textContent; });
+  check(/^st-empty\|The decks are open\. Hop on and the room plays from your ★ playlist\./.test(states.open) && states.bot === "st-botonly|The bot keeps the music going until someone hops on." && states.after === "|",
+    "the stage says when the decks are open and when the bot is keeping the music going, and nothing otherwise (" + JSON.stringify(states) + ")");
+  check(/^Listen to the room\|.+ is playing .+/.test(states.listen), "audio blocked: Listen to the room, with who's playing what (" + states.listen + ")");
+
   console.log("-- the stage's volume slider (a native range input)");
   const vol = await page.evaluate(async () => {
     const s = document.getElementById("slider");
@@ -1016,6 +1039,22 @@ try {
     firetable.actions.showCard = showCard;
     return { shown, first, sent: sent.join(), card: $b.attr("data-card") };
   });
+  // the bot's lines are quieter than people's (1.13); the people list names each role (1.12)
+  await put("/users/bot/status", true); // online, as the room's bot is
+  await page.waitForFunction(() => ftapi.users && ftapi.users.bot && ftapi.users.bot.hostbot, null, { timeout: 10000 }).catch(() => {});
+  const botLine = await page.evaluate(async () => {
+    const say = (id, txt) => ftapi.events.emit("newChat", { chatID: "smkq" + Math.random().toString(36).slice(2), feedID: "f", id, name: id, txt, time: Date.now() });
+    say("bot", "dj1 has played this 3 times.");
+    say("dj1", "nice one");
+    await new Promise((r) => setTimeout(r, 100));
+    const blocks = [...document.querySelectorAll("#chats > .newChat:not(.nowplayn)")].slice(-2);
+    const size = (b) => getComputedStyle(b.querySelector(".chatText")).fontSize;
+    const role = document.querySelector("#usersbox .prsnRole[title]");
+    return { bot: blocks[0].classList.contains("ch-bot") + "|" + size(blocks[0]), person: blocks[1].classList.contains("ch-bot") + "|" + size(blocks[1]),
+      role: role ? role.getAttribute("title") + "|" + role.getAttribute("aria-label") : "" };
+  });
+  check(botLine.bot === "true|13px" && botLine.person === "false|14px", "the room bot's chat lines are quieter than people's (" + JSON.stringify(botLine) + ")");
+  check(/^(Member|Mod|Supermod|Room bot)\|\1$/.test(botLine.role), "the people list names each role icon, for a tooltip and screen readers (" + botLine.role + ")");
   await put("/cards/cardL/owner", "smoke");
   await page.waitForFunction(() => $('.chat-grab-btn[data-card="cardL"]').attr("data-state") === "mine", null, { timeout: 8000 }).catch(() => {});
   legacy.after = await page.$eval('.chat-grab-btn[data-card="cardL"]', (b) => b.dataset.state).catch(() => "missing");

@@ -8,6 +8,14 @@
  * Special card styles are selected via data.special (classic, id8, id9, v2).
  */
 
+/**
+ * What a card's temp means (1.12): the bot sets it at random when it prints a
+ * card (the hostbot's card printing): most land at 110–130°, about 1 in 5 at
+ * 131–230°, about 1 in 20 at 231–420°. The hotter, the rarer.
+ */
+var TEMP_MEANS = "A card's temp is set at random when it's printed: most are 110–130°, about 1 in 5 are 131–230°, about 1 in 20 run hotter. The hotter, the rarer.";
+
+
 firetable.actions = firetable.actions || {};
 
 firetable.actions.markCardRendered = function (cardid) {
@@ -124,8 +132,9 @@ firetable.actions.renderCardStats = function (data) {
     '<div class="cardStatsSummary">' +
     '<div class="cardStatTile"><span class="cardStatLabel">Total Cards</span><span class="cardStatValue">' + total + '</span></div>' +
     '<div class="cardStatTile"><span class="cardStatLabel">Unique DJs</span><span class="cardStatValue">' + Object.keys(perDj).length + '</span></div>' +
-    '<div class="cardStatTile"><span class="cardStatLabel">Lowest Temp</span><span class="cardStatValue">' + (minTemp === null ? '--' : (minTemp + '°')) + '</span></div>' +
-    '<div class="cardStatTile"><span class="cardStatLabel">Highest Temp</span><span class="cardStatValue">' + (maxTemp === null ? '--' : (maxTemp + '°')) + '</span></div>' +
+    '<div class="cardStatTile" title="' + TEMP_MEANS + '"><span class="cardStatLabel">Lowest Temp</span><span class="cardStatValue">' + (minTemp === null ? '--' : (minTemp + '°')) + '</span></div>' +
+    '<div class="cardStatTile" title="' + TEMP_MEANS + '"><span class="cardStatLabel">Highest Temp</span><span class="cardStatValue">' + (maxTemp === null ? '--' : (maxTemp + '°')) + '</span></div>' +
+    '<p class="cardTempNote">' + TEMP_MEANS + '</p>' +
     '</div>' +
     '<div class="cardStatDjBreakdown hist-day-group collapsed">' +
     '<div class="hist-day-header" role="button" tabindex="0" aria-expanded="false">Cards Per DJ</div>' +
@@ -134,7 +143,7 @@ firetable.actions.renderCardStats = function (data) {
     '<div id="cardFilterRow" class="cardFilterRow">' +
     '<div class="cardFilterControl"><input id="cardFilterText" class="cardFilterInput" type="search" placeholder="Search cards…" aria-label="Filter cards by text" /></div>' +
     '<div class="cardFilterControl"><select id="cardFilterDj" class="cardFilterSelect" aria-label="Filter cards by DJ"><option value="">All DJs</option>' + djOptions + '</select></div>' +
-    '<div class="cardFilterControl"><select id="cardSortBy" class="cardFilterSelect" aria-label="Sort cards by"><option value="cardnum">Card Number</option><option value="djname">DJ Name</option><option value="temp">Temp</option><option value="num">Num</option></select></div>' +
+    '<div class="cardFilterControl"><select id="cardSortBy" class="cardFilterSelect" aria-label="Sort cards by"><option value="cardnum">Card Number</option><option value="djname">DJ Name</option><option value="temp" title="' + TEMP_MEANS + '">Temp (hotter is rarer)</option><option value="num">Num</option></select></div>' +
     '</div>' +
     '</section>'
   );

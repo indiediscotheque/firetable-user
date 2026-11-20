@@ -908,14 +908,15 @@ function buildUserHTML(data) {
   if (!data.username) data.username = data.userid;
   var roleicon = "person";
   var roleiconclass = "material-symbols-filled";
-  if (data.mod) { roleicon = "shield"; roleiconclass = "material-symbols-filled"; }
-  if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; }
-  if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; }
+  var rolename = "Member"; // named for the icon's tooltip and for screen readers (1.12)
+  if (data.mod) { roleicon = "shield"; roleiconclass = "material-symbols-filled"; rolename = "Mod"; }
+  if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; rolename = "Supermod"; }
+  if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; rolename = "Room bot"; }
 
   return '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + firetable.utilities.htmlEscape(data.username) + ' — profile" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username, null, firetable.roomAvatarStyle || data.avatarStyle)) + ');">' +
          '<span class="material-symbols-outlined blockon">' + blockcon + '</span>' +
          '</div>' +
-         '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
+         '<span class="' + roleiconclass + ' prsnRole" role="img" title="' + rolename + '" aria-label="' + rolename + '">' + roleicon + '</span>' +
          '<div class="prsnNameRole">' +
          '<span class="prsnName">' + firetable.utilities.htmlEscape(data.username) + '</span>' +
          '</div>';

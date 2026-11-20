@@ -2387,6 +2387,34 @@ body.screen:not(.yt-stalled) #stageTopRight .graybutt {
 body.media-blocked #tapToPlay {
     display: inline-flex;
 }
+/* "Listen to the room", and under it who's playing what and how many are here (1.10) */
+#tapToPlay { height: auto; min-height: var(--tap-min); padding-block: var(--pad1); }
+#tapToPlay .ttp-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; text-align: left; }
+#tapToPlay .ttp-text b { font-size: var(--fs-title); }
+#tapToPlay #tapToPlaySub { max-width: 18rem; overflow: hidden; text-overflow: ellipsis; opacity: 0.8; font-size: var(--fs-meta); }
+#tapToPlay #tapToPlaySub:empty { display: none; }
+
+/* The decks' state (1.10): open, or the bot keeping the music going */
+/* a line just above the deck, where its own join button (Play / +) is */
+.st-state {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    bottom: calc(var(--pad3) + 3.25rem);
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: min(30rem, calc(100% - 2 * var(--pad3)));
+    padding: var(--pad1) var(--pad3);
+    border-radius: var(--radius-panel);
+    background: color-mix(in srgb, var(--color-bg) 85%, transparent);
+    box-shadow: 0 0.5rem 1.5rem -0.5rem black;
+    text-align: center;
+}
+.st-state[hidden] { display: none; }
+.st-state p { margin: 0; color: var(--color-text-light); font-size: var(--fs-meta); line-height: 1.35; }
+/* Listen to the room comes first; the note shows once the sound is on */
+body.media-blocked .st-state { display: none; }
+
 
 body.screen:not(.yt-stalled) #screenBox::after {
     content: '';
@@ -7345,3 +7373,10 @@ body:not(.is-mod) .helpMods { display: none; }
     .helpKeys dd { margin-bottom: var(--space-2); }
     .helpKeys dt { white-space: normal; }
 }
+
+/* what a card's temp means (1.12), under the card case's stats */
+.cardTempNote { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--fs-meta); }
+
+/* The room's bot in chat (1.13): its lines quieter than people's talk; printed cards and their GRAB as before */
+.ch-bot .chatText { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 400; }
+.ch-bot .chatText strong, .ch-bot .chatText b { color: var(--color-text); }
