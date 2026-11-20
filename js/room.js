@@ -997,6 +997,7 @@ firetable.ui.setupRoomEvents = function () {
     firetable.ui.markSaved();
     firetable.fireCount = 0;
     firetable.fireReactors = {};
+    if (firetable.actions.updateFireReactionDisplay) setTimeout(firetable.actions.updateFireReactionDisplay, 0); // Fire's count back to none
     if (typeof window.firetableSetFyreIntensity === 'function') {
       window.firetableSetFyreIntensity(0);
     }

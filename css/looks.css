@@ -7381,3 +7381,25 @@ body:not(.is-mod) .helpMods { display: none; }
 /* The room's bot in chat (1.13): its lines quieter than people's talk; printed cards and their GRAB as before */
 .ch-bot .chatText { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 400; }
 .ch-bot .chatText strong, .ch-bot .chatText b { color: var(--color-text); }
+
+/* Fire's count (1.5): a badge on its button, wherever the button is (bar, full-screen player) */
+#fire { position: relative; }
+.st-fireCount {
+    position: absolute;
+    top: -0.3rem;
+    right: -0.35rem;
+    display: grid;
+    place-items: center;
+    min-width: 1.1rem;
+    height: 1.1rem;
+    padding: 0 0.25rem;
+    border-radius: var(--radius-pill);
+    background: var(--color-danger);
+    color: #fff;
+    font-family: var(--font-numbers);
+    font-size: var(--fs-label);
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+}
+.st-fireCount[hidden] { display: none; }
