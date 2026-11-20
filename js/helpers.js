@@ -993,6 +993,12 @@ firetable.utilities.dragSort = function (list, o) {
   var up = function (e) {
     if (pending && e.pointerId === pending.id) return stopPending(); // a click or tap: nothing moved
     if (!drag || e.pointerId !== drag.id) return;
+    // where it was let go: the browser folds moves into frames, and a quick
+    // release can land before the last move was handled
+    if (typeof e.clientY === "number" && (e.clientX || e.clientY)) {
+      lastX = e.clientX; lastY = e.clientY;
+      place();
+    }
     var d = drag;
     drag = null;
     cancelAnimationFrame(raf);

@@ -631,7 +631,14 @@ try {
   [s1, s3] = await dragEnds("k1", "k3", tPage);
   await touch("touchStart", s1.x, s1.y);
   await sleep(450);
-  for (let i = 1; i <= 8; i++) { await touch("touchMove", s1.x, s1.y + (s3.y + s3.h * 0.4 - s1.y) * i / 8); await sleep(16); }
+  // each step aims at the third row where it is now (something above the list can appear mid-drag
+  // and move every row), ending in its lower quarter
+  const rowNow = (k) => tPage.$eval('#mainqueue .pvbar[data-key="' + k + '"]', (el) => { const r = el.getBoundingClientRect(); return { top: r.top, h: r.height }; });
+  for (let i = 1; i <= 8; i++) {
+    const r3 = await rowNow("k3");
+    await touch("touchMove", s1.x, s1.y + (r3.top + r3.h * 0.75 - s1.y) * i / 8);
+    await sleep(16);
+  }
   await touch("touchEnd");
   await sleep(300);
   t.hold = await rowOrder(tPage);
