@@ -390,7 +390,7 @@ firetable.actions.grabTo = function (dest) {
     label: "Change",
     fn: function () {
       destRef.child(key).remove().then(function () { firetable.saved.unmark(src.type, src.cid); }, function () { /* it stays; the picker still opens */ });
-      firetable.actions.openGrabPicker();
+      firetable.actions.openGrabPicker(true);
     }
   });
   return true;
@@ -1680,8 +1680,10 @@ firetable.ui.setupMiscEvents = function () {
   // Grab (1.6): one tap adds the room's song to the playlist you grabbed to
   // last, with Undo and Change; the first grab, or the ▾ beside it
   // (#st-grabPick), opens the picker.
-  var openGrabPicker = function () {
+  // Grab toggles the picker; the ▾ and Change only ever open it (keepOpen)
+  var openGrabPicker = function (keepOpen) {
     if (!$("#stealContain").is(":hidden")) {
+      if (keepOpen === true) return;
       $('#grab').removeClass('on');
       $("#stealContain").hide();
       return;
@@ -1704,7 +1706,7 @@ firetable.ui.setupMiscEvents = function () {
     if ($("#stealContain").is(":hidden") && last != null && firetable.actions.grabTo(last)) return;
     openGrabPicker();
   });
-  $("#st-grabPick").on("click", openGrabPicker);
+  $("#st-grabPick").on("click", function () { openGrabPicker(true); });
 
   // Keys (1.18): H Fire ("h0t tracks"), G Grab, M mute, T the selected songs
   // to the top, ? the list of keys and commands (#helpBox). Never while

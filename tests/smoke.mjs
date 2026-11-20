@@ -869,7 +869,9 @@ try {
     document.getElementById("st-grabPick").click();
     await until(() => $("#stealContain").is(":visible"));
     out.pickOpens = $("#stealContain").is(":visible");
-    document.getElementById("st-grabPick").click();
+    document.getElementById("st-grabPick").click(); // a second ▾ keeps it open
+    out.pickStays = $("#stealContain").is(":visible");
+    document.body.click(); // a click elsewhere closes it
     out.pickCloses = $("#stealContain").is(":hidden");
     ftapi.uid = realUid;
     return out;
@@ -877,8 +879,8 @@ try {
   check(grabbed.firstOpens && grabbed.remembered === "0" && grabbed.noPicker && grabbed.actions === "Undo,Change" && /^(\d+),\1|/.test(grabbed.counts),
     "Grab: the first opens the picker, the next goes straight to that playlist with Undo and Change (" + JSON.stringify(grabbed) + ")");
   const [g0, g1, g2, g3] = grabbed.counts.split(",").map(Number);
-  check(g1 === g0 + 1 && g2 === g1 + 1 && g3 === g1 && grabbed.pickOpens && grabbed.pickCloses,
-    "each grab adds one, Undo takes the last back, and the ▾ opens and closes the picker (" + grabbed.counts + ")");
+  check(g1 === g0 + 1 && g2 === g1 + 1 && g3 === g1 && grabbed.pickOpens && grabbed.pickStays && grabbed.pickCloses,
+    "each grab adds one, Undo takes the last back, and the ▾ always opens the picker (" + grabbed.counts + ")");
   await put("/queues/smoke", listBeforeGrab);
 
   console.log("-- keys: H fires, G grabs, M mutes, ? lists them; never while typing");
