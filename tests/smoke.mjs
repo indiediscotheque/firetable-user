@@ -836,6 +836,77 @@ try {
   await fresh();
   await page.evaluate(() => { ftapi.actions.reorderList = window.__reorder; $("#mainGrid").addClass("login"); });
 
+  console.log("-- Grab: one tap to the playlist you grabbed to last, with Undo and Change; ▾ opens the picker");
+  const listBeforeGrab = await listNow(); // put back after: later checks count this list
+  const grabbed = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    const count = async () => Object.keys((await ftapi.db().ref("queues/smoke").once("value")).val() || {}).length;
+    const realUid = ftapi.uid;
+    ftapi.uid = "smoke";
+    try { localStorage.removeItem("ft-lastGrabList"); } catch (e) { /* none */ }
+    const out = {};
+    const before = await count();
+    // the first grab: no list yet, so the picker opens
+    document.getElementById("grab").click();
+    await until(() => $("#stealContain").is(":visible"));
+    out.firstOpens = $("#stealContain").is(":visible");
+    if (!$("#stealpicker option[value='0']").length) $("#stealpicker").append(new Option("Default Playlist", "0"));
+    $("#stealpicker").val("0").trigger("change");
+    await wait(300);
+    out.remembered = localStorage.getItem("ft-lastGrabList");
+    const once = await count();
+    // the next grab goes straight there, with Undo and Change
+    document.getElementById("grab").click();
+    await wait(400);
+    out.noPicker = $("#stealContain").is(":hidden");
+    out.actions = [...document.querySelectorAll("#ft-toast .ft-toast-action")].map((b) => b.textContent).join();
+    const twice = await count();
+    [...document.querySelectorAll("#ft-toast .ft-toast-action")].find((b) => b.textContent === "Undo").click();
+    for (let i = 0; i < 30 && (await count()) !== twice - 1; i++) await wait(100);
+    out.counts = [before, once, twice, await count()].join();
+    // the ▾ always opens the picker
+    document.getElementById("st-grabPick").click();
+    await until(() => $("#stealContain").is(":visible"));
+    out.pickOpens = $("#stealContain").is(":visible");
+    document.getElementById("st-grabPick").click(); // a second ▾ keeps it open
+    out.pickStays = $("#stealContain").is(":visible");
+    document.body.click(); // a click elsewhere closes it
+    out.pickCloses = $("#stealContain").is(":hidden");
+    ftapi.uid = realUid;
+    return out;
+  });
+  check(grabbed.firstOpens && grabbed.remembered === "0" && grabbed.noPicker && grabbed.actions === "Undo,Change" && /^(\d+),\1|/.test(grabbed.counts),
+    "Grab: the first opens the picker, the next goes straight to that playlist with Undo and Change (" + JSON.stringify(grabbed) + ")");
+  const [g0, g1, g2, g3] = grabbed.counts.split(",").map(Number);
+  check(g1 === g0 + 1 && g2 === g1 + 1 && g3 === g1 && grabbed.pickOpens && grabbed.pickStays && grabbed.pickCloses,
+    "each grab adds one, Undo takes the last back, and the ▾ always opens the picker (" + grabbed.counts + ")");
+  await put("/queues/smoke", listBeforeGrab);
+
+  console.log("-- keys: H fires, G grabs, M mutes, ? lists them; never while typing");
+  const hotkeys = {};
+  await page.evaluate(() => {
+    window.__pressed = [];
+    ["fire", "grab", "volstatus"].forEach((id) => document.getElementById(id).addEventListener("click", () => window.__pressed.push(id), true));
+    document.activeElement && document.activeElement.blur && document.activeElement.blur();
+  });
+  await page.keyboard.press("h");
+  await page.keyboard.press("g");
+  await page.keyboard.press("m");
+  hotkeys.page = await page.evaluate(() => window.__pressed.join());
+  await page.evaluate(() => { $("#stealContain").hide(); const t = document.getElementById("ft-toast"); if (t) t.classList.remove("show"); });
+  await page.focus("#newchat").catch(() => {});
+  await page.keyboard.press("h");
+  hotkeys.typed = await page.evaluate(() => (document.getElementById("newchat") || {}).value + "|" + window.__pressed.length);
+  await page.evaluate(() => { const c = document.getElementById("newchat"); if (c) { c.value = ""; c.blur(); } });
+  await page.keyboard.press("Shift+Slash");
+  hotkeys.help = await page.evaluate(() => document.getElementById("helpBox").open && /Shortcuts and commands/.test(document.getElementById("helpTitle").textContent));
+  await page.keyboard.press("Escape");
+  hotkeys.closed = await page.evaluate(() => !document.getElementById("helpBox").open);
+  check(hotkeys.page === "fire,grab,volstatus" && hotkeys.typed === "h|3" && hotkeys.help && hotkeys.closed,
+    "keys: H fires, G grabs, M mutes and ? lists them; in the chat box H is just an h (" + JSON.stringify(hotkeys) + ")");
+  await page.keyboard.press("m"); // unmute again
+
   console.log("-- the stage's volume slider (a native range input)");
   const vol = await page.evaluate(async () => {
     const s = document.getElementById("slider");
@@ -2441,7 +2512,7 @@ try {
     dlg.close();
     return out;
   });
-  check(acct.signinHidden && acct.menuOpen && acct.expanded === "true" && acct.items === "Profile|Account and sign-in|Settings|Get the app|Log out" && acct.focused === "Profile" && acct.arrow === "Account and sign-in",
+  check(acct.signinHidden && acct.menuOpen && acct.expanded === "true" && acct.items === "Profile|Account and sign-in|Settings|Shortcuts and commands|Get the app|Log out" && acct.focused === "Profile" && acct.arrow === "Account and sign-in",
     "the header avatar opens the account menu, with the keyboard (" + JSON.stringify(acct) + ")");
   check(acct.dialog && acct.menuClosed && acct.tab === "Account|true" && acct.logout, "Account and sign-in opens the Account tab, with Log out (" + acct.tab + ")");
   check(/current password/.test(acct.passMsg) && acct.shortPass === "bad", "changing the password checks what's typed first (" + acct.passMsg + " / " + acct.shortPass + ")");

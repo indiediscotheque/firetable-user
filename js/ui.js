@@ -184,13 +184,15 @@ firetable.ui.toast = function (msg, type, opts) {
   el.textContent = msg;
   el.classList.remove('is-error', 'is-success', 'is-notice', 'show', 'has-action');
   if (type) el.classList.add('is-' + type);
-  if (opts.action) {
+  // one action (opts.action) or several (opts.actions), each a button after the message
+  var acts = opts.actions || (opts.action ? [opts.action] : []);
+  acts.forEach(function (act) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'ft-toast-action';
-    btn.textContent = opts.action.label;
+    btn.textContent = act.label;
     btn.addEventListener('click', function () {
-      opts.action.fn();
+      act.fn();
       if (seq !== firetable.ui._toastSeq) return; // the action put up a toast of its own
       clearTimeout(firetable.ui._toastTimer);
       firetable.ui._toastTimer = null;
@@ -198,8 +200,8 @@ firetable.ui.toast = function (msg, type, opts) {
       firetable.ui._toastHideTimer = setTimeout(hideToast, 220);
     });
     el.appendChild(btn);
-    el.classList.add('has-action');
-  }
+  });
+  if (acts.length) el.classList.add('has-action');
   try {
     if (el.showPopover && !el.matches(':popover-open')) el.showPopover();
   } catch (e) { /* popover unsupported: plain fixed element */ }
@@ -352,10 +354,52 @@ firetable.ui.markSaved = firetable.utilities.oncePerFrame(function () {
  * @param {{type, cid}} track
  * @param {string} listName
  */
-firetable.ui.savedToast = function (ref, key, track, listName) {
+/** The playlist the stage's Grab went to last (1.6), if it's still one of yours. */
+firetable.actions.lastGrabList = function () {
+  var id = null;
+  try { id = localStorage.getItem("ft-lastGrabList"); } catch (e) { /* storage off: always ask */ }
+  if (id == null) return null;
+  var exists = String(id) === "0" || $('#listpicker option').filter(function () { return this.value === String(id); }).length > 0;
+  return exists ? String(id) : null;
+};
+firetable.actions.rememberGrabList = function (id) {
+  try { localStorage.setItem("ft-lastGrabList", String(id)); } catch (e) { /* storage off */ }
+};
+
+/**
+ * Add the room's song to a playlist, at the bottom, crediting its DJ (1.6).
+ * The toast offers Undo, and Change: undo it and pick another playlist.
+ * @param {string} dest - Playlist id
+ * @returns {boolean} false when nothing was added (no song, or a list kept to the other source)
+ */
+firetable.actions.grabTo = function (dest) {
+  var s = firetable.song;
+  if (!s || s.cid == 0) return false;
+  var src = {
+    cid: s.cid, type: s.type,
+    title: firetable.utilities.decodeEntities(s.artist + " - " + s.title),
+    img: (firetable.imgCache && firetable.imgCache[s.cid]) || '',
+    url: s.url || ''
+  };
+  if (firetable.utilities.formatRefusal(dest, src.type)) return false; // the picker says why
+  firetable.actions.recordGrab(s.djid, src.type, src.cid);
+  var destRef = ftapi.lookup.listRef(dest);
+  var destName = firetable.utilities.listName(dest);
+  var key = ftapi.actions.addToList(src.type, src.title, src.cid, dest, null, src.img, firetable.utilities.soundCloudPageUrl(src.url));
+  firetable.ui.savedToast(destRef, key, src, destName, {
+    label: "Change",
+    fn: function () {
+      destRef.child(key).remove().then(function () { firetable.saved.unmark(src.type, src.cid); }, function () { /* it stays; the picker still opens */ });
+      firetable.actions.openGrabPicker(true);
+    }
+  });
+  return true;
+};
+
+firetable.ui.savedToast = function (ref, key, track, listName, more) {
   firetable.saved.mark(track.type, track.cid, listName);
   firetable.ui.toast("Saved to " + listName, "success", {
-    action: {
+    actions: [{
       label: "Undo",
       fn: function () {
         if (!ref || !key) return;
@@ -366,7 +410,7 @@ firetable.ui.savedToast = function (ref, key, track, listName) {
           firetable.ui.toast("Couldn't undo that. The song is still in " + listName + ".", "error");
         });
       }
-    }
+    }].concat(more ? [more] : [])
   });
 };
 
@@ -1633,24 +1677,67 @@ firetable.ui.setupMiscEvents = function () {
   ftapi.events.on('loggedOut', firetable.actions.unwatchGrabs);
 
   // ── Grab (steal to another playlist) ──
-  $("#grab").on("click", function () {
-    var isHidden = $("#stealContain").is(":hidden");
-    if (isHidden) {
-      ftapi.lookup.listNames(function (allPlaylists) {
-        firetable.ui.fillStealPicker(allPlaylists);
-        if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
-        firetable.stealSourceBtn = null;
-        firetable.stealTarget = null;
-        $('#grab').addClass('on');
-        var stealContainEl = document.getElementById('stealContain');
-        stealContainEl.style.visibility = 'hidden';
-        $("#stealContain").show();
-        firetable.ui.positionPopover(document.getElementById('grab'), stealContainEl, document.getElementById('stealArrow'));
-      });
-    } else {
+  // Grab (1.6): one tap adds the room's song to the playlist you grabbed to
+  // last, with Undo and Change; the first grab, or the ▾ beside it
+  // (#st-grabPick), opens the picker.
+  // Grab toggles the picker; the ▾ and Change only ever open it (keepOpen)
+  var openGrabPicker = function (keepOpen) {
+    if (!$("#stealContain").is(":hidden")) {
+      if (keepOpen === true) return;
       $('#grab').removeClass('on');
       $("#stealContain").hide();
+      return;
     }
+    ftapi.lookup.listNames(function (allPlaylists) {
+      firetable.ui.fillStealPicker(allPlaylists);
+      if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
+      firetable.stealSourceBtn = null;
+      firetable.stealTarget = null;
+      $('#grab').addClass('on');
+      var stealContainEl = document.getElementById('stealContain');
+      stealContainEl.style.visibility = 'hidden';
+      $("#stealContain").show();
+      firetable.ui.positionPopover(document.getElementById('grab'), stealContainEl, document.getElementById('stealArrow'));
+    });
+  };
+  firetable.actions.openGrabPicker = openGrabPicker;
+  $("#grab").on("click", function () {
+    var last = firetable.actions.lastGrabList();
+    if ($("#stealContain").is(":hidden") && last != null && firetable.actions.grabTo(last)) return;
+    openGrabPicker();
+  });
+  $("#st-grabPick").on("click", function () { openGrabPicker(true); });
+
+  // Keys (1.18): H Fire ("h0t tracks"), G Grab, M mute, T the selected songs
+  // to the top, ? the list of keys and commands (#helpBox). Never while
+  // typing, with Ctrl, Cmd or Alt held, or over a dialog. F, V, Space, / and
+  // Shift+arrows are Discover's (discover.js).
+  firetable.ui.openHelp = function () {
+    var d = document.getElementById("helpBox");
+    if (d && !d.open) d.showModal();
+  };
+  $("#nav-acctHelp").on("click", function () {
+    var m = document.getElementById("nav-accountMenu");
+    if (m && m.matches(":popover-open")) m.hidePopover();
+    firetable.ui.openHelp();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    var t = e.target;
+    if (/^(input|textarea|select)$/i.test(t.tagName || "") || t.isContentEditable) return;
+    if (document.querySelector("dialog[open]")) return;
+    var press = function (id) {
+      var el = document.getElementById(id);
+      if (!el || el.disabled) return false;
+      el.click();
+      return true;
+    };
+    var k = e.key;
+    if (k === "?") { e.preventDefault(); firetable.ui.openHelp(); }
+    else if ((k === "h" || k === "H") && press("fire")) e.preventDefault();
+    else if ((k === "g" || k === "G") && press("grab")) e.preventDefault();
+    else if ((k === "m" || k === "M") && press("volstatus")) e.preventDefault();
+    else if ((k === "t" || k === "T") && $("#mainqueue").hasClass("cr-selecting") && press("cr-bulkTop")) e.preventDefault();
   });
 
   // ── Skip popover ──
@@ -1724,6 +1811,7 @@ firetable.ui.setupMiscEvents = function () {
         firetable.stealSourceBtn = null;
       } else {
         $("#grab").removeClass('on');
+        firetable.actions.rememberGrabList(dest); // the next Grab goes straight there
       }
       var isNowPlaying = !!(firetable.song && firetable.song.cid != 0 &&
         String(src.cid) === String(firetable.song.cid) &&
@@ -1759,7 +1847,7 @@ firetable.ui.setupMiscEvents = function () {
   // ── Close steal popover when clicking outside it ──
   $(document).on('click', function (e) {
     if ($("#stealContain").is(':hidden')) return;
-    if (!$(e.target).closest('#stealContain, .histeal, .queuetrack, #grab').length) {
+    if (!$(e.target).closest('#stealContain, .histeal, .queuetrack, #grab, #st-grabPick').length) {
       if (firetable.stealSourceBtn) {
         firetable.stealSourceBtn.removeClass('on');
         firetable.stealSourceBtn = null;

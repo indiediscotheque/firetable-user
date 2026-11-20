@@ -2329,7 +2329,7 @@ firetable.discover = (function () {
   // body.is-current-dj and signed in decide, as on the stage), and go back
   // to the stage for Live.
 
-  var STAGE_BUTTONS = [["fire", "tip-fire", "pv-livekeep"], ["grab", "tip-grab", "pv-livekeep"], ["songlink", "tip-songlink", "pv-liveacts"],
+  var STAGE_BUTTONS = [["fire", "tip-fire", "pv-livekeep"], ["grab", "tip-grab", "pv-livekeep"], ["st-grabPick", "tip-st-grabPick", "pv-livekeep"], ["songlink", "tip-songlink", "pv-liveacts"],
     ["skipTrigger", "tip-skipTrigger", "pv-liveacts"], ["npModBtn", "tip-npModBtn", "pv-liveacts"]];
   // The stage's own utilities: its screen (synced, on, off), reload, play on a
   // speaker or TV, and full screen. With the player along the bottom they live

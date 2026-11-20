@@ -70,6 +70,7 @@ const FEATURES = [
   // AU-08, members choosing their avatar style: retired (the owner, November 19, 2026); a supermod sets everyone's (MO-05)
   { row: "AU-11", name: "Account: email, password", who: IN, via: [...account, '#nav-accountMenu [data-acct="account-tab"]'], target: "#ac-passForm" },
   { row: "AU-09", name: "Log out", who: IN, via: account, target: "#nav-logout" },
+  { row: "CH-13", name: "Shortcuts and commands", who: IN, via: [...account, "#nav-acctHelp"], target: "#helpBox .helpKeys" },
   { row: "SE-*", name: "Settings", who: IN, via: [...account, '#nav-accountMenu [data-acct="settings-tab"]'], target: "#densityPicker" },
   { row: "MO-05", name: "Mod tools: everyone's avatar style (supermods)", who: ["mod"], via: [...account, '#nav-accountMenu [data-acct="mod-tab"]'], target: "#mo-avatarStyle" },
   { row: "MO-01", name: "Mod tools: suspend a user (supermods)", who: ["mod"], via: [...account, '#nav-accountMenu [data-acct="mod-tab"]'], target: "#supercopSearch" },
@@ -89,6 +90,7 @@ const FEATURES = [
   { row: "ST-08b", name: "Play on a speaker or TV (phone: from the full-screen player)", who: ALL, widths: PHONE, via: [".pb-expand", "#st-cast"], target: "#st-castWays" },
   { row: "ST-09", name: "Fire", who: IN, target: "#fire" },
   { row: "ST-11", name: "Grab to a playlist", who: IN, via: ["#grab"], target: "#stealpicker" },
+  { row: "ST-11", name: "Grab: choose the playlist (▾)", who: IN, via: ["#st-grabPick"], target: "#stealpicker" },
   { row: "ST-12", name: "Open the song on YouTube or SoundCloud", who: IN, widths: WIDE, target: "#songlink" },
   { row: "ST-12", name: "Open the song (phone: the full-screen player's More)", who: IN, widths: PHONE, via: fullMore, target: "#songlink" },
   { row: "ST-13", name: "Skip your own song (phone: the full-screen player's More)", who: ["dj"], widths: PHONE, via: [...fullMore, "#skipTrigger"], target: "#skipPopover .skipNowAction" },
