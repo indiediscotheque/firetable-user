@@ -2759,6 +2759,29 @@ console.log("-- the live stage for other sites (embed/stage/)");
     await put2("/songToPlay", null);
     await sp.waitForFunction(() => document.getElementById("st").classList.contains("is-quiet"), null, { timeout: 10000 }).catch(() => {});
     check(await sp.evaluate(() => !document.getElementById("st-quiet").hidden && document.getElementById("st-listen").hidden), "with no one playing, the stage says the decks are open");
+    // Everything above ran the old way (no stage/ yet: an older hostbot). Once
+    // the hostbot publishes its stage summary, the stage reads only that and
+    // the song: who's here, the deck, the looks and fires come from it, and
+    // users/ (every member there has ever been) is no longer followed.
+    const t1 = Date.now();
+    await put2("/songToPlay", Object.assign({}, youtubeSong, { title: "Summary Song", started: t1 - 5000, djid: "dj2", djname: "dj2" }));
+    await put2("/stage", { online: 7, deck: [{ id: "dj2", n: "Deejay Two", av: "dicebear:pixel-art" }, { id: "dj1", n: "dj1" }],
+      colors: { color: "#aa3366", txt: "#fff" }, theme: "summary night", bpm: { started: t1 - 5000, bpm: 100 }, fires: { started: t1 - 5000, count: 2 } });
+    await sp.waitForFunction(() => document.getElementById("st-count").textContent === "7 in the room" &&
+      document.getElementById("st-themeText").textContent === "summary night", null, { timeout: 15000 }).catch(() => {});
+    await put2("/users/dj3", { username: "dj3", status: true }); // the old way would count 3 now
+    await put2("/theme", "not followed");
+    await sp.waitForTimeout(1500);
+    const summary = await sp.evaluate(() => ({
+      count: document.getElementById("st-count").textContent, theme: document.getElementById("st-themeText").textContent,
+      acc: document.getElementById("st").style.getPropertyValue("--acc"), title: document.getElementById("st-title").textContent,
+      deck: (document.querySelector("#st-deck .st-plaque") || {}).textContent, line: [...document.querySelectorAll("#st-ondeck li")].map((li) => li.title).join(),
+      avatar: /api\.dicebear\.com\/9\.x\/pixel-art\/svg\?seed=dj2/.test((document.querySelector("#st-deck .st-avtr") || {}).style.backgroundImage || ""),
+      kicker: document.getElementById("st-kicker").textContent, fire: document.getElementById("st").classList.contains("has-fire")
+    }));
+    check(summary.count === "7 in the room" && summary.theme === "summary night" && summary.acc === "#aa3366" && summary.title === "Summary Song" &&
+      summary.deck === "Deejay Two" && summary.line === "dj1" && summary.avatar && /100 BPM/.test(summary.kicker) && summary.fire,
+      "with the hostbot's stage summary, the stage shows who's here, the deck, the looks and the fire from it alone, and no longer follows users/ or reads the theme (" + JSON.stringify(summary) + ")");
   } catch (e) {
     check(false, "stage test threw: " + e.message);
   } finally {
