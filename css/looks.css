@@ -7317,3 +7317,31 @@ body.ft-discover #joinBox #login,
     padding: 0;
 }
 #st-grabPick [class*="material-symbols-"] { margin: 0; font-size: 1.25rem; }
+
+/* Shortcuts and commands (#helpBox, 1.18) */
+.helpBox { max-width: 34rem; }
+.helpBox h3 { margin: var(--space-4) 0 var(--space-2); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); }
+.helpBox h3:first-child { margin-top: 0; }
+.helpKeys { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-2) var(--space-4); margin: 0; }
+.helpKeys dt { white-space: nowrap; }
+.helpKeys dd { margin: 0; color: var(--color-text); }
+.helpBox kbd,
+.helpBox code {
+    display: inline-block;
+    padding: 0.05rem 0.4rem;
+    border: 1px solid var(--color-border);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-t2);
+    color: var(--color-text-light);
+    font-family: var(--font-numbers);
+    font-size: 0.8125rem;
+}
+.helpBox code { border-bottom-width: 1px; }
+.helpNote { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--fs-meta); }
+body:not(.is-mod) .helpMods { display: none; }
+@media only screen and (max-width: 639px) {
+    .helpKeys { grid-template-columns: minmax(0, 1fr); gap: 0 0; }
+    .helpKeys dd { margin-bottom: var(--space-2); }
+    .helpKeys dt { white-space: normal; }
+}

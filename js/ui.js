@@ -1706,6 +1706,38 @@ firetable.ui.setupMiscEvents = function () {
   });
   $("#st-grabPick").on("click", openGrabPicker);
 
+  // Keys (1.18): H Fire ("h0t tracks"), G Grab, M mute, T the selected songs
+  // to the top, ? the list of keys and commands (#helpBox). Never while
+  // typing, with Ctrl, Cmd or Alt held, or over a dialog. F, V, Space, / and
+  // Shift+arrows are Discover's (discover.js).
+  firetable.ui.openHelp = function () {
+    var d = document.getElementById("helpBox");
+    if (d && !d.open) d.showModal();
+  };
+  $("#nav-acctHelp").on("click", function () {
+    var m = document.getElementById("nav-accountMenu");
+    if (m && m.matches(":popover-open")) m.hidePopover();
+    firetable.ui.openHelp();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    var t = e.target;
+    if (/^(input|textarea|select)$/i.test(t.tagName || "") || t.isContentEditable) return;
+    if (document.querySelector("dialog[open]")) return;
+    var press = function (id) {
+      var el = document.getElementById(id);
+      if (!el || el.disabled) return false;
+      el.click();
+      return true;
+    };
+    var k = e.key;
+    if (k === "?") { e.preventDefault(); firetable.ui.openHelp(); }
+    else if ((k === "h" || k === "H") && press("fire")) e.preventDefault();
+    else if ((k === "g" || k === "G") && press("grab")) e.preventDefault();
+    else if ((k === "m" || k === "M") && press("volstatus")) e.preventDefault();
+    else if ((k === "t" || k === "T") && $("#mainqueue").hasClass("cr-selecting") && press("cr-bulkTop")) e.preventDefault();
+  });
+
   // ── Skip popover ──
   var skipPopoverEl = document.getElementById('skipPopover');
   if (skipPopoverEl) {

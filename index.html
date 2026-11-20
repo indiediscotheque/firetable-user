@@ -1139,11 +1139,63 @@
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="account-tab"><i class="material-symbols-outlined" aria-hidden="true">manage_accounts</i>Account and sign-in</button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="settings-tab"><i class="material-symbols-outlined" aria-hidden="true">settings</i>Settings</button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="mod-tab" id="nav-acctMod" hidden><i class="material-symbols-outlined" aria-hidden="true">shield</i>Mod tools</button>
+			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-acctHelp"><i class="material-symbols-outlined" aria-hidden="true">keyboard</i>Shortcuts and commands</button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem showInstallGuide" id="nav-acctApp" hidden><i class="material-symbols-outlined" aria-hidden="true">install_mobile</i>Get the app</button>
 			<div class="nav-acctSep" role="separator"></div>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-logout"><i class="material-symbols-outlined" aria-hidden="true">logout</i>Log out</button>
 		</div>
 	</div>
+
+	<!-- Shortcuts and commands (1.18): ? opens it, or the account menu -->
+	<dialog id="helpBox" aria-labelledby="helpTitle">
+		<div class="modalBox">
+			<div class="modalHeader">
+				<h2 id="helpTitle">Shortcuts and commands</h2>
+				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			</div>
+			<div class="modalContent helpBox">
+				<h3>Keys</h3>
+				<dl class="helpKeys">
+					<dt><kbd>H</kbd></dt><dd>Fire the song playing ("h0t tracks")</dd>
+					<dt><kbd>G</kbd></dt><dd>Grab it to the playlist you grabbed to last</dd>
+					<dt><kbd>M</kbd></dt><dd>Mute or unmute</dd>
+					<dt><kbd>F</kbd></dt><dd>The full-screen player; <kbd>V</kbd> there turns the video on or off</dd>
+					<dt><kbd>Space</kbd></dt><dd>Play or pause</dd>
+					<dt><kbd>Shift</kbd> <kbd>←</kbd> <kbd>→</kbd></dt><dd>The previous or next song in Discover</dd>
+					<dt><kbd>/</kbd></dt><dd>Search Discover</dd>
+					<dt><kbd>T</kbd></dt><dd>Selecting songs in a playlist: move them to the top</dd>
+					<dt><kbd>Alt</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Move the focused playlist song up or down</dd>
+					<dt><kbd>?</kbd></dt><dd>This list</dd>
+				</dl>
+				<p class="helpNote">Keys do nothing while you're typing.</p>
+				<h3>In chat</h3>
+				<dl class="helpKeys">
+					<dt><code>/hot</code></dt><dd>Fire the song playing</dd>
+					<dt><code>/block name</code>, <code>/unblock name</code></dt><dd>Stop or start seeing someone's chat</dd>
+					<dt><code>/shrug</code>, <code>/tableflip</code>, <code>/unflip</code>, <code>/storm</code></dt><dd>Say it with feeling</dd>
+				</dl>
+				<h3>The bot</h3>
+				<dl class="helpKeys">
+					<dt><code>!plays</code>, <code>!firstplay</code></dt><dd>How often the song has played here, and who played it first and last</dd>
+					<dt><code>!bpm</code></dt><dd>The song's tempo; the DJ can set it: <code>!bpm 128</code></dd>
+					<dt><code>!suggest theme</code></dt><dd>Start a theme vote</dd>
+					<dt><code>!removeafter</code>, <code>!dontremoveme</code></dt><dd>Step down after your next song, or don't</dd>
+					<dt><code>!autodj</code></dt><dd>What the autopilot DJ is doing</dd>
+				</dl>
+				<div class="helpMods">
+					<h3>Mods</h3>
+					<dl class="helpKeys">
+						<dt><code>!remove name</code></dt><dd>Take someone off the decks or the line</dd>
+						<dt><code>!fixtags artist - title</code></dt><dd>Fix the playing song's tags</dd>
+						<dt><code>!flagplay id reason</code></dt><dd>Flag a play from Recent: broken, quality or offtheme</dd>
+						<dt><code>!upbot</code>, <code>!downbot</code>, <code>!autodj auto</code></dt><dd>The bot DJs, stays off, or decides for itself again</dd>
+						<dt><code>!review</code>, <code>!same n</code>, <code>!different n</code></dt><dd>Answer the play history's tag questions</dd>
+						<dt><code>!swapscan</code>, <code>!ytsync</code>, <code>!genrelists run</code></dt><dd>Run a swap search, the YouTube Music sync, or the genre playlists now</dd>
+					</dl>
+				</div>
+			</div>
+		</div>
+	</dialog>
 
 	<dialog id="importPromptBox">
 		<div class="modalBox">

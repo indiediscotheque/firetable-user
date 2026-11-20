@@ -242,7 +242,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke: select 2 of 5, Top → they're first in their old order; Undo restores.
 - **Undo:** revert.
 
-### 1.18 Keyboard shortcuts and help
+### 1.18 Keyboard shortcuts and help ✅ shipped (the owner's yes, November 20, 2026)
+- **Shipped:** one listener in `ui.js` (never while typing, with Ctrl, Cmd or Alt, or over a dialog): **H** Fire, **G** Grab (1.6: to the last playlist), **M** mute, **T** the selected songs to the top (1.17), **?** `#helpBox`. F, V, Space, / and Shift+arrows stay Discover's. `#helpBox` lists the keys, the chat's slash commands (`/hot`, `/block`, `/unblock`, `/shrug`, `/tableflip`, `/unflip`, `/storm`), the bot's commands for everyone (`!plays`, `!firstplay`, `!bpm`, `!suggest`, `!removeafter`, `!dontremoveme`, `!autodj`) and, for mods only, theirs (`!remove`, `!fixtags`, `!flagplay`, `!upbot` / `!downbot`, `!review`, `!swapscan`, `!ytsync`, `!genrelists run`). The account menu has **Shortcuts and commands** too. Smoke: H, G and M press their buttons, H in the chat box types an h, ? opens the list and Escape closes it; reach finds it in the account menu.
 - **Goal:** fast hands for regulars.
 - **Rows:** CH-12, CH-13, MO-04.
 - **Files and change:** `ui.js`: one `keydown` listener (ignored while typing in an input, textarea or contenteditable, and while a dialog is open): **H** Fire (F is the full-screen player's, 2.3b), **G** Grab (1.6), **T** move selected to top (1.17), **M** mute, **/** search (exists in Discover), **?** opens `#helpBox`, a dialog listing shortcuts, the chat slash commands (`/block`, `/unblock`, `/hot`, `/storm`, `/shrug`, `/tableflip`, `/unflip`), the common bot commands (`!plays`, `!firstplay`, `!bpm`, `!suggest`, `!link`, `!theme`), and for mods their commands (MO-04).

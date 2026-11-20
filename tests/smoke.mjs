@@ -881,6 +881,30 @@ try {
     "each grab adds one, Undo takes the last back, and the ▾ opens and closes the picker (" + grabbed.counts + ")");
   await put("/queues/smoke", listBeforeGrab);
 
+  console.log("-- keys: H fires, G grabs, M mutes, ? lists them; never while typing");
+  const hotkeys = {};
+  await page.evaluate(() => {
+    window.__pressed = [];
+    ["fire", "grab", "volstatus"].forEach((id) => document.getElementById(id).addEventListener("click", () => window.__pressed.push(id), true));
+    document.activeElement && document.activeElement.blur && document.activeElement.blur();
+  });
+  await page.keyboard.press("h");
+  await page.keyboard.press("g");
+  await page.keyboard.press("m");
+  hotkeys.page = await page.evaluate(() => window.__pressed.join());
+  await page.evaluate(() => { $("#stealContain").hide(); const t = document.getElementById("ft-toast"); if (t) t.classList.remove("show"); });
+  await page.focus("#newchat").catch(() => {});
+  await page.keyboard.press("h");
+  hotkeys.typed = await page.evaluate(() => (document.getElementById("newchat") || {}).value + "|" + window.__pressed.length);
+  await page.evaluate(() => { const c = document.getElementById("newchat"); if (c) { c.value = ""; c.blur(); } });
+  await page.keyboard.press("Shift+Slash");
+  hotkeys.help = await page.evaluate(() => document.getElementById("helpBox").open && /Shortcuts and commands/.test(document.getElementById("helpTitle").textContent));
+  await page.keyboard.press("Escape");
+  hotkeys.closed = await page.evaluate(() => !document.getElementById("helpBox").open);
+  check(hotkeys.page === "fire,grab,volstatus" && hotkeys.typed === "h|3" && hotkeys.help && hotkeys.closed,
+    "keys: H fires, G grabs, M mutes and ? lists them; in the chat box H is just an h (" + JSON.stringify(hotkeys) + ")");
+  await page.keyboard.press("m"); // unmute again
+
   console.log("-- the stage's volume slider (a native range input)");
   const vol = await page.evaluate(async () => {
     const s = document.getElementById("slider");
@@ -2486,7 +2510,7 @@ try {
     dlg.close();
     return out;
   });
-  check(acct.signinHidden && acct.menuOpen && acct.expanded === "true" && acct.items === "Profile|Account and sign-in|Settings|Get the app|Log out" && acct.focused === "Profile" && acct.arrow === "Account and sign-in",
+  check(acct.signinHidden && acct.menuOpen && acct.expanded === "true" && acct.items === "Profile|Account and sign-in|Settings|Shortcuts and commands|Get the app|Log out" && acct.focused === "Profile" && acct.arrow === "Account and sign-in",
     "the header avatar opens the account menu, with the keyboard (" + JSON.stringify(acct) + ")");
   check(acct.dialog && acct.menuClosed && acct.tab === "Account|true" && acct.logout, "Account and sign-in opens the Account tab, with Log out (" + acct.tab + ")");
   check(/current password/.test(acct.passMsg) && acct.shortPass === "bad", "changing the password checks what's typed first (" + acct.passMsg + " / " + acct.shortPass + ")");
