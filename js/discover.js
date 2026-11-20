@@ -3061,6 +3061,7 @@ firetable.discover = (function () {
     F.open = false;
     clearTimeout(F.idle);
     keepScreenOn(false);
+    releaseData();
     ["mainGrid", "dMini"].forEach(function (id) { var x = document.getElementById(id); if (x) x.inert = false; });
     placeStage();
     renderBar();
@@ -3165,6 +3166,7 @@ firetable.discover = (function () {
     // which it is, Listen in takes you to the room, a song in Discover away from it.
     if (!D.src) setSrc("live"); // the room plays until something is picked
     if (mode === "live") {
+      releaseData();
       chatBack();
       if (D.sideTab === "chat") D.sideTab = "list";
       document.body.classList.remove("d-sheet-open");
@@ -3224,28 +3226,48 @@ firetable.discover = (function () {
 
   // ─── Data ───────────────────────────────────────────────────────────────
 
+  // Discover's live data is followed only while Discover (or the full player)
+  // is open: the database bills every byte it sends, and the bot rewrites the
+  // week's chart after every song, so a visit mustn't keep costing for the
+  // rest of the session. Coming back follows it again (and catches up).
   var watching = false;
+  var following = []; // [ref, fn] of each live listener
+  var liveKeys = {}; // the charts followed live (the week's), let go with the rest
+  function follow(ref, fn) {
+    ref.on("value", fn, quiet);
+    following.push([ref, fn]);
+  }
   function ensureData() {
     if (watching) return;
     watching = true;
     try { ftapi.watchFeed("history"); } catch (e) { /* signed out before the feeds exist */ }
-    db().ref("discover/new").on("value", function (s) {
+    follow(db().ref("discover/new"), function (s) {
       D.data.new = s.val() || { tracks: [] };
       if (D.view === "home" || D.view === "new") renderBrowse();
-    }, quiet);
-    db().ref("discover/chartIds/week").on("value", function (s) {
+    });
+    follow(db().ref("discover/chartIds/week"), function (s) {
       D.data.chartIds.week = s.val() || {};
       var wk = currentId("week");
       if (wk) loadChart("week", wk, true);
       if (D.view === "charts" || D.view === "home") renderBrowse();
-    }, quiet);
+    });
     ["month", "year"].forEach(function (p) {
+      if (D.data.chartIds[p]) return; // read on an earlier visit (they change once a month, a year)
       db().ref("discover/chartIds/" + p).once("value").then(function (s) { D.data.chartIds[p] = s.val() || {}; if (D.view === "charts") renderBrowse(); }, quiet);
     });
     // (the bot's public chat peek, discover/chat, isn't read: the chat is for members only)
     renderPeek();
   }
   function quiet(err) { firetable.debug && console.log("[discover] not readable yet:", err && err.message); }
+  /** Stop following Discover's live data once neither Discover nor the full player is open. */
+  function releaseData() {
+    if (!watching || D.mode === "discover" || F.open) return;
+    watching = false;
+    following.forEach(function (f) { f[0].off("value", f[1]); });
+    following = [];
+    Object.keys(liveKeys).forEach(function (key) { delete liveCharts[key]; });
+    liveKeys = {};
+  }
 
   var liveCharts = {};
   function loadChart(period, id, live) {
@@ -3257,7 +3279,7 @@ firetable.discover = (function () {
       D.data.charts[key] = s.val() || null;
       if (D.view === "charts" || (D.view === "home" && period === "week")) renderBrowse();
     };
-    if (live) ref.on("value", got, quiet);
+    if (live) { follow(ref, got); liveKeys[key] = true; }
     else ref.once("value").then(got, function () { D.data.charts[key] = null; renderBrowse(); });
   }
 

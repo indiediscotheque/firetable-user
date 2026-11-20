@@ -985,6 +985,42 @@ try {
   }, DB).catch((e) => ["error: " + e.message]);
   check(counts.includes("p1=Mix (3, 1 ⚠)") && counts.includes("p2=Empty (0)") && counts.some((t) => /^0=.* \(4, 1 ⚠\)$/.test(t)),
     "every list's track and flagged counts show in the picker (" + counts.join(" | ") + ")");
+  // back to the tab later: the bot flagged another track meanwhile, and a list was made elsewhere
+  await put("/playlists/smoke/p1/list/c/flagged", { date: 2, code: 2 });
+  await put("/playlists/smoke/p3", { name: "New", list: { x: { type: 1, cid: "c9", name: "X - 9" } } });
+  const recount = await page.evaluate(() => {
+    const keysRead = [];
+    const shallow = ftapi.utilities.shallowKeys;
+    ftapi.utilities.shallowKeys = (path) => { keysRead.push(path); return shallow(path); };
+    const all = { p1: { name: "Mix" }, p2: { name: "Empty" }, p3: { name: "New" } };
+    firetable.ui.fillPlaylistPickers(all);
+    return firetable.actions.loadListCounts(all, { flaggedOnly: true }).then(() => ({
+      options: [...document.querySelectorAll("#listpicker option")].map((o) => o.value + "=" + o.textContent), keysRead
+    }));
+  }).catch((e) => ({ options: ["error: " + e.message], keysRead: [] }));
+  check(recount.options.includes("p1=Mix (3, 2 ⚠)") && recount.options.includes("p3=New (1)") && recount.keysRead.join() === "playlists/smoke/p3/list",
+    "back on the tab, only the flagged counts are fetched again (every track's key only for a list not counted yet) (" + JSON.stringify(recount) + ")");
+
+  console.log("-- grab stats: the hostbot's sum when there is one, otherwise every grab counted here");
+  await put("/grabs/smoke", { "1_c1": { u1: 1, u2: 2 }, "1_c2": { u3: 3 } });
+  const grabsBefore = await page.evaluate(async () => {
+    ftapi.uid = "smoke";
+    firetable.actions.watchGrabs();
+    await new Promise((r) => setTimeout(r, 1500));
+    return { text: document.getElementById("grabStats").textContent, following: !!firetable.grabs.ref };
+  }).catch((e) => ({ text: "error: " + e.message }));
+  check(/^3 grabs across 2 tracks/.test(grabsBefore.text) && grabsBefore.following,
+    "with no sum from the hostbot (an older one, or its rules not published), the site counts every grab itself (" + JSON.stringify(grabsBefore) + ")");
+  await put("/grabCount/smoke", { n: 40, t: 12, last: "1_c2", lastAt: 3 });
+  await page.waitForTimeout(1200);
+  await put("/grabs/smoke/1_c9", { u9: 9 }); // the hostbot counts this one now, not the site
+  await page.waitForTimeout(800);
+  const grabsAfter = await page.evaluate(() => ({ text: document.getElementById("grabStats").textContent, following: !!firetable.grabs.ref }));
+  check(/^40 grabs across 12 tracks/.test(grabsAfter.text) && !grabsAfter.following,
+    "with the hostbot's sum, Profile shows it, and grabs/ is no longer downloaded (" + JSON.stringify(grabsAfter) + ")");
+  await page.evaluate(() => firetable.actions.unwatchGrabs());
+  await put("/grabCount/smoke", null);
+  await put("/grabs/smoke", null);
 
   console.log("-- emoji: Emoji 17.0 in the picker, old shortnames still work");
   await page.waitForFunction(() => firetable.emojiMap && firetable.emojiMap.trombone, null, { timeout: 30000 }).catch(() => {});
@@ -1182,14 +1218,18 @@ try {
     const editTag = ftapi.actions.editTag;
     ftapi.actions.editTag = (...a) => { calls.push(a.slice(0, 5).join("|")); };
     const input = document.getElementById("tagMachine");
+    input.value = "exile (live) - MESH";
+    document.querySelector("#tagEditorForm .tagCase").click();
+    const cased = input.value;
     input.value = "Exile (Live) - Mesh";
     document.querySelector("#tagEditorForm .tagSwap").click();
     const swapped = input.value;
     document.querySelector("#tagEditorForm .tagSave").click();
     await new Promise((r) => setTimeout(r, 200));
     ftapi.actions.editTag = editTag;
-    return { swapped, calls: calls.join(), open: document.getElementById("tagEditorPopover").matches(":popover-open") };
+    return { cased, swapped, calls: calls.join(), open: document.getElementById("tagEditorPopover").matches(":popover-open") };
   });
+  check(saved.cased === "Exile (Live) - MESH", "Title Case puts the tags in AP title case (" + saved.cased + ")");
   check(saved.swapped === "Mesh - Exile (Live)", "Swap turns \"Title - Artist\" around (" + saved.swapped + ")");
   check(saved.calls === "1|smcid0|Mesh - Exile (Live)|smh0|songHistory" && !saved.open, "Save writes the tag for that play (" + JSON.stringify(saved) + ")");
   const typed = await page.evaluate(async () => {
@@ -2821,6 +2861,29 @@ console.log("-- the live stage for other sites (embed/stage/)");
     await put2("/songToPlay", null);
     await sp.waitForFunction(() => document.getElementById("st").classList.contains("is-quiet"), null, { timeout: 10000 }).catch(() => {});
     check(await sp.evaluate(() => !document.getElementById("st-quiet").hidden && document.getElementById("st-listen").hidden), "with no one playing, the stage says the decks are open");
+    // Everything above ran the old way (no stage/ yet: an older hostbot). Once
+    // the hostbot publishes its stage summary, the stage reads only that and
+    // the song: who's here, the deck, the looks and fires come from it, and
+    // users/ (every member there has ever been) is no longer followed.
+    const t1 = Date.now();
+    await put2("/songToPlay", Object.assign({}, youtubeSong, { title: "Summary Song", started: t1 - 5000, djid: "dj2", djname: "dj2" }));
+    await put2("/stage", { online: 7, deck: [{ id: "dj2", n: "Deejay Two", av: "dicebear:pixel-art" }, { id: "dj1", n: "dj1" }],
+      colors: { color: "#aa3366", txt: "#fff" }, theme: "summary night", bpm: { started: t1 - 5000, bpm: 100 }, fires: { started: t1 - 5000, count: 2 } });
+    await sp.waitForFunction(() => document.getElementById("st-count").textContent === "7 in the room" &&
+      document.getElementById("st-themeText").textContent === "summary night", null, { timeout: 15000 }).catch(() => {});
+    await put2("/users/dj3", { username: "dj3", status: true }); // the old way would count 3 now
+    await put2("/theme", "not followed");
+    await sp.waitForTimeout(1500);
+    const summary = await sp.evaluate(() => ({
+      count: document.getElementById("st-count").textContent, theme: document.getElementById("st-themeText").textContent,
+      acc: document.getElementById("st").style.getPropertyValue("--acc"), title: document.getElementById("st-title").textContent,
+      deck: (document.querySelector("#st-deck .st-plaque") || {}).textContent, line: [...document.querySelectorAll("#st-ondeck li")].map((li) => li.title).join(),
+      avatar: /api\.dicebear\.com\/9\.x\/pixel-art\/svg\?seed=dj2/.test((document.querySelector("#st-deck .st-avtr") || {}).style.backgroundImage || ""),
+      kicker: document.getElementById("st-kicker").textContent, fire: document.getElementById("st").classList.contains("has-fire")
+    }));
+    check(summary.count === "7 in the room" && summary.theme === "summary night" && summary.acc === "#aa3366" && summary.title === "Summary Song" &&
+      summary.deck === "Deejay Two" && summary.line === "dj1" && summary.avatar && /100 BPM/.test(summary.kicker) && summary.fire,
+      "with the hostbot's stage summary, the stage shows who's here, the deck, the looks and the fire from it alone, and no longer follows users/ or reads the theme (" + JSON.stringify(summary) + ")");
   } catch (e) {
     check(false, "stage test threw: " + e.message);
   } finally {

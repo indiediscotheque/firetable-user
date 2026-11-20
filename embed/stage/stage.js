@@ -14,7 +14,14 @@
  * browser allows, else with "Listen live".
  *
  * It reads the room's public nodes over Firebase's REST streaming API
- * (EventSource): no sign-in, no Firebase library, nothing written.
+ * (EventSource): no sign-in, no Firebase library, nothing written. Two
+ * streams: the song (songToPlay) and the hostbot's stage summary (stage:
+ * who's in the room and at the table, the song's colours, theme, tempo,
+ * facts and fires), one small node written only when what it shows changes.
+ * The database bills every byte it sends, so it never follows users/ (every
+ * member there has ever been). Until the hostbot publishes stage/, it falls
+ * back to the old way: the table, users and songFires streamed, and the
+ * song's looks read every minute.
  *
  * Fire: when people call the song hot (🔥 in the room's chat, which only
  * members can read), the site's fire burns behind the DJ (flame.js: js/fire.js
@@ -45,7 +52,7 @@
   var ROOM = cfg.roomNameShort || cfg.roomName || "Indie Discotheque";
 
   var S = {
-    song: null, key: "", table: [], users: {}, bpm: null, bpmData: null, theme: "", firesData: null, fires: 0,
+    song: null, key: "", table: [], users: {}, online: null, staged: false, bpm: null, bpmData: null, theme: "", firesData: null, fires: 0,
     sound: false, muted: read(MUTE_KEY) === "1",
     vol: clampVol(read(VOL_KEY) !== null ? read(VOL_KEY) : q.get("volume") !== null ? q.get("volume") : 80),
     retry: null, retryWait: 2000
@@ -107,10 +114,15 @@
     if (next === null || next === undefined) delete out[key]; else out[key] = next;
     return out;
   }
-  /** Follow one node; `cb` gets its whole value after every change. */
-  function watch(path, cb) {
-    var data = null, es = null, wait = 1000;
+  /**
+   * Follow one node; `cb` gets its whole value after every change, `onFail`
+   * (optional) hears when the stream is refused or lost (it's tried again).
+   * @returns {{close: function()}}
+   */
+  function watch(path, cb, onFail) {
+    var data = null, es = null, wait = 1000, closed = false;
     function open() {
+      if (closed) return;
       es = new EventSource(dbHref(path).href);
       es.addEventListener("put", function (e) {
         var m = JSON.parse(e.data);
@@ -124,9 +136,14 @@
         cb(data);
       });
       // the rules refuse it, or the stream was dropped for good: try again later
-      es.addEventListener("cancel", retry);
-      es.addEventListener("auth_revoked", retry);
-      es.onerror = function () { if (es.readyState === EventSource.CLOSED) retry(); };
+      es.addEventListener("cancel", failed);
+      es.addEventListener("auth_revoked", failed);
+      es.onerror = function () { if (es.readyState === EventSource.CLOSED) failed(); };
+    }
+    function failed() {
+      if (closed) return;
+      if (onFail) onFail();
+      retry();
     }
     function retry() {
       if (es) es.close();
@@ -134,9 +151,52 @@
       wait = Math.min(wait * 2, 60000);
     }
     open();
+    return { close: function () { closed = true; if (es) es.close(); } };
   }
   function once(path) {
     return fetch(dbHref(path).href).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+
+  // ─── The stage summary (stage/), or the old way until there is one ───────
+
+  var old = null, stageWait = null;
+  /** The hostbot's summary: who's here and at the table, the song's looks and fires. */
+  function onStage(st) {
+    if (!st || typeof st !== "object") { S.staged = false; oldWay(); return; }
+    clearTimeout(stageWait);
+    if (!S.staged) { S.staged = true; S.users = {}; endOldWay(); }
+    S.online = st.online;
+    S.table = (Array.isArray(st.deck) ? st.deck : []).filter(function (d) { return d && d.id; })
+      .map(function (d) { return { id: String(d.id), name: d.n, av: d.av }; });
+    colors(st.colors);
+    theme(st.theme);
+    S.bpmData = st.bpm || null;
+    beat();
+    tagged(st.tag || null);
+    S.firesData = st.fires || null;
+    fire();
+    renderCount();
+    renderDeck();
+  }
+  /** Before the hostbot publishes stage/: the table, users and fires streamed, the looks read. */
+  function oldWay() {
+    if (old) return;
+    old = {
+      streams: [
+        watch("table", function (t) { if (!S.staged) { S.table = t || []; renderDeck(); } }),
+        watch("users", function (u) { if (!S.staged) { S.users = u || {}; renderCount(); renderDeck(); } }),
+        watch("songFires", function (f) { if (!S.staged) { S.firesData = f; fire(); } })
+      ],
+      poll: setInterval(function () { if (S.song && !S.staged) readLooks(); }, 60000)
+    };
+    if (S.song) roomLooks();
+  }
+  function endOldWay() {
+    if (!old) return;
+    old.streams.forEach(function (w) { w.close(); });
+    clearInterval(old.poll);
+    looksTimers.forEach(clearTimeout);
+    old = null;
   }
 
   // ─── What's on: colours, theme, the song, the decks ─────────────────────
@@ -164,16 +224,18 @@
    */
   var looksTimers = [];
   function readLooks() {
-    once("colors").then(colors, function () { /* keep what's there */ });
-    once("theme").then(theme, function () { /* keep what's there */ });
-    once("songBpm").then(function (b) { S.bpmData = b; beat(); }, function () { /* keep what's there */ });
-    once("tagUpdate").then(tagged, function () { /* keep what's there */ });
+    // an answer that lands after the stage summary arrived is the old way's: the summary wins
+    var oldWay = function (fn) { return function (v) { if (!S.staged) fn(v); }; };
+    var keep = function () { /* keep what's there */ };
+    once("colors").then(oldWay(colors), keep);
+    once("theme").then(oldWay(theme), keep);
+    once("songBpm").then(oldWay(function (b) { S.bpmData = b; beat(); }), keep);
+    once("tagUpdate").then(oldWay(tagged), keep);
   }
   function roomLooks() {
     looksTimers.forEach(clearTimeout);
     looksTimers = [0, 3000, 10000, 30000].map(function (ms) { return setTimeout(readLooks, ms); });
   }
-  setInterval(function () { if (S.song) readLooks(); }, 60000);
   /** The bot's facts on the song (and a mod's tag fix): the words follow. */
   function tagged(t) {
     S.tag = t;
@@ -215,7 +277,7 @@
     if (!live) { renderDeck(); return; }
     nowPlaying(s, same);
     if (same) return; // a tag fix: only the words change
-    roomLooks();
+    if (!S.staged) roomLooks(); // the stage summary brings them otherwise
     beat();
     S.fires = 0;
     fire();
@@ -293,9 +355,9 @@
     return null;
   })();
   /** A DJ's picture, asked for at the size it's drawn (`ems` tall) on this screen, so it's sharp at any size. */
-  function avatar(uid, name, ems) {
+  function avatar(uid, name, ems, av) {
     var u = S.users[uid] || {};
-    var style = roomStyle || normStyle(u.avatarStyle) || "robohash:set1";
+    var style = roomStyle || normStyle(av || u.avatarStyle) || "robohash:set1";
     if (style.indexOf("dicebear:") === 0) return "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + name);
     var px = Math.min(600, Math.max(60, Math.ceil(ems * em() * (window.devicePixelRatio || 1) / 60) * 60));
     return ROBOTS + encodeURIComponent(uid + name) + ".png?size=" + px + "x" + px + "&set=" + encodeURIComponent(style.slice(9) || "set1");
@@ -310,9 +372,9 @@
     var nameOf = function (d) { return text((S.users[d.id] && S.users[d.id].username) || d.name || "DJ"); };
     var playing = seats.filter(function (d) { return String(d.id) === String(on); })[0] || (S.song ? null : seats[0]);
     var html = playing ? '<li class="st-spot" aria-current="true"><span class="st-avtr" style="background-image:' +
-      escHtml(cssUrl(avatar(playing.id, nameOf(playing), 8))) + '"></span><span class="st-plaque">' + escHtml(nameOf(playing)) + "</span></li>" : "";
+      escHtml(cssUrl(avatar(playing.id, nameOf(playing), 8, playing.av))) + '"></span><span class="st-plaque">' + escHtml(nameOf(playing)) + "</span></li>" : "";
     var line = seats.filter(function (d) { return d !== playing; }).slice(0, 6).map(function (d) {
-      return '<li title="' + escHtml(nameOf(d)) + '" aria-label="' + escHtml(nameOf(d)) + '" style="background-image:' + escHtml(cssUrl(avatar(d.id, nameOf(d), 3.8))) + '"></li>';
+      return '<li title="' + escHtml(nameOf(d)) + '" aria-label="' + escHtml(nameOf(d)) + '" style="background-image:' + escHtml(cssUrl(avatar(d.id, nameOf(d), 3.8, d.av))) + '"></li>';
     }).join("");
     if (html !== deckHtml) { el("st-deck").innerHTML = html; deckHtml = html; }
     if (line !== lineHtml) { el("st-ondeck").innerHTML = line; lineHtml = line; }
@@ -321,7 +383,8 @@
 
   function renderCount() {
     // who's online (status true), not the bot: the site's own count (js/users.js)
-    var n = Object.keys(S.users || {}).filter(function (k) { return S.users[k] && S.users[k].status === true && !S.users[k].hostbot; }).length;
+    var n = S.staged ? Math.max(0, Number(S.online) || 0)
+      : Object.keys(S.users || {}).filter(function (k) { return S.users[k] && S.users[k].status === true && !S.users[k].hostbot; }).length;
     var c = el("st-count");
     c.hidden = !n;
     c.textContent = n.toLocaleString("en-US") + " in the room";
@@ -523,7 +586,7 @@
     return;
   }
   watch("songToPlay", onSong);
-  watch("table", function (t) { S.table = t || []; renderDeck(); });
-  watch("users", function (u) { S.users = u || {}; renderCount(); renderDeck(); });
-  watch("songFires", function (f) { S.firesData = f; fire(); });
+  watch("stage", onStage, function () { if (!S.staged) oldWay(); });
+  // no summary yet (an older hostbot, or the rules not published): the old way
+  stageWait = setTimeout(function () { if (!S.staged) oldWay(); }, 10000);
 })();

@@ -3587,8 +3587,8 @@ a.importLinkCheck {
     gap: var(--pad2);
 
     .tagPromptSpacer { flex: 1; }
-    .tagSwap { display: inline-flex; align-items: center; gap: 0.25em; }
-    .tagSwap i { font-size: 1.25em; line-height: 1; }
+    .tagSwap, .tagCase { display: inline-flex; align-items: center; gap: 0.25em; }
+    .tagSwap i, .tagCase i { font-size: 1.25em; line-height: 1; }
 }
 
 .tagPromptHelp {

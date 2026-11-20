@@ -437,7 +437,23 @@ firetable.actions.recordGrab = function (djid, type, cid) {
   ref.set(firebase.database.ServerValue.TIMESTAMP).catch(function () { /* already counted, or rules not deployed */ });
 };
 
-firetable.grabs = { ref: null, tracks: {}, since: 0 };
+// Your counts come from the hostbot's sum (grabCount/<your uid>: n grabs over
+// t tracks, and the latest one): one small node, instead of downloading every
+// grab you've ever had at every sign-in (the database bills every byte it
+// sends). Until the hostbot keeps that sum (or while you have none), the site
+// follows grabs/<your uid> itself, as before.
+firetable.grabs = { ref: null, sumRef: null, sumFn: null, tracks: {}, sum: null, since: 0, toasted: {} };
+
+/** Toast a grab once (it may be seen by both ways of counting). */
+firetable.actions.toastGrab = function (track, at) {
+  var g = firetable.grabs;
+  var id = track + '|' + at;
+  if (g.toasted[id] || !(Number(at) > g.since)) return;
+  g.toasted[id] = true;
+  var song = firetable.song || {};
+  var playing = song.djid === ftapi.uid && firetable.utilities.grabKey(song.type, song.cid) === track;
+  firetable.ui.toast(playing ? 'Someone added the track you\'re playing to their playlist 🎶' : 'Someone added one of your tracks to their playlist 🎶', 'success');
+};
 
 /** Listen to your own grab stats (count in Profile, a quiet toast for new grabs). */
 firetable.actions.watchGrabs = function () {
@@ -445,43 +461,70 @@ firetable.actions.watchGrabs = function () {
   if (!ftapi.uid) return;
   var g = firetable.grabs;
   g.since = ftapi.now();
-  g.ref = ftapi.db().ref('grabs/' + ftapi.uid);
-  var onTrack = function (snap) {
-    var who = snap.val() || {};
-    var before = g.tracks[snap.key] || {};
-    g.tracks[snap.key] = who;
-    var fresh = Object.keys(who).some(function (uid) { return !before[uid] && who[uid] > g.since; });
-    firetable.ui.renderGrabStats();
-    if (fresh) {
-      var song = firetable.song || {};
-      var playing = song.djid === ftapi.uid && firetable.utilities.grabKey(song.type, song.cid) === snap.key;
-      firetable.ui.toast(playing ? 'Someone added the track you\'re playing to their playlist 🎶' : 'Someone added one of your tracks to their playlist 🎶', 'success');
-    }
+  // the old way: every grab, from grabs/<your uid>
+  var follow = function () {
+    if (g.ref) return;
+    g.ref = ftapi.db().ref('grabs/' + ftapi.uid);
+    var onTrack = function (snap) {
+      var who = snap.val() || {};
+      var before = g.tracks[snap.key] || {};
+      g.tracks[snap.key] = who;
+      firetable.ui.renderGrabStats();
+      // one toast for the change, as before
+      var fresh = Object.keys(who).filter(function (uid) { return !before[uid] && Number(who[uid]) > g.since; })[0];
+      if (fresh) firetable.actions.toastGrab(snap.key, who[fresh]);
+    };
+    var onGone = function (snap) { delete g.tracks[snap.key]; firetable.ui.renderGrabStats(); };
+    g.ref.on('child_added', onTrack, function () { /* rules not deployed yet */ });
+    g.ref.on('child_changed', onTrack);
+    g.ref.on('child_removed', onGone);
   };
-  var onGone = function (snap) { delete g.tracks[snap.key]; firetable.ui.renderGrabStats(); };
-  g.ref.on('child_added', onTrack, function () { /* rules not deployed yet */ });
-  g.ref.on('child_changed', onTrack);
-  g.ref.on('child_removed', onGone);
+  var stopFollowing = function () {
+    if (g.ref) g.ref.off();
+    g.ref = null;
+    g.tracks = {};
+  };
+  g.sumRef = ftapi.db().ref('grabCount/' + ftapi.uid);
+  g.sumFn = g.sumRef.on('value', function (snap) {
+    var s = snap.val();
+    if (s && typeof s.n === 'number') {
+      g.sum = s;
+      stopFollowing();
+      if (s.last) firetable.actions.toastGrab(s.last, s.lastAt);
+    } else {
+      g.sum = null;
+      follow();
+    }
+    firetable.ui.renderGrabStats();
+  }, function () {
+    // the hostbot's rules don't have grabCount yet: count them here
+    g.sum = null;
+    follow();
+  });
 };
 
 firetable.actions.unwatchGrabs = function () {
   var g = firetable.grabs;
   if (g.ref) g.ref.off();
+  if (g.sumRef && g.sumFn) g.sumRef.off('value', g.sumFn);
   g.ref = null;
+  g.sumRef = g.sumFn = null;
   g.tracks = {};
+  g.sum = null;
   firetable.ui.renderGrabStats();
 };
 
 /** Profile tab: "Your tracks were added to playlists N times (M tracks)". */
 firetable.ui.renderGrabStats = function () {
-  var tracks = firetable.grabs.tracks, keys = Object.keys(tracks);
-  var total = keys.reduce(function (n, k) { return n + Object.keys(tracks[k] || {}).length; }, 0);
+  var g = firetable.grabs, tracks = g.tracks, keys = Object.keys(tracks);
+  var total = g.sum ? g.sum.n : keys.reduce(function (n, k) { return n + Object.keys(tracks[k] || {}).length; }, 0);
+  var trackCount = g.sum ? g.sum.t : keys.length;
   var $el = $('#grabStats');
   if (!total) { $el.text('When listeners add a track you played to their playlists, you\'ll see the count here. Only you can see it.'); return; }
   $el.empty()
     .append($('<strong></strong>').text(total.toLocaleString()))
     .append(document.createTextNode(total === 1 ? ' grab' : ' grabs'))
-    .append(document.createTextNode(' across ' + keys.length.toLocaleString() + (keys.length === 1 ? ' track' : ' tracks') + '. Only you can see this.'));
+    .append(document.createTextNode(' across ' + trackCount.toLocaleString() + (trackCount === 1 ? ' track' : ' tracks') + '. Only you can see this.'));
 };
 
 // ─── LinkGrabber (Drag-and-Drop Track Detection) ─────────────────────────────

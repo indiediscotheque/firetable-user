@@ -64,6 +64,34 @@ test("decodeEntities decodes text without making elements", async () => {
   assert.equal(r.nul, "");
 });
 
+// ─── Lean tracks ─────────────────────────────────────────────────────────────
+
+test("leanTrack: a YouTube track's own thumbnail and watch page aren't saved; anything else is (as the hostbot's lib/tracks.js)", async () => {
+  const r = await run(() => {
+    const lean = ftapi.utilities.leanTrack;
+    const yt = { type: 1, cid: "abcDEF12345", name: "A - B", img: "https://i.ytimg.com/vi/abcDEF12345/mqdefault.jpg", url: "https://www.youtube.com/watch?v=abcDEF12345", from: "discover" };
+    return {
+      yt: lean(yt), untouched: !!yt.img,
+      webp: lean({ type: 1, cid: "abcDEF12345", img: "https://i9.ytimg.com/vi_webp/abcDEF12345/maxresdefault.webp" }),
+      short: lean({ type: 1, cid: "abcDEF12345", url: "https://youtu.be/abcDEF12345" }),
+      other: lean({ type: 1, cid: "abcDEF12345", img: "https://i.ytimg.com/vi/zzzZZZ99999/mqdefault.jpg" }),
+      start: lean({ type: 1, cid: "abcDEF12345", url: "https://www.youtube.com/watch?v=abcDEF12345&t=30" }),
+      custom: lean({ type: 1, cid: "abcDEF12345", img: "https://example.com/cover.jpg" }),
+      sc: lean({ type: 2, cid: 123, img: "https://i1.sndcdn.com/artworks-x-large.jpg", url: "https://soundcloud.com/a/b" }),
+      none: lean(null)
+    };
+  });
+  assert.deepEqual(r.yt, { type: 1, cid: "abcDEF12345", name: "A - B", from: "discover" });
+  assert.equal(r.untouched, true, "the track passed in is left as it was");
+  assert.deepEqual(r.webp, { type: 1, cid: "abcDEF12345" });
+  assert.deepEqual(r.short, { type: 1, cid: "abcDEF12345" });
+  assert.equal(r.other.img, "https://i.ytimg.com/vi/zzzZZZ99999/mqdefault.jpg", "another video's thumbnail is kept");
+  assert.equal(r.start.url, "https://www.youtube.com/watch?v=abcDEF12345&t=30", "a link with a start time is kept");
+  assert.equal(r.custom.img, "https://example.com/cover.jpg");
+  assert.deepEqual(r.sc, { type: 2, cid: 123, img: "https://i1.sndcdn.com/artworks-x-large.jpg", url: "https://soundcloud.com/a/b" });
+  assert.equal(r.none, null);
+});
+
 // ─── The chat formatter ──────────────────────────────────────────────────────
 
 test("YouTube names: the artist from the title or the channel, and the real one for YouTube's stand-in \"Release - Topic\"", async () => {
@@ -88,6 +116,36 @@ test("YouTube names: the artist from the title or the channel, and the real one 
     "Radiohead - Karma Police", "Radiohead - Karma Police", "Band & Friends - Rock & Roll", "Fresh Song",
     "", true, false
   ]);
+});
+
+test("apTitleCase puts tags in AP title case, keeping names' own capitals and Rohn Standard Notation", async () => {
+  const cases = {
+    "the cure - friday i'm in love": "The Cure - Friday I'm in Love",
+    "THE CURE - FRIDAY I'M IN LOVE": "The Cure - Friday I'm in Love",
+    "florence and the machine - dog days are over": "Florence and the Machine - Dog Days Are Over",
+    "drake - one dance feat. wizkid & kyla (tame impala remix)": "Drake - One Dance feat. Wizkid & Kyla (Tame Impala Remix)",
+    "artist - come in feat. the weeknd": "Artist - Come In feat. The Weeknd",
+    "kendrick lamar vs. drake - the heart part 5": "Kendrick Lamar vs. Drake - The Heart Part 5",
+    "a tribe called quest - can i kick it?": "A Tribe Called Quest - Can I Kick It?",
+    "bruce springsteen - born to run": "Bruce Springsteen - Born to Run",
+    "artist - title: a subtitle of things": "Artist - Title: A Subtitle of Things",
+    "AC/DC - back in black": "AC/DC - Back in Black",
+    "MGMT - kids": "MGMT - Kids",
+    "Paul McCartney - an iPhone song (DJ Shadow remix)": "Paul McCartney - An iPhone Song (DJ Shadow Remix)",
+    "will.i.am - scream & shout": "will.i.am - Scream & Shout",
+    "elvis - rock 'n' roll": "Elvis - Rock 'n' Roll",
+    "nas - hip-hop is dead": "Nas - Hip-Hop Is Dead",
+    "artist - up-to-date": "Artist - Up-to-Date",
+    "artist - shut up and dance": "Artist - Shut Up and Dance",
+    "the who - who are you": "The Who - Who Are You",
+    "2pac - california love": "2pac - California Love",
+    "artist – song [live at the roxy]": "Artist – Song [Live at the Roxy]",
+    "  spaced  out -  kept ": "  Spaced  Out -  Kept ",
+    "": ""
+  };
+  const got = await run((ins) => ins.map((s) => firetable.utilities.apTitleCase(s)), Object.keys(cases));
+  assert.deepEqual(got, Object.values(cases));
+  assert.equal(await run(() => firetable.utilities.apTitleCase(null)), "");
 });
 
 test("chat: markup people type is shown as text, never as elements", async () => {
