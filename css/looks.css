@@ -5598,6 +5598,349 @@ input.tagMachine,
     flex-shrink: 0;
 }
 
+/* Import, step by step (1.19): find it, see its songs, then import */
+#importPromptBox .modalBox {
+    width: min(34rem, 100vw);
+    height: min(40rem, 100dvh);
+}
+
+#importPromptBox .modalContent {
+    padding: 0;
+}
+
+#importPromptBox .modalHeader {
+    gap: var(--space-2);
+}
+
+#importPromptBox .modalHeader h2 {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#im-step1,
+#im-step2 {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+#im-step1[hidden],
+#im-step2[hidden],
+#im-back[hidden],
+#im-link[hidden] {
+    display: none;
+}
+
+/* YouTube | SoundCloud as one segmented control */
+#importSources.im-seg {
+    display: inline-flex;
+    width: auto;
+    gap: 0;
+    margin: var(--space-3) var(--space-4) 0;
+    padding: 0.1875rem;
+    align-self: flex-start;
+    background-color: var(--color-bg-t2);
+    border-radius: var(--radius-pill);
+
+    & .tab {
+        min-height: 2rem;
+        padding: 0 var(--space-4);
+        font-size: var(--fs-meta);
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--color-text-subtle);
+        border-radius: var(--radius-pill);
+    }
+
+    & .tab.on {
+        color: var(--color-text-light);
+        background-color: var(--color-bg-t3);
+    }
+
+    & .tab.on::after {
+        display: none;
+    }
+}
+
+#importPromptBox #importContent {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: none;
+    padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+#importPromptBox #plMachine {
+    border-radius: var(--radius-row);
+}
+
+.im-hint {
+    margin: var(--space-1) 0 var(--space-2);
+    font-size: var(--fs-meta);
+    color: var(--color-text-subtle);
+}
+
+#importResults {
+    overflow: auto;
+}
+
+#importResults .importResult {
+    gap: var(--space-2);
+    padding: 0;
+}
+
+.im-open {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    min-height: 3rem;
+    padding: var(--space-2) var(--space-1);
+    text-align: left;
+    color: var(--color-text);
+    background: none;
+    border: none;
+    border-radius: var(--radius-row);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background-color: var(--color-bg-t1);
+    }
+
+    & .imtxt {
+        grid-column: 1;
+        padding: 0;
+        font-size: var(--fs-body);
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    & .im-by {
+        grid-column: 1;
+        font-size: var(--fs-meta);
+        color: var(--color-text-subtle);
+    }
+
+    & i {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        color: var(--color-icon);
+    }
+}
+
+.im-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4) var(--space-2);
+
+    & .importLinkCheck {
+        margin-left: auto;
+    }
+}
+
+.im-headText {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    & b {
+        font-size: var(--fs-h3);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    & span {
+        font-size: var(--fs-meta);
+        color: var(--color-text-subtle);
+    }
+}
+
+.im-songs {
+    flex: 1;
+    min-height: 6rem;
+    margin: 0 var(--space-4);
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+    background-color: var(--color-bg-s1);
+    border-radius: var(--radius-row);
+}
+
+.im-song {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 2.25rem;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--fs-row);
+    border-bottom: 1px solid var(--color-bg-t1);
+
+    &.is-out .im-title,
+    &.is-out .im-artist {
+        font-weight: 400;
+        color: var(--color-text-muted);
+    }
+}
+
+.im-num {
+    flex: 0 0 1.75rem;
+    font-size: var(--fs-meta);
+    color: var(--color-text-subtle);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.im-songName {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+
+    & > span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.im-title {
+    font-weight: 600;
+}
+
+.im-artist {
+    font-size: var(--fs-meta);
+    color: var(--color-text-subtle);
+}
+
+.im-tag {
+    flex-shrink: 0;
+    padding: 0.125rem var(--space-2);
+    font-size: var(--fs-meta);
+    color: var(--color-text);
+    background-color: var(--color-bg-t3);
+    border-radius: var(--radius-pill);
+
+    &.is-gone {
+        color: #ffb4a8;
+        background-color: #4a211c;
+    }
+}
+
+.im-dest {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-3) var(--space-4) 0;
+    padding: 0;
+    border: none;
+
+    & legend {
+        margin-bottom: var(--space-1);
+        padding: 0;
+        font-size: var(--fs-label);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-subtle);
+    }
+}
+
+.im-destRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+
+    & label {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        min-height: 2rem;
+        flex: 0 0 11rem;
+        font-size: var(--fs-body);
+    }
+
+    & input[type="text"],
+    & select {
+        flex: 1 1 8rem;
+        min-width: 0;
+        min-height: 2rem;
+        padding: 0 var(--space-2);
+        border-radius: var(--radius-row);
+    }
+
+    & select {
+        padding-right: 2rem;
+    }
+
+    & select#im-pos {
+        flex: 0 1 9rem;
+    }
+
+    & :disabled {
+        opacity: 0.5;
+    }
+}
+
+.im-skip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-2) var(--space-4) 0;
+    min-height: 2rem;
+    font-size: var(--fs-body);
+}
+
+.im-status {
+    min-height: 1.25rem;
+    margin: var(--space-2) var(--space-4) 0;
+    font-size: var(--fs-meta);
+    color: var(--color-text-subtle);
+
+    &.is-error {
+        color: #ffb4a8;
+    }
+}
+
+.im-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: var(--space-3) var(--space-4) var(--space-4);
+
+    & .butt {
+        min-height: 2.5rem;
+        padding: 0 var(--space-5);
+        color: #111;
+    }
+
+    & .butt:disabled {
+        opacity: 0.5;
+    }
+}
+
+.im-offer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.d-importOffer .d-import {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: var(--space-2);
+}
+
 #importContent {
     padding: var(--pad2) var(--pad3);
     background-color: var(--color-bg-t2);

@@ -154,6 +154,8 @@ firetable.ui.setupSearchEvents = function () {
     if (e.which !== 13) return;
     var txt = String($("#qsearch").val() || "").trim();
     if (!txt) return;
+    var plLink = firetable.importer.parseLink(txt);
+    if (plLink) { firetable.utilities.cancelSearchPreview(); return firetable.ui.offerImport('#searchResults', plLink); }
     var source = firetable.utilities.isSCLink(txt) ? MEDIA_SOUNDCLOUD : firetable.searchSelectsChoice;
 
     if (source === MEDIA_YOUTUBE) {
@@ -253,9 +255,8 @@ firetable.ui.setupSearchEvents = function () {
         firetable.debug && console.log("sc direct link found");
         firetable.actions.resolveSCLink(q).then(function (item) {
           if (item && item.kind === "track") return showSCResults([item]);
-          showStatus('#searchResults', item && item.kind === "playlist"
-            ? "That's a SoundCloud playlist. Use Import to add it as a list."
-            : "That SoundCloud link isn't a track.");
+          if (item && item.kind === "playlist") return firetable.ui.offerImport('#searchResults', { type: MEDIA_SOUNDCLOUD, url: q });
+          showStatus('#searchResults', "That SoundCloud link isn't a track.");
         }, showSCError);
       } else {
         firetable.actions.scSearch('tracks', q).then(showSCResults, showSCError);
@@ -276,116 +277,124 @@ firetable.ui.setupSearchEvents = function () {
     firetable.searchSelectsChoice = MEDIA_SOUNDCLOUD;
   });
 
-  // ── Import Source Toggle Tabs ──
-  $("#ytimportchoice").on("click", function () {
-    firetable.debug && console.log("yt import");
-    firetable.importSelectsChoice = MEDIA_YOUTUBE;
-  });
-  $("#scimportchoice").on("click", function () {
-    firetable.debug && console.log("sc import");
-    firetable.importSelectsChoice = MEDIA_SOUNDCLOUD;
-  });
+  // ── Import Source Toggle (YouTube | SoundCloud) ──
+  $("#ytimportchoice").on("click", function () { firetable.importSelectsChoice = MEDIA_YOUTUBE; });
+  $("#scimportchoice").on("click", function () { firetable.importSelectsChoice = MEDIA_SOUNDCLOUD; });
   $("#importSources .tab").on("click", function () {
-    $(this).siblings().removeClass('on');
-    $(this).addClass('on');
+    $(this).siblings().removeClass('on').attr('aria-pressed', 'false');
+    $(this).addClass('on').attr('aria-pressed', 'true');
+    $("#importResults").html("");
+    $("#plMachine").trigger("focus");
   });
 
-  // ── Import result row builder ──
-  // Builds the row with text nodes and a real click handler (no inline
-  // onclick), so playlist titles from YouTube/SoundCloud can't inject HTML/JS.
-  // `importName` is passed to importList() unchanged, exactly as before.
-  var appendImportResult = function (label, href, listID, importName, type) {
-    var $row = $('<div class="importResult"></div>');
-    $('<div class="imtxt"></div>').text(firetable.ui.strip(label)).appendTo($row);
-    // Platform logo, like every other link to YouTube / SoundCloud
-    var platform = type === MEDIA_SOUNDCLOUD ? 'SoundCloud' : 'YouTube';
+  // ── Import result rows ──
+  // Text nodes only, so playlist titles from YouTube/SoundCloud can't inject
+  // HTML. The row opens the playlist's songs (step 2); nothing is added yet.
+  var appendImportResult = function (meta) {
+    var $row = $('<div class="importResult"></div>').attr('data-id', meta.id);
+    var $open = $('<button type="button" class="im-open"></button>')
+      .attr('aria-label', 'See the songs in ' + meta.name)
+      .on('click', function () { firetable.importer.show(meta); });
+    $('<span class="imtxt"></span>').text(meta.name).appendTo($open);
+    $('<span class="im-by"></span>').text([meta.by ? 'by ' + meta.by : '', typeof meta.count === 'number' ? firetable.utilities.pluralize(meta.count, 'song') : ''].filter(Boolean).join(' · ')).appendTo($open);
+    $open.append('<i class="material-symbols-outlined" aria-hidden="true">chevron_right</i>');
+    $row.append($open);
+    var platform = meta.type === MEDIA_SOUNDCLOUD ? 'SoundCloud' : 'YouTube';
     var $link = $('<a target="_blank" rel="noopener" class="importLinkCheck"></a>')
       .attr({ title: 'Open on ' + platform, 'aria-label': 'Open on ' + platform })
-      .html(type === MEDIA_SOUNDCLOUD ? SC_LOGO_SVG : YT_LOGO_SVG);
-    if (/^https:\/\//i.test(href || '')) $link.attr('href', href);
-    $row.append($link).append(' ');
-    $('<i role="button" class="material-symbols-filled" title="Import">&#xE02E;</i>')
-      .on('click', function () {
-        firetable.actions.importList(String(listID), importName, type);
-      })
-      .appendTo($row);
+      .html(meta.type === MEDIA_SOUNDCLOUD ? SC_LOGO_SVG : YT_LOGO_SVG);
+    if (/^https:\/\//i.test(meta.href || '')) $link.attr('href', meta.href);
+    $row.append($link);
     $("#importResults").append($row);
+    return $row;
   };
 
   // ── Playlist/Import Search (#plMachine) ──
   $("#plMachine").on("keyup", function (e) {
     if (e.which !== 13) return;
-    var val = $("#plMachine").val();
+    var val = String($("#plMachine").val() || "").trim();
     if (!val) return;
     $("#importResults").html("");
-    $("#plMachine").val("");
-    var searchFrom = firetable.importSelectsChoice;
+    var link = firetable.importer.parseLink(val);
+    var searchFrom = link ? link.type : firetable.importSelectsChoice;
+    if (link) {
+      $(link.type === MEDIA_SOUNDCLOUD ? "#scimportchoice" : "#ytimportchoice").addClass('on').attr('aria-pressed', 'true')
+        .siblings().removeClass('on').attr('aria-pressed', 'false');
+      firetable.importSelectsChoice = link.type;
+      showStatus('#importResults', 'Looking it up…');
+      firetable.importer.peek(link).then(function (meta) {
+        $("#importResults").html("");
+        if (!meta) return showStatus('#importResults', link.type === MEDIA_SOUNDCLOUD ? "That link isn't a public SoundCloud playlist." : "That playlist isn't public, or it's gone.");
+        appendImportResult(meta);
+        firetable.importer.show(meta);
+      });
+      return;
+    }
 
     if (searchFrom === MEDIA_YOUTUBE) {
-      // ── YouTube Playlist Search ──
-      var listID;
-      var directLink = false;
-
-      // Check for direct playlist URL
-      if (val.match(/youtube.com\/watch/) || val.match(/youtube.com\/playlist/)) {
-        listID = getQueryStringValue(val, "list");
-        if (listID) directLink = true;
-      }
-
-      if (directLink) {
-        ytAPI('playlists', { id: listID, part: 'snippet' }, function (response) {
-          if (response.items && response.items.length === 1) {
-            var item = response.items[0];
-            appendImportResult(
-              item.snippet.title + ' by ' + item.snippet.channelTitle,
-              'https://www.youtube.com/playlist?list=' + encodeURIComponent(listID),
-              listID, item.snippet.title, MEDIA_YOUTUBE
-            );
-          }
+      // a search costs 100 of the day's YouTube units: say it's under way
+      showStatus('#importResults', 'Searching YouTube…');
+      ytAPI('search', { q: val, type: 'playlist', part: 'snippet', maxResults: SEARCH_MAX_RESULTS }, function (response) {
+        $("#importResults").html("");
+        var items = response.items || [];
+        if (!items.length) return showStatus('#importResults', 'No YouTube playlists found.');
+        var rows = {};
+        $.each(items, function (index, item) {
+          var id = item.id && item.id.playlistId;
+          if (!id) return;
+          var meta = {
+            type: MEDIA_YOUTUBE, id: id,
+            name: firetable.ui.strip(item.snippet.title), by: firetable.ui.strip(item.snippet.channelTitle || ''), count: null,
+            href: 'https://www.youtube.com/playlist?list=' + encodeURIComponent(id)
+          };
+          rows[id] = { meta: meta, $row: appendImportResult(meta) };
         });
-      } else {
-        ytAPI('search', { q: val, type: 'playlist', part: 'snippet', maxResults: SEARCH_MAX_RESULTS }, function (response) {
-          firetable.debug && console.log('import search results:', response);
-          $.each(response.items || [], function (index, item) {
-            appendImportResult(
-              item.snippet.title + ' by ' + item.snippet.channelTitle,
-              'https://www.youtube.com/playlist?list=' + encodeURIComponent(item.id.playlistId),
-              item.id.playlistId, item.snippet.title, MEDIA_YOUTUBE
-            );
+        // how many songs each has: 1 unit for all of them
+        ytAPI('playlists', { id: Object.keys(rows).join(','), part: 'contentDetails', maxResults: 50 }, function (res) {
+          $.each(res.items || [], function (i, pl) {
+            var r = rows[pl.id];
+            if (!r || !pl.contentDetails) return;
+            r.meta.count = pl.contentDetails.itemCount;
+            r.$row.find('.im-by').text([r.meta.by ? 'by ' + r.meta.by : '', firetable.utilities.pluralize(r.meta.count, 'song')].filter(Boolean).join(' · '));
           });
         });
-      }
+      });
 
     } else if (searchFrom === MEDIA_SOUNDCLOUD) {
-      // ── SoundCloud Playlist Search ──
-      var appendSCList = function (item) {
-        appendImportResult(
-          item.title + ' by ' + ((item.user && item.user.username) || 'unknown') + ' (' + firetable.utilities.pluralize(item.track_count, "song") + ')',
-          item.permalink_url, item.id, item.title, MEDIA_SOUNDCLOUD
-        );
-      };
-      var showImportError = function (err) {
+      showStatus('#importResults', 'Searching SoundCloud…');
+      firetable.actions.scSearch('playlists', val).then(function (lists) {
+        $("#importResults").html("");
+        lists = $.map(lists, function (item) { return firetable.importer.fromSoundCloud(item); });
+        if (!lists.length) return showStatus('#importResults', 'No public SoundCloud playlists found.');
+        $.each(lists, function (i, meta) { appendImportResult(meta); });
+      }, function (err) {
         showStatus('#importResults', err.message || "SoundCloud search failed.");
-      };
-
-      showStatus('#importResults', 'Searching…');
-      if (firetable.utilities.isSCLink(val)) {
-        // Direct set URL (also accepts short on.soundcloud.com links)
-        firetable.actions.resolveSCLink(val).then(function (item) {
-          $("#importResults").html("");
-          if (item && item.kind === "playlist" && item.sharing !== "private") return appendSCList(item);
-          showStatus('#importResults', "That link isn't a public SoundCloud playlist.");
-        }, showImportError);
-      } else {
-        // Keyword search for playlists
-        firetable.actions.scSearch('playlists', val).then(function (lists) {
-          $("#importResults").html("");
-          lists = $.grep(lists, function (item) { return item.sharing !== "private"; });
-          if (!lists.length) return showStatus('#importResults', 'No public SoundCloud playlists found.');
-          $.each(lists, function (i, item) { appendSCList(item); });
-        }, showImportError);
-      }
+      });
     }
+  });
+
+  firetable.importer.init();
+};
+
+/**
+ * "That's a playlist: [name] · N songs. Import it" in a results box, for a
+ * playlist link pasted where a song was expected.
+ * @param {string} sel - the results box
+ * @param {Object} link - firetable.importer.parseLink's result
+ */
+firetable.ui.offerImport = function (sel, link) {
+  var $box = $(sel).empty().append($('<p class="searchStatus"></p>').text("That's a playlist. Looking it up…"));
+  firetable.importer.peek(link).then(function (meta) {
+    $box.empty();
+    if (!meta) {
+      $box.append($('<p class="searchStatus"></p>').text("That's a playlist link, but it isn't public or it's gone."));
+      return;
+    }
+    var $p = $('<p class="searchStatus im-offer"></p>').text("That's a playlist: " + firetable.importer.describe(meta) + ". ");
+    $('<button type="button" class="butt im-offerGo">Import it</button>')
+      .on('click', function () { firetable.importer.open(meta); })
+      .appendTo($p);
+    $box.append($p);
   });
 };
 

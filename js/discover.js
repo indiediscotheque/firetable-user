@@ -1086,6 +1086,23 @@ firetable.discover = (function () {
     if (input && document.activeElement !== input && input.value !== query) input.value = query;
     var h = '<div class="d-headrow"><h2>Search</h2></div>';
     if (q.length < 2) return h + emptyNote("Type an artist, a song, a genre or a DJ.");
+    // a YouTube or SoundCloud playlist link: offer to import it (1.19)
+    var plLink = D.signedIn && firetable.importer && firetable.importer.parseLink(query);
+    if (plLink) {
+      if (D.importFor !== query) {
+        D.importFor = query;
+        D.importMeta = undefined;
+        firetable.importer.peek(plLink).then(function (meta) {
+          if (D.importFor !== query) return;
+          D.importMeta = meta;
+          if (D.view === "search") renderBrowse();
+        });
+      }
+      var m = D.importMeta;
+      return h + '<section class="d-importOffer">' + (m === undefined ? emptyNote("That's a playlist. Looking it up…")
+        : m ? '<p class="d-empty">' + esc("That's a playlist: " + firetable.importer.describe(m) + ".") + ' <button type="button" class="butt d-import">' + ms("playlist_add") + "<span>Import it</span></button></p>"
+        : emptyNote("That's a playlist link, but it isn't public or it's gone.")) + "</section>";
+    }
     var found = 0;
     var section = function (title, body, n) { found += n; return n ? "<section>" + head(title) + body + "</section>" : ""; };
     // artists
@@ -3451,6 +3468,7 @@ firetable.discover = (function () {
     if ((b = t.closest(".d-chip[data-decade]"))) { D.mapDecade = b.getAttribute("data-decade") || null; return renderBrowse(); }
     if ((b = t.closest(".d-homemore"))) { var k = b.getAttribute("data-more"); D.homeMore[k] = !D.homeMore[k]; return renderBrowse(); }
     if ((b = t.closest("#dSearchOpen"))) return openSearch();
+    if (t.closest(".d-import")) return D.importMeta && firetable.importer.open(D.importMeta);
     if ((b = t.closest(".d-sheetlink"))) { e.preventDefault(); return openSheet(songFrom(b)); }
     if ((b = t.closest("#thehistory .pv-dj-avatar, #thediscovers .pv-dj-avatar"))) {
       var key = djKey(b.getAttribute("data-avatar-uid"), b.getAttribute("aria-label"));
@@ -4182,7 +4200,7 @@ firetable.discover = (function () {
         if (!v) return;
         clearTimeout(typed);
         setView("search", v);
-        if (D.signedIn && yt.q !== v) searchYouTube(v);
+        if (D.signedIn && yt.q !== v && !(firetable.importer && firetable.importer.parseLink(v))) searchYouTube(v);
       });
       window.addEventListener("resize", function () { closeMenu(); });
       document.addEventListener("scroll", function () { closeMenu(); }, true);

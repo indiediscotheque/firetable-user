@@ -157,12 +157,12 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| IM-01 | Import a YouTube playlist (search by name or paste a link) into a new playlist | M | `#importPromptBox` ("Playlist Import Machine"), `#importSources` (`#ytimportchoice`), `#plMachine`, `#importResults`, `search.js`, `playlist.js` `importList` | 1.19 the new import dialog, step 1 |
-| IM-02 | Import a SoundCloud set | M | `#scimportchoice`, `scPlaylist` | 1.19 |
-| IM-03 | (new) Preview what's inside, choose new or existing playlist, top or bottom, skip what you have, see what's missing | M | — | 1.19 step 2 |
+| IM-01 | Import a YouTube playlist (search by name or paste a link) into a new playlist | M | `#importPromptBox` ("Playlist Import Machine"), `#importSources` (`#ytimportchoice`), `#plMachine`, `#importResults`, `search.js`, `playlist.js` `importList` | ✅ 1.19 step 1: link or name, results with song counts, `js/import.js` |
+| IM-02 | Import a SoundCloud set | M | `#scimportchoice`, `scPlaylist` | ✅ 1.19 |
+| IM-03 | (new) Preview what's inside, choose new or existing playlist, top or bottom, skip what you have, see what's missing | M | `#im-step2` | ✅ 1.19 step 2 (`firetable.importer.show`, Undo in the toast) |
 | IM-04 | (new) A list of songs or a CSV | M | — | 1.20 (needs the bot's matching job) |
 | IM-05 | (new) Spotify link | M | — | 1.21, after the owner adds a Spotify key to the bot |
-| IM-06 | (new) Paste a playlist link in any search box | M | today: "That's a SoundCloud playlist. Use Import…" | 1.19 offers to import it |
+| IM-06 | (new) Paste a playlist link in any search box | M | today: "That's a SoundCloud playlist. Use Import…" | ✅ 1.19 `firetable.ui.offerImport` in Find tracks; `.d-importOffer` in Discover search |
 
 ## RE · Recent, Fresh, Cards (the tabs under the stage)
 
