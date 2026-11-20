@@ -3,7 +3,7 @@
 // and a supermod, at a phone's and a computer's width. Fails on a serious or
 // critical finding that isn't in the allowlist below; the allowlist holds what
 // the site has today, each with the step that fixes it, and only ever shrinks.
-// Also reports (doesn't fail on) text smaller than 11px, for steps 1.2 and 2.x.
+// Also fails on text smaller than 10px: the type floor (1.2, the owner, November 20, 2026).
 //
 // axe is run through the browser's own evaluate (as devtools would), so the
 // site keeps its real Content-Security-Policy. While it measures, the page's
@@ -147,7 +147,7 @@ const contrast = (page) => page.evaluate(() => {
   return nodes.length ? [{ id: "color-contrast", impact: "serious", help: "Text must stand out from what's behind it (WCAG AA 4.5:1, 3:1 for large text)", nodes }] : [];
 });
 
-/** Text on screen smaller than 11px: "selector size" for each kind of element. */
+/** Text on screen under the 10px type floor: "selector size" for each kind of element. */
 const smallText = (page) => page.evaluate(() => {
   const out = new Set();
   const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
@@ -155,7 +155,7 @@ const smallText = (page) => page.evaluate(() => {
     const el = n.parentElement;
     if (!el || !el.checkVisibility() || el.closest(".material-symbols-outlined, .material-symbols-filled, [aria-hidden=true]")) continue;
     const size = parseFloat(getComputedStyle(el).fontSize);
-    if (size >= 11 || size === 0) continue; // 0: hidden on purpose
+    if (size >= 10 || size === 0) continue; // 0: hidden on purpose
     const name = el.id ? "#" + el.id : el.tagName.toLowerCase() + (typeof el.className === "string" && el.className.trim() ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".") : "");
     out.add(name + " " + size + "px");
   }
@@ -249,7 +249,8 @@ if (process.env.LIST) {
 }
 console.log("\n" + keys.length + " kinds of element with a serious or critical finding (" + keys.filter((k) => allowed.has(k)).length + " in the allowlist)");
 if (stale.length) console.log("  Fixed (take these out of the allowlist): " + stale.join(", "));
-if (small.size) console.log("  Text under 11px (report only, steps 1.2 and 2.x): " + [...small].sort().join(", "));
+// the type floor (1.2): no text smaller than 10px
+if (small.size) failures.push("text under 10px (the type floor, 1.2): " + [...small].sort().join(", "));
 if (failures.length) {
   console.log("  FAIL " + failures.join("\n  FAIL "));
   process.exitCode = 1;

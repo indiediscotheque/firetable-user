@@ -7373,3 +7373,10 @@ body:not(.is-mod) .helpMods { display: none; }
     .helpKeys dd { margin-bottom: var(--space-2); }
     .helpKeys dt { white-space: normal; }
 }
+
+/* what a card's temp means (1.12), under the card case's stats */
+.cardTempNote { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--fs-meta); }
+
+/* The room's bot in chat (1.13): its lines quieter than people's talk; printed cards and their GRAB as before */
+.ch-bot .chatText { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 400; }
+.ch-bot .chatText strong, .ch-bot .chatText b { color: var(--color-text); }

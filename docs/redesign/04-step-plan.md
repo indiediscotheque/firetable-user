@@ -95,8 +95,9 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** screenshots at all widths and roles; nothing becomes unreadable; theme colour change (`colors` in the database) still recolours the accent.
 - **Undo:** revert.
 
-### 1.2 Type floor and the header
-- **Goal:** nothing smaller than 11px; labels look like labels; the header reads as one bar.
+### 1.2 Type floor and the header ✅ the type floor shipped (the owner's yes, November 20, 2026)
+- **Shipped:** no text under **10px** (the owner's floor, November 20, 2026; the plan said 11px). Everything the site shows already met it, so no size changed; the accessibility check (`tests/a11y.mjs`) now fails on any visible text under 10px instead of reporting text under 11px. **Not done (not in the yes):** the header's 36px buttons, the theme pill restyle, `#reconnecting` as a chip.
+- **Goal:** nothing smaller than 10px (the owner; was 11px); labels look like labels; the header reads as one bar.
 - **Rows:** TB-01 to TB-07.
 - **Files and change:** replace every `font-size` under 11px in both CSS files (search `0.6`, `0.65`, `0.7rem`, `9px`, `10px`). Section and tab labels use `--fs-label`. Header: icon buttons 36px with the existing tooltips (`.ft-tip`); theme pill restyled (the gold THEME badge stays); `#reconnecting` as a small status chip.
 - **Keep:** the logo exactly; every header button and its tooltip id.
@@ -185,14 +186,16 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke as the DJ: `#st-bus` toggles the departure state the user card shows; as a member off deck: `#st-hopon` sends `!addme`.
 - **Undo:** revert.
 
-### 1.12 People and cards
+### 1.12 People and cards ✅ shipped (the owner's yes, November 20, 2026)
+- **Shipped:** each role icon in the people list is named for its tooltip and screen readers (Room bot, Supermod, Mod, Member). A card's temp is explained where it's shown (the Lowest and Highest Temp tiles, a line under them, and the sort's "Temp (hotter is rarer)"): the bot sets it at random when it prints a card, most at 110–130°, about 1 in 5 at 131–230°, about 1 in 20 hotter (the hostbot's card printing). Row sizes stay as they are.
 - **Goal:** the people list is readable and its icons explained; card "temp" is explained.
 - **Rows:** PE-01 to PE-03, RE-05.
 - **Files and change:** `#usersbox` rows 36px, avatar 28px, role icon with a tooltip (Room bot, Supermod, Mod, Member, Listening on radio). `cards.js`: the "Lowest/Highest Temp" tiles and the sort option get a tooltip saying what temp measures (ask the owner for the exact meaning; it's in the bot's card printing, `!printcard`).
 - **Check:** keyboard focus order through the list; tooltips readable.
 - **Undo:** revert.
 
-### 1.13 Chat and Recent
+### 1.13 Chat and Recent ✅ shipped (the owner's yes, November 20, 2026)
+- **Shipped:** the song lines were already one slim 12px line with the fires on the right (`.nowplayn .npmsg`, `processFireReactionMessage`); the room bot's own messages (answers to `!plays`, votes, notices) are now quieter than people's talk (`.ch-bot`: 13px, muted), its printed cards and GRAB as before. Smoke: a bot line and a person's line side by side. **Not done (not in the yes):** names at 13px bold, Recent's two-tone rows.
 - **Goal:** chat reads like a conversation; the bot's song lines stop crowding it.
 - **Rows:** CH-01 to CH-19, RE-01 to RE-03.
 - **Files and change:** `chat.js`: when a message is from the hostbot and is a song announcement (the "started playing" pattern; the bot's text is in `firetable-hostbot/app.js`), add `.ch-song` to it. CSS: one slim 12px line ("♪ Chris played Dernière · Romain Muller · 2 plays") with the play count on the right. Fire reactions for a song collapse into "🔥 matt and scytheria fired this" under its line where `processFireReactionMessage` already groups them. Message text 14px, names 13px bold. Recent rows: two-tone title · artist, Roboto Mono times.
