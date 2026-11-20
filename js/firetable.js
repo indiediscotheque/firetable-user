@@ -1241,7 +1241,10 @@ ftapi.actions = {
   /**
    * Correct a play's "Artist - Title" (mods). Saves the history entry and the
    * track's global tags in one atomic write, then emits "editedHistory" so the
-   * row updates even when it's an older play outside the live window.
+   * row updates even when it's an older play outside the live window. The
+   * tag log entry carries the tags it replaced (fa, ft): the hostbot gives
+   * every other copy of them the fix, and when the artist was respelled
+   * ("POOLSIDE" -> "Poolside") writes all their songs that way.
    * @param {string|number} type - MEDIA_YOUTUBE / MEDIA_SOUNDCLOUD
    * @param {string} cid
    * @param {string} tag - "Artist - Title"
@@ -1259,10 +1262,16 @@ ftapi.actions = {
     var isHistory = !list || list === "songHistory";
     // The bot keeps only the latest plays; writing to a play it has already
     // removed would create a bogus entry in Recent (#147), so check first.
-    var exists = isHistory && histID
-      ? ftapi.db().ref("songHistory/" + histID + "/cid").once("value").then(function(snap) { return snap.exists(); })
-      : Promise.resolve(false);
-    exists.then(function(inHistory) {
+    var row = isHistory && histID
+      ? ftapi.db().ref("songHistory/" + histID).once("value").then(function(snap) { return snap.val(); })
+      : Promise.resolve(null);
+    // the tags being replaced: the hostbot puts the fix on every other copy
+    // of them, and on all the artist's songs when the artist was respelled
+    var before = ftapi.db().ref("globalTracks/" + type + cid).once("value").then(function(snap) { return snap.val(); }, function() { return null; });
+    Promise.all([row, before]).then(function(found) {
+      var hist = found[0];
+      var inHistory = !!(hist && hist.cid != null);
+      var old = found[1] && typeof found[1].artist === "string" ? found[1] : hist;
       var updates = {};
       if (inHistory) {
         updates["songHistory/" + histID + "/artist"] = theartist;
@@ -1277,6 +1286,10 @@ ftapi.actions = {
       var logKey = /^[12][A-Za-z0-9_-]{1,64}$/.test(String(type) + cid) ? "tagLog/" + ftapi.db().ref("tagLog").push().key : null;
       if (logKey) {
         updates[logKey] = { k: String(type) + cid, a: theartist, t: thetitle, by: ftapi.uid, at: firebase.database.ServerValue.TIMESTAMP };
+        if (old && typeof old.artist === "string") {
+          updates[logKey].fa = old.artist.slice(0, 500);
+          updates[logKey].ft = String(old.title || "").slice(0, 500);
+        }
       }
       return ftapi.db().ref().update(updates).catch(function(err) {
         if (!logKey || !/permission/i.test(String(err && (err.code || err.message)))) throw err;

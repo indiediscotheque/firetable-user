@@ -3595,6 +3595,8 @@ a.importLinkCheck {
 .tagPromptHelp {
     color: var(--color-text-subtle);
     line-height: 1.5;
+
+    .tagPromptScope { display: block; margin-top: var(--pad2); }
 }
 
 /* Touch screens and phones: the tag editor is a sheet along the top of the
