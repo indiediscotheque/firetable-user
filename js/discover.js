@@ -70,6 +70,7 @@ firetable.discover = (function () {
     chartNew: false,     // the chart, new releases only
     genreTab: "fav",     // fav | newHere | deep
     djTab: null,         // most | firstHere; null: Brought here first when they have any (2.7)
+    showAll: {},         // long lists opened past their top 10, by list and page
     djSort: "plays",     // plays | firsts | fires | since | name
     djFind: "",
     homeMore: {},
@@ -705,20 +706,31 @@ firetable.discover = (function () {
     return '<button type="button" class="butt graybutt d-saveall" data-list="' + esc(listName) + '" title="' + (D.signedIn ? "Save these songs as a new playlist" : "Save these songs to your crate") + '">' +
       ms("playlist_add") + "<span>" + esc(label || "Save all") + "</span></button>";
   }
+  /**
+   * A long list shows its top 10 and "Show all N" (2.7); Play and Save still
+   * take the whole list. Once shown, a list stays open while you're on the page.
+   */
+  var CAP = 10;
+  function capped(listName, count, rowsHtml) {
+    var key = listName + "/" + (D.sub || D.view);
+    if (count <= CAP + 2 || D.showAll[key]) return '<div class="ft-rows d-rowlist">' + rowsHtml + "</div>";
+    return '<div class="ft-rows d-rowlist d-capped">' + rowsHtml + "</div>" +
+      '<button type="button" class="butt graybutt d-showall" data-showall="' + esc(key) + '">' + ms("expand_more") + "<span>Show all " + esc(n(count)) + "</span></button>";
+  }
   function rankedRows(tracks, listName, rightOf) {
     if (!tracks.length) return emptyNote("Nothing here yet.");
     // ranked by plays when the list is in play order; a list in another order keeps its places
     var byPlays = tracks.every(function (t, i) { return !i || (tracks[i - 1].plays || 0) >= (t.plays || 0); });
     var ranks = byPlays ? ranked(tracks.map(function (t) { return { plays: t.plays || 0 }; }), "plays") : [];
-    return '<div class="ft-rows d-rowlist">' + tracks.map(function (t, i) {
+    return capped(listName, tracks.length, tracks.map(function (t, i) {
       return row(t, listName, i, { stamp: ranks[i] ? rankStamp(ranks[i], i) : "#" + (i + 1), rank: true, dj: djShown(t.djid, t.dj), right: rightOf ? rightOf(t) : '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" });
-    }).join("") + "</div>" + (ranks.some(function (r) { return r.tie; }) ? TIE_NOTE : "");
+    }).join("")) + (ranks.some(function (r) { return r.tie; }) ? TIE_NOTE : "");
   }
   function datedRows(tracks, listName) {
     if (!tracks.length) return emptyNote("Nothing here yet.");
-    return '<div class="ft-rows d-rowlist">' + tracks.map(function (t, i) {
+    return capped(listName, tracks.length, tracks.map(function (t, i) {
       return row(t, listName, i, { stamp: t.first ? firetable.utilities.shortDate(t.first) : "", dj: djShown(t.djid, t.dj), right: '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" });
-    }).join("") + "</div>";
+    }).join(""));
   }
   function person(p, fact, more) {
     var dj = djShown(p.djid, p.dj || p.name);
@@ -3371,6 +3383,16 @@ firetable.discover = (function () {
     if ((b = t.closest("[data-period]"))) { D.chart = { period: b.getAttribute("data-period"), id: null }; renderBrowse(); return writeAddress(); }
     if ((b = t.closest(".d-chip[data-gtab]"))) { D.genreTab = b.getAttribute("data-gtab"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-djtab]"))) { D.djTab = b.getAttribute("data-djtab"); return renderBrowse(); }
+    if ((b = t.closest(".d-showall"))) {
+      D.showAll[b.getAttribute("data-showall")] = true;
+      var rowsBox = b.previousElementSibling;
+      if (rowsBox) {
+        rowsBox.classList.remove("d-capped");
+        var next = rowsBox.querySelectorAll(".hist-entry")[CAP];
+        if (next) { var go = next.querySelector("button, a, [tabindex]"); if (go) go.focus(); }
+      }
+      return b.remove();
+    }
     if ((b = t.closest(".d-chip[data-djsort]"))) { D.djSort = b.getAttribute("data-djsort"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-decade]"))) { D.mapDecade = b.getAttribute("data-decade") || null; return renderBrowse(); }
     if ((b = t.closest(".d-homemore"))) { var k = b.getAttribute("data-more"); D.homeMore[k] = !D.homeMore[k]; return renderBrowse(); }
@@ -3993,7 +4015,7 @@ firetable.discover = (function () {
 
   function applyRoute(r) {
     if (r.view) {
-      if (r.view !== D.view || r.sub !== D.sub) { D.genreTab = "fav"; D.djTab = null; }
+      if (r.view !== D.view || r.sub !== D.sub) { D.genreTab = "fav"; D.djTab = null; D.showAll = {}; }
       D.view = r.view;
       D.sub = r.sub || null;
     }

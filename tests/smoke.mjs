@@ -1301,7 +1301,8 @@ try {
   await put("/discover", discover(now));
   const lib = library(now);
   // dj1 brought a song here first: their page opens on it (2.7)
-  lib.dj.dj1.firstHere = [{ cid: "lib0000001", type: 1, a: "Alpha & Beta", t: "Fav One", plays: 30, first: now - 400 * 86400000 }];
+  // 14 of them: the page shows 10 and Show all 14
+  lib.dj.dj1.firstHere = Array.from({ length: 14 }, (_, i) => ({ cid: "fh" + String(i).padStart(9, "0"), type: 1, a: "Firsts", t: "First " + (i + 1), plays: 20 - i, first: now - (400 - i) * 86400000 }));
   await put("/discover/lib", lib);
   await openPage(dPage, SITE);
   await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
@@ -2125,6 +2126,12 @@ try {
     out.djTab = document.querySelector("#dBrowse .d-chip[data-djtab].on").getAttribute("data-djtab") + "|" +
       (document.querySelector("#dBrowse .d-pagehead .d-actions .butt span") || {}).textContent + "|" +
       [...document.querySelectorAll("#dBrowse .d-chip[data-djtab]")].map((c) => c.getAttribute("data-djtab")).join();
+    const more = document.querySelector("#dBrowse .d-showall");
+    const capList = more && more.previousElementSibling;
+    const shownRows = () => [...capList.querySelectorAll(".pvbar")].filter((r) => r.offsetParent !== null).length;
+    out.capped = shownRows() + "|" + (more && more.textContent.trim());
+    more.click();
+    out.uncapped = shownRows() + "|" + !document.querySelector("#dBrowse .d-showall") + "|" + firetable.discover.state().list;
     out.userCardLink = firetable.discover.djPage("dj1", "dj1");
     out.dj = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelector("#dBrowse .d-pagehead .d-fact").textContent;
     location.hash = "#discover/artist/alpha";
@@ -2151,6 +2158,8 @@ try {
     "the sound map by decade, and a genre's line (" + libPages.decade + " / " + libPages.about + ")");
   check(libPages.ytm === "https://music.youtube.com/playlist?list=PLsmokeNuDisco", "a genre page links to its YouTube Music playlist (" + libPages.ytm + ")");
   check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
+  check(libPages.capped === "10|expand_moreShow all 14" && /^14\|true\|/.test(libPages.uncapped || ""),
+    "a long list shows its top 10 and Show all, which opens the rest in place (" + libPages.capped + " / " + libPages.uncapped + ")");
   check(libPages.djTab === "firstHere|Play what they brought here|firstHere,most",
     "a DJ page opens on Brought here first, its first tab, when they have any (" + libPages.djTab + ")");
   check(libPages.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && libPages.who === "#discover/djs/dj1", "artists and DJs link to their pages (" + libPages.artistLinks + " / " + libPages.who + ")");

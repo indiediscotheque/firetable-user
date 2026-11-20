@@ -2284,3 +2284,7 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     letter-spacing: 0.02em;
     pointer-events: none;
 }
+
+/* Long lists: the top 10, then "Show all N" (2.7) */
+.d-capped > .hist-entry:nth-child(n+11) { display: none; }
+.d-showall { margin: var(--space-2) auto 0; display: flex; }
