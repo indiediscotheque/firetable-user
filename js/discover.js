@@ -725,7 +725,20 @@ firetable.discover = (function () {
     var inner = robot(dj, "80x80") + '<span class="d-person-text"><b>' + esc(dj.name) + "</b><span>" + fact + "</span>" + (more ? "<span>" + more + "</span>" : "") + "</span>";
     return key ? '<a class="d-person" href="#discover/djs/' + esc(key) + '">' + inner + "</a>" : '<span class="d-person">' + inner + "</span>";
   }
-  function withType(list) { return (list || []).map(function (t) { return Object.assign({ type: 1 }, t); }); }
+  /**
+   * A library list, ready to show: each song once (the same upload, or the
+   * same artist and title, counts as a repeat), whatever the published data
+   * holds. The history job checks this too; this keeps a page right meanwhile.
+   */
+  function withType(list) {
+    var seen = {};
+    return (list || []).map(function (t) { return Object.assign({ type: 1 }, t); }).filter(function (t) {
+      var a = Number(t.type) + "_" + t.cid, b = String(t.a || "").toLowerCase().trim() + "|" + String(t.t || "").toLowerCase().trim();
+      if (seen[a] || (t.t && seen[b])) return false;
+      seen[a] = seen[b] = true;
+      return true;
+    });
+  }
 
   /** Every genre, most played first. */
   function genreList() {
