@@ -1028,3 +1028,72 @@ firetable.utilities.dragSort = function (list, o) {
     });
   }
 };
+
+// ─── One song menu (2.8) ─────────────────────────────────────────────────────
+// Every song's ⋮ (Discover's, a playlist row's, Recent's) picks its items from
+// this one list, so the same thing has the same name, icon and place wherever
+// it appears. Each menu shows only what applies there.
+
+firetable.songMenu = {
+  ORDER: ["toroom", "sheet", "add", "open", "copy", "tags", "swaptags", "swap", "flag", "bottom", "delsearch", "delete"],
+  ITEMS: {
+    toroom: { icon: "queue_play_next", label: "Play it in the room" },
+    sheet: { icon: "info", label: "About this song" },
+    add: { icon: "playlist_add", label: "Add to playlist…" },
+    open: { icon: "open_in_new", label: "Open the song" },
+    copy: { icon: "link", label: "Copy the song's link" },
+    tags: { icon: "edit", label: "Edit tags…" },
+    swaptags: { icon: "swap_horiz", label: "Swap artist and title" },
+    swap: { icon: "swap_horiz", label: "Swap for YouTube Music audio…" },
+    flag: { icon: "flag", label: "Flag…", popup: true },
+    bottom: { icon: "vertical_align_bottom", label: "Send to bottom" },
+    delsearch: { icon: "find_replace", label: "Delete and search for another" },
+    delete: { icon: "delete", label: "Delete", danger: true }
+  },
+
+  /** `acts` in the menus' order. */
+  sort: function (acts) {
+    var order = firetable.songMenu.ORDER;
+    return acts.slice().sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+  },
+
+  /**
+   * A Live popover menu's items (#trackMenuPopover, #histMenuPopover).
+   * "open" is a link whose label and logo the menu sets per song; "swap" and
+   * "copy" start hidden, shown when the song has them.
+   * @param {string[]} acts
+   * @returns {string} HTML
+   */
+  html: function (acts) {
+    var M = firetable.songMenu;
+    return M.sort(acts).map(function (act) {
+      var it = M.ITEMS[act];
+      if (act === "open") {
+        return '<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><span class="ft-menu-open-logo" aria-hidden="true"></span> <span class="ft-menu-open-label">Open track</span></a>';
+      }
+      return '<button type="button" role="menuitem" class="butt graybutt' + (it.danger ? " ft-menu-danger" : "") + '" data-act="' + act + '"' +
+        (it.popup ? ' aria-haspopup="menu"' : "") + (act === "swap" || act === "copy" ? " hidden" : "") + ">" +
+        '<i class="material-symbols-outlined">' + it.icon + "</i> " + it.label + "</button>";
+    }).join("");
+  },
+
+  /** Copy a song's link, saying so (or showing it where copying isn't allowed). */
+  copyLink: function (url) {
+    if (!url) return;
+    var done = function () { firetable.ui.toast("Link copied", "success"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { firetable.ui.toast(url); });
+    else firetable.ui.toast(url);
+  },
+
+  /** "About this song" (Discover's song sheet) for a song stored as "Artist - Title". */
+  sheet: function (cid, type, name, url, img) {
+    if (!firetable.discover || !firetable.discover.songSheet) return;
+    name = String(name || "");
+    var sep = name.indexOf(" - ");
+    firetable.discover.songSheet({
+      cid: cid, type: Number(type) || 1, url: url || "", img: img || "",
+      a: sep > 0 ? name.slice(0, sep).trim() : "",
+      t: sep > 0 ? name.slice(sep + 3).trim() : name
+    });
+  }
+};

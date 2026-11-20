@@ -1014,6 +1014,9 @@ firetable.ui.setupPlaylistEvents = function () {
 
   // ── Narrow rows: ⋮ menu (Send to bottom / Add to playlist / Open / Delete) ──
   var trackMenuEl = document.getElementById('trackMenuPopover');
+  // its items come from the one song menu (firetable.songMenu, 2.8)
+  trackMenuEl.querySelector('.ft-menu').innerHTML = firetable.songMenu.html(
+    ['sheet', 'add', 'open', 'copy', 'tags', 'swaptags', 'swap', 'bottom', 'delsearch', 'delete']);
 
   function openTrackMenu(btn) {
     var $p = $(btn).closest('.pvbar');
@@ -1031,6 +1034,7 @@ firetable.ui.setupPlaylistEvents = function () {
     $menu.find('.ft-menu-open-logo').html($link.find('svg').prop('outerHTML') || '');
     $menu.find('[data-act="swap"]').prop('hidden', !$p.hasClass('has-swap'));
     $menu.find('[data-act="swaptags"]').prop('hidden', String($p.attr('data-tags') || '').indexOf(' - ') < 1);
+    $menu.find('[data-act="copy"]').prop('hidden', !/^https?:/.test($link.attr('href') || ''));
     $(btn).addClass('on').attr('aria-expanded', 'true');
     trackMenuEl.style.visibility = 'hidden';
     trackMenuEl.showPopover();
@@ -1067,6 +1071,11 @@ firetable.ui.setupPlaylistEvents = function () {
         firetable.actions.editTagsPrompt($p.attr('data-key'), $p.attr('data-tags') || $p.find('.listwords').text(), btn);
       } else if (act === 'swaptags') {
         firetable.actions.swapTrackTags($p);
+      } else if (act === 'copy') {
+        firetable.songMenu.copyLink($p.find('.tracklink-btn').attr('href'));
+      } else if (act === 'sheet') {
+        var tr = queueRowTarget($p);
+        firetable.songMenu.sheet(tr.cid, tr.type, tr.title, tr.url, tr.img);
       } else if (act === 'delsearch') {
         firetable.actions.deleteSongAndSearch($p.attr('data-key'), $p.attr('data-tags') || '', $p.attr('data-type'));
       }

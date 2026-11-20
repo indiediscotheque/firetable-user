@@ -689,6 +689,42 @@ try {
     "tags: Next on the first song of the list you DJ from (only that list), Broken (or why) when flagged, Remix when the title says so (" + JSON.stringify(rowLook) + ")");
   check(rowLook.delsearch === "k2|Daft Punk - One More Time|1", "the row's ⋮ has Delete and search for another (" + rowLook.delsearch + ")");
 
+  console.log("-- one song menu: the same items, words and order in each ⋮");
+  const oneMenu = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const acts = (sel) => [...document.querySelectorAll(sel + " [data-act]")].map((b) => b.getAttribute("data-act")).join();
+    const M = firetable.songMenu;
+    const out = { crate: acts("#trackMenuPopover"), recent: acts("#histMenuPopover") };
+    // every shared item says the same thing wherever it is
+    out.words = [...document.querySelectorAll("#trackMenuPopover [data-act], #histMenuPopover [data-act]")]
+      .filter((b) => b.getAttribute("data-act") !== "open")
+      .every((b) => b.lastChild.textContent.trim() === M.ITEMS[b.getAttribute("data-act")].label); // the text after the icon
+    // a playlist row's ⋮: Copy the song's link, and About this song
+    const copied = [];
+    const realClip = navigator.clipboard && navigator.clipboard.writeText;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: (t) => { copied.push(t); return Promise.resolve(); } } });
+    const row = document.querySelector('#mainqueue .pvbar[data-key="k4"]');
+    row.querySelector(".row-more").click();
+    await wait(150);
+    out.copyShown = !document.querySelector('#trackMenuPopover [data-act="copy"]').hidden;
+    document.querySelector('#trackMenuPopover [data-act="copy"]').click();
+    await wait(100);
+    out.copied = copied.join() + "|" + (document.getElementById("ft-toast")?.textContent || "");
+    row.querySelector(".row-more").click();
+    await wait(150);
+    document.querySelector('#trackMenuPopover [data-act="sheet"]').click();
+    await wait(200);
+    const sheet = document.getElementById("dSheetBox");
+    out.sheet = !!(sheet && sheet.open) && sheet.querySelector(".d-title").textContent + "|" + sheet.querySelector(".d-artist").textContent;
+    if (sheet) sheet.close();
+    if (realClip) Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: realClip } });
+    return out;
+  });
+  check(oneMenu.crate === "sheet,add,open,copy,tags,swaptags,swap,bottom,delsearch,delete" && oneMenu.recent === "sheet,open,copy,tags,flag" && oneMenu.words,
+    "a playlist row's ⋮ and Recent's ⋮ come from the one song menu, in its order and words (" + JSON.stringify(oneMenu) + ")");
+  check(oneMenu.copyShown && /^https:\/\/www\.youtube\.com\/watch\?v=finevideo01\|Link copied/.test(oneMenu.copied) && oneMenu.sheet === "Track|Fine",
+    "a playlist row's ⋮: Copy the song's link, and About this song opens the song's sheet (" + JSON.stringify(oneMenu) + ")");
+
   console.log("-- Sort: by artist or title, view only");
   await page.evaluate(() => { window.__saved = []; return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")); });
   // the menu moves focus once it's placed (a frame or two after it opens)

@@ -3434,17 +3434,21 @@ firetable.discover = (function () {
     var item = function (icon, label, attrs) {
       return '<a role="menuitem" tabindex="-1" class="d-menuitem" ' + attrs + ">" + ms(icon) + "<span>" + label + "</span></a>";
     };
+    // the shared items (firetable.songMenu), in their shared order and words
+    var I = firetable.songMenu.ITEMS;
+    var act = function (name, label) { return item(I[name].icon, label || I[name].label, 'href="#" data-act="' + name + '"'); };
     var h = "";
     var url = linkOf(t);
-    h += item("queue_play_next", D.signedIn ? "Play it in the room" : "Join to play it in the room", 'href="#" data-act="toroom"');
-    h += item("info", "About this song", 'href="#" data-act="sheet"');
-    if (url) h += item("open_in_new", Number(t.type || 1) === MEDIA_YOUTUBE ? "Open on YouTube" : "Open the song", 'href="' + esc(url) + '" target="_blank" rel="noopener"');
+    h += act("toroom", D.signedIn ? null : "Join to play it in the room");
+    h += act("sheet");
+    if (D.signedIn) h += act("add");
+    if (url) h += item(I.open.icon, Number(t.type || 1) === MEDIA_YOUTUBE ? "Open on YouTube" : "Open on SoundCloud", 'href="' + esc(url) + '" target="_blank" rel="noopener"');
     artistsOf(t.a).slice(0, 3).forEach(function (a) { h += item("person", "Go to " + esc(a), 'href="#discover/artist/' + esc(artistSlug(a)) + '"'); });
     if (t.g) h += item("category", "More " + esc(t.g), 'href="#discover/genres/' + esc(genreSlug(t.g)) + '"');
     var dj = t.dj ? djShown(t.djid, t.dj) : null;
     var key = dj && djKey(dj.uid, dj.name);
     if (key) h += item("headphones", esc(dj.name) + "'s DJ page", 'href="#discover/djs/' + esc(key) + '"');
-    if (url) h += item("link", "Copy the song's link", 'href="#" data-act="copy"');
+    if (url) h += act("copy");
     m.innerHTML = h;
     m.hidden = false;
     btn.setAttribute("aria-expanded", "true");
@@ -3467,16 +3471,12 @@ firetable.discover = (function () {
   }
   function menuAct(b) {
     var act = b.getAttribute("data-act");
-    var t = menuTrack;
+    var t = menuTrack, opener = menuButton;
     closeMenu(true);
     if (act === "toroom" && t) return toRoom(t);
     if (act === "sheet" && t) return openSheet(t);
-    if (act === "copy" && t) {
-      var url = linkOf(t);
-      var done = function () { firetable.ui.toast("Link copied", "success"); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { firetable.ui.toast(url); });
-      else firetable.ui.toast(url);
-    }
+    if (act === "add" && t) return save(t, opener || b);
+    if (act === "copy" && t) firetable.songMenu.copyLink(linkOf(t));
   }
 
   function save(t, btn) {
@@ -3575,12 +3575,7 @@ firetable.discover = (function () {
           return play("sheet", 0);
         }
         if ((b = e.target.closest(".d-sheetsave"))) return save(sheetTrack, b);
-        if ((b = e.target.closest(".d-sheetcopy"))) {
-          var url = linkOf(sheetTrack);
-          var done = function () { firetable.ui.toast("Link copied", "success"); };
-          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { firetable.ui.toast(url); });
-          else firetable.ui.toast(url);
-        }
+        if ((b = e.target.closest(".d-sheetcopy"))) firetable.songMenu.copyLink(linkOf(sheetTrack));
       });
     }
     var link = linkOf(t);
@@ -4114,6 +4109,8 @@ firetable.discover = (function () {
     onFailed: onFailed,
     /** True when the full-screen player is here (Discover on): the stage's full-screen button opens it. */
     fullPlayer: function () { return true; },
+    /** "About this song" for any song: {cid, type, t (title), a (artist)[, url][, img]} (firetable.songMenu.sheet) */
+    songSheet: function (t) { openSheet(t); },
     /** Open or close the full-screen player (for tests, and a way in from elsewhere). */
     openFull: function () { openFull(); },
     closeFull: function () { closeFull(); },
