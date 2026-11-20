@@ -1164,14 +1164,18 @@ try {
     const editTag = ftapi.actions.editTag;
     ftapi.actions.editTag = (...a) => { calls.push(a.slice(0, 5).join("|")); };
     const input = document.getElementById("tagMachine");
+    input.value = "exile (live) - MESH";
+    document.querySelector("#tagEditorForm .tagCase").click();
+    const cased = input.value;
     input.value = "Exile (Live) - Mesh";
     document.querySelector("#tagEditorForm .tagSwap").click();
     const swapped = input.value;
     document.querySelector("#tagEditorForm .tagSave").click();
     await new Promise((r) => setTimeout(r, 200));
     ftapi.actions.editTag = editTag;
-    return { swapped, calls: calls.join(), open: document.getElementById("tagEditorPopover").matches(":popover-open") };
+    return { cased, swapped, calls: calls.join(), open: document.getElementById("tagEditorPopover").matches(":popover-open") };
   });
+  check(saved.cased === "Exile (Live) - MESH", "Title Case puts the tags in AP title case (" + saved.cased + ")");
   check(saved.swapped === "Mesh - Exile (Live)", "Swap turns \"Title - Artist\" around (" + saved.swapped + ")");
   check(saved.calls === "1|smcid0|Mesh - Exile (Live)|smh0|songHistory" && !saved.open, "Save writes the tag for that play (" + JSON.stringify(saved) + ")");
   const typed = await page.evaluate(async () => {
