@@ -653,6 +653,12 @@ try {
   });
   check(narrowRow === ".bumpsongs:true .row-more:true .bottomsongs:false .tracklink-btn:false .histeal:false .deletesong:false .q-num:false",
     "a phone's playlist rows show Top and ⋮ only (" + narrowRow + ")");
+  const thumbRow = await tPage.evaluate(() => {
+    const row = document.querySelector('#mainqueue .pvbar[data-key="k4"]');
+    const a = row.querySelector(".q-art").getBoundingClientRect(), b = row.querySelector(".previewicon").getBoundingClientRect();
+    return { h: Math.round(row.getBoundingClientRect().height), off: Math.abs((a.x + a.width / 2) - (b.x + b.width / 2)) };
+  });
+  check(thumbRow.h >= 56 && thumbRow.off <= 1, "a phone's playlist rows are a thumb's height, the play button in the middle of the cover (" + JSON.stringify(thumbRow) + ")");
   await touchPhone.close();
 
   console.log("-- playlist rows: number, Title · Artist, Next / Broken / Remix, and ⋮'s Delete and search for another");

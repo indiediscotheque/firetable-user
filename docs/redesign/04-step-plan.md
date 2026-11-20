@@ -396,7 +396,8 @@ Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the
 
 Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what people know from other apps, and it leaves the screen for content. It ships to everyone at once, visitors and members alike (no opt-in switch, the owner, November 15, 2026). Because it changes how regulars move around Live on a phone, keep each step's first-run moment clear: the old tab's content is one tap away under its new tab, and nothing is reachable only by gesture.
 
-### 4.0 Measure first (new, realigned November 15, 2026)
+### 4.0 Measure first: skipped (the owner, November 20, 2026)
+- **Decided:** no measuring. Phones are assumed to matter; the safe steps (4.3, 4.5) go first and today's tabs stay. The bottom tab bar (4.1, 4.2) waits for a separate call.
 - **Goal:** know how many people use the site on phones, and which tabs they use, before moving their navigation (the risk register's "phone work is wasted if few use phones").
 - **Change:** count phone and computer visits in a month of the server's access logs (user agents; no tracking script on the site), and ask the room which Live tabs they use on a phone. Write the numbers here. If phones are few, ship 4.5 and 4.3 first and keep today's tabs.
 
@@ -409,14 +410,16 @@ Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what peop
 - **Change:** the stage full width at 16:9; the song row with Fire, Grab and ⋯ (44px); the You're next row; the tabs; about 320px of chat; a ⋮ on the stage for screen, avatars, full screen and reload.
 - **Realigned:** the stage's tools are in the player bar since 2.3c, so there's no ⋮ on the stage to add, and Chat is already the first tab and the default (November 15, 2026). Left: the song row's size and the You're next row.
 
-### 4.3 Library on a phone
+### 4.3 Library on a phone ✅ shipped (November 20, 2026)
+- **Shipped:** most of it came with 1.15 to 1.17 (the switcher, ⋮ and Find tracks on one row; filter, Show only, Sort and Select several on the next; rows keeping Top and ⋮; hold to drag; Undo toasts). Now a phone's rows are a thumb's height (56px or more, with Comfortable's 44px covers; Compact keeps its own), and the play button sits in the middle of the cover at every size (it sat at the cover's left edge). Smoke checks the height and the centring.
 - **Rows:** CR-*.
 - **Change:** the switcher + Find tracks on one row; the tool row (filter, tune, sort, select, ⋮); rows of 56px with Top and ⋮; hold to drag (already: `dragSort`'s touch hold, since jQuery UI left); Undo toasts.
 
 ### 4.4 Grab and More sheets
 - **Change:** Grab's toast with Change; ⋯ as a short bottom sheet (the same menu as desktop, at 48px rows), with a separate Mods section.
 
-### 4.5 The You tab
+### 4.5 The You tab: covered, while today's tabs stay (November 20, 2026)
+- **Decided:** with today's tabs kept (4.0), a You tab would repeat the header: Community, About (`#roomInfo`) and Mentions (`#inboxTrigger`) are its buttons on every width, and the avatar's account menu (`#nav-accountMenu`, 2.5) holds Profile, Account and sign-in, Settings, Mod tools, Get the app and Log out. Revisit with the bottom tab bar (4.1).
 - **Rows:** TB-03 to TB-06, SE-*, AU-07 to AU-09, MO-01.
 - **Change:** a page listing profile, settings, mentions, community links, install the app, about, privacy, terms, log out, and the Mod tab for mods. Reuses `#accountSettingsBox`'s contents (moved, not copied).
 
