@@ -2055,6 +2055,8 @@ try {
   // the database's song stays, so no player anywhere is cut short
   await put("/globalTracks/1mapsong0001", { artist: "Smoke Artist", title: "Map Song", type: 1, song: "sMap" });
   await put("/globalSongs/sMap", { artist: "Smoke Artist", title: "Map Song", plays: 3, genres: ["Nu-Disco"] });
+  // a play from tonight whose Recent row carries its genre (the bot's g)
+  await put("/songHistory/-zzzmap0001", { type: 1, cid: "maptonight1", artist: "Somebody", title: "Tonight's Soul", dj: "dj2", djid: "dj2", when: Date.now() - 3600000, g: "Soul & R&B" });
   await dPage.evaluate(() => {
     window.__songBefore = firetable.song;
     firetable.song = Object.assign({}, firetable.song, { type: 1, cid: "mapsong0001", title: "Map Song", artist: "Smoke Artist" });
@@ -2068,6 +2070,8 @@ try {
     await until(() => document.querySelector("#dBrowse .d-map .d-mapg.d-room"));
     out.room = [...document.querySelectorAll("#dBrowse .d-mapg.d-room")].map((a) => a.getAttribute("data-slug")).join();
     out.hear = [...document.querySelectorAll("#dBrowse .d-mapg.d-hear")].map((a) => a.getAttribute("data-slug")).join();
+    await until(() => document.querySelector("#dBrowse .d-mapg.d-tonight"));
+    out.tonight = [...document.querySelectorAll("#dBrowse .d-mapg.d-tonight")].map((a) => a.getAttribute("data-slug")).join();
     out.legend = [...document.querySelectorAll("#dMapLegend > span")].filter((x) => getComputedStyle(x).display !== "none").map((x) => x.textContent).join("|");
     const before = location.hash;
     document.querySelector('#dBrowse .d-mapg[data-slug="soul-and-randb"]').click();
@@ -2080,6 +2084,8 @@ try {
   });
   check(soundMap.room === "nu-disco" && soundMap.hear === "nu-disco" && /The room is playing/.test(soundMap.legend) && /You're hearing/.test(soundMap.legend),
     "the sound map: the room song's genre has the room's dot, and the one you're hearing its outline, with a legend (" + JSON.stringify(soundMap) + ")");
+  check(/soul-and-randb/.test(soundMap.tonight || "") && /Played tonight/.test(soundMap.legend),
+    "the sound map rings the genres played tonight, from the Recent rows' genre (" + soundMap.tonight + " / " + soundMap.legend + ")");
   check(soundMap.stayed && /^Soul & R&B\|true\|open$/.test(soundMap.card) && soundMap.picked === "soul-and-randb|true",
     "picking a genre on the map shows its card under the map (radio, Open) and stays on the page (" + JSON.stringify(soundMap) + ")");
   await dPage.evaluate(() => { firetable.song = window.__songBefore; ftapi.events.emit("newSong", firetable.song); });

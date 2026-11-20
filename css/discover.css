@@ -510,6 +510,17 @@ section .d-chips a.d-chip {
     vertical-align: 0.1em;
 }
 .d-mapg.d-hear { outline: 2px solid var(--color-accent); outline-offset: 1px; z-index: 1; }
+/* played tonight: a small ring after the name */
+.d-mapg.d-tonight::after {
+    content: "";
+    display: inline-block;
+    width: 0.45em;
+    height: 0.45em;
+    margin-left: 0.3em;
+    border: 2px solid var(--color-danger);
+    border-radius: 50%;
+    vertical-align: 0.1em;
+}
 .d-mapg.is-picked { z-index: 2; color: var(--color-bg); background: var(--color-text); }
 .d-maplegend {
     display: flex;
@@ -521,9 +532,11 @@ section .d-chips a.d-chip {
 }
 .d-maplegend > span { display: none; align-items: center; gap: 0.4rem; }
 .d-maplegend.has-room .d-mlroom,
+.d-maplegend.has-tonight .d-mltonight,
 .d-maplegend.has-hear .d-mlhear,
 .d-map:has(.is-picked) + .d-maplegend .d-mlpick { display: inline-flex; }
 .d-mlroom::before { content: ""; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--color-danger); }
+.d-mltonight::before { content: ""; width: 0.45rem; height: 0.45rem; border: 2px solid var(--color-danger); border-radius: 50%; }
 .d-mlhear::before { content: ""; width: 0.8rem; height: 0.6rem; border: 2px solid var(--color-accent); border-radius: 3px; }
 .d-mlpick::before { content: ""; width: 0.8rem; height: 0.6rem; border-radius: 3px; background: var(--color-text); }
 .d-mapcard { margin: var(--space-3) 0 var(--space-5); }

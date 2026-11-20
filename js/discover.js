@@ -777,7 +777,7 @@ firetable.discover = (function () {
           esc(g.name + " · " + n(g.plays) + " plays" + (g.bpm ? " · usually " + g.bpm + " BPM" : "")) + '">' + esc(g.name) + "</a>";
       }).join("") + "</div>";
     // what the marks mean (the room's genre and yours are found after the page draws: mapMarks)
-    h += '<p class="d-maplegend" id="dMapLegend"><span class="d-mlroom">The room is playing</span><span class="d-mlhear">You\'re hearing</span><span class="d-mlpick">Picked: its card is below</span></p>';
+    h += '<p class="d-maplegend" id="dMapLegend"><span class="d-mlroom">The room is playing</span><span class="d-mltonight">Played tonight</span><span class="d-mlhear">You\'re hearing</span><span class="d-mlpick">Picked: its card is below</span></p>';
     h += '<div class="d-mapcard" id="dMapCard" aria-live="polite">' + mapCard(D.mapPick) + "</div>";
     h += '<div class="d-gcards">' + list.map(function (g) {
       return '<a class="d-gcard" href="#discover/genres/' + esc(g.slug) + '">' + mosaic(g.covers) +
@@ -805,6 +805,7 @@ firetable.discover = (function () {
    * The genre comes from the song's library record (loadDetails).
    */
   var marking = 0;
+  var TONIGHT_MS = 8 * 3600000;
   function mapMarks() {
     var box = document.querySelector("#dBrowse .d-map");
     if (!box) return;
@@ -816,17 +817,25 @@ firetable.discover = (function () {
       if (t.g) return Promise.resolve(genreSlug(t.g));
       return loadDetails(t).then(function (d) { return d.genres && d.genres[0] ? genreSlug(d.genres[0]) : null; });
     };
-    Promise.all([genreOf(room), genreOf(mine)]).then(function (gs) {
+    // tonight: the genres of the room's plays in the last 8 hours (the bot adds g to each Recent row)
+    var history = ftapi.watchFeed ? ftapi.watchFeed("history").catch(function () {}) : Promise.resolve();
+    Promise.all([genreOf(room), genreOf(mine), history]).then(function (gs) {
       if (turn !== marking || !box.isConnected) return;
+      var since = Date.now() - TONIGHT_MS, tonight = {};
+      (firetable._historyCache || []).forEach(function (h) {
+        if (h && h.g && (h.when || 0) >= since) tonight[genreSlug(h.g)] = (tonight[genreSlug(h.g)] || 0) + 1;
+      });
       box.querySelectorAll(".d-mapg").forEach(function (el) {
         var slug = el.getAttribute("data-slug");
         el.classList.toggle("d-room", !!gs[0] && slug === gs[0]);
         el.classList.toggle("d-hear", !!gs[1] && slug === gs[1]);
+        el.classList.toggle("d-tonight", !!tonight[slug]);
       });
       var legend = document.getElementById("dMapLegend");
       if (legend) {
         legend.classList.toggle("has-room", !!gs[0] && !!box.querySelector(".d-room"));
         legend.classList.toggle("has-hear", !!gs[1] && !!box.querySelector(".d-hear"));
+        legend.classList.toggle("has-tonight", !!box.querySelector(".d-tonight"));
       }
     });
   }
@@ -4190,7 +4199,10 @@ firetable.discover = (function () {
         renderBar();
         if (D.mode === "discover" && /^(home|charts|recent)$/.test(D.view)) renderBrowse();
       }));
+      // a play, or its genre arriving a moment later: tonight's rings on the sound map
+      ftapi.events.on("editedHistory", firetable.utilities.oncePerFrame(function () { setTimeout(mapMarks, 0); }));
       ftapi.events.on("newHistory", firetable.utilities.oncePerFrame(function () {
+        setTimeout(mapMarks, 0);
         if (D.mode === "discover" && (D.view === "recent" || D.view === "home")) renderBrowse();
         renderFull(); // the song's plays
       }));
