@@ -995,10 +995,18 @@ firetable.discover = (function () {
     }
     var taste = d.taste || [];
     if (taste.length) {
-      h += "<section>" + head("Their sound") + '<div class="d-taste">' + taste.map(function (x) {
-        var name = x.slug ? '<a href="#discover/genres/' + esc(x.slug) + '">' + esc(x.g) + "</a>" : "<span>" + esc(x.g) + "</span>";
-        return '<div class="d-tasterow' + (x.slug ? "" : " d-other") + '">' + name + '<span class="d-bar"><i style="width:' + Math.max(1, x.pct) + '%"></i></span><span class="d-num">' + esc(x.pct) + "%</span></div>";
-      }).join("") + "</div></section>";
+      // one stacked bar: their top five genres, then everything else (2.7)
+      var top = taste.filter(function (x) { return x.slug; }).slice(0, 5);
+      var rest = Math.max(0, 100 - top.reduce(function (sum, x) { return sum + (x.pct || 0); }, 0));
+      var parts = top.map(function (x, i) { return { g: x.g, slug: x.slug, pct: x.pct || 0, k: i }; });
+      if (rest > 0) parts.push({ g: "Everything else", pct: rest, k: "rest" });
+      h += "<section>" + head("Their sound") + '<div class="d-taste">' +
+        '<div class="d-stack" role="img" aria-label="' + esc(parts.map(function (x) { return x.g + " " + x.pct + "%"; }).join(", ")) + '">' +
+        parts.map(function (x) { return '<i class="d-sw-' + x.k + '" style="flex-grow:' + Math.max(0.5, x.pct) + '" title="' + esc(x.g + " · " + x.pct + "%") + '"></i>'; }).join("") + "</div>" +
+        '<ul class="d-stacklegend">' + parts.map(function (x) {
+          var name = x.slug ? '<a href="#discover/genres/' + esc(x.slug) + '">' + esc(x.g) + "</a>" : "<span>" + esc(x.g) + "</span>";
+          return '<li><i class="d-sw-' + x.k + '" aria-hidden="true"></i>' + name + '<span class="d-num">' + esc(x.pct) + "%</span></li>";
+        }).join("") + "</ul></div></section>";
     }
     h += "<section>" + '<div class="d-headrow">' + chips("djtab", [["firstHere", "Brought here first"], ["most", "Most played"]], tab) + "</div>" +
       (tab === "most"

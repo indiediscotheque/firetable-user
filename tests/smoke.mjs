@@ -2123,6 +2123,7 @@ try {
     out.radio = firetable.discover.state().list + "|" + (document.getElementById("pv-src") || {}).textContent;
     location.hash = "#discover/djs/dj1";
     await until(() => document.querySelector("#dBrowse .d-taste"));
+    out.taste = [...document.querySelectorAll("#dBrowse .d-stacklegend li")].map((li) => li.textContent).join("|") + "|" + document.querySelectorAll("#dBrowse .d-stack > i").length;
     out.djTab = document.querySelector("#dBrowse .d-chip[data-djtab].on").getAttribute("data-djtab") + "|" +
       (document.querySelector("#dBrowse .d-pagehead .d-actions .butt span") || {}).textContent + "|" +
       [...document.querySelectorAll("#dBrowse .d-chip[data-djtab]")].map((c) => c.getAttribute("data-djtab")).join();
@@ -2158,6 +2159,7 @@ try {
     "the sound map by decade, and a genre's line (" + libPages.decade + " / " + libPages.about + ")");
   check(libPages.ytm === "https://music.youtube.com/playlist?list=PLsmokeNuDisco", "a genre page links to its YouTube Music playlist (" + libPages.ytm + ")");
   check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
+  check(libPages.taste === "Nu-Disco70%|Everything else30%|2", "a DJ's sound: one stacked bar of their top genres and the rest, with a legend (" + libPages.taste + ")");
   check(libPages.capped === "10|expand_moreShow all 14" && /^14\|true\|/.test(libPages.uncapped || ""),
     "a long list shows its top 10 and Show all, which opens the rest in place (" + libPages.capped + " / " + libPages.uncapped + ")");
   check(libPages.djTab === "firstHere|Play what they brought here|firstHere,most",
