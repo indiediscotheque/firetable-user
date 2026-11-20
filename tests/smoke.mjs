@@ -42,7 +42,7 @@ const loaded = (part) => requested.some((u) => u.includes(part));
 
 try {
   console.log("-- page load (" + SITE + ")");
-  await openPage(page, SITE);
+  await openPage(page, SITE + "#live"); // the room: Discover is always on (5.3), and these checks are about Live
   await page.waitForFunction(() => /Smoke Song/.test(document.getElementById("track").textContent), null, { timeout: 30000 });
   check(true, "the playing song shows (from the database)");
   check(await page.$eval("#themePillText", (el) => /smoke tests/.test(el.textContent)).catch(() => false), "the theme shows");
@@ -596,7 +596,7 @@ try {
   const touchPhone = await browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true });
   const tPage = await touchPhone.newPage();
   tPage.on("pageerror", (e) => pageErrors.push("phone: " + e.message));
-  await openPage(tPage, SITE);
+  await openPage(tPage, SITE + "#live");
   await tPage.waitForFunction(() => window.firetable && firetable.started && window.ftapi && ftapi.started, null, { timeout: 30000 });
   await tPage.evaluate(() => {
     if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
@@ -1235,8 +1235,8 @@ try {
   check(false, "smoke test threw: " + e.message);
 }
 
-// Discover (config.js discover: true), in a page of its own: everything above
-// ran with it off, so the site is unchanged until it's switched on.
+// Discover, in a page of its own (signing in with Google offered): everything
+// above ran on Live (#live), the room as members see it.
 const dPage = await context.newPage();
 // the YouTube and SoundCloud players' own scripts sometimes throw when a song
 // is cut short (an aborted fetch): not errors of the site's
@@ -1250,7 +1250,7 @@ try {
     try { localStorage.clear(); } catch (e) { /* fine */ }
   });
   await dPage.route("**/config.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript",
-    body: CONFIG.replace(/roomName:/, 'discover: true, signInProviders: ["google"], roomName:') }));
+    body: CONFIG.replace(/roomName:/, 'signInProviders: ["google"], roomName:') }));
   await put("/discover", discover(now));
   await put("/discover/lib", library(now));
   await openPage(dPage, SITE);
@@ -2393,7 +2393,7 @@ try {
   const { execFile } = await import("child_process");
   // not execFileSync: the builder reads config.js from this process's server
   const out = await new Promise((resolve, reject) => execFile(process.execPath,
-    [join(ROOT, "tools/plain-pages.mjs"), "--site", SITE, "--out", join(ROOT, "music"), "--template", join(ROOT, "index.html"), "--always"],
+    [join(ROOT, "tools/plain-pages.mjs"), "--site", SITE, "--out", join(ROOT, "music"), "--template", join(ROOT, "index.html")],
     { env: { ...process.env, FIREBASE_DATABASE_URL: DB + "?ns=" + NS }, timeout: 60000 },
     (err, stdout, stderr) => (err ? reject(new Error(err.message + stderr)) : resolve(stdout))));
   check(/plain pages: \d+ pages/.test(out), "the pages are built (" + out.trim() + ")");
@@ -2402,7 +2402,7 @@ try {
     document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI));
   });
   await plain.route("**/config.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript",
-    body: CONFIG.replace(/roomName:/, 'discover: true, roomName:') }));
+    body: CONFIG }));
   // what a search engine reads: the page as sent
   const raw = await (await fetch(SITE + "music/genres/nu-disco/")).text();
   const read = {

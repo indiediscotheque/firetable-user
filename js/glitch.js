@@ -70,8 +70,7 @@ function setup(useThis) {
 
 /** Whether a full-screen view is showing the screen: the cover is plain there. */
 function isFullScreenView() {
-  return document.body.classList.contains('pv-full-on') ||
-    !!(document.getElementById('stage') && document.getElementById('stage').classList.contains('is-fullscreen'));
+  return document.body.classList.contains('pv-full-on');
 }
 
 /**

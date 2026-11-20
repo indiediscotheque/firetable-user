@@ -137,7 +137,6 @@ body.ft-discover #discoverPage {
 .d-new { color: var(--color-text-muted); }
 .d-ytsearch { display: inline-flex; align-items: center; gap: var(--pad1); }
 .d-ytsearch i { font-size: 1.15rem; }
-body:not(.ft-has-discover) #dSearchOpen { display: none; }
 @media only screen and (max-width: 639px) {
     #dSearchOpen { display: none; } /* phones: the search box is at the top of the page */
 }
@@ -1295,7 +1294,7 @@ body.ft-has-discover #djStage .avtr { height: min(110px, max(5rem, min(24cqw, va
    applyDeckPlacement); desktops keep the DJ in the middle whatever the stage's
    width. With the screen down the stage keeps 16:9 for the video. */
 @media only screen and (max-width: 639px) {
-    body.ft-has-discover:not(.pv-full-on):is(:not(.screen), .yt-stalled, .pb-elsewhere) #stage.dj-side:not(.is-fullscreen) {
+    body.ft-has-discover:not(.pv-full-on):is(:not(.screen), .yt-stalled, .pb-elsewhere) #stage.dj-side {
         --dj-side-w: 8.5rem;
 
         & #djStage {

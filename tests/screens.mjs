@@ -130,7 +130,7 @@ async function settle(page, inflight) {
 }
 
 // ── run ─────────────────────────────────────────────────────────────────────
-const configJs = config(NS).replace(/roomName:/, "discover: true, roomName:");
+const configJs = config(NS);
 const { server, SITE } = await serveSite({ csp: policy({ auth: true }), configJs });
 const browser = await chromium.launch(Object.assign(launchOptions(), { args: ["--autoplay-policy=no-user-gesture-required"] }));
 mkdirSync(OUT, { recursive: true });
