@@ -2863,6 +2863,11 @@ input.ft-filter {
         display: inline-flex;
     }
 
+    /* 4.3: a phone's rows are a thumb's height (56px), with Comfortable's 44px
+       covers, unless Compact is chosen */
+    body:not(.density-compact) #mainqueue .pvbar { --q-art: 2.75rem; }
+    body:not(.density-compact) #mainqueue .pvbarWrap { min-height: 3.5rem; }
+
     /* the name keeps its room: no number, length, Remix or Discover labels */
     #mainqueue :is(.q-num, .q-remix, .trackDuration, .pl-from) {
         display: none;
@@ -2882,11 +2887,14 @@ input.ft-filter {
     box-shadow: none;
 }
 
+/* the play button sits in the middle of the cover, whatever the cover's size (density, phone) */
 #mainqueue .previewicon {
     position: absolute;
     z-index: 1;
-    left: 0;
+    left: calc(var(--q-art, 2rem) / 2);
+    transform: translateX(-50%);
 }
+#mainqueue .pvbar .previewicon { margin: 0; } /* not the row icons' side margin */
 
 #queuelist .pvbar,
 #searchResults .pvbar {
@@ -3191,7 +3199,7 @@ input.ft-filter {
 #mainqueue.cr-selecting .q-check:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 #mainqueue.cr-selecting .pvbar { cursor: pointer; }
 /* the cover's play button and flag sit on the cover, which the tick pushes along */
-#mainqueue.cr-selecting .previewicon { left: calc(1.1rem + 2 * var(--pad2)); }
+#mainqueue.cr-selecting .previewicon { left: calc(1.1rem + 2 * var(--pad2) + var(--q-art, 2rem) / 2); }
 #mainqueue.cr-selecting .track-warning { left: calc(1.3rem + 1.1rem + 2 * var(--pad2)); }
 #mainqueue.cr-selecting .pvbar.is-picked {
     background-color: var(--color-bg-t2);
