@@ -748,9 +748,12 @@ firetable.discover = (function () {
         var x = 6 + (g.x == null ? 0.5 : g.x) * 88;
         var y = g.bpm ? 8 + (1 - (g.bpm - lo) / (hi - lo)) * 80 : 48;
         var size = Math.sqrt(weight(g) / top);
-        return '<a role="listitem" class="d-mapg' + (D.mapDecade && !weight(g) ? " d-quiet" : "") + '" href="#discover/genres/' + esc(g.slug) + '" data-y="' + y.toFixed(1) + '" style="left:' + x.toFixed(1) + "%;top:" + y.toFixed(1) + "%;--s:" + size.toFixed(2) + '" title="' +
+        return '<a role="listitem" class="d-mapg' + (D.mapDecade && !weight(g) ? " d-quiet" : "") + (D.mapPick === g.slug ? " is-picked" : "") + '" href="#discover/genres/' + esc(g.slug) + '" data-slug="' + esc(g.slug) + '"' + (D.mapPick === g.slug ? ' aria-current="true"' : "") + ' data-y="' + y.toFixed(1) + '" style="left:' + x.toFixed(1) + "%;top:" + y.toFixed(1) + "%;--s:" + size.toFixed(2) + '" title="' +
           esc(g.name + " · " + n(g.plays) + " plays" + (g.bpm ? " · usually " + g.bpm + " BPM" : "")) + '">' + esc(g.name) + "</a>";
       }).join("") + "</div>";
+    // what the marks mean (the room's genre and yours are found after the page draws: mapMarks)
+    h += '<p class="d-maplegend" id="dMapLegend"><span class="d-mlroom">The room is playing</span><span class="d-mlhear">You\'re hearing</span><span class="d-mlpick">Picked: its card is below</span></p>';
+    h += '<div class="d-mapcard" id="dMapCard" aria-live="polite">' + mapCard(D.mapPick) + "</div>";
     h += '<div class="d-gcards">' + list.map(function (g) {
       return '<a class="d-gcard" href="#discover/genres/' + esc(g.slug) + '">' + mosaic(g.covers) +
         '<span class="d-gname">' + esc(g.name) + '</span><span class="d-gfact d-num">' + (D.mapDecade ? esc(n(weight(g))) + " plays in the " + esc(D.mapDecade) + "s" : esc(n(g.songs)) + " songs · " + esc(n(g.plays)) + " plays") + "</span></a>";
@@ -768,6 +771,67 @@ firetable.discover = (function () {
       new ResizeObserver(function () { if (box.isConnected) spreadMap(box); }).observe(box);
     }
     spreadMap(box);
+    mapMarks();
+  }
+
+  /**
+   * The sound map's marks: a red dot on the room song's genre, a gold outline
+   * on the genre you're hearing (the room's, unless Discover is playing).
+   * The genre comes from the song's library record (loadDetails).
+   */
+  var marking = 0;
+  function mapMarks() {
+    var box = document.querySelector("#dBrowse .d-map");
+    if (!box) return;
+    var turn = ++marking;
+    var room = liveTrack();
+    var mine = discoverActive() ? P.track : room;
+    var genreOf = function (t) {
+      if (!t) return Promise.resolve(null);
+      if (t.g) return Promise.resolve(genreSlug(t.g));
+      return loadDetails(t).then(function (d) { return d.genres && d.genres[0] ? genreSlug(d.genres[0]) : null; });
+    };
+    Promise.all([genreOf(room), genreOf(mine)]).then(function (gs) {
+      if (turn !== marking || !box.isConnected) return;
+      box.querySelectorAll(".d-mapg").forEach(function (el) {
+        var slug = el.getAttribute("data-slug");
+        el.classList.toggle("d-room", !!gs[0] && slug === gs[0]);
+        el.classList.toggle("d-hear", !!gs[1] && slug === gs[1]);
+      });
+      var legend = document.getElementById("dMapLegend");
+      if (legend) {
+        legend.classList.toggle("has-room", !!gs[0] && !!box.querySelector(".d-room"));
+        legend.classList.toggle("has-hear", !!gs[1] && !!box.querySelector(".d-hear"));
+      }
+    });
+  }
+
+  /** A genre's card under the sound map: what it is, its numbers, next door, its radio and its page. */
+  function mapCard(slug) {
+    var all = lib("genres") || {};
+    var g = slug && all[slug];
+    if (!g) return '<p class="d-fact">Pick a genre on the map to see it here.</p>';
+    var facts = [n(g.songs) + " songs", n(g.plays) + " plays"];
+    if (g.bpm) facts.push("usually " + g.bpm + " BPM");
+    if (g.first) facts.push("played here since " + g.first);
+    var next = (g.next || []).filter(function (k) { return all[k]; });
+    return '<div class="d-mapcardin">' + mosaic(g.covers) + '<div class="d-mapcardtext"><h3>' + esc(g.name) + "</h3>" +
+      (g.about ? '<p class="d-about">' + esc(g.about) + "</p>" : "") + '<p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
+      (next.length ? '<p class="d-fact">Next door: ' + next.map(function (k) { return '<a class="d-mapnext" href="#discover/genres/' + esc(k) + '" data-slug="' + esc(k) + '">' + esc(all[k].name) + "</a>"; }).join(", ") + "</p>" : "") +
+      '<div class="d-actions"><button type="button" class="butt d-panelmain d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>" + esc(g.name) + " radio</span></button>" +
+      '<a class="butt graybutt" href="#discover/genres/' + esc(slug) + '">' + ms("arrow_forward") + "<span>Open " + esc(g.name) + "</span></a></div></div></div>";
+  }
+  /** Pick a genre on the map: its card shows under the map, and the page stays. */
+  function pickGenre(slug) {
+    D.mapPick = slug;
+    var box = document.querySelector("#dBrowse .d-map");
+    if (box) box.querySelectorAll(".d-mapg").forEach(function (el) {
+      var on = el.getAttribute("data-slug") === slug;
+      el.classList.toggle("is-picked", on);
+      if (on) el.setAttribute("aria-current", "true"); else el.removeAttribute("aria-current");
+    });
+    var card = document.getElementById("dMapCard");
+    if (card) card.innerHTML = mapCard(slug);
   }
   function spreadMap(box) {
     var W = box.clientWidth, H = box.clientHeight;
@@ -1951,7 +2015,7 @@ firetable.discover = (function () {
   var P = { track: null, list: null, i: 0, paused: false, len: 0, at: 0, timer: null, inRoom: null, play: 0 };
   var DECK_SPOTS = 4;
 
-  function setSrc(src) { D.src = src; D.listening = src === "live"; }
+  function setSrc(src) { D.src = src; D.listening = src === "live"; setTimeout(mapMarks, 0); }
   function discoverActive() { return !!(P.track && D.src === "discover"); }
   function isPlaying(list, i) { return discoverActive() && P.list === list && P.i === i; }
   function isSounding(list, i) { return isPlaying(list, i) && !P.paused; }
@@ -1983,6 +2047,7 @@ firetable.discover = (function () {
     // the same song picked up where it waited is the same listen
     if (!(P.track && String(P.track.cid) === String(t.cid) && startAt)) P.play++;
     P.track = t; P.list = listName; P.i = i; P.paused = false; P.len = t.dur || 0; P.at = startAt || 0;
+    setTimeout(mapMarks, 0); // the genre you're hearing, on the sound map
     firetable.preview = "discover";
     firetable.previewType = Number(t.type || 1);
     if (firetable.disableMediaPlayback) {
@@ -3219,6 +3284,10 @@ firetable.discover = (function () {
     var t = e.target;
     var b;
     if ((b = t.closest("#modeTabs [data-mode]"))) return setMode(b.getAttribute("data-mode"), { remember: true });
+    if ((b = t.closest("#dBrowse .d-mapg, #dBrowse .d-mapnext")) && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+      e.preventDefault();
+      return pickGenre(b.getAttribute("data-slug"));
+    }
     if ((b = t.closest("#dNav [data-view]"))) return setView(b.getAttribute("data-view"));
     if ((b = t.closest(".d-listen"))) return listenIn();
     if ((b = t.closest(".d-stepin"))) return setMode("live", { remember: true });
@@ -4041,6 +4110,7 @@ firetable.discover = (function () {
       ftapi.events.on("loggedIn", function () { signedIn(true); });
       ftapi.events.on("loggedOut", function () { signedIn(false); });
       ftapi.events.on("newSong", function () {
+        mapMarks();
         renderFull(true);
         yourTurn();
         if (D.src === "live" && liveTrack()) mediaSession(liveTrack(), true);

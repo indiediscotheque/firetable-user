@@ -2044,6 +2044,40 @@ try {
   check(header.live.shown && header.live.open && header.live.inside && header.live.focused === "newemail" && header.live.back === "mainGrid",
     "in Live it opens the same dialog, and the form goes back under the stage (" + JSON.stringify(header.live) + ")");
 
+  console.log("-- Discover: the sound map marks the room's genre, and a genre's card opens under it");
+  // the room's song, as this page knows it, is one whose library record says Nu-Disco (put back after);
+  // the database's song stays, so no player anywhere is cut short
+  await put("/globalTracks/1mapsong0001", { artist: "Smoke Artist", title: "Map Song", type: 1, song: "sMap" });
+  await put("/globalSongs/sMap", { artist: "Smoke Artist", title: "Map Song", plays: 3, genres: ["Nu-Disco"] });
+  await dPage.evaluate(() => {
+    window.__songBefore = firetable.song;
+    firetable.song = Object.assign({}, firetable.song, { type: 1, cid: "mapsong0001", title: "Map Song", artist: "Smoke Artist" });
+    ftapi.events.emit("newSong", firetable.song);
+  });
+  const soundMap = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
+    const out = {};
+    location.hash = "#discover/genres";
+    await until(() => document.querySelector("#dBrowse .d-map .d-mapg.d-room"));
+    out.room = [...document.querySelectorAll("#dBrowse .d-mapg.d-room")].map((a) => a.getAttribute("data-slug")).join();
+    out.hear = [...document.querySelectorAll("#dBrowse .d-mapg.d-hear")].map((a) => a.getAttribute("data-slug")).join();
+    out.legend = [...document.querySelectorAll("#dMapLegend > span")].filter((x) => getComputedStyle(x).display !== "none").map((x) => x.textContent).join("|");
+    const before = location.hash;
+    document.querySelector('#dBrowse .d-mapg[data-slug="soul-and-randb"]').click();
+    await wait(100);
+    out.stayed = location.hash === before && !!document.querySelector("#dBrowse .d-map");
+    const card = document.getElementById("dMapCard");
+    out.card = (card.querySelector("h3") || {}).textContent + "|" + !!card.querySelector('.d-radio[data-slug="soul-and-randb"]') + "|" + (card.querySelector('a[href="#discover/genres/soul-and-randb"]') ? "open" : "");
+    out.picked = document.querySelector("#dBrowse .d-mapg.is-picked").getAttribute("data-slug") + "|" + document.querySelector("#dBrowse .d-mapg.is-picked").getAttribute("aria-current");
+    return out;
+  });
+  check(soundMap.room === "nu-disco" && soundMap.hear === "nu-disco" && /The room is playing/.test(soundMap.legend) && /You're hearing/.test(soundMap.legend),
+    "the sound map: the room song's genre has the room's dot, and the one you're hearing its outline, with a legend (" + JSON.stringify(soundMap) + ")");
+  check(soundMap.stayed && /^Soul & R&B\|true\|open$/.test(soundMap.card) && soundMap.picked === "soul-and-randb|true",
+    "picking a genre on the map shows its card under the map (radio, Open) and stays on the page (" + JSON.stringify(soundMap) + ")");
+  await dPage.evaluate(() => { firetable.song = window.__songBefore; ftapi.events.emit("newSong", firetable.song); });
+
   console.log("-- Discover: genres, DJs, artists and years from the weekly library");
   const libPages = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
