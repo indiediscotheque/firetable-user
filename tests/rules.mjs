@@ -218,7 +218,7 @@ try {
     presence: me.status === false && typeof me.closed === "number" && typeof me.offlineAt === "number" && typeof me.joined === "number",
     grab: !!(db.grabs && db.grabs.dj1 && Object.values(db.grabs.dj1).some((t) => t[FAN])),
     hidden: db.chatFeed.fother1.hidden === true,
-    tags: db.songHistory.h1.artist === "New Artist" && db.globalTracks["1dQw4w9WgXcQ"].title === "New Title" && Object.values(db.tagLog || {}).some((t) => t.by === MOD)
+    tags: db.songHistory.h1.artist === "New Artist" && db.globalTracks["1dQw4w9WgXcQ"].title === "New Title" && Object.values(db.tagLog || {}).some((t) => t.by === MOD && t.fa === "Old Artist" && t.ft === "Old Title")
   };
   check(Object.values(landed).every(Boolean), "every step's write is in the database (" + JSON.stringify(landed) + ")");
 } catch (e) {
