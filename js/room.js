@@ -710,7 +710,7 @@ firetable.ui.setupRoomEvents = function () {
     // keep the cached copies (used to redraw after logging back in) in step
     [firetable._historyCache, firetable._produceCache].forEach(function (cache) {
       (cache || []).forEach(function (item) {
-        if (item.histID === data.histID) { item.artist = data.artist; item.title = data.title; }
+        if (item.histID === data.histID) { item.artist = data.artist; item.title = data.title; if (data.g) item.g = data.g; }
       });
     });
     applyHistoryFilter();
