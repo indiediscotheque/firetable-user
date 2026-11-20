@@ -1299,7 +1299,13 @@ try {
   await dPage.route("**/config.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript",
     body: CONFIG.replace(/roomName:/, 'signInProviders: ["google"], roomName:') }));
   await put("/discover", discover(now));
-  await put("/discover/lib", library(now));
+  const lib = library(now);
+  // dj1 brought a song here first: their page opens on it (2.7)
+  // 14 of them: the page shows 10 and Show all 14
+  lib.dj.dj1.firstHere = Array.from({ length: 14 }, (_, i) => ({ cid: "fh" + String(i).padStart(9, "0"), type: 1, a: "Firsts", t: "First " + (i + 1), plays: 20 - i, first: now - (400 - i) * 86400000 }));
+  // a year's playlist with one song three times (an old library build did that): the page lists it once
+  lib.year[2026].top = [lib.year[2026].top[0], Object.assign({}, lib.year[2026].top[0]), Object.assign({}, lib.year[2026].top[0], { cid: "lib0000099" })];
+  await put("/discover/lib", lib);
   await openPage(dPage, SITE);
   await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
   const home = await dPage.evaluate(async () => ({
@@ -2044,6 +2050,40 @@ try {
   check(header.live.shown && header.live.open && header.live.inside && header.live.focused === "newemail" && header.live.back === "mainGrid",
     "in Live it opens the same dialog, and the form goes back under the stage (" + JSON.stringify(header.live) + ")");
 
+  console.log("-- Discover: the sound map marks the room's genre, and a genre's card opens under it");
+  // the room's song, as this page knows it, is one whose library record says Nu-Disco (put back after);
+  // the database's song stays, so no player anywhere is cut short
+  await put("/globalTracks/1mapsong0001", { artist: "Smoke Artist", title: "Map Song", type: 1, song: "sMap" });
+  await put("/globalSongs/sMap", { artist: "Smoke Artist", title: "Map Song", plays: 3, genres: ["Nu-Disco"] });
+  await dPage.evaluate(() => {
+    window.__songBefore = firetable.song;
+    firetable.song = Object.assign({}, firetable.song, { type: 1, cid: "mapsong0001", title: "Map Song", artist: "Smoke Artist" });
+    ftapi.events.emit("newSong", firetable.song);
+  });
+  const soundMap = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
+    const out = {};
+    location.hash = "#discover/genres";
+    await until(() => document.querySelector("#dBrowse .d-map .d-mapg.d-room"));
+    out.room = [...document.querySelectorAll("#dBrowse .d-mapg.d-room")].map((a) => a.getAttribute("data-slug")).join();
+    out.hear = [...document.querySelectorAll("#dBrowse .d-mapg.d-hear")].map((a) => a.getAttribute("data-slug")).join();
+    out.legend = [...document.querySelectorAll("#dMapLegend > span")].filter((x) => getComputedStyle(x).display !== "none").map((x) => x.textContent).join("|");
+    const before = location.hash;
+    document.querySelector('#dBrowse .d-mapg[data-slug="soul-and-randb"]').click();
+    await wait(100);
+    out.stayed = location.hash === before && !!document.querySelector("#dBrowse .d-map");
+    const card = document.getElementById("dMapCard");
+    out.card = (card.querySelector("h3") || {}).textContent + "|" + !!card.querySelector('.d-radio[data-slug="soul-and-randb"]') + "|" + (card.querySelector('a[href="#discover/genres/soul-and-randb"]') ? "open" : "");
+    out.picked = document.querySelector("#dBrowse .d-mapg.is-picked").getAttribute("data-slug") + "|" + document.querySelector("#dBrowse .d-mapg.is-picked").getAttribute("aria-current");
+    return out;
+  });
+  check(soundMap.room === "nu-disco" && soundMap.hear === "nu-disco" && /The room is playing/.test(soundMap.legend) && /You're hearing/.test(soundMap.legend),
+    "the sound map: the room song's genre has the room's dot, and the one you're hearing its outline, with a legend (" + JSON.stringify(soundMap) + ")");
+  check(soundMap.stayed && /^Soul & R&B\|true\|open$/.test(soundMap.card) && soundMap.picked === "soul-and-randb|true",
+    "picking a genre on the map shows its card under the map (radio, Open) and stays on the page (" + JSON.stringify(soundMap) + ")");
+  await dPage.evaluate(() => { firetable.song = window.__songBefore; ftapi.events.emit("newSong", firetable.song); });
+
   console.log("-- Discover: genres, DJs, artists and years from the weekly library");
   const libPages = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -2076,6 +2116,16 @@ try {
     out.radio = firetable.discover.state().list + "|" + (document.getElementById("pv-src") || {}).textContent;
     location.hash = "#discover/djs/dj1";
     await until(() => document.querySelector("#dBrowse .d-taste"));
+    out.taste = [...document.querySelectorAll("#dBrowse .d-stacklegend li")].map((li) => li.textContent).join("|") + "|" + document.querySelectorAll("#dBrowse .d-stack > i").length;
+    out.djTab = document.querySelector("#dBrowse .d-chip[data-djtab].on").getAttribute("data-djtab") + "|" +
+      (document.querySelector("#dBrowse .d-pagehead .d-actions .butt span") || {}).textContent + "|" +
+      [...document.querySelectorAll("#dBrowse .d-chip[data-djtab]")].map((c) => c.getAttribute("data-djtab")).join();
+    const more = document.querySelector("#dBrowse .d-showall");
+    const capList = more && more.previousElementSibling;
+    const shownRows = () => [...capList.querySelectorAll(".pvbar")].filter((r) => r.offsetParent !== null).length;
+    out.capped = shownRows() + "|" + (more && more.textContent.trim());
+    more.click();
+    out.uncapped = shownRows() + "|" + !document.querySelector("#dBrowse .d-showall") + "|" + firetable.discover.state().list;
     out.userCardLink = firetable.discover.djPage("dj1", "dj1");
     out.dj = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelector("#dBrowse .d-pagehead .d-fact").textContent;
     location.hash = "#discover/artist/alpha";
@@ -2102,13 +2152,18 @@ try {
     "the sound map by decade, and a genre's line (" + libPages.decade + " / " + libPages.about + ")");
   check(libPages.ytm === "https://music.youtube.com/playlist?list=PLsmokeNuDisco", "a genre page links to its YouTube Music playlist (" + libPages.ytm + ")");
   check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
+  check(libPages.taste === "Nu-Disco70%|Everything else30%|2", "a DJ's sound: one stacked bar of their top genres and the rest, with a legend (" + libPages.taste + ")");
+  check(libPages.capped === "10|expand_moreShow all 14" && /^14\|true\|/.test(libPages.uncapped || ""),
+    "a long list shows its top 10 and Show all, which opens the rest in place (" + libPages.capped + " / " + libPages.uncapped + ")");
+  check(libPages.djTab === "firstHere|Play what they brought here|firstHere,most",
+    "a DJ page opens on Brought here first, its first tab, when they have any (" + libPages.djTab + ")");
   check(libPages.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && libPages.who === "#discover/djs/dj1", "artists and DJs link to their pages (" + libPages.artistLinks + " / " + libPages.who + ")");
   check(/^(\d+)x\1,\1x\1$/.test(libPages.favFaces) && Number(libPages.favFaces.split("x")[0]) > 10 && Number(libPages.favFaces.split("x")[0]) < 40,
     "faces on a genre's timeline are the timeline's size, linked to a DJ page or not (" + libPages.favFaces + ")");
   check(/^(\d+)x\1\|true\|(\d+)$/.test(libPages.deepFace) && Number(libPages.deepFace.split("x")[0]) < 40 && Number(libPages.deepFace.split("|")[2]) > 40,
     "a first DJ nobody can name now is a small plain circle, and the title keeps its room (" + libPages.deepFace + ")");
   check(/^radio\|.*Nu-Disco radio/.test(libPages.radio), "genre radio plays (" + libPages.radio + ")");
-  check(/^dj1\|.*Friday nights/.test(libPages.dj) && libPages.artist === "Alpha|1" && libPages.year === "1|1", "DJ, artist and year pages (" + [libPages.dj, libPages.artist, libPages.year].join(" / ") + ")");
+  check(/^dj1\|.*Friday nights/.test(libPages.dj) && libPages.artist === "Alpha|1" && libPages.year === "1|1", "DJ, artist and year pages; a year listing one song three times shows it once (" + [libPages.dj, libPages.artist, libPages.year].join(" / ") + ")");
   check(/no page for this DJ/.test(libPages.missing), "a DJ without a page says so (" + libPages.missing + ")");
   const lit = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -497,6 +497,55 @@ section .d-chips a.d-chip {
     .d-mapg:hover { z-index: 1; color: var(--color-bg); background: var(--color-accent); }
 }
 .d-mapg:focus-visible { z-index: 1; }
+/* the marks (2.7): the room's genre has a red dot, yours a gold outline, the picked one is lit */
+.d-mapg.d-room::before {
+    content: "";
+    display: inline-block;
+    width: 0.5em;
+    height: 0.5em;
+    margin-right: 0.3em;
+    border-radius: 50%;
+    background: var(--color-danger);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger) 35%, transparent);
+    vertical-align: 0.1em;
+}
+.d-mapg.d-hear { outline: 2px solid var(--color-accent); outline-offset: 1px; z-index: 1; }
+.d-mapg.is-picked { z-index: 2; color: var(--color-bg); background: var(--color-text); }
+.d-maplegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    margin: var(--space-2) 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-label);
+}
+.d-maplegend > span { display: none; align-items: center; gap: 0.4rem; }
+.d-maplegend.has-room .d-mlroom,
+.d-maplegend.has-hear .d-mlhear,
+.d-map:has(.is-picked) + .d-maplegend .d-mlpick { display: inline-flex; }
+.d-mlroom::before { content: ""; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--color-danger); }
+.d-mlhear::before { content: ""; width: 0.8rem; height: 0.6rem; border: 2px solid var(--color-accent); border-radius: 3px; }
+.d-mlpick::before { content: ""; width: 0.8rem; height: 0.6rem; border-radius: 3px; background: var(--color-text); }
+.d-mapcard { margin: var(--space-3) 0 var(--space-5); }
+.d-mapcard > .d-fact { margin: 0; }
+.d-mapcardin {
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-start;
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-panel);
+    background: var(--color-bg-t1);
+}
+.d-mapcardin .d-mosaic { flex: none; width: 6.5rem; }
+.d-mapcardtext { min-width: 0; }
+.d-mapcardtext h3 { margin: 0 0 var(--space-1); font-size: var(--fs-title); }
+.d-mapcardtext .d-about { margin: 0 0 var(--space-1); }
+.d-mapcardtext .d-fact { margin: 0 0 var(--space-2); }
+.d-mapcardtext .d-actions { margin-top: var(--space-2); }
+@media only screen and (max-width: 639px) {
+    .d-mapcardin .d-mosaic { width: 4.5rem; }
+}
 .d-axis {
     position: absolute;
     color: var(--color-text-muted);
@@ -599,16 +648,6 @@ section .d-chips a.d-chip {
 
 /* A DJ's sound */
 .d-taste { display: flex; flex-direction: column; gap: var(--pad1); }
-.d-tasterow {
-    display: grid;
-    grid-template-columns: minmax(6rem, 10rem) 1fr 3rem;
-    align-items: center;
-    gap: var(--pad2);
-    font-size: var(--fs-title);
-}
-.d-tasterow > a, .d-tasterow > span:first-child { color: var(--color-text); mix-blend-mode: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.d-tasterow .d-num { color: var(--color-text-muted); font-size: var(--fs-meta); text-align: right; }
-.d-taste .d-bar,
 .d-yearrow .d-bar {
     display: block;
     height: 0.4rem;
@@ -616,9 +655,7 @@ section .d-chips a.d-chip {
     background: var(--color-bg-t2);
     overflow: hidden;
 }
-.d-taste .d-bar i,
 .d-yearrow .d-bar i { display: block; height: 100%; border-radius: 99px; background: var(--color-accent); }
-.d-tasterow.d-other .d-bar i { background: var(--color-text-muted); }
 .d-sets { display: flex; flex-direction: column; }
 .d-set {
     display: flex;
@@ -2214,3 +2251,35 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     .d-firsthere { display: none; }
 }
 .d-tienote { font-size: var(--fs-meta); }
+
+/* Long lists: the top 10, then "Show all N" (2.7) */
+.d-capped > .hist-entry:nth-child(n+11) { display: none; }
+.d-showall { margin: var(--space-2) auto 0; display: flex; }
+
+/* A DJ's sound (2.7): one stacked bar of their top five genres and the rest, with a legend */
+.d-stack {
+    display: flex;
+    gap: 2px;
+    height: 0.9rem;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+}
+.d-stack > i { flex: 1 1 0; min-width: 4px; }
+.d-stacklegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    list-style: none;
+}
+.d-stacklegend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.d-stacklegend li > i { width: 0.7rem; height: 0.7rem; border-radius: 3px; }
+.d-stacklegend a { color: var(--color-text); }
+.d-stacklegend .d-num { color: var(--color-text-muted); font-size: var(--fs-meta); }
+.d-sw-0 { background: var(--color-accent); }
+.d-sw-1 { background: #d86a5a; }
+.d-sw-2 { background: #5b9bd5; }
+.d-sw-3 { background: #6cbf8b; }
+.d-sw-4 { background: #a685cf; }
+.d-sw-rest { background: var(--color-bg-t3, #444); }

@@ -69,7 +69,8 @@ firetable.discover = (function () {
     chartGenre: null,    // the chart, narrowed to one genre
     chartNew: false,     // the chart, new releases only
     genreTab: "fav",     // fav | newHere | deep
-    djTab: "most",       // most | firstHere
+    djTab: null,         // most | firstHere; null: Brought here first when they have any (2.7)
+    showAll: {},         // long lists opened past their top 10, by list and page
     djSort: "plays",     // plays | firsts | fires | since | name
     djFind: "",
     homeMore: {},
@@ -691,20 +692,31 @@ firetable.discover = (function () {
     return '<button type="button" class="butt graybutt d-saveall" data-list="' + esc(listName) + '" title="' + (D.signedIn ? "Save these songs as a new playlist" : "Save these songs to your crate") + '">' +
       ms("playlist_add") + "<span>" + esc(label || "Save all") + "</span></button>";
   }
+  /**
+   * A long list shows its top 10 and "Show all N" (2.7); Play and Save still
+   * take the whole list. Once shown, a list stays open while you're on the page.
+   */
+  var CAP = 10;
+  function capped(listName, count, rowsHtml) {
+    var key = listName + "/" + (D.sub || D.view);
+    if (count <= CAP + 2 || D.showAll[key]) return '<div class="ft-rows d-rowlist">' + rowsHtml + "</div>";
+    return '<div class="ft-rows d-rowlist d-capped">' + rowsHtml + "</div>" +
+      '<button type="button" class="butt graybutt d-showall" data-showall="' + esc(key) + '">' + ms("expand_more") + "<span>Show all " + esc(n(count)) + "</span></button>";
+  }
   function rankedRows(tracks, listName, rightOf) {
     if (!tracks.length) return emptyNote("Nothing here yet.");
     // ranked by plays when the list is in play order; a list in another order keeps its places
     var byPlays = tracks.every(function (t, i) { return !i || (tracks[i - 1].plays || 0) >= (t.plays || 0); });
     var ranks = byPlays ? ranked(tracks.map(function (t) { return { plays: t.plays || 0 }; }), "plays") : [];
-    return '<div class="ft-rows d-rowlist">' + tracks.map(function (t, i) {
+    return capped(listName, tracks.length, tracks.map(function (t, i) {
       return row(t, listName, i, { stamp: ranks[i] ? rankStamp(ranks[i], i) : "#" + (i + 1), rank: true, dj: djShown(t.djid, t.dj), right: rightOf ? rightOf(t) : '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" });
-    }).join("") + "</div>" + (ranks.some(function (r) { return r.tie; }) ? TIE_NOTE : "");
+    }).join("")) + (ranks.some(function (r) { return r.tie; }) ? TIE_NOTE : "");
   }
   function datedRows(tracks, listName) {
     if (!tracks.length) return emptyNote("Nothing here yet.");
-    return '<div class="ft-rows d-rowlist">' + tracks.map(function (t, i) {
+    return capped(listName, tracks.length, tracks.map(function (t, i) {
       return row(t, listName, i, { stamp: t.first ? firetable.utilities.shortDate(t.first) : "", dj: djShown(t.djid, t.dj), right: '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" });
-    }).join("") + "</div>";
+    }).join(""));
   }
   function person(p, fact, more) {
     var dj = djShown(p.djid, p.dj || p.name);
@@ -713,7 +725,20 @@ firetable.discover = (function () {
     var inner = robot(dj, "80x80") + '<span class="d-person-text"><b>' + esc(dj.name) + "</b><span>" + fact + "</span>" + (more ? "<span>" + more + "</span>" : "") + "</span>";
     return key ? '<a class="d-person" href="#discover/djs/' + esc(key) + '">' + inner + "</a>" : '<span class="d-person">' + inner + "</span>";
   }
-  function withType(list) { return (list || []).map(function (t) { return Object.assign({ type: 1 }, t); }); }
+  /**
+   * A library list, ready to show: each song once (the same upload, or the
+   * same artist and title, counts as a repeat), whatever the published data
+   * holds. The history job checks this too; this keeps a page right meanwhile.
+   */
+  function withType(list) {
+    var seen = {};
+    return (list || []).map(function (t) { return Object.assign({ type: 1 }, t); }).filter(function (t) {
+      var a = Number(t.type) + "_" + t.cid, b = String(t.a || "").toLowerCase().trim() + "|" + String(t.t || "").toLowerCase().trim();
+      if (seen[a] || (t.t && seen[b])) return false;
+      seen[a] = seen[b] = true;
+      return true;
+    });
+  }
 
   /** Every genre, most played first. */
   function genreList() {
@@ -748,9 +773,12 @@ firetable.discover = (function () {
         var x = 6 + (g.x == null ? 0.5 : g.x) * 88;
         var y = g.bpm ? 8 + (1 - (g.bpm - lo) / (hi - lo)) * 80 : 48;
         var size = Math.sqrt(weight(g) / top);
-        return '<a role="listitem" class="d-mapg' + (D.mapDecade && !weight(g) ? " d-quiet" : "") + '" href="#discover/genres/' + esc(g.slug) + '" data-y="' + y.toFixed(1) + '" style="left:' + x.toFixed(1) + "%;top:" + y.toFixed(1) + "%;--s:" + size.toFixed(2) + '" title="' +
+        return '<a role="listitem" class="d-mapg' + (D.mapDecade && !weight(g) ? " d-quiet" : "") + (D.mapPick === g.slug ? " is-picked" : "") + '" href="#discover/genres/' + esc(g.slug) + '" data-slug="' + esc(g.slug) + '"' + (D.mapPick === g.slug ? ' aria-current="true"' : "") + ' data-y="' + y.toFixed(1) + '" style="left:' + x.toFixed(1) + "%;top:" + y.toFixed(1) + "%;--s:" + size.toFixed(2) + '" title="' +
           esc(g.name + " · " + n(g.plays) + " plays" + (g.bpm ? " · usually " + g.bpm + " BPM" : "")) + '">' + esc(g.name) + "</a>";
       }).join("") + "</div>";
+    // what the marks mean (the room's genre and yours are found after the page draws: mapMarks)
+    h += '<p class="d-maplegend" id="dMapLegend"><span class="d-mlroom">The room is playing</span><span class="d-mlhear">You\'re hearing</span><span class="d-mlpick">Picked: its card is below</span></p>';
+    h += '<div class="d-mapcard" id="dMapCard" aria-live="polite">' + mapCard(D.mapPick) + "</div>";
     h += '<div class="d-gcards">' + list.map(function (g) {
       return '<a class="d-gcard" href="#discover/genres/' + esc(g.slug) + '">' + mosaic(g.covers) +
         '<span class="d-gname">' + esc(g.name) + '</span><span class="d-gfact d-num">' + (D.mapDecade ? esc(n(weight(g))) + " plays in the " + esc(D.mapDecade) + "s" : esc(n(g.songs)) + " songs · " + esc(n(g.plays)) + " plays") + "</span></a>";
@@ -768,6 +796,67 @@ firetable.discover = (function () {
       new ResizeObserver(function () { if (box.isConnected) spreadMap(box); }).observe(box);
     }
     spreadMap(box);
+    mapMarks();
+  }
+
+  /**
+   * The sound map's marks: a red dot on the room song's genre, a gold outline
+   * on the genre you're hearing (the room's, unless Discover is playing).
+   * The genre comes from the song's library record (loadDetails).
+   */
+  var marking = 0;
+  function mapMarks() {
+    var box = document.querySelector("#dBrowse .d-map");
+    if (!box) return;
+    var turn = ++marking;
+    var room = liveTrack();
+    var mine = discoverActive() ? P.track : room;
+    var genreOf = function (t) {
+      if (!t) return Promise.resolve(null);
+      if (t.g) return Promise.resolve(genreSlug(t.g));
+      return loadDetails(t).then(function (d) { return d.genres && d.genres[0] ? genreSlug(d.genres[0]) : null; });
+    };
+    Promise.all([genreOf(room), genreOf(mine)]).then(function (gs) {
+      if (turn !== marking || !box.isConnected) return;
+      box.querySelectorAll(".d-mapg").forEach(function (el) {
+        var slug = el.getAttribute("data-slug");
+        el.classList.toggle("d-room", !!gs[0] && slug === gs[0]);
+        el.classList.toggle("d-hear", !!gs[1] && slug === gs[1]);
+      });
+      var legend = document.getElementById("dMapLegend");
+      if (legend) {
+        legend.classList.toggle("has-room", !!gs[0] && !!box.querySelector(".d-room"));
+        legend.classList.toggle("has-hear", !!gs[1] && !!box.querySelector(".d-hear"));
+      }
+    });
+  }
+
+  /** A genre's card under the sound map: what it is, its numbers, next door, its radio and its page. */
+  function mapCard(slug) {
+    var all = lib("genres") || {};
+    var g = slug && all[slug];
+    if (!g) return '<p class="d-fact">Pick a genre on the map to see it here.</p>';
+    var facts = [n(g.songs) + " songs", n(g.plays) + " plays"];
+    if (g.bpm) facts.push("usually " + g.bpm + " BPM");
+    if (g.first) facts.push("played here since " + g.first);
+    var next = (g.next || []).filter(function (k) { return all[k]; });
+    return '<div class="d-mapcardin">' + mosaic(g.covers) + '<div class="d-mapcardtext"><h3>' + esc(g.name) + "</h3>" +
+      (g.about ? '<p class="d-about">' + esc(g.about) + "</p>" : "") + '<p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
+      (next.length ? '<p class="d-fact">Next door: ' + next.map(function (k) { return '<a class="d-mapnext" href="#discover/genres/' + esc(k) + '" data-slug="' + esc(k) + '">' + esc(all[k].name) + "</a>"; }).join(", ") + "</p>" : "") +
+      '<div class="d-actions"><button type="button" class="butt d-panelmain d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>" + esc(g.name) + " radio</span></button>" +
+      '<a class="butt graybutt" href="#discover/genres/' + esc(slug) + '">' + ms("arrow_forward") + "<span>Open " + esc(g.name) + "</span></a></div></div></div>";
+  }
+  /** Pick a genre on the map: its card shows under the map, and the page stays. */
+  function pickGenre(slug) {
+    D.mapPick = slug;
+    var box = document.querySelector("#dBrowse .d-map");
+    if (box) box.querySelectorAll(".d-mapg").forEach(function (el) {
+      var on = el.getAttribute("data-slug") === slug;
+      el.classList.toggle("is-picked", on);
+      if (on) el.setAttribute("aria-current", "true"); else el.removeAttribute("aria-current");
+    });
+    var card = document.getElementById("dMapCard");
+    if (card) card.innerHTML = mapCard(slug);
   }
   function spreadMap(box) {
     var W = box.clientWidth, H = box.clientHeight;
@@ -883,11 +972,11 @@ firetable.discover = (function () {
     if (d.cards) facts.push(firetable.utilities.pluralize(d.cards, "trading card", "trading cards"));
     var litFacts = firesOf(d.djid);
     if (litFacts && litFacts.fires) facts.push(firetable.utilities.pluralize(litFacts.fires, "fire", "fires"));
-    var tab = D.djTab === "firstHere" ? "firstHere" : "most";
+    var tab = D.djTab === "most" || D.djTab === "firstHere" ? D.djTab : ((d.firstHere || []).length ? "firstHere" : "most");
     var tracks = withType(tab === "most" ? d.most : d.firstHere);
     setList("dj", d.name + " · " + (tab === "most" ? "Most played" : "Brought here first"), tracks);
     h += '<div class="d-pagehead">' + '<span class="d-bigrobot">' + robot(dj, "160x160") + '</span><div class="d-pagetext"><h2>' + esc(d.name) + '</h2><p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
-      '<div class="d-actions">' + playAllButton("dj", "Play their favorites") + "</div></div></div>";
+      '<div class="d-actions">' + playAllButton("dj", tab === "firstHere" ? "Play what they brought here" : "Play their favorites") + "</div></div></div>";
     var cardButton = function (c) {
       return '<button type="button" class="d-card" data-card="' + esc(c.key) + '" aria-label="' + esc("Card: " + (c.djname || "") + ", " + (c.artist || "") + " - " + (c.title || "")) + '">' +
         '<canvas width="225" height="300" id="cardMakerdj' + esc(c.key) + '"></canvas></button>';
@@ -905,12 +994,20 @@ firetable.discover = (function () {
     }
     var taste = d.taste || [];
     if (taste.length) {
-      h += "<section>" + head("Their sound") + '<div class="d-taste">' + taste.map(function (x) {
-        var name = x.slug ? '<a href="#discover/genres/' + esc(x.slug) + '">' + esc(x.g) + "</a>" : "<span>" + esc(x.g) + "</span>";
-        return '<div class="d-tasterow' + (x.slug ? "" : " d-other") + '">' + name + '<span class="d-bar"><i style="width:' + Math.max(1, x.pct) + '%"></i></span><span class="d-num">' + esc(x.pct) + "%</span></div>";
-      }).join("") + "</div></section>";
+      // one stacked bar: their top five genres, then everything else (2.7)
+      var top = taste.filter(function (x) { return x.slug; }).slice(0, 5);
+      var rest = Math.max(0, 100 - top.reduce(function (sum, x) { return sum + (x.pct || 0); }, 0));
+      var parts = top.map(function (x, i) { return { g: x.g, slug: x.slug, pct: x.pct || 0, k: i }; });
+      if (rest > 0) parts.push({ g: "Everything else", pct: rest, k: "rest" });
+      h += "<section>" + head("Their sound") + '<div class="d-taste">' +
+        '<div class="d-stack" role="img" aria-label="' + esc(parts.map(function (x) { return x.g + " " + x.pct + "%"; }).join(", ")) + '">' +
+        parts.map(function (x) { return '<i class="d-sw-' + x.k + '" style="flex-grow:' + Math.max(0.5, x.pct) + '" title="' + esc(x.g + " · " + x.pct + "%") + '"></i>'; }).join("") + "</div>" +
+        '<ul class="d-stacklegend">' + parts.map(function (x) {
+          var name = x.slug ? '<a href="#discover/genres/' + esc(x.slug) + '">' + esc(x.g) + "</a>" : "<span>" + esc(x.g) + "</span>";
+          return '<li><i class="d-sw-' + x.k + '" aria-hidden="true"></i>' + name + '<span class="d-num">' + esc(x.pct) + "%</span></li>";
+        }).join("") + "</ul></div></section>";
     }
-    h += "<section>" + '<div class="d-headrow">' + chips("djtab", [["most", "Most played"], ["firstHere", "Brought here first"]], tab) + "</div>" +
+    h += "<section>" + '<div class="d-headrow">' + chips("djtab", [["firstHere", "Brought here first"], ["most", "Most played"]], tab) + "</div>" +
       (tab === "most"
         ? rankedRows(tracks, "dj", function (t) { return '<span class="d-num" title="' + esc(firetable.utilities.pluralize(t.by, "play", "plays") + " by " + d.name) + '">' + esc(firetable.utilities.pluralize(t.by, "play", "plays")) + "</span>"; })
         : datedRows(tracks, "dj")) + "</section>";
@@ -1951,7 +2048,7 @@ firetable.discover = (function () {
   var P = { track: null, list: null, i: 0, paused: false, len: 0, at: 0, timer: null, inRoom: null, play: 0 };
   var DECK_SPOTS = 4;
 
-  function setSrc(src) { D.src = src; D.listening = src === "live"; }
+  function setSrc(src) { D.src = src; D.listening = src === "live"; setTimeout(mapMarks, 0); }
   function discoverActive() { return !!(P.track && D.src === "discover"); }
   function isPlaying(list, i) { return discoverActive() && P.list === list && P.i === i; }
   function isSounding(list, i) { return isPlaying(list, i) && !P.paused; }
@@ -1983,6 +2080,7 @@ firetable.discover = (function () {
     // the same song picked up where it waited is the same listen
     if (!(P.track && String(P.track.cid) === String(t.cid) && startAt)) P.play++;
     P.track = t; P.list = listName; P.i = i; P.paused = false; P.len = t.dur || 0; P.at = startAt || 0;
+    setTimeout(mapMarks, 0); // the genre you're hearing, on the sound map
     firetable.preview = "discover";
     firetable.previewType = Number(t.type || 1);
     if (firetable.disableMediaPlayback) {
@@ -3219,6 +3317,10 @@ firetable.discover = (function () {
     var t = e.target;
     var b;
     if ((b = t.closest("#modeTabs [data-mode]"))) return setMode(b.getAttribute("data-mode"), { remember: true });
+    if ((b = t.closest("#dBrowse .d-mapg, #dBrowse .d-mapnext")) && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+      e.preventDefault();
+      return pickGenre(b.getAttribute("data-slug"));
+    }
     if ((b = t.closest("#dNav [data-view]"))) return setView(b.getAttribute("data-view"));
     if ((b = t.closest(".d-listen"))) return listenIn();
     if ((b = t.closest(".d-stepin"))) return setMode("live", { remember: true });
@@ -3288,6 +3390,16 @@ firetable.discover = (function () {
     if ((b = t.closest("[data-period]"))) { D.chart = { period: b.getAttribute("data-period"), id: null }; renderBrowse(); return writeAddress(); }
     if ((b = t.closest(".d-chip[data-gtab]"))) { D.genreTab = b.getAttribute("data-gtab"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-djtab]"))) { D.djTab = b.getAttribute("data-djtab"); return renderBrowse(); }
+    if ((b = t.closest(".d-showall"))) {
+      D.showAll[b.getAttribute("data-showall")] = true;
+      var rowsBox = b.previousElementSibling;
+      if (rowsBox) {
+        rowsBox.classList.remove("d-capped");
+        var next = rowsBox.querySelectorAll(".hist-entry")[CAP];
+        if (next) { var go = next.querySelector("button, a, [tabindex]"); if (go) go.focus(); }
+      }
+      return b.remove();
+    }
     if ((b = t.closest(".d-chip[data-djsort]"))) { D.djSort = b.getAttribute("data-djsort"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-decade]"))) { D.mapDecade = b.getAttribute("data-decade") || null; return renderBrowse(); }
     if ((b = t.closest(".d-homemore"))) { var k = b.getAttribute("data-more"); D.homeMore[k] = !D.homeMore[k]; return renderBrowse(); }
@@ -3910,7 +4022,7 @@ firetable.discover = (function () {
 
   function applyRoute(r) {
     if (r.view) {
-      if (r.view !== D.view || r.sub !== D.sub) { D.genreTab = "fav"; D.djTab = "most"; }
+      if (r.view !== D.view || r.sub !== D.sub) { D.genreTab = "fav"; D.djTab = null; D.showAll = {}; }
       D.view = r.view;
       D.sub = r.sub || null;
     }
@@ -4041,6 +4153,7 @@ firetable.discover = (function () {
       ftapi.events.on("loggedIn", function () { signedIn(true); });
       ftapi.events.on("loggedOut", function () { signedIn(false); });
       ftapi.events.on("newSong", function () {
+        mapMarks();
         renderFull(true);
         yourTurn();
         if (D.src === "live" && liveTrack()) mediaSession(liveTrack(), true);
