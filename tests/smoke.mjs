@@ -948,6 +948,30 @@ try {
     "the stage says when the decks are open and when the bot is keeping the music going, and nothing otherwise (" + JSON.stringify(states) + ")");
   check(/^Listen to the room\|.+ is playing .+/.test(states.listen), "audio blocked: Listen to the room, with who's playing what (" + states.listen + ")");
 
+  console.log("-- Fire's count on its button");
+  const fires = await page.evaluate(async () => {
+    const badge = () => { const b = document.getElementById("st-fireCount"); return (b.hidden ? "hidden" : b.textContent) + "|" + document.getElementById("fire").getAttribute("aria-label"); };
+    const keep = { count: firetable.fireCount, who: firetable.fireReactors };
+    firetable.fireCount = 0; firetable.fireReactors = {};
+    firetable.actions.updateFireReactionDisplay();
+    const out = { none: badge() };
+    const at = firetable.song.started;
+    const send = (id, txt) => firetable.actions.processFireReactionMessage({ id: id, txt: txt, time: Date.now(), forSong: at });
+    send("fan1", "🔥"); out.one = badge();
+    send("fan2", ":fire:"); send("fan2", "🔥"); out.two = badge();
+    send("fan1", ":fire_off:"); out.off = badge();
+    firetable.actions.processFireReactionMessage({ id: "fan3", txt: "🔥", time: Date.now(), forSong: at - 1 }); out.otherSong = badge();
+    firetable.fireCount = 0; firetable.fireReactors = {}; // what newSong does
+    firetable.actions.updateFireReactionDisplay();
+    await new Promise((r) => setTimeout(r, 0));
+    out.reset = badge();
+    firetable.fireCount = keep.count; firetable.fireReactors = keep.who;
+    firetable.actions.updateFireReactionDisplay();
+    return out;
+  });
+  check(fires.none === "hidden|Fire!" && fires.one === "1|Fire! (1 so far)" && fires.two === "2|Fire! (2 so far)" && fires.off === "1|Fire! (1 so far)" && fires.otherSong === "1|Fire! (1 so far)" && fires.reset === "hidden|Fire!",
+    "Fire shows how many fires this song has, one per person, and starts again at none (" + JSON.stringify(fires) + ")");
+
   console.log("-- the stage's volume slider (a native range input)");
   const vol = await page.evaluate(async () => {
     const s = document.getElementById("slider");

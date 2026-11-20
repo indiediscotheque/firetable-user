@@ -124,7 +124,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** long titles wrap to three lines max with an ellipsis; facts don't cover the DJ.
 - **Undo:** revert.
 
-### 1.5 Stage actions, bottom-left
+### 1.5 Stage actions, bottom-left ✅ Fire's count shipped (the owner's ask, November 20, 2026)
+- **Shipped:** `#fire` (in the player bar, the full-screen player and wherever it sits) carries a red count, `#st-fireCount`: how many people have fired this song, one each, 99+ past that; hidden at none. Its name and tooltip say it too ("Fire! (3 so far)"). It goes up and down with each fire and fire-off (`updateFireReactionDisplay`) and starts again at none on `newSong`. The 44px restyle no longer applies: the stage's buttons moved to the player bar in 2.3c. Smoke: none, one, a second person, the same person twice, a fire-off, a fire for another song, and a new song.
 - **Goal:** 44px buttons with labels in tooltips; Fire shows its count.
 - **Rows:** ST-09, ST-10, ST-12, ST-13.
 - **Files and change:** `#stageActions` CSS (44px, `--radius-btn`, translucent `--surface-0` background). Fire count: find where the current song's fires are counted (`chat.js` `processFireReactionMessage` / `updateFireReactionDisplay`); expose the count and render it as a badge on `#fire` (new `#st-fireCount`). Reset on `newSong`.

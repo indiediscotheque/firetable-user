@@ -40,6 +40,11 @@ firetable.actions.updateFireReactionDisplay = function () {
 
   firetable.actions.syncFireReactionButtons();
 
+  // Fire's count on its button (1.5), and in its name and tooltip
+  $("#st-fireCount").text(count > 99 ? "99+" : String(count)).prop("hidden", !count);
+  $("#fire").attr("aria-label", count ? "Fire! (" + count + " so far)" : "Fire!");
+  $("#tip-fire").text(count ? "Fire! · " + count + (count === 1 ? " fire" : " fires") + " on this song" : "Fire!");
+
   if (!count) {
     if ($fires.length) {
       $fires.text("").removeAttr("style");
