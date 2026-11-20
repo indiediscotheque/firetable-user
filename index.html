@@ -1203,19 +1203,45 @@
 		</div>
 	</dialog>
 
-	<dialog id="importPromptBox">
+	<dialog id="importPromptBox" aria-labelledby="importTitle">
 		<div class="modalBox">
 			<div class="modalHeader">
-				<h2>Playlist Import Machine</h2>
-				<button class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined">close</i></button>
+				<button type="button" class="butt graybutt iconbutt" id="im-back" hidden title="Back to the search" aria-label="Back to the search"><i class="material-symbols-outlined" aria-hidden="true">arrow_back</i></button>
+				<h2 id="importTitle">Import a playlist</h2>
+				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<div class="modalContent">
-				<div id="importSources" class="tabs">
-					<button type="button" class="tab on" id="ytimportchoice">YouTube</button><button type="button" class="tab" id="scimportchoice">SoundCloud</button>
+				<div id="im-step1">
+					<div id="importSources" class="tabs im-seg" role="group" aria-label="Import from">
+						<button type="button" class="tab on" id="ytimportchoice" aria-pressed="true">YouTube</button><button type="button" class="tab" id="scimportchoice" aria-pressed="false">SoundCloud</button>
+					</div>
+					<div id="importContent">
+						<input type="search" placeholder="Paste a playlist link or search by name" id="plMachine" enterkeyhint="search" aria-label="A playlist's link or name" autocomplete="off" />
+						<p class="im-hint">Then see its songs before anything is added.</p>
+						<div id="importResults" aria-live="polite"></div>
+					</div>
 				</div>
-				<div id="importContent">
-					<input type="text" placeholder="Search playlists" id="plMachine" enterkeyhint="search" />
-					<div id="importResults"></div>
+				<div id="im-step2" hidden>
+					<div class="im-head">
+						<div class="im-headText"><b id="im-name"></b><span id="im-meta"></span></div>
+						<a id="im-link" class="importLinkCheck" target="_blank" rel="noopener" hidden><i class="material-symbols-outlined" aria-hidden="true">open_in_new</i></a>
+					</div>
+					<ol id="im-songs" class="im-songs" aria-label="The playlist's songs"></ol>
+					<fieldset class="im-dest">
+						<legend>Put them in</legend>
+						<div class="im-destRow">
+							<label><input type="radio" name="im-dest" value="new" checked /> A new playlist</label>
+							<input type="text" id="im-newName" maxlength="100" aria-label="The new playlist's name" />
+						</div>
+						<div class="im-destRow">
+							<label><input type="radio" name="im-dest" value="have" /> A playlist you have</label>
+							<select id="im-destList" aria-label="Which playlist" disabled></select>
+							<select id="im-pos" aria-label="Where in it" disabled><option value="bottom">at the bottom</option><option value="top">at the top</option></select>
+						</div>
+					</fieldset>
+					<label class="im-skip"><input type="checkbox" id="im-skip" checked /> Skip songs already in that playlist</label>
+					<p id="im-status" class="im-status" aria-live="polite"></p>
+					<div class="im-actions"><button type="button" class="butt" id="im-go" disabled>Import</button></div>
 				</div>
 			</div>
 		</div>
@@ -1458,6 +1484,7 @@
 	<script type="text/javascript" src="js/search.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/playlist.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/playlists.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/import.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/users.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/room.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/ui.js?v=01.12.08"></script>

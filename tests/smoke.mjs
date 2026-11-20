@@ -854,6 +854,74 @@ try {
   await fresh();
   await page.evaluate(() => { ftapi.actions.reorderList = window.__reorder; $("#mainGrid").addClass("login"); });
 
+  console.log("-- Import, step by step: see the songs first, the ones that can't play shown, into a list you have, with Undo");
+  const beforeImport = await listNow();
+  await put("/queues/smoke", { i1: { type: 1, cid: "impvideo00a", name: "Aa - Old" } });
+  const imp = await page.evaluate(async () => {
+    const realUid = ftapi.uid;
+    ftapi.uid = "smoke";
+    const wait = async (fn) => { for (let i = 0; i < 60; i++) { const v = await fn(); if (v) return v; await new Promise((r) => setTimeout(r, 100)); } return null; };
+    window.__ytAPI = window.ytAPI;
+    window.ytAPI = (resource, params, cb) => setTimeout(() => {
+      if (resource === "playlists") return cb({ items: [{ id: "PLsmokeImport01", snippet: { title: "Smoke Mix", channelTitle: "Smoke Channel" }, contentDetails: { itemCount: 4 } }] });
+      if (resource === "playlistItems") {
+        const it = (cid, title, owner) => ({ snippet: { title, videoOwnerChannelTitle: owner, resourceId: { videoId: cid } }, status: { privacyStatus: "public" } });
+        return cb({ pageInfo: { totalResults: 4 }, items: [it("impvideo00b", "Bb - Two", "Bb"), it("impvideo00x", "Deleted video", ""), it("impvideo00a", "Aa - Old", "Aa"), it("impvideo00c", "Cc - Three", "Cc")] });
+      }
+      cb({ items: [] });
+    }, 10);
+    const names = async (id) => Object.entries((await ftapi.lookup.listRef(id).once("value")).val() || {}).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map((e) => e[1].name.slice(0, 2)).join();
+    const out = {};
+    out.links = [firetable.importer.parseLink("https://www.youtube.com/playlist?list=PLsmokeImport01"), firetable.importer.parseLink("https://www.youtube.com/watch?v=abcdefghijk&list=PLsmokeImport01"),
+      firetable.importer.parseLink("https://soundcloud.com/someone/sets/night-drive"), firetable.importer.parseLink("https://soundcloud.com/someone/a-song"), firetable.importer.parseLink("night drive")]
+      .map((l) => (l ? l.type + ":" + (l.id || "url") : "-")).join(",");
+    firetable.importer.open();
+    out.step1 = !document.getElementById("im-step1").hidden && document.getElementById("im-step2").hidden && document.getElementById("importTitle").textContent;
+    const input = document.getElementById("plMachine");
+    input.value = "https://www.youtube.com/playlist?list=PLsmokeImport01";
+    $(input).trigger($.Event("keyup", { which: 13 }));
+    out.rows = await wait(() => document.querySelectorAll("#im-songs li").length === 4 && !document.getElementById("im-step2").hidden &&
+      [...document.querySelectorAll("#im-songs li")].map((li) => li.querySelector(".im-title").textContent + (li.querySelector(".im-tag") ? "(" + li.querySelector(".im-tag").textContent + ")" : "")).join("|"));
+    out.title = document.getElementById("importTitle").textContent + "|" + document.getElementById("im-meta").textContent;
+    out.toNew = document.getElementById("im-go").textContent + "|" + document.getElementById("im-newName").value;
+    document.querySelector('input[name="im-dest"][value="have"]').checked = true;
+    $("#im-destList").val("0");
+    $("#im-pos").val("top").trigger("change");
+    out.toHave = await wait(() => /Import 2 songs/.test(document.getElementById("im-go").textContent) && document.getElementById("im-go").textContent + "|" + document.getElementById("im-status").textContent + "|" +
+      [...document.querySelectorAll("#im-songs .im-tag")].map((t) => t.textContent).join(","));
+    document.getElementById("im-go").click();
+    out.added = await wait(async () => { const n = await names("0"); return n === "Bb,Cc,Aa" && n; }) || await names("0");
+    out.closed = !document.getElementById("importPromptBox").open;
+    out.toast = document.getElementById("ft-toast").textContent;
+    [...document.querySelectorAll("#ft-toast button")].find((b) => b.textContent === "Undo").click();
+    out.undone = await wait(async () => { const n = await names("0"); return n === "Aa" && n; }) || await names("0");
+    // the old way in: importList(id, name, type) makes a new playlist of what can play
+    const r = await firetable.actions.importList("PLsmokeImport01", "Smoke Mix", 1);
+    out.newList = r.created + "|" + (await names(r.listID)) + "|" + r.unavailable;
+    await firetable.importer.undo(r);
+    out.newGone = await wait(async () => !(await ftapi.lookup.listRef(r.listID).once("value")).val() && !firetable.allPlaylists[r.listID]);
+    // a playlist link pasted in Find tracks offers the import
+    $("#qsearch").val("https://www.youtube.com/playlist?list=PLsmokeImport01").trigger($.Event("keyup", { which: 13 }));
+    out.offer = await wait(() => document.querySelector("#searchResults .im-offerGo") && document.querySelector("#searchResults .im-offer").textContent);
+    document.querySelector("#searchResults .im-offerGo").click();
+    out.offerOpens = await wait(() => document.getElementById("importPromptBox").open && !document.getElementById("im-step2").hidden && document.querySelectorAll("#im-songs li").length === 4);
+    document.getElementById("importPromptBox").close();
+    $("#qsearch").val("");
+    $("#searchResults").empty();
+    window.ytAPI = window.__ytAPI;
+    ftapi.uid = realUid;
+    return out;
+  });
+  check(imp.links === "1:PLsmokeImport01,-,2:url,-,-" && imp.step1 === "Import a playlist", "Import: a playlist link is told from a song's, and it opens at the search (" + JSON.stringify(imp) + ")");
+  check(imp.rows === "Two|Deleted video(Not available)|Old|Three" && imp.title === "Import “Smoke Mix”|by Smoke Channel · 4 songs · YouTube" && imp.toNew === "Import 3 songs|Smoke Mix",
+    "Import: the playlist's songs are listed before anything is added, a deleted video shown as Not available (" + JSON.stringify(imp) + ")");
+  check(/^Import 2 songs\|2 songs to import · 1 not available · 1 already there\|Not available,Already there$/.test(imp.toHave) && imp.added === "Bb,Cc,Aa" && imp.closed &&
+    /^Imported 2 songs into .+ \(1 already there, 1 not available left out\)\./.test(imp.toast) && imp.undone === "Aa",
+    "Import: into a playlist you have, at the top, skipping the one already there; Undo takes exactly those back (" + JSON.stringify(imp) + ")");
+  check(imp.newList === "true|Bb,Aa,Cc|1" && imp.newGone, "Import: the old call still makes a new playlist of what can play, and Undo deletes it (" + JSON.stringify(imp) + ")");
+  check(imp.offer === "That's a playlist: Smoke Mix · 4 songs. Import it" && imp.offerOpens, "Import: a playlist link in Find tracks says what it is and opens its songs (" + JSON.stringify(imp) + ")");
+  await put("/queues/smoke", beforeImport);
+
   console.log("-- Grab: one tap to the playlist you grabbed to last, with Undo and Change; ▾ opens the picker");
   const listBeforeGrab = await listNow(); // put back after: later checks count this list
   const grabbed = await page.evaluate(async () => {

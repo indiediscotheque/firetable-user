@@ -9,7 +9,6 @@
  * - Merge lists between playlists
  * - Queue from link (YouTube/SoundCloud URL drag-and-drop)
  * - SoundCloud API access via the site proxy (scSearch, resolveSCLink, scPlaylist)
- * - Import playlist from YouTube/SoundCloud (importList)
  * - List CRUD (create, delete, switch)
  * - playlistChanged event handler
  * - Tag editing (editTagsPrompt)
@@ -657,82 +656,7 @@ firetable.actions.scPlaylist = function (id) {
     });
 };
 
-// ─── Playlist Import ─────────────────────────────────────────────────────────
-
-/**
- * Import a full playlist from YouTube or SoundCloud into a new local list.
- * YouTube playlists are paginated (50 items per page).
- * @param {string} id   - Playlist/set ID
- * @param {string} name - Display name for the new local list
- * @param {number} type - MEDIA_YOUTUBE (1) or MEDIA_SOUNDCLOUD (2)
- */
-firetable.actions.importList = function (id, name, type) {
-  document.querySelectorAll("dialog[open]").forEach(function (d) { d.close(); });
-  $("#importResults").html("");
-  $("#plMachine").val("");
-
-  if (type === MEDIA_YOUTUBE) {
-    var finalList = [];
-
-    var fetchPage = function (pageToken) {
-      var params = {
-        playlistId: id,
-        maxResults: IMPORT_PAGE_SIZE,
-        part: "snippet"
-      };
-      if (pageToken) params.pageToken = pageToken;
-
-      ytAPI('playlistItems', params, function (response) {
-        if (response.items && response.items.length) {
-          for (var idx = 0; idx < response.items.length; idx++) {
-            finalList.push(response.items[idx]);
-          }
-        }
-        if (response.nextPageToken) {
-          fetchPage(response.nextPageToken);
-        } else {
-          // All pages fetched — create the list
-          firetable.debug && console.log(finalList);
-          var listid = ftapi.actions.createList(name);
-          firetable.utilities.addPlaylistToPickers(listid, name);
-          for (var i = 0; i < finalList.length; i++) {
-            var sn = finalList[i].snippet;
-            var rawTitle = firetable.utilities.decodeEntities(sn.title);
-            if (rawTitle !== "Private video" && rawTitle !== "Deleted video") {
-              // the same page already says who uploaded each video and its
-              // description: the artist comes free ("Band - Topic" -> "Band")
-              ftapi.actions.addToList(MEDIA_YOUTUBE, firetable.utilities.youtubeTrackName(sn.title, sn.videoOwnerChannelTitle, sn.description),
-                sn.resourceId.videoId, listid);
-            }
-          }
-        }
-      });
-    };
-    fetchPage(); // start with first page
-
-  } else if (type === MEDIA_SOUNDCLOUD) {
-    firetable.actions.scPlaylist(id).then(function (listinfo) {
-      var tracks = (listinfo && listinfo.tracks) || [];
-      firetable.debug && console.log('sc tracks:', tracks);
-      var listid = ftapi.actions.createList(name);
-      firetable.utilities.addPlaylistToPickers(listid, name);
-      for (var i = 0; i < tracks.length; i++) {
-        var goodTitle;
-        if (tracks[i].title) {
-          var parsed = firetable.utilities.parseArtistTitle(tracks[i].title, (tracks[i].user && tracks[i].user.username) || "");
-          goodTitle = parsed.artist + " - " + parsed.title;
-        } else {
-          goodTitle = "Unknown";
-        }
-        var extras = firetable.utilities.soundCloudExtras(tracks[i]);
-        ftapi.actions.addToList(MEDIA_SOUNDCLOUD, goodTitle, tracks[i].id, listid, null, extras.img, extras.url);
-      }
-      firetable.actions.localChatResponse("Imported " + firetable.utilities.pluralize(tracks.length, "song") + " from SoundCloud into \"" + name + "\".");
-    }, function (err) {
-      firetable.actions.localChatResponse("SoundCloud import failed: " + err.message);
-    });
-  }
-};
+// Playlist import: js/import.js (firetable.importer, firetable.actions.importList)
 
 // ─── Tag Editing ─────────────────────────────────────────────────────────────
 
@@ -1574,7 +1498,7 @@ firetable.ui.setupPlaylistEvents = function () {
   // ── Popover: Import Playlist ──
   $("#plAddImport").on("click", function () {
     closePlAddMenu(false);
-    document.getElementById("importPromptBox").showModal();
+    firetable.importer.open();
   });
 
   // ── Merge lists UI ──
@@ -1680,7 +1604,7 @@ firetable.ui.setupPlaylistEvents = function () {
       var id = $("#listpicker").val();
       if (act === "all") return firetable.actions.openPlaylistIndex();
       if (act === "new") return enterCreateMode();
-      if (act === "import") return document.getElementById("importPromptBox").showModal();
+      if (act === "import") return firetable.importer.open();
       if (act === "shuffle") return firetable.actions.shuffleQueuePrompt(listBtn);
       if (act === "merge") return toggleMerge(listBtn);
       if (act === "delete") return $("#plDeleteLauncher").trigger("click");
