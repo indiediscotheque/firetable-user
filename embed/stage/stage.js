@@ -224,10 +224,13 @@
    */
   var looksTimers = [];
   function readLooks() {
-    once("colors").then(colors, function () { /* keep what's there */ });
-    once("theme").then(theme, function () { /* keep what's there */ });
-    once("songBpm").then(function (b) { S.bpmData = b; beat(); }, function () { /* keep what's there */ });
-    once("tagUpdate").then(tagged, function () { /* keep what's there */ });
+    // an answer that lands after the stage summary arrived is the old way's: the summary wins
+    var oldWay = function (fn) { return function (v) { if (!S.staged) fn(v); }; };
+    var keep = function () { /* keep what's there */ };
+    once("colors").then(oldWay(colors), keep);
+    once("theme").then(oldWay(theme), keep);
+    once("songBpm").then(oldWay(function (b) { S.bpmData = b; beat(); }), keep);
+    once("tagUpdate").then(oldWay(tagged), keep);
   }
   function roomLooks() {
     looksTimers.forEach(clearTimeout);

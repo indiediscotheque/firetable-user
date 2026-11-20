@@ -233,7 +233,9 @@ firetable.ui.fillPlaylistSelect = function ($sel, allPlaylists, lead, idPrefix) 
   $sel.empty();
   (lead || []).forEach(function (o) { $sel.append($("<option></option>").val(o.value).text(o.text)); });
   firetable.utilities.sortedLists(allPlaylists).forEach(function (l) {
-    if (l.list && !l.builtIn) firetable.listCounts[String(l.id)] = firetable.utilities.listStats(l.list, l.id);
+    // counted from the tracks only when they were given (names alone leave the known count)
+    var given = allPlaylists && allPlaylists[l.id] && allPlaylists[l.id].list;
+    if (given && !l.builtIn) firetable.listCounts[String(l.id)] = firetable.utilities.listStats(given, l.id);
     var $o = $("<option></option>").val(l.id).attr("data-name", l.name).text(firetable.utilities.listLabel(l.id, l.name));
     if (idPrefix && l.id !== "0") $o.attr("id", idPrefix + l.id);
     $sel.append($o);
