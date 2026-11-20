@@ -101,20 +101,6 @@ firetable.discover = (function () {
     if (Number(t.type || 1) === MEDIA_YOUTUBE) return "https://i.ytimg.com/vi/" + encodeURIComponent(t.cid) + "/mqdefault.jpg";
     return (ftconfigs.defaultAlbumArtUrl) || "img/idlogo.png";
   }
-  /**
-   * A cover's style: the song's picture, or for a song with none (a SoundCloud
-   * song saved without one) a colour block with the artist's initials, the
-   * colour picked from the name so the same artist always looks the same.
-   */
-  function artStyle(t) {
-    if (t.img || Number(t.type || 1) === MEDIA_YOUTUBE) return 'style="background-image:url(' + esc(artOf(t)) + ')"';
-    var name = String(t.a || t.t || "?");
-    var words = name.replace(/^the\s+/i, "").split(/[\s&,+-]+/).filter(function (w) { return /[\p{L}\p{N}]/u.test(w); });
-    var initials = words.slice(0, 2).map(function (w) { return Array.from(w.replace(/[^\p{L}\p{N}]/gu, ""))[0] || ""; }).join("").toUpperCase() || "?";
-    var hue = 0;
-    for (var i = 0; i < name.length; i++) hue = (hue * 31 + name.charCodeAt(i)) % 360;
-    return 'style="--hue:' + hue + '" data-initials="' + esc(initials) + '"';
-  }
   function linkOf(t) {
     if (t.url) return t.url;
     return Number(t.type || 1) === MEDIA_YOUTUBE ? "https://www.youtube.com/watch?v=" + encodeURIComponent(t.cid) : "";
@@ -232,7 +218,7 @@ firetable.discover = (function () {
   function card(t, list, i, meta) {
     var playing = isPlaying(list, i);
     return '<div class="pvbar' + (playing ? " previewing" : "") + '"' + rowAttrs(t, list, i) + ">" +
-      '<div class="pv-art discart" ' + artStyle(t) + ">" +
+      '<div class="pv-art discart" style="background-image:url(' + esc(artOf(t)) + ')">' +
       '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, i) ? "Pause" : "Play") + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
       '<div class="qtxt"><div class="listwords"><div class="fresh-title"><span class="fresh-track-title d-sheetlink" role="button" tabindex="0">' + esc(t.t) + '</span><span class="fresh-track-artist">' + artistLinks(t.a) + "</span></div>" +
       moreButton() + saveButton(t) + "</div>" +
@@ -245,7 +231,7 @@ firetable.discover = (function () {
     return '<div class="hist-entry"><span class="hist-timestamp' + (meta.rank ? " d-rank" : "") + '">' + esc(meta.stamp || "") + "</span>" +
       (meta.dj ? robotLink(meta.dj) : '<span class="ft-avatar pv-dj-avatar dj-avatar-tip d-nobody" aria-hidden="true"></span>') +
       '<div class="pvbar' + (playing ? " previewing" : "") + '"' + rowAttrs(t, list, i) + ">" +
-      '<div class="pv-art histart" ' + artStyle(t) + '><button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, i) ? "Pause" : "Play") + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
+      '<div class="pv-art histart" style="background-image:url(' + esc(artOf(t)) + ')"><button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, i) ? "Pause" : "Play") + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
       '<div class="listwords"><div class="histlink"><span class="hist-track-title d-sheetlink" role="button" tabindex="0">' + esc(t.t) + '</span><span class="hist-track-artist">' + artistLinks(t.a) + "</span></div></div>" +
       (meta.right ? '<span class="d-right">' + meta.right + "</span>" : "") +
       moreButton() + saveButton(t) + "</div></div>";
@@ -320,7 +306,7 @@ firetable.discover = (function () {
     var tags = (t.g ? '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(t.g)) + '">' + esc(t.g) + "</a>" : "") + (t.dur ? '<span class="d-tag d-numtag">' + esc(clock(t.dur)) + "</span>" : "") +
       (t.rel ? '<span class="d-tag d-numtag">out ' + esc(u.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime())) + "</span>" : "");
     return '<div class="pvbar d-lead' + (isPlaying(list, 0) ? " previewing" : "") + '"' + rowAttrs(t, list, 0) + ">" +
-      '<div class="pv-art discart d-leadart" ' + artStyle(t) + ">" +
+      '<div class="pv-art discart d-leadart" style="background-image:url(' + esc(artOf(t)) + ')">' +
       '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, 0) ? "Pause" : "Play") + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button></div>" +
       '<div class="d-leadtext"><p class="d-kicker">' + (t.plays ? "The week's most played" : "New this week") + "</p>" +
       '<h3 class="d-leadtitle"><span class="d-sheetlink" role="button" tabindex="0">' + esc(t.t) + "</span></h3>" +
@@ -3695,7 +3681,7 @@ firetable.discover = (function () {
     var saved = firetable.saved.where(t.type, t.cid);
     dlg.innerHTML = '<div class="modalBox"><div class="modalHeader"><h2 id="dSheetTitle">About this song</h2>' +
       '<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close">' + ms("close") + "</button></div>" +
-      '<div class="modalContent d-sheet"><div class="d-sheethead"><span class="d-cover" ' + artStyle(t) + "></span>" +
+      '<div class="modalContent d-sheet"><div class="d-sheethead"><span class="d-cover" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
       '<div class="d-now"><span class="d-title">' + esc(t.t) + '</span><span class="d-artist">' + artistLinks(t.a) + "</span>" +
       '<div class="d-tags" id="dSheetTags"></div></div></div>' +
       '<div class="d-hist" id="dSheetHist"><p>' + ms("hourglass_empty") + "Looking it up…</p></div>" +
