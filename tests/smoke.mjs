@@ -2077,6 +2077,15 @@ try {
   check(soundMap.stayed && /^Soul & R&B\|true\|open$/.test(soundMap.card) && soundMap.picked === "soul-and-randb|true",
     "picking a genre on the map shows its card under the map (radio, Open) and stays on the page (" + JSON.stringify(soundMap) + ")");
   await dPage.evaluate(() => { firetable.song = window.__songBefore; ftapi.events.emit("newSong", firetable.song); });
+  const noArt = await dPage.evaluate(async () => {
+    firetable.songMenu.sheet("777000111", 2, "The Zed Alpha - No Picture Song");
+    await new Promise((r) => setTimeout(r, 200));
+    const c = document.querySelector("#dSheetBox .d-cover");
+    const out = { initials: c && c.getAttribute("data-initials"), drawn: c && getComputedStyle(c, "::before").content, img: c && c.style.backgroundImage };
+    document.getElementById("dSheetBox").close();
+    return out;
+  });
+  check(noArt.initials === "ZA" && noArt.drawn === '"ZA"' && !noArt.img, "a song with no picture gets a colour block with the artist's initials (" + JSON.stringify(noArt) + ")");
 
   console.log("-- Discover: genres, DJs, artists and years from the weekly library");
   const libPages = await dPage.evaluate(async () => {

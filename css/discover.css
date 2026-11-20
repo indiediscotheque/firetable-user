@@ -2263,3 +2263,24 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     .d-firsthere { display: none; }
 }
 .d-tienote { font-size: var(--fs-meta); }
+
+/* A cover for a song with no picture (2.7): a colour block with the artist's
+   initials, its colour picked from the name (artStyle in discover.js) */
+[data-initials] {
+    position: relative;
+    container-type: inline-size;
+    background-color: hsl(var(--hue, 30) 30% 26%);
+    background-image: linear-gradient(135deg, hsl(var(--hue, 30) 42% 36%), hsl(calc(var(--hue, 30) + 40) 36% 20%));
+}
+[data-initials]::before {
+    content: attr(data-initials);
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: clamp(0.7rem, 34cqi, 4rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+}
