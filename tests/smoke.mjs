@@ -139,16 +139,16 @@ try {
     btn.click();
     await new Promise((r) => setTimeout(r, 200));
     const dlg = document.getElementById("joinBox");
-    out.dialog = dlg.open && !!dlg.querySelector("#login");
+    out.dialog = dlg.open && !!dlg.querySelector("#authBox");
     out.focused = document.activeElement && document.activeElement.id;
     out.title = document.getElementById("joinTitle").textContent;
     dlg.close();
-    for (let i = 0; i < 40 && document.getElementById("login").parentElement.id !== "mainGrid"; i++) await new Promise((r) => setTimeout(r, 50));
-    out.back = document.getElementById("login").parentElement.id;
+    // one sign-in form on the site: the page itself has none
+    out.oneForm = document.querySelectorAll("#authBox, #createAccountFormShell, #loginFormShell").length === 3 && !document.querySelector("#login #authBox, #mainGrid #authBox");
     return out;
   });
-  check(entry.shown && entry.label === "Join" && entry.dialog && entry.focused === "newemail" && /^Join /.test(entry.title) && entry.back === "mainGrid",
-    "the header's Join opens the sign-in dialog for a new visitor, and the form goes back after (" + JSON.stringify(entry) + ")");
+  check(entry.shown && entry.label === "Join" && entry.dialog && entry.focused === "newemail" && /^Join /.test(entry.title) && entry.oneForm,
+    "the header's Join opens the site's one sign-in form, in a dialog (" + JSON.stringify(entry) + ")");
   await page.waitForFunction(() => typeof YT !== "undefined" && YT.Player, null, { timeout: 30000 }).catch(() => {});
   check(loaded("/s/player/") || loaded("www-widgetapi"), "YouTube's player API loaded under the policy");
 
@@ -161,12 +161,16 @@ try {
   // and if it takes it all the same, the focus goes back where it was
   const focusBack = await page.evaluate(async () => {
     const f = document.getElementById("playerArea");
-    const box = document.getElementById("chatText") || document.querySelector("input[type=text], textarea");
-    if (!f || f.tagName !== "IFRAME" || !box) return { skipped: true };
+    if (!f || f.tagName !== "IFRAME") return { skipped: true };
+    // a text box on screen (a visitor's page has none outside the sign-in dialog: one for the test)
+    const seen = [...document.querySelectorAll("#chatText, input[type=text], input[type=search], textarea")].find((e) => e.offsetParent !== null && !e.closest("dialog"));
+    const box = seen || document.body.appendChild(Object.assign(document.createElement("input"), { id: "focusProbe" }));
     box.focus();
     f.inert = false; f.focus(); f.inert = true; // as YouTube's page taking it
     await new Promise((r) => setTimeout(r, 50));
-    return { back: document.activeElement === box, was: box.id || box.name || box.tagName };
+    const out = { back: document.activeElement === box, was: box.id || box.name || box.tagName };
+    if (!seen) box.remove();
+    return out;
   });
   check(focusBack.skipped || focusBack.back, "if YouTube's player takes the focus all the same, it goes back where it was (" + JSON.stringify(focusBack) + ")");
   const over = await page.evaluate(async () => {
@@ -1490,6 +1494,19 @@ try {
     const tabs = [...document.querySelectorAll("#minimodeoptions .tab")].filter((t) => t.offsetParent)
       .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left).map((t) => t.id);
     out.first = tabs[0];
+    // with the bottom tab bar, Playlists is Library: Live keeps the rest, the stage hides in Library
+    const keepView = firetable.nav.view;
+    firetable.nav.view = "playlists";
+    firetable.nav.apply();
+    out.library = document.body.classList.contains("nt-library") && document.querySelector('#nav-tabs [data-tab="library"]').classList.contains("on");
+    firetable.nav.view = keepView;
+    firetable.nav.mobileSection = "chat";
+    firetable.nav.apply();
+    out.liveTabs = [...document.querySelectorAll("#minimodeoptions .tab")].filter((t) => t.offsetParent)
+      .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left).map((t) => t.textContent.trim()).join();
+    out.liveLit = !document.body.classList.contains("nt-library") && document.querySelector('#nav-tabs [data-tab="live"]').classList.contains("on");
+    firetable.nav.mobileSection = "view";
+    firetable.nav.apply();
     const label = document.getElementById("djlistpickerLabel").getBoundingClientRect();
     out.labelHidden = label.width <= 1 && label.height <= 1;
     out.labelledBy = document.getElementById("djlistpicker").getAttribute("aria-labelledby");
@@ -1519,6 +1536,8 @@ try {
     await page.evaluate(() => { ftapi.uid = window.__realUid; ftapi.events.emit("tableChanged", firetable.tableData); });
   }
   await page.setViewportSize({ width: 1280, height: 720 });
+  check(phoneFix.library && phoneFix.liveTabs === "Chat,Recent,Fresh,Cards,People" && phoneFix.liveLit,
+    "phone, a member: Playlists is the Library tab; Live keeps Chat, Recent, Fresh, Cards and People (" + JSON.stringify(phoneFix) + ")");
   check(/^−\d+:\d\d$/.test(phoneFix.left) && /^\d+:\d\d$/.test(phoneFix.played), "time left has a minus, time played doesn't (" + phoneFix.played + " / " + phoneFix.left + ")");
   check(phoneFix.first === "mmchat", "Chat is the first phone tab (" + phoneFix.first + ")");
   check(phoneFix.labelHidden && phoneFix.labelledBy === "djlistpickerLabel", "on a phone the DJ playlist's label is for screen readers only, and still names the picker");
@@ -1791,7 +1810,7 @@ try {
     await wait(200);
     const dlg = document.getElementById("joinBox");
     out.join = !!(dlg && dlg.open);
-    if (dlg && dlg.open) { dlg.close(); for (let i = 0; i < 40 && document.getElementById("login").parentElement.id !== "mainGrid"; i++) await wait(50); }
+    if (dlg && dlg.open) dlg.close();
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await wait(300);
     out.fireHome = document.getElementById("fire").parentElement.id;
@@ -2000,6 +2019,53 @@ try {
     await wait(200);
     return out;
   });
+  console.log("-- the bottom tab bar on a phone: Home, Discover, Live, Library, You");
+  const tabs = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const tap = async (t) => { document.querySelector('#nav-tabs [data-tab="' + t + '"]').click(); await wait(450); };
+    const seen = (sel) => { const el = document.querySelector(sel); if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth; };
+    const lit = () => [...document.querySelectorAll("#nav-tabs .nt-tab.on")].map((b) => b.dataset.tab + (b.getAttribute("aria-current") === "page" ? "" : "!")).join();
+    const out = {};
+    const bar = document.getElementById("nav-tabs").getBoundingClientRect(), pb = document.getElementById("dMini").getBoundingClientRect();
+    out.bar = { labels: [...document.querySelectorAll("#nav-tabs .nt-tab span")].map((s) => s.textContent).join(","), bottom: Math.round(innerHeight - bar.bottom), underPlayer: bar.top >= pb.bottom - 1,
+      tall: Math.round(bar.height) >= 56, oldGone: !seen("#modeTabs") };
+    await tap("home");
+    out.home = { lit: lit(), hash: location.hash, view: firetable.discover.state().view, rowGone: !seen("#dNav"), search: seen("#dQ") };
+    await tap("discover");
+    out.list = { lit: lit(), browse: document.body.classList.contains("nt-browse"), pages: [...document.querySelectorAll("#dNav .d-nav")].filter((b) => seen("#dNav") && b.getBoundingClientRect().height >= 44).length,
+      browseHidden: !seen("#dBrowse") };
+    document.querySelector('#dNav [data-view="charts"]').click();
+    await wait(450);
+    out.page = { lit: lit(), hash: location.hash, browse: document.body.classList.contains("nt-browse"), shown: seen("#dBrowse") };
+    await tap("discover");
+    out.again = { lit: lit(), browse: document.body.classList.contains("nt-browse") };
+    await tap("live");
+    out.live = { lit: lit(), hash: location.hash, stage: seen("#djStage"), join: seen("#login") };
+    await tap("library");
+    out.library = { lit: lit(), stageGone: !seen("#djStage"), join: seen("#login"), view: firetable.nav.view, section: firetable.nav.mobileSection };
+    await tap("live");
+    out.back = { lit: lit(), section: firetable.nav.mobileSection, stage: seen("#djStage") };
+    // You: the account menu, or join / log in
+    await tap("you");
+    const menu = document.getElementById("nav-accountMenu"), join = document.getElementById("joinBox");
+    out.you = menu.matches(":popover-open") ? "menu" : join.open ? "join" : "";
+    if (menu.matches(":popover-open")) menu.hidePopover();
+    if (join.open) { join.close(); await wait(300); }
+    out.youNotLit = lit() === "live";
+    // the Discover page row and the Live tabs come back on a computer
+    return out;
+  });
+  check(tabs.bar.labels === "Home,Discover,Live,Library,You" && tabs.bar.bottom === 0 && tabs.bar.underPlayer && tabs.bar.tall && tabs.bar.oldGone,
+    "phone: the tab bar sits along the bottom under the player, and the Discover / Live switch steps aside (" + JSON.stringify(tabs.bar) + ")");
+  check(tabs.home.lit === "home" && /^#discover/.test(tabs.home.hash) && tabs.home.view === "home" && tabs.home.rowGone && tabs.home.search,
+    "phone: Home is Discover's Home, with search and without the row of pages (" + JSON.stringify(tabs.home) + ")");
+  check(tabs.list.lit === "discover" && tabs.list.browse && tabs.list.pages >= 8 && tabs.list.browseHidden && tabs.page.lit === "discover" && tabs.page.hash === "#discover/charts" && !tabs.page.browse && tabs.page.shown &&
+    tabs.again.browse, "phone: Discover lists its pages, a page opens under the same tab, and the tab again goes back to the list (" + JSON.stringify([tabs.list, tabs.page, tabs.again]) + ")");
+  check(tabs.live.lit === "live" && tabs.live.hash === "#live" && tabs.live.stage && tabs.live.join &&
+    tabs.library.lit === "library" && tabs.library.stageGone && tabs.library.join && tabs.library.view === "playlists" && tabs.library.section === "view" &&
+    tabs.back.lit === "live" && tabs.back.section !== "view" && tabs.back.stage,
+    "phone, a visitor: Live is the stage; Library is what joining opens, on its own; Live goes back to its tab (" + JSON.stringify([tabs.live, tabs.library, tabs.back]) + ")");
+  check(tabs.you === "join" && tabs.youNotLit, "phone, a visitor: You opens join and log in (" + tabs.you + ")");
   // a narrow desktop (the stage's middle column under 520px) keeps the DJ in the middle
   await dPage.setViewportSize({ width: 1024, height: 768 });
   const narrowDesk = await dPage.evaluate(async () => {
@@ -2277,23 +2343,19 @@ try {
     document.querySelector("#dSide .d-login").click();
     await wait(200);
     const dlg = document.getElementById("joinBox");
-    const out = { open: !!(dlg && dlg.open), inside: !!(dlg && dlg.querySelector("#login")), form: ["createscreen", "logscreen"].filter((id) => !document.getElementById(id).hidden).join(),
+    const out = { open: !!(dlg && dlg.open), inside: !!(dlg && dlg.querySelector("#authBox")), form: ["createscreen", "logscreen"].filter((id) => !document.getElementById(id).hidden).join(),
       title: dlg && dlg.querySelector("#joinTitle").textContent, focused: document.activeElement && document.activeElement.id, stillDiscover: document.body.classList.contains("ft-discover") };
     dlg.close();
-    // the dialog's close event comes a moment later, and puts the form back
-    for (let i = 0; i < 40 && document.getElementById("login").parentElement.id !== "mainGrid"; i++) await wait(50);
-    out.back = document.getElementById("login").parentElement.id;
     return out;
   });
   check(join.open && join.inside && join.form === "logscreen" && join.focused === "loginemail" && join.stillDiscover,
     "Log in opens the form in a dialog, on Discover (" + JSON.stringify(join) + ")");
-  check(join.back === "mainGrid", "closing it puts the form back in the page (" + join.back + ")");
 
   console.log("-- Join or log in from the header, on Discover and in Live");
   const header = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const dlg = document.getElementById("joinBox");
-    const closeIt = async () => { dlg.close(); for (let i = 0; i < 40 && document.getElementById("login").parentElement.id !== "mainGrid"; i++) await wait(50); };
+    const closeIt = async () => { dlg.close(); await wait(50); };
     const out = {};
     const btn = document.getElementById("nav-signin");
     out.label = document.getElementById("nav-signinLabel").textContent;
@@ -2315,15 +2377,21 @@ try {
     out.live.inside = !!dlg.querySelector("#authBox");
     out.live.focused = document.activeElement && document.activeElement.id;
     await closeIt();
-    out.live.back = document.getElementById("login").parentElement.id;
+    // Live's welcome opens the same dialog, with the same buttons as Discover
+    const welcomeJoin = document.querySelector("#welcomeInfo .au-join .d-join .d-createaccount");
+    out.live.welcome = !!welcomeJoin && welcomeJoin.offsetParent !== null && !document.querySelector("#welcomeInfo #authBox");
+    if (welcomeJoin) welcomeJoin.click();
+    await wait(200);
+    out.live.welcomeOpens = dlg.open && !document.getElementById("createscreen").hidden;
+    await closeIt();
     document.querySelector('#modeTabs [data-mode="discover"]').click();
     await wait(200);
     return out;
   });
   check(header.label === "Join" && header.discover.shown && header.discover.open && header.discover.form === "createscreen" && /^Join /.test(header.discover.title) && header.discover.retitled === "Welcome back",
     "on Discover, the header's Join opens the sign-in dialog; its title follows the tabs (" + JSON.stringify(header) + ")");
-  check(header.live.shown && header.live.open && header.live.inside && header.live.focused === "newemail" && header.live.back === "mainGrid",
-    "in Live it opens the same dialog, and the form goes back under the stage (" + JSON.stringify(header.live) + ")");
+  check(header.live.shown && header.live.open && header.live.inside && header.live.focused === "newemail" && header.live.welcome && header.live.welcomeOpens,
+    "in Live the header and the welcome's Create account open the same dialog; Live has no form of its own (" + JSON.stringify(header.live) + ")");
 
   console.log("-- Discover: the sound map marks the room's genre, and a genre's card opens under it");
   // the room's song, as this page knows it, is one whose library record says Nu-Disco (put back after);
@@ -2484,10 +2552,10 @@ try {
     const shown = (id) => { const el = document.getElementById(id); return !!el && !el.hidden && el.offsetParent !== null; };
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await wait(300);
-    const out = { tabs: [...document.querySelectorAll("#dLocked .tab")].map((b) => b.textContent + (b.classList.contains("on") ? "*" : "")).join(), form: shown("authBox") };
+    const out = { tabs: [...document.querySelectorAll("#dLocked .tab")].map((b) => b.textContent + (b.classList.contains("on") ? "*" : "")).join(), form: shown("welcomeInfo") };
     const tab = (name) => document.querySelector('#dLocked [data-locked="' + name + '"]').click();
     tab("playlists");
-    out.playlists = { form: shown("authBox"), text: /Your playlists/.test(document.getElementById("dLockedPane").textContent), join: !!document.querySelector("#dLockedPane .d-createaccount") };
+    out.playlists = { form: shown("welcomeInfo"), text: /Your playlists/.test(document.getElementById("dLockedPane").textContent), join: !!document.querySelector("#dLockedPane .d-createaccount") };
     tab("recent");
     await until(() => document.querySelector('#dLockedPane .pvbar[data-cid="lockrec001"]'));
     out.recent = document.querySelectorAll("#dLockedPane .pvbar").length;
@@ -2500,14 +2568,14 @@ try {
     await until(() => document.querySelectorAll("#dLockedPane canvas").length);
     out.cards = document.querySelectorAll("#dLockedPane canvas").length;
     tab("join");
-    out.back = { form: shown("authBox"), pane: document.getElementById("dLockedPane").hidden };
+    out.back = { form: shown("welcomeInfo"), pane: document.getElementById("dLockedPane").hidden };
     return out;
   });
   check(locked.tabs === "Join*,Playlists,Recent,Cards" && locked.form, "a visitor in Live sees Join, Playlists, Recent and Cards (" + JSON.stringify(locked) + ")");
-  check(!locked.playlists.form && locked.playlists.text && locked.playlists.join, "Playlists says what joining gives, with Join the room (" + JSON.stringify(locked.playlists) + ")");
+  check(!locked.playlists.form && locked.playlists.text && locked.playlists.join, "Playlists says what joining gives, with Create account (" + JSON.stringify(locked.playlists) + ")");
   check(locked.recent >= 1 && locked.played.discover && locked.played.playing === "lockrec001", "Recent lists the room's plays, and one plays in Discover (" + JSON.stringify({ n: locked.recent, played: locked.played }) + ")");
   check(locked.cards > 0 && locked.cards <= 3, "Cards shows the latest cards (" + locked.cards + ")");
-  check(locked.back.form && locked.back.pane, "Join brings the form back (" + JSON.stringify(locked.back) + ")");
+  check(locked.back.form && locked.back.pane, "Join brings the welcome back (" + JSON.stringify(locked.back) + ")");
 
   console.log("-- Discover: members chat with the room from Discover");
   const chatHere = await dPage.evaluate(async () => {
