@@ -69,7 +69,7 @@ firetable.discover = (function () {
     chartGenre: null,    // the chart, narrowed to one genre
     chartNew: false,     // the chart, new releases only
     genreTab: "fav",     // fav | newHere | deep
-    djTab: "most",       // most | firstHere
+    djTab: null,         // most | firstHere; null: Brought here first when they have any (2.7)
     djSort: "plays",     // plays | firsts | fires | since | name
     djFind: "",
     homeMore: {},
@@ -961,11 +961,11 @@ firetable.discover = (function () {
     if (d.cards) facts.push(firetable.utilities.pluralize(d.cards, "trading card", "trading cards"));
     var litFacts = firesOf(d.djid);
     if (litFacts && litFacts.fires) facts.push(firetable.utilities.pluralize(litFacts.fires, "fire", "fires"));
-    var tab = D.djTab === "firstHere" ? "firstHere" : "most";
+    var tab = D.djTab === "most" || D.djTab === "firstHere" ? D.djTab : ((d.firstHere || []).length ? "firstHere" : "most");
     var tracks = withType(tab === "most" ? d.most : d.firstHere);
     setList("dj", d.name + " · " + (tab === "most" ? "Most played" : "Brought here first"), tracks);
     h += '<div class="d-pagehead">' + '<span class="d-bigrobot">' + robot(dj, "160x160") + '</span><div class="d-pagetext"><h2>' + esc(d.name) + '</h2><p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
-      '<div class="d-actions">' + playAllButton("dj", "Play their favorites") + "</div></div></div>";
+      '<div class="d-actions">' + playAllButton("dj", tab === "firstHere" ? "Play what they brought here" : "Play their favorites") + "</div></div></div>";
     var cardButton = function (c) {
       return '<button type="button" class="d-card" data-card="' + esc(c.key) + '" aria-label="' + esc("Card: " + (c.djname || "") + ", " + (c.artist || "") + " - " + (c.title || "")) + '">' +
         '<canvas width="225" height="300" id="cardMakerdj' + esc(c.key) + '"></canvas></button>';
@@ -988,7 +988,7 @@ firetable.discover = (function () {
         return '<div class="d-tasterow' + (x.slug ? "" : " d-other") + '">' + name + '<span class="d-bar"><i style="width:' + Math.max(1, x.pct) + '%"></i></span><span class="d-num">' + esc(x.pct) + "%</span></div>";
       }).join("") + "</div></section>";
     }
-    h += "<section>" + '<div class="d-headrow">' + chips("djtab", [["most", "Most played"], ["firstHere", "Brought here first"]], tab) + "</div>" +
+    h += "<section>" + '<div class="d-headrow">' + chips("djtab", [["firstHere", "Brought here first"], ["most", "Most played"]], tab) + "</div>" +
       (tab === "most"
         ? rankedRows(tracks, "dj", function (t) { return '<span class="d-num" title="' + esc(firetable.utilities.pluralize(t.by, "play", "plays") + " by " + d.name) + '">' + esc(firetable.utilities.pluralize(t.by, "play", "plays")) + "</span>"; })
         : datedRows(tracks, "dj")) + "</section>";
@@ -3993,7 +3993,7 @@ firetable.discover = (function () {
 
   function applyRoute(r) {
     if (r.view) {
-      if (r.view !== D.view || r.sub !== D.sub) { D.genreTab = "fav"; D.djTab = "most"; }
+      if (r.view !== D.view || r.sub !== D.sub) { D.genreTab = "fav"; D.djTab = null; }
       D.view = r.view;
       D.sub = r.sub || null;
     }

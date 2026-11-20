@@ -1299,7 +1299,10 @@ try {
   await dPage.route("**/config.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript",
     body: CONFIG.replace(/roomName:/, 'signInProviders: ["google"], roomName:') }));
   await put("/discover", discover(now));
-  await put("/discover/lib", library(now));
+  const lib = library(now);
+  // dj1 brought a song here first: their page opens on it (2.7)
+  lib.dj.dj1.firstHere = [{ cid: "lib0000001", type: 1, a: "Alpha & Beta", t: "Fav One", plays: 30, first: now - 400 * 86400000 }];
+  await put("/discover/lib", lib);
   await openPage(dPage, SITE);
   await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
   const home = await dPage.evaluate(async () => ({
@@ -2119,6 +2122,9 @@ try {
     out.radio = firetable.discover.state().list + "|" + (document.getElementById("pv-src") || {}).textContent;
     location.hash = "#discover/djs/dj1";
     await until(() => document.querySelector("#dBrowse .d-taste"));
+    out.djTab = document.querySelector("#dBrowse .d-chip[data-djtab].on").getAttribute("data-djtab") + "|" +
+      (document.querySelector("#dBrowse .d-pagehead .d-actions .butt span") || {}).textContent + "|" +
+      [...document.querySelectorAll("#dBrowse .d-chip[data-djtab]")].map((c) => c.getAttribute("data-djtab")).join();
     out.userCardLink = firetable.discover.djPage("dj1", "dj1");
     out.dj = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelector("#dBrowse .d-pagehead .d-fact").textContent;
     location.hash = "#discover/artist/alpha";
@@ -2145,6 +2151,8 @@ try {
     "the sound map by decade, and a genre's line (" + libPages.decade + " / " + libPages.about + ")");
   check(libPages.ytm === "https://music.youtube.com/playlist?list=PLsmokeNuDisco", "a genre page links to its YouTube Music playlist (" + libPages.ytm + ")");
   check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
+  check(libPages.djTab === "firstHere|Play what they brought here|firstHere,most",
+    "a DJ page opens on Brought here first, its first tab, when they have any (" + libPages.djTab + ")");
   check(libPages.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && libPages.who === "#discover/djs/dj1", "artists and DJs link to their pages (" + libPages.artistLinks + " / " + libPages.who + ")");
   check(/^(\d+)x\1,\1x\1$/.test(libPages.favFaces) && Number(libPages.favFaces.split("x")[0]) > 10 && Number(libPages.favFaces.split("x")[0]) < 40,
     "faces on a genre's timeline are the timeline's size, linked to a DJ page or not (" + libPages.favFaces + ")");
