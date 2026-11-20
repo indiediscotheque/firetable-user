@@ -396,8 +396,8 @@ firetable.ui.setupRoomEvents = function () {
         }
 
         deckHtml = '<div id="spt0" class="spot' + (isGhost ? ' ghost' : '') + '">' +
-          '<div class="avtr animate" id="avtr0" style="background-image: url(' +
-          firetable.utilities.htmlEscape(firetable.utilities.avatarURL(djId, djName)) + ');"></div>' +
+          '<div class="avtr animate" id="avtr0" data-stage-uid="' + firetable.utilities.htmlEscape(djId) + '" data-stage-name="' + firetable.utilities.htmlEscape(djName) + '" style="background-image: url(' +
+          firetable.utilities.htmlEscape(firetable.utilities.avatarURL(djId, djName, firetable.utilities.sharpAvatarSize(160))) + ');"></div>' +
           '<div id="djthing0" class="djplaque djActive">' +
           '<div class="djname">' + firetable.utilities.htmlEscape(djName) + '</div>' +
           departureIndicator + actionBtn +
@@ -430,8 +430,8 @@ firetable.ui.setupRoomEvents = function () {
       if (odj) {
         ondeckHtml += '<button class="ondeck-slot" data-djid="' + odj.id + '" data-plays="' + (odj.plays || 0) + '" aria-label="' +
           firetable.utilities.htmlEscape(odj.name) + '">' +
-          '<div class="ft-avatar" style="background-image: url(' +
-          firetable.utilities.htmlEscape(firetable.utilities.avatarURL(odj.id, odj.name, '40x40')) + ')"></div>' +
+          '<div class="ft-avatar" data-stage-uid="' + firetable.utilities.htmlEscape(odj.id) + '" data-stage-name="' + firetable.utilities.htmlEscape(odj.name) + '" style="background-image: url(' +
+          firetable.utilities.htmlEscape(firetable.utilities.avatarURL(odj.id, odj.name, firetable.utilities.sharpAvatarSize(64))) + ')"></div>' +
           '</button>';
       } else {
         ondeckHtml += '<button class="ondeck-slot empty" aria-label="Add to DJ list"' + (isSelfOnDeck ? ' disabled' : '') + '></button>';
@@ -443,6 +443,7 @@ firetable.ui.setupRoomEvents = function () {
     // by reference: on a narrow stage a visitor's #ondeck is in the detached People panel
     var $ondeck = $(firetable.ui.ondeckEl ? firetable.ui.ondeckEl() : document.getElementById("ondeck"));
     $ondeck.html(ondeckHtml);
+    firetable.ui.sharpenStage();
     $("#deckQueue").empty();
     if (firetable.ui.tooltip) firetable.ui.tooltip.refreshUserTip();
 
@@ -1486,3 +1487,39 @@ firetable.ui.renderStageState = function () {
     : "";
   $("#tapToPlaySub").text([playing, hereText].filter(Boolean).join(" · "));
 };
+
+/**
+ * The stage's avatars, sharp at the size they're drawn: each one is asked for
+ * at its drawn height × the screen's pixel density (sharpAvatarSize), after the
+ * deck is drawn and whenever the stage changes size. Only ever a bigger
+ * picture, so a resize back down doesn't load anything.
+ */
+firetable.ui.sharpenStage = function () {
+  var els = document.querySelectorAll("[data-stage-uid]");
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    var r = el.getBoundingClientRect();
+    var drawn = Math.min(r.width || r.height, r.height || r.width); // the picture is square, drawn to fit
+    if (!drawn) continue;
+    var size = firetable.utilities.sharpAvatarSize(drawn);
+    var px = parseInt(size, 10);
+    if (px <= Number(el.getAttribute("data-stage-px") || 0)) continue;
+    el.setAttribute("data-stage-px", String(px));
+    el.style.backgroundImage = "url(" + JSON.stringify(firetable.utilities.avatarURL(el.getAttribute("data-stage-uid"), el.getAttribute("data-stage-name"), size)) + ")";
+  }
+};
+(function () {
+  if (typeof ResizeObserver === "undefined") return;
+  var queued = false;
+  var watch = function () {
+    var stage = document.getElementById("djStage");
+    if (!stage) return;
+    new ResizeObserver(function () {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () { queued = false; firetable.ui.sharpenStage(); });
+    }).observe(stage);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
+  else watch();
+})();

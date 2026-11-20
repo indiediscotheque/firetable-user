@@ -42,6 +42,16 @@ firetable.utilities = {
    *   Otherwise the person's current name wins, so a rename shows everywhere.
    * @returns {string} Full avatar URL
    */
+  /**
+   * The picture size to ask for, for an avatar drawn `cssPx` tall on this
+   * screen: its pixels at the screen's density, in steps of 60 (60–600), so
+   * it's never stretched (blurry) and the steps share the cache.
+   */
+  sharpAvatarSize: function (cssPx) {
+    var px = Math.min(600, Math.max(60, Math.ceil((cssPx || 0) * (window.devicePixelRatio || 1) / 60) * 60));
+    return px + "x" + px;
+  },
+
   avatarURL: function (uid, username, size, style, keepName) {
     size = size || "110x110";
     if (!keepName && uid) {

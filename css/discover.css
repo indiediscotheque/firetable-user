@@ -1361,10 +1361,13 @@ body.ft-has-discover.pb-elsewhere:not(.pv-full-on) #mainGrid #stageBackdrop { di
     .st-nl-text { display: none; }
 }
 
-/* the DJs, with the stage to themselves, stand as tall as their picture allows:
-   sized to the stage, but never past the 110px image the stage asks for (bigger is blurry) */
-body.ft-has-discover #djStage .spot { max-width: clamp(10rem, 20cqw, 12rem); }
-body.ft-has-discover #djStage .avtr { height: min(110px, max(5rem, min(24cqw, var(--stage-max-height) * 0.5))); }
+/* the DJs stand in proportion to the stage: the one playing about half its
+   height, the ones in line beside them a third of that. Their pictures are
+   asked for at the size they're drawn on this screen (sharpenStage in
+   room.js), so they're sharp at any size */
+body.ft-has-discover #djStage .spot { max-width: clamp(10rem, 26cqw, 16rem); }
+body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-max-height) * 0.5, 16rem)); }
+#djStage .ondeck-slot { width: clamp(2.5rem, 6cqw, 4rem); height: clamp(2.5rem, 6cqw, 4rem); }
 
 /* ── Phones, with the screen up: the DJ stands at the right, beside the song,
    and the stage is only as tall as the song and the DJ need. #stage.dj-side

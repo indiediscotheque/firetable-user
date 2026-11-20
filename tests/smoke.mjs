@@ -77,6 +77,24 @@ try {
     "the song's colour reaches the stage from a stylesheet, not an injected <style> (" + JSON.stringify(colours) + ")");
   check(colours.mediaOff === "none" && colours.mediaOn !== "none", "media playback off hides the preview buttons (" + colours.mediaOff + " / " + colours.mediaOn + ")");
 
+  console.log("-- the stage's avatars: asked for at the size they're drawn, on this screen");
+  const sharpOn = (p) => p.evaluate(() => [...document.querySelectorAll("[data-stage-uid]")].map((e) => {
+    const r = e.getBoundingClientRect();
+    const drawn = Math.min(r.width || r.height, r.height || r.width);
+    const asked = Number((e.style.backgroundImage.match(/size=(\d+)x/) || [])[1] || 0);
+    return { drawn: Math.round(drawn), asked, sharp: !drawn || asked >= drawn * devicePixelRatio };
+  }));
+  await page.waitForFunction(() => document.querySelector("[data-stage-uid][data-stage-px]"), null, { timeout: 10000 }).catch(() => {});
+  const sharp1 = await sharpOn(page);
+  const retina = await browser.newContext({ deviceScaleFactor: 2, viewport: { width: 1440, height: 900 } });
+  const rPage = await retina.newPage();
+  await openPage(rPage, SITE + "#live");
+  await rPage.waitForFunction(() => document.querySelector("[data-stage-uid][data-stage-px]"), null, { timeout: 20000 }).catch(() => {});
+  const sharp2 = await sharpOn(rPage);
+  await retina.close();
+  check(sharp1.length >= 2 && sharp1.every((a) => a.sharp) && sharp2.length >= 1 && sharp2.every((a) => a.sharp) && sharp2[0].asked >= 2 * sharp2[0].drawn,
+    "the stage's avatars are asked for at their drawn size × the screen's density, so never stretched (" + JSON.stringify({ sharp1, sharp2 }) + ")");
+
   console.log("-- sign in: Create account and Log in as tabs, checks as you type");
   const auth = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -1588,7 +1606,12 @@ try {
       bar: bar.offsetParent !== null && /is-discover/.test(bar.className), stageUp: document.body.classList.contains("pb-elsewhere"),
       tools: ["screenControl", "reloadtrack", "st-cast", "fullscreenBtn", "fire", "grab"].every((id) => document.getElementById(id).closest("#dMini")),
       stageEmpty: getComputedStyle(document.getElementById("stageTopRight")).display === "none" && getComputedStyle(document.getElementById("stageActions")).display === "none",
-      avatar: Math.round((document.querySelector("#deck .avtr") || { getBoundingClientRect: () => ({ height: -1 }) }).getBoundingClientRect().height) };
+      avatar: (() => {
+        const a = document.querySelector("#deck .avtr");
+        if (!a) return { drawn: -1, asked: 0 };
+        const r = a.getBoundingClientRect();
+        return { drawn: Math.round(Math.min(r.width, r.height)), asked: Number((a.style.backgroundImage.match(/size=(\d+)x/) || [])[1] || 0) };
+      })() };
     // the stage's lower left says they aren't hearing the room
     const nl = document.getElementById("st-notlive");
     const stage = document.getElementById("djStage").getBoundingClientRect(), card = nl.getBoundingClientRect();
@@ -1618,7 +1641,7 @@ try {
     "in Live while a Discover song plays, the stage's lower left says they aren't listening live (" + JSON.stringify(playing.after.notLive) + ")");
   check(playing.after.notLive.goneOnListen, "the stage's not-live card goes once they listen in (" + JSON.stringify(playing.after.notLive) + ")");
   check(playing.after.notLive.notInDiscover, "the not-live card is Live's only (" + JSON.stringify(playing.after.notLive) + ")");
-  check(playing.after.avatar > 0 && playing.after.avatar <= 110, "the DJ on the stage is never drawn past its 110px picture (" + playing.after.avatar + "px)");
+  check(playing.after.avatar.drawn > 0 && playing.after.avatar.asked >= playing.after.avatar.drawn, "the DJ on the stage is never drawn past the picture asked for (" + JSON.stringify(playing.after.avatar) + ")");
 
   console.log("-- Discover: the player bar says what it plays, Discover or the room, and switches between them");
   const bar = await dPage.evaluate(async () => {
