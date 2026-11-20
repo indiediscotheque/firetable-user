@@ -967,6 +967,42 @@ try {
   }, DB).catch((e) => ["error: " + e.message]);
   check(counts.includes("p1=Mix (3, 1 ⚠)") && counts.includes("p2=Empty (0)") && counts.some((t) => /^0=.* \(4, 1 ⚠\)$/.test(t)),
     "every list's track and flagged counts show in the picker (" + counts.join(" | ") + ")");
+  // back to the tab later: the bot flagged another track meanwhile, and a list was made elsewhere
+  await put("/playlists/smoke/p1/list/c/flagged", { date: 2, code: 2 });
+  await put("/playlists/smoke/p3", { name: "New", list: { x: { type: 1, cid: "c9", name: "X - 9" } } });
+  const recount = await page.evaluate(() => {
+    const keysRead = [];
+    const shallow = ftapi.utilities.shallowKeys;
+    ftapi.utilities.shallowKeys = (path) => { keysRead.push(path); return shallow(path); };
+    const all = { p1: { name: "Mix" }, p2: { name: "Empty" }, p3: { name: "New" } };
+    firetable.ui.fillPlaylistPickers(all);
+    return firetable.actions.loadListCounts(all, { flaggedOnly: true }).then(() => ({
+      options: [...document.querySelectorAll("#listpicker option")].map((o) => o.value + "=" + o.textContent), keysRead
+    }));
+  }).catch((e) => ({ options: ["error: " + e.message], keysRead: [] }));
+  check(recount.options.includes("p1=Mix (3, 2 ⚠)") && recount.options.includes("p3=New (1)") && recount.keysRead.join() === "playlists/smoke/p3/list",
+    "back on the tab, only the flagged counts are fetched again (every track's key only for a list not counted yet) (" + JSON.stringify(recount) + ")");
+
+  console.log("-- grab stats: the hostbot's sum when there is one, otherwise every grab counted here");
+  await put("/grabs/smoke", { "1_c1": { u1: 1, u2: 2 }, "1_c2": { u3: 3 } });
+  const grabsBefore = await page.evaluate(async () => {
+    ftapi.uid = "smoke";
+    firetable.actions.watchGrabs();
+    await new Promise((r) => setTimeout(r, 1500));
+    return { text: document.getElementById("grabStats").textContent, following: !!firetable.grabs.ref };
+  }).catch((e) => ({ text: "error: " + e.message }));
+  check(/^3 grabs across 2 tracks/.test(grabsBefore.text) && grabsBefore.following,
+    "with no sum from the hostbot (an older one, or its rules not published), the site counts every grab itself (" + JSON.stringify(grabsBefore) + ")");
+  await put("/grabCount/smoke", { n: 40, t: 12, last: "1_c2", lastAt: 3 });
+  await page.waitForTimeout(1200);
+  await put("/grabs/smoke/1_c9", { u9: 9 }); // the hostbot counts this one now, not the site
+  await page.waitForTimeout(800);
+  const grabsAfter = await page.evaluate(() => ({ text: document.getElementById("grabStats").textContent, following: !!firetable.grabs.ref }));
+  check(/^40 grabs across 12 tracks/.test(grabsAfter.text) && !grabsAfter.following,
+    "with the hostbot's sum, Profile shows it, and grabs/ is no longer downloaded (" + JSON.stringify(grabsAfter) + ")");
+  await page.evaluate(() => firetable.actions.unwatchGrabs());
+  await put("/grabCount/smoke", null);
+  await put("/grabs/smoke", null);
 
   console.log("-- emoji: Emoji 17.0 in the picker, old shortnames still work");
   await page.waitForFunction(() => firetable.emojiMap && firetable.emojiMap.trombone, null, { timeout: 30000 }).catch(() => {});

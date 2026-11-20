@@ -177,8 +177,12 @@ firetable.actions.restoreListCounts = function () {
  * Count every list's tracks (and flagged ones) in the background and put the
  * numbers in the pickers. A few lists at a time; never downloads whole lists.
  * @param {Object} allPlaylists - {listID: {name}}
+ * @param {{flaggedOnly: boolean}} [opts] - flaggedOnly: lists already counted
+ *   get only their flagged counts again (just the flagged tracks download;
+ *   counting a list's length downloads every track's key)
  */
-firetable.actions.loadListCounts = function (allPlaylists) {
+firetable.actions.loadListCounts = function (allPlaylists, opts) {
+  var flaggedOnly = !!(opts && opts.flaggedOnly);
   var uid = ftapi.uid;
   var ids = ["0"].concat(Object.keys(allPlaylists || {}));
   // forget lists that are gone
@@ -190,7 +194,11 @@ firetable.actions.loadListCounts = function (allPlaylists) {
   var worker = function () {
     if (next >= ids.length || ftapi.uid !== uid) return Promise.resolve();
     var id = ids[next++];
-    return ftapi.lookup.listCount(id).then(function (s) {
+    var known = firetable.listCounts[id];
+    var counted = flaggedOnly && known && typeof known.n === "number"
+      ? ftapi.lookup.listFlagged(id).then(function (f) { return { n: known.n, broken: f.broken, swaps: f.swaps }; })
+      : ftapi.lookup.listCount(id);
+    return counted.then(function (s) {
       // the list you're viewing is counted live; don't overwrite it
       if (ftapi.uid === uid && id !== firetable.liveCountID) firetable.ui.setListCount(id, s);
     }, function (err) {
@@ -202,13 +210,15 @@ firetable.actions.loadListCounts = function (allPlaylists) {
   return Promise.all(workers).then(function () { firetable.actions.saveListCounts(); });
 };
 
-// Recount when you come back to the tab after a while (the bot flags tracks
-// and plays from your lists while you're away).
+// Recount when you come back to the tab after a while: the bot flags tracks
+// while you're away. Playing from a list moves a track, it doesn't add or take
+// one away, so only the flagged counts are fetched again (lists new since the
+// last count are counted in full); the page's next load counts everything.
 document.addEventListener("visibilitychange", function () {
   if (document.visibilityState !== "visible" || !ftapi.uid || !firetable.listCountsLoaded) return;
   if (Date.now() - firetable.listCountsLoaded < 15 * 60 * 1000) return;
   firetable.listCountsLoaded = Date.now();
-  ftapi.lookup.listNames(function (all) { firetable.actions.loadListCounts(all); });
+  ftapi.lookup.listNames(function (all) { firetable.actions.loadListCounts(all, { flaggedOnly: true }); });
 });
 
 /**

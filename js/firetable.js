@@ -694,7 +694,7 @@ ftapi.actions = {
     };
     if (img) info.img = img;
     if (url) info.url = url;
-    var newTrack = destref.push(info, function(err) {
+    var newTrack = destref.push(ftapi.utilities.leanTrack(info), function(err) {
       if (err) ftapi.saveFailed("that track")(err);
       if (callback) callback(err || undefined);
     });
@@ -724,7 +724,7 @@ ftapi.actions = {
       if (info.img) track.img = info.img;
       if (info.url) track.url = info.url;
       if (info.from) track.from = String(info.from).slice(0, 16);
-      return { key: ref.push().key, track: track };
+      return { key: ref.push().key, track: ftapi.utilities.leanTrack(track) };
     });
     ftapi.utilities.rearrangeList(ref, function(items) {
       return fresh.concat(items);
@@ -796,6 +796,7 @@ ftapi.actions = {
     if (info.img) track.img = info.img;
     if (info.url) track.url = info.url;
     if (info.from) track.from = String(info.from).slice(0, 16); // where it was saved from ("discover")
+    track = ftapi.utilities.leanTrack(track);
     var finalKey = newKey;
     ftapi.utilities.rearrangeList(ref, function(items) {
       return [{ key: newKey, track: track }].concat(items);
@@ -908,8 +909,7 @@ ftapi.actions = {
         if (/^https:\/\//.test(sw.img || "")) next.img = sw.img;
       } else {
         next.type = MEDIA_YOUTUBE;
-        next.cid = sw.cid;
-        next.url = "https://www.youtube.com/watch?v=" + sw.cid;
+        next.cid = sw.cid; // (its art and page follow from the id)
       }
       if (sw.dur) next.duration = sw.dur;
       next.swappedFrom = { type: cur.type, cid: cur.cid, date: ftapi.now() };
@@ -963,7 +963,7 @@ ftapi.actions = {
               var childData = childSnapshot3.val();
               if (!childData || !childData.cid) return;
               if (destObj[childData.cid] && childData.type == destObj[childData.cid]) return; // already there
-              updates[destref.push().key] = childData; // push keys keep the source's order
+              updates[destref.push().key] = ftapi.utilities.leanTrack(childData); // push keys keep the source's order
             });
             return Object.keys(updates).length ? destref.update(updates) : null;
           });
@@ -1474,12 +1474,21 @@ ftapi.lookup = {
    */
   listCount: function(listID) {
     var path = String(listID) === "0" ? "queues/" + ftapi.uid : "playlists/" + ftapi.uid + "/" + listID + "/list";
-    var flagged = ftapi.db().ref(path).orderByChild("flagged/date").startAt(1).once("value").then(function(snap) {
-      return snap.val() || {};
+    return Promise.all([ftapi.utilities.shallowKeys(path), ftapi.lookup.listFlagged(listID)]).then(function(res) {
+      return { n: Object.keys(res[0]).length, broken: res[1].broken, swaps: res[1].swaps };
     });
-    return Promise.all([ftapi.utilities.shallowKeys(path), flagged]).then(function(res) {
-      var s = firetable.utilities.listStats(res[1], listID);
-      return { n: Object.keys(res[0]).length, broken: s.broken, swaps: s.swaps };
+  },
+  /**
+   * Just a list's flagged tracks, counted (the flagged/date index: only those
+   * download). For a recount when the length can't have changed.
+   * @param {string} listID
+   * @returns {Promise<{broken:number, swaps:number}>}
+   */
+  listFlagged: function(listID) {
+    var path = String(listID) === "0" ? "queues/" + ftapi.uid : "playlists/" + ftapi.uid + "/" + listID + "/list";
+    return ftapi.db().ref(path).orderByChild("flagged/date").startAt(1).once("value").then(function(snap) {
+      var s = firetable.utilities.listStats(snap.val() || {}, listID);
+      return { broken: s.broken, swaps: s.swaps };
     });
   },
   /** Every playlist with all its tracks (the playlist overview counts them). */
@@ -1492,6 +1501,31 @@ ftapi.lookup = {
 UTILITY FUNCTIONS
 */
 ftapi.utilities = {
+  /**
+   * A track as it's saved: without what follows from it. Every member
+   * downloads their whole open playlist on every visit (and the database
+   * bills what it sends), so a YouTube track doesn't keep its thumbnail
+   * (https://i.ytimg.com/vi/<id>/...) or watch page
+   * (https://www.youtube.com/watch?v=<id>): everything that shows them builds
+   * them from the id. Anything else is kept (a SoundCloud track's artwork and
+   * page, another image, a link with a start time). The same rules as the
+   * hostbot's lib/tracks.js.
+   * @param {Object} track
+   * @returns {Object} a copy
+   */
+  leanTrack: function(track) {
+    if (!track || typeof track !== "object") return track;
+    var out = Object.assign({}, track);
+    if (Number(out.type) === MEDIA_YOUTUBE && out.cid != null) {
+      var id = String(out.cid);
+      var thumb = /^https?:\/\/i\d?\.ytimg\.com\/vi(?:_webp)?\/([\w-]{6,64})\/[\w-]+\.(?:jpg|webp)$/i.exec(String(out.img || ""));
+      if (thumb && thumb[1] === id) delete out.img;
+      var page = /^https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([\w-]{6,64})$/i.exec(String(out.url || "")) ||
+        /^https?:\/\/youtu\.be\/([\w-]{6,64})$/i.exec(String(out.url || ""));
+      if (page && page[1] === id) delete out.url;
+    }
+    return out;
+  },
   /**
    * Is this a database key as the site makes them (push keys: letters,
    * digits, "-" and "_")? Chat keys end up in element ids, so a key someone

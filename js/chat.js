@@ -163,10 +163,14 @@ firetable.actions.localChatResponse = function (txt) {
 };
 
 // ─── Typing indicator (#33) ──────────────────────────────────────────────────
-// typing/<uid> = {name, at}: written while you type (at most every 3 s),
-// removed when you send, clear the box, leave it, go quiet for 5 s or
-// disconnect. Entries older than 8 s are ignored, so a crashed tab can't
-// leave someone "typing" forever.
+// typing/<uid> = {name, at}: written when you start typing, then only its
+// time (at) refreshed, at most every 5 s (every write goes to everyone in the
+// room, and the database bills what it sends); removed when you send, clear
+// the box, leave it, go quiet for 5 s or disconnect. Entries older than 11 s
+// (a refresh's 5 s, plus 5 s quiet, plus a second) are ignored, so a crashed
+// tab can't leave someone "typing" forever.
+var TYPING_REFRESH_MS = 5000;
+var TYPING_STALE_MS = 11000;
 
 firetable.typing = { others: {}, active: false, last: 0, idle: null };
 
@@ -184,12 +188,17 @@ firetable.actions.setTyping = function (on) {
     return;
   }
   var now = Date.now();
-  if (!t.active || now - t.last > 3000) {
+  if (!t.active) {
     t.active = true;
     t.last = now;
     ref.onDisconnect().remove();
     ref.set({ name: ftapi.uname, at: firebase.database.ServerValue.TIMESTAMP })
       .catch(function () { t.active = false; });
+  } else if (now - t.last > TYPING_REFRESH_MS) {
+    // still typing: just the time (the name is there already)
+    t.last = now;
+    ref.child('at').set(firebase.database.ServerValue.TIMESTAMP)
+      .catch(function () { t.active = false; }); // gone (a reconnect): the next keystroke writes it whole
   }
   t.idle = setTimeout(function () { firetable.actions.setTyping(false); }, 5000);
 };
@@ -202,7 +211,7 @@ firetable.ui.renderTyping = function () {
     if (!others.hasOwnProperty(uid) || uid === ftapi.uid) continue;
     if (ftapi.blockedUsers && ftapi.blockedUsers[uid]) continue;
     var e = others[uid];
-    if (!e || !e.name || ftapi.now() - Number(e.at || 0) > 8000) continue;
+    if (!e || !e.name || ftapi.now() - Number(e.at || 0) > TYPING_STALE_MS) continue;
     names.push(String(e.name));
   }
   var $el = $('#typingIndicator');
