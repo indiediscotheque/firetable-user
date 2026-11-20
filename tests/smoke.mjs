@@ -567,6 +567,12 @@ try {
   });
   const rowOrder = (p = page) => p.evaluate(() => [...document.querySelectorAll("#mainqueue .pvbar")].map((r) => r.getAttribute("data-key")).join());
   const box = (sel, p = page) => p.$eval(sel, (el) => { el.scrollIntoView({ block: "center" }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
+  // where a drag starts and ends: both measured after one scroll, so the first isn't stale when the second scrolls
+  const dragEnds = async (from, to, p = page) => {
+    await p.$eval('#mainqueue .pvbar[data-key="k2"]', (el) => el.scrollIntoView({ block: "center" }));
+    const at = (sel) => p.$eval(sel, (el) => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
+    return [await at('#mainqueue .pvbar[data-key="' + from + '"] .listwords'), await at('#mainqueue .pvbar[data-key="' + to + '"] .listwords')];
+  };
   const drag = {};
   drag.before = await rowOrder();
   // a click isn't a drag
@@ -574,8 +580,8 @@ try {
   await page.mouse.click(b1.x, b1.y);
   drag.click = await page.evaluate(() => window.__saved.length);
   // the first row, dragged below the third
-  b1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords');
-  const b3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords');
+  let b3;
+  [b1, b3] = await dragEnds("k1", "k3");
   await page.mouse.move(b1.x, b1.y);
   await page.mouse.down();
   for (let i = 1; i <= 8; i++) await page.mouse.move(b1.x, b1.y + (b3.y + b3.h * 0.4 - b1.y) * i / 8);
@@ -614,8 +620,7 @@ try {
   const cdpT = await touchPhone.newCDPSession(tPage);
   const touch = (type, x, y) => cdpT.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
   const t = {};
-  let s1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords', tPage);
-  let s3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords', tPage);
+  let [s1, s3] = await dragEnds("k1", "k3", tPage);
   // swipe without holding: no drag
   await touch("touchStart", s1.x, s1.y);
   for (let i = 1; i <= 5; i++) { await touch("touchMove", s1.x, s1.y + i * 12); await sleep(16); }
@@ -623,8 +628,7 @@ try {
   await sleep(300);
   t.swipe = await rowOrder(tPage);
   // hold, then move below the third row
-  s1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords', tPage);
-  s3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords', tPage);
+  [s1, s3] = await dragEnds("k1", "k3", tPage);
   await touch("touchStart", s1.x, s1.y);
   await sleep(450);
   for (let i = 1; i <= 8; i++) { await touch("touchMove", s1.x, s1.y + (s3.y + s3.h * 0.4 - s1.y) * i / 8); await sleep(16); }
