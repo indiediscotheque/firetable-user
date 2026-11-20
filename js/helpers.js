@@ -607,6 +607,76 @@ firetable.utilities = {
     return /[([][^)\]]*\b(re-?mix|mix|edit|rework|re-?edit|dub|vip|bootleg|flip)\b[^)\]]*[)\]]/i.test(String(name || ""));
   },
 
+  /**
+   * "Artist - Song Title" in AP title case: every word capitalized except
+   * articles and the conjunctions and prepositions of three letters or fewer
+   * (a, an, the, and, but, for, in, of, on, to…), which are capitalized only as
+   * the first or last word of a part (artist, title, a bracket, after a colon
+   * or "feat."). "feat.", "ft." and "vs." stay lowercase (Rohn Standard
+   * Notation). Words with their own capitals (DJ, AC/DC, McCartney, iPhone) or
+   * inner dots (will.i.am, U.S.) are left alone; a part that's all shouting
+   * (two or more words, no lowercase) is cased fresh. Spacing and punctuation
+   * are kept exactly. Particles like up, out and off stay capitalized: in song
+   * titles they're nearly always adverbs ("Shut Up and Dance"), which AP caps.
+   * @param {string} text
+   * @returns {string}
+   */
+  apTitleCase: function (text) {
+    var SMALL = /^(?:a|an|and|as|at|but|by|for|if|in|n|nor|of|on|or|per|the|to|via)$/i;
+    var BOUNDARY = /[:;!?()[\]{}"\u201C\u201D\u2013\u2014|]|(?:^|\s)[-/](?:\s|$)/;
+    var credit = function (w) {
+      return /^(?:feat|ft|featuring|vs)$/i.test(w.core);
+    };
+    var caseWord = function (word, first, last) {
+      if (!first && !last && SMALL.test(word)) return word.toLowerCase();
+      if (/\p{Lu}/u.test(word.slice(1))) return word; // DJ, McCartney, iPhone
+      return word.replace(/^\p{L}/u, function (c) { return c.toUpperCase(); });
+    };
+
+    // Shouted parts ("THE CURE - FRIDAY I'M IN LOVE") are lowercased first; a
+    // lone all-caps word (ABBA, MGMT) is a name and stays
+    var str = String(text == null ? "" : text).split(/(\s[-\u2013\u2014]\s|[()[\]{}:])/).map(function (part) {
+      var words = part.match(/\S*\p{L}\S*/gu) || [];
+      return words.length > 1 && !/\p{Ll}/u.test(part) ? part.toLowerCase() : part;
+    }).join("");
+
+    var tokens = str.split(/(\s+)/);
+    var words = [];
+    var gap = "";
+    tokens.forEach(function (tok, i) {
+      if (!tok || /^\s+$/.test(tok)) { gap += tok; return; }
+      var m = tok.match(/^([^\p{L}\p{N}]*)([\s\S]*?)([^\p{L}\p{N}]*)$/u);
+      if (!m[2]) { gap += tok; return; } // "-", "&", "/" between words
+      words.push({ i: i, lead: m[1], core: m[2], trail: m[3], before: gap });
+      gap = "";
+    });
+    var startsPart = function (k) {
+      if (k === 0) return true;
+      var prev = words[k - 1];
+      return credit(prev) || BOUNDARY.test(prev.trail + words[k].before + words[k].lead);
+    };
+
+    words.forEach(function (w, k) {
+      var first = startsPart(k);
+      // The last word of a part, which includes the title before "feat."
+      var last = k === words.length - 1 || (startsPart(k + 1) && !credit(w)) || credit(words[k + 1]);
+      var core;
+      if (k > 0 && credit(w)) core = w.core.toLowerCase();
+      else if (/\.\p{L}/u.test(w.core)) core = w.core; // will.i.am, U.S.
+      else {
+        // Hyphenated and slashed words: each piece is cased ("Hip-Hop",
+        // "Up-to-Date", "Love/Hate")
+        var parts = w.core.split(/([-/])/);
+        core = parts.map(function (p, j) {
+          if (j % 2) return p;
+          return caseWord(p, j === 0 ? first : parts[j - 1] === "/", j === parts.length - 1 ? last : false);
+        }).join("");
+      }
+      tokens[w.i] = w.lead + core + w.trail;
+    });
+    return tokens.join("");
+  },
+
   // ─── Date / Time Formatting ──────────────────────────────────────────────
 
   /**

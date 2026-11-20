@@ -1804,6 +1804,13 @@ firetable.ui.setupPlaylistEvents = function () {
       if (sep > 0) input.value = tag.slice(sep + 3).trim() + " - " + tag.slice(0, sep).trim();
       input.removeAttribute("aria-invalid");
       input.focus();
+    })
+    // "the cure - friday i'm in love" → "The Cure - Friday I'm in Love" (AP)
+    .on("click", "#tagEditorForm .tagCase", function () {
+      var input = document.getElementById("tagMachine");
+      input.value = firetable.utilities.apTitleCase(input.value);
+      input.removeAttribute("aria-invalid");
+      input.focus();
     });
 
   // ── Tag editor popover cleanup on auto-dismiss ──

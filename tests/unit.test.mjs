@@ -118,6 +118,36 @@ test("YouTube names: the artist from the title or the channel, and the real one 
   ]);
 });
 
+test("apTitleCase puts tags in AP title case, keeping names' own capitals and Rohn Standard Notation", async () => {
+  const cases = {
+    "the cure - friday i'm in love": "The Cure - Friday I'm in Love",
+    "THE CURE - FRIDAY I'M IN LOVE": "The Cure - Friday I'm in Love",
+    "florence and the machine - dog days are over": "Florence and the Machine - Dog Days Are Over",
+    "drake - one dance feat. wizkid & kyla (tame impala remix)": "Drake - One Dance feat. Wizkid & Kyla (Tame Impala Remix)",
+    "artist - come in feat. the weeknd": "Artist - Come In feat. The Weeknd",
+    "kendrick lamar vs. drake - the heart part 5": "Kendrick Lamar vs. Drake - The Heart Part 5",
+    "a tribe called quest - can i kick it?": "A Tribe Called Quest - Can I Kick It?",
+    "bruce springsteen - born to run": "Bruce Springsteen - Born to Run",
+    "artist - title: a subtitle of things": "Artist - Title: A Subtitle of Things",
+    "AC/DC - back in black": "AC/DC - Back in Black",
+    "MGMT - kids": "MGMT - Kids",
+    "Paul McCartney - an iPhone song (DJ Shadow remix)": "Paul McCartney - An iPhone Song (DJ Shadow Remix)",
+    "will.i.am - scream & shout": "will.i.am - Scream & Shout",
+    "elvis - rock 'n' roll": "Elvis - Rock 'n' Roll",
+    "nas - hip-hop is dead": "Nas - Hip-Hop Is Dead",
+    "artist - up-to-date": "Artist - Up-to-Date",
+    "artist - shut up and dance": "Artist - Shut Up and Dance",
+    "the who - who are you": "The Who - Who Are You",
+    "2pac - california love": "2pac - California Love",
+    "artist – song [live at the roxy]": "Artist – Song [Live at the Roxy]",
+    "  spaced  out -  kept ": "  Spaced  Out -  Kept ",
+    "": ""
+  };
+  const got = await run((ins) => ins.map((s) => firetable.utilities.apTitleCase(s)), Object.keys(cases));
+  assert.deepEqual(got, Object.values(cases));
+  assert.equal(await run(() => firetable.utilities.apTitleCase(null)), "");
+});
+
 test("chat: markup people type is shown as text, never as elements", async () => {
   for (const attack of [
     `<script>alert(1)</script>`,
