@@ -131,7 +131,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke: sending a fire reaction increments the badge; a new song resets it.
 - **Undo:** revert.
 
-### 1.6 Grab: one tap, with Undo
+### 1.6 Grab: one tap, with Undo ✅ shipped (the owner's yes, November 20, 2026)
+- **Shipped:** Grab (`#grab`, in the player bar since 2.3c) adds the room's song to the playlist you grabbed to last (`ft-lastGrabList` in this browser, if that list still exists), at the bottom, crediting the DJ (`recordGrab`), through `firetable.actions.grabTo`; the toast offers **Undo** and **Change** (undo it and open the picker). The first grab, a list that's gone, or a list kept to the other source opens the picker as before. A narrow ▾ beside it (`#st-grabPick`) always opens the picker. Toasts can now carry several actions (`opts.actions`). Smoke: the first grab opens the picker, the next goes straight there with Undo and Change, Undo takes it back, ▾ opens and closes the picker; reach finds the ▾.
 - **Goal:** grabbing goes to the playlist you grabbed to last, in one tap; the picker is one tap further.
 - **Rows:** ST-11, CR-24, CR-27.
 - **Files and change:** `#grab` becomes the main half of a split button; add `#st-grabPick` (▾) beside it. `STORAGE.lastGrabList` remembers the list. Tap `#grab`: if a last list exists and still exists, add there (the existing add-to-bottom path in `ui.js`'s `#stealpicker` change handler, factored into `firetable.actions.grabTo(listID)`), then `savedToast` with **Undo** and a **Change** action that opens the picker. Otherwise open the picker (today's behaviour). `#st-grabPick` always opens `#stealContain`.
