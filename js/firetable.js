@@ -709,6 +709,86 @@ ftapi.actions = {
    * @param {Function} [callback] - (error, newKey)
    * @returns {string} key the track was saved under
    */
+  /**
+   * Add several tracks to the top of a list, in the order given, in one step.
+   * @param {Object} ref - Playlist ref
+   * @param {Object[]} infos - [{type, name, cid[, img][, url][, from]}]
+   * @param {string} [preview] - Key of a track being previewed in this list
+   * @param {Function} [pvChangeCallback] - Gets the preview's new key if it moved
+   * @param {Function} [callback] - (error)
+   */
+  addTracksToTop: function(ref, infos, preview, pvChangeCallback, callback) {
+    if (!infos.length) { if (callback) callback(null); return; }
+    var fresh = infos.map(function(info) {
+      var track = { type: info.type, name: info.name, cid: info.cid };
+      if (info.img) track.img = info.img;
+      if (info.url) track.url = info.url;
+      if (info.from) track.from = String(info.from).slice(0, 16);
+      return { key: ref.push().key, track: track };
+    });
+    ftapi.utilities.rearrangeList(ref, function(items) {
+      return fresh.concat(items);
+    }, function(err, moves) {
+      ftapi.utilities.previewMover(preview, pvChangeCallback)(err, moves);
+      if (callback) callback(err);
+    }, fresh.map(function(f) { return f.key; }));
+  },
+  /**
+   * Move several tracks of the list on screen to its top or bottom, keeping
+   * their order, in one step.
+   * @param {string[]} keys - Track keys
+   * @param {string} where - "top" or "bottom"
+   * @param {string} [preview]
+   * @param {Function} [pvChangeCallback]
+   * @param {Function} [callback] - (error, moves): moves maps old key → new key
+   */
+  moveTracks: function(keys, where, preview, pvChangeCallback, callback) {
+    var pick = {};
+    keys.forEach(function(k) { pick[k] = true; });
+    ftapi.utilities.rearrangeList(ftapi.queueRef, function(items) {
+      var chosen = items.filter(function(it) { return pick[it.key]; });
+      if (!chosen.length) return;
+      var rest = items.filter(function(it) { return !pick[it.key]; });
+      return where === "bottom" ? rest.concat(chosen) : chosen.concat(rest);
+    }, function(err, moves) {
+      ftapi.utilities.previewMover(preview, pvChangeCallback)(err, moves);
+      if (callback) callback(err, moves);
+    });
+  },
+  /**
+   * Delete several tracks of the list on screen in one write.
+   * @param {string[]} keys - Track keys
+   * @returns {Promise<Object[]>} what went, [{index, track}] by place in the list, for restoreTracks
+   */
+  removeTracks: function(keys) {
+    var ref = ftapi.queueRef;
+    return ref.once("value").then(function(snap) {
+      var list = snap.val() || {};
+      var order = Object.keys(list).sort(ftapi.utilities.compareKeys);
+      var gone = [], update = {};
+      order.forEach(function(k, i) {
+        if (keys.indexOf(k) === -1) return;
+        gone.push({ index: i, track: list[k] });
+        update[k] = null;
+      });
+      if (!gone.length) return gone;
+      return ref.update(update).then(function() { return gone; });
+    });
+  },
+  /**
+   * Put deleted tracks back where they were (removeTracks' result), in one step.
+   * @param {Object} ref - The list they came from
+   * @param {Object[]} gone - [{index, track}]
+   * @param {Function} [callback] - (error)
+   */
+  restoreTracks: function(ref, gone, callback) {
+    var back = gone.slice().sort(function(a, b) { return a.index - b.index; })
+      .map(function(g) { return { index: g.index, item: { key: ref.push().key, track: g.track } }; });
+    ftapi.utilities.rearrangeList(ref, function(items) {
+      back.forEach(function(b) { items.splice(Math.min(b.index, items.length), 0, b.item); });
+      return items;
+    }, function(err) { if (callback) callback(err); }, back.map(function(b) { return b.item.key; }));
+  },
   addTrackToTop: function(ref, info, preview, pvChangeCallback, callback) {
     ref = ref || ftapi.queueRef;
     var newKey = ref.push().key; // sorts after every existing key
@@ -1490,19 +1570,20 @@ ftapi.utilities = {
    * @param {Object} ref - Playlist ref
    * @param {Function} arrange - (items) => items in the new order, or undefined
    * @param {Function} [onDone] - (error, moves) — moves maps old key → new key
-   * @param {string} [newKey] - Key of a track `arrange` adds
+   * @param {string|string[]} [newKey] - Key(s) of the track(s) `arrange` adds
    */
   rearrangeList: function(ref, arrange, onDone, newKey) {
     var moves = null;
+    var added = newKey ? [].concat(newKey) : [];
     ref.transaction(function(current) {
-      if (!current && !newKey) return current; // nothing cached yet: let Firebase fetch
+      if (!current && !added.length) return current; // nothing cached yet: let Firebase fetch
       current = current || {};
       var keys = Object.keys(current).sort(ftapi.utilities.compareKeys);
       var items = keys.map(function(k) { return { key: k, track: current[k] }; });
       var ordered = arrange(items.slice());
       if (!ordered) return; // abort: nothing to change
       var slots = keys.slice();
-      if (newKey && slots.indexOf(newKey) === -1) slots.push(newKey);
+      added.forEach(function(k) { if (slots.indexOf(k) === -1) slots.push(k); });
       slots.sort(ftapi.utilities.compareKeys);
       if (ordered.length !== slots.length) return; // shouldn't happen; never drop tracks
       var out = {};

@@ -1731,6 +1731,29 @@ firetable.ui.setupMiscEvents = function () {
       img: (firetable.imgCache && firetable.imgCache[firetable.song.cid]) || '',
       url: firetable.song.url || ''
     });
+    // Several songs at once (Select several's Copy to…): to the top, in their order
+    if (src && src.many) {
+      var fits = src.many.filter(function (t) { return !firetable.utilities.formatRefusal(dest, t.type); });
+      var skipped = src.many.length - fits.length;
+      if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
+      firetable.stealSourceBtn = null;
+      firetable.stealTarget = null;
+      $("#stealContain").hide();
+      $("#stealpicker").val("-1");
+      if (!fits.length) {
+        firetable.ui.toast(firetable.utilities.formatRefusal(dest, src.many[0].type), "error");
+        return;
+      }
+      var manyName = firetable.utilities.listName(dest);
+      ftapi.actions.addTracksToTop(ftapi.lookup.listRef(dest), fits.map(function (t) {
+        return { type: t.type, name: t.title, cid: t.cid, img: t.img, url: firetable.utilities.soundCloudPageUrl(t.url) };
+      }), null, null, function (err) {
+        if (err) return;
+        firetable.ui.toast("Copied " + fits.length + (fits.length === 1 ? " song" : " songs") + " to " + manyName + "." +
+          (skipped ? " " + skipped + " left out: that playlist takes only one kind." : ""), "success");
+      });
+      return;
+    }
     // a list kept to one source takes only that source's tracks
     var refusal = src ? firetable.utilities.formatRefusal(dest, src.type) : "";
     if (refusal) {

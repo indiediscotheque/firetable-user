@@ -848,13 +848,15 @@ function buildQueueItemHTML(key, track, isPreview, pos) {
     swapHtml = '<button type="button" class="material-symbols-outlined row-icon swapsong" title="' + swapTitle + '" aria-label="' + swapTitle + '" aria-haspopup="dialog">swap_horiz</button>';
   }
 
+  var picked = !!(firetable.queueSel && firetable.queueSel[key]);
   return (
-    '<div class="pvbar' + (isPreview ? ' previewing' : '') + (swap ? ' has-swap' : '') + '" id="pvbar' + key + '"' +
+    '<div class="pvbar' + (isPreview ? ' previewing' : '') + (swap ? ' has-swap' : '') + (picked ? ' is-picked' : '') + '" id="pvbar' + key + '"' +
     ' data-key="' + key + '" data-type="' + track.type + '"' +
     ' data-cid="' + firetable.utilities.htmlEscape(String(track.cid)) + '"' +
     ' data-tags="' + safeTrackName + '" data-broken="' + (track.flagged ? '1' : '0') + '"' +
     ' data-track-seconds="' + (trackSeconds || '') + '">' +
     '<div class="pvbarWrap">' +
+    '<input type="checkbox" class="q-check" aria-label="Select ' + firetable.utilities.htmlEscape(showTitle || trackName) + '"' + (picked ? ' checked' : '') + ' />' +
     '<div class="' + artClass + '"' + artStyle + '></div>' +
     '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
     (track.flagged ? flagHtml : '<span class="track-warning"></span>') +
@@ -924,7 +926,9 @@ firetable.ui.setupPlaylistEvents = function () {
     cancel: 'button, a, input, textarea, select, label, [contenteditable], .edittags',
     keys: true,
     // off while the list is sorted for viewing: a drop there has no play-order meaning
-    disabled: function () { return firetable.queueSort && firetable.queueSort !== "order"; },
+    disabled: function () {
+      return (firetable.queueSort && firetable.queueSort !== "order") || $('#mainqueue').hasClass('cr-selecting');
+    },
     onStart: function (row) {
       var block = row.closest('.pvchunk');
       if (block) block.classList.add('sort-src');
@@ -1128,6 +1132,10 @@ firetable.ui.setupPlaylistEvents = function () {
     var listKey = String(listID);
     var isUpdate = firetable._queueShownList === listKey &&
       container.querySelector('.pvbar') !== null;
+    // another list: what was ticked in the last one doesn't carry over
+    if (firetable._queueShownList != null && firetable._queueShownList !== listKey && firetable.actions.clearQueueSelection) firetable.actions.clearQueueSelection();
+    // drop ticks for songs no longer in the list
+    if (firetable.queueSel) Object.keys(firetable.queueSel).forEach(function (k) { if (!okdata || !okdata[k]) delete firetable.queueSel[k]; });
     firetable._queueShownList = listKey;
 
     if (!keys.length) {
@@ -1242,6 +1250,141 @@ firetable.ui.setupPlaylistEvents = function () {
     });
   }
   setSort("order");
+
+  // ── Select several (#cr-select): tick songs, then Top, Bottom, Copy to… or
+  // Delete them together (#cr-bulk). Dragging is off meanwhile. ──
+  var bulk = document.getElementById("cr-bulk");
+  var selBtn = document.getElementById("cr-select");
+  var lastPicked = null;
+  /** The ticked songs' keys, in play order. */
+  function pickedKeys() {
+    var sel = firetable.queueSel || {};
+    return Object.keys(firetable.queue || {}).filter(function (k) { return sel[k]; });
+  }
+  function resetDelete() {
+    $("#cr-bulkDelete").removeClass("confirming").find("span").text("Delete");
+  }
+  function renderBulk() {
+    var n = pickedKeys().length;
+    var shown = $("#mainqueue .pvbar:not(.ft-filtered)").length;
+    $("#cr-bulkCount").text(n + " selected");
+    $("#cr-bulkAll").prop("checked", n > 0 && n >= shown).prop("indeterminate", n > 0 && n < shown);
+    $("#cr-bulkTop, #cr-bulkBottom, #cr-bulkCopy, #cr-bulkDelete").prop("disabled", !n);
+    resetDelete();
+  }
+  function setPicked(row, on) {
+    var key = row.getAttribute("data-key");
+    firetable.queueSel = firetable.queueSel || {};
+    if (on) firetable.queueSel[key] = true; else delete firetable.queueSel[key];
+    row.classList.toggle("is-picked", on);
+    var box = row.querySelector(".q-check");
+    if (box) box.checked = on;
+  }
+  function setSelecting(on) {
+    $("#mainqueue").toggleClass("cr-selecting", on);
+    if (bulk) bulk.hidden = !on;
+    if (selBtn) {
+      selBtn.classList.toggle("is-on", on);
+      selBtn.setAttribute("aria-pressed", String(on));
+    }
+    if (!on) {
+      firetable.queueSel = {};
+      $("#mainqueue .pvbar.is-picked").removeClass("is-picked").find(".q-check").prop("checked", false);
+    }
+    lastPicked = null;
+    renderBulk();
+  }
+  firetable.actions.clearQueueSelection = function () { setSelecting(false); };
+  firetable.actions.setQueueSelecting = setSelecting;
+  $(selBtn).on("click", function () { setSelecting(!$("#mainqueue").hasClass("cr-selecting")); });
+  $("#cr-bulkDone").on("click", function () {
+    setSelecting(false);
+    if (selBtn) selBtn.focus();
+  });
+  // a tick, or a tap on the row anywhere but a button; Shift takes the rows between
+  $("#mainqueue").on("click", ".pvbar", function (e) {
+    if (!$("#mainqueue").hasClass("cr-selecting")) return;
+    var onBox = $(e.target).is(".q-check");
+    if (!onBox && $(e.target).closest("button, a, input, label").length) return;
+    var row = this;
+    var on = onBox ? e.target.checked : !row.classList.contains("is-picked");
+    if (e.shiftKey && lastPicked && lastPicked.isConnected) {
+      var rows = $("#mainqueue .pvbar:not(.ft-filtered)").get();
+      var a = rows.indexOf(lastPicked), b = rows.indexOf(row);
+      if (a > -1 && b > -1) rows.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(function (r) { setPicked(r, on); });
+    }
+    setPicked(row, on);
+    lastPicked = row;
+    renderBulk();
+  });
+  $("#cr-bulkAll").on("change", function () {
+    var on = this.checked;
+    $("#mainqueue .pvbar:not(.ft-filtered)").each(function () { setPicked(this, on); });
+    renderBulk();
+  });
+  function bulkMove(where) {
+    var keys = pickedKeys();
+    if (!keys.length) return;
+    ftapi.actions.moveTracks(keys, where, firetable.preview, function (changePV) {
+      if (changePV) firetable.preview = changePV;
+    }, function (err, moves) {
+      if (err || !moves) return;
+      // the same songs stay ticked, under their new keys
+      var next = {};
+      keys.forEach(function (k) { if (moves[k]) next[moves[k]] = true; });
+      firetable.queueSel = next;
+      $("#mainqueue .pvbar").each(function () {
+        var on = !!next[this.getAttribute("data-key")];
+        this.classList.toggle("is-picked", on);
+        var box = this.querySelector(".q-check");
+        if (box) box.checked = on;
+      });
+      renderBulk(); // no toast: the rows move in view, and a toast would cover this bar
+    });
+  }
+  $("#cr-bulkTop").on("click", function () { bulkMove("top"); });
+  $("#cr-bulkBottom").on("click", function () { bulkMove("bottom"); });
+  $("#cr-bulkCopy").on("click", function () {
+    var list = firetable.queue || {};
+    var many = pickedKeys().map(function (k) {
+      var t = list[k];
+      return { cid: t.cid, type: t.type, title: firetable.utilities.decodeEntities(t.name || ""), img: t.img || "", url: t.url || "" };
+    });
+    if (many.length) firetable.actions.openStealPicker($(this), { many: many }, "top");
+  });
+  $("#cr-bulkDelete").on("click", function () {
+    var $b = $(this);
+    var keys = pickedKeys();
+    if (!keys.length) return;
+    if (!$b.hasClass("confirming")) {
+      $b.addClass("confirming").find("span").text("Delete " + keys.length + (keys.length === 1 ? " song?" : " songs?"));
+      return;
+    }
+    resetDelete();
+    var ref = ftapi.queueRef;
+    ftapi.actions.removeTracks(keys).then(function (gone) {
+      firetable.queueSel = {};
+      renderBulk();
+      if (!gone.length) return;
+      firetable.ui.toast("Deleted " + gone.length + (gone.length === 1 ? " song." : " songs."), "success", { action: { label: "Undo", fn: function () {
+        ftapi.actions.restoreTracks(ref, gone, function (err) {
+          if (err) firetable.ui.toast("Couldn't put them back. Try again in a moment.", "error");
+        });
+      } } });
+    }, function (err) {
+      console.error("[firetable] deleting songs failed:", err);
+      firetable.ui.toast("Couldn't delete those songs. Try again in a moment.", "error");
+    });
+  });
+  $(bulk).on("click", "button:not(#cr-bulkDelete)", resetDelete);
+  $(document).on("keydown", function (e) {
+    if (e.key !== "Escape" || !$("#mainqueue").hasClass("cr-selecting")) return;
+    if (document.querySelector(":popover-open, dialog[open]")) return;
+    var t = e.target;
+    if (!(t === document.body || (t.closest && t.closest("#queuelist, #queueControls, #cr-bulk")))) return;
+    setSelecting(false);
+  });
+  setSelecting(false);
 
   // ── Queue filter input ──
   // "input" covers typing, paste, cut, undo and the search box's clear (X)

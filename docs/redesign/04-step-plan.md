@@ -232,7 +232,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke: every menu item reaches its function; filters still filter; view-only sort doesn't change `ftapi.queue` order.
 - **Undo:** revert.
 
-### 1.17 Select several
+### 1.17 Select several ✅ shipped (November 19, 2026)
+- **Shipped:** `#cr-select` (beside Sort) turns on `#mainqueue.cr-selecting`: a tick on each row (`.q-check`; a tap on the row's empty space ticks it too, Shift ticks the run between), the picked rows lit, dragging off, and a light bar floating at the bottom of the list, `#cr-bulk`: "N selected" (its box ticks every row shown, so a filter then Select all works), **Top**, **Bottom**, **Copy to…**, **Delete**, ×. Top and Bottom keep the picked songs' order in one transaction (`ftapi.actions.moveTracks` on `rearrangeList`, which now takes several new keys) and the same songs stay ticked. Copy to… uses the playlist picker for all of them (`addTracksToTop`, in play order; songs a one-kind playlist won't take are left out and counted). Delete asks once on the button ("Delete 3 songs?"), deletes in one write (`removeTracks`) and offers Undo, which puts them back where they were (`restoreTracks`). Esc or × ends it; another playlist clears the ticks. On a phone the bar shows icons and the count. Smoke ticks two of five, Top (order and ticks kept), Delete and Undo, and Copy to….
 - **Goal:** move, copy or delete several songs at once.
 - **Rows:** CR-03, CR-05, CR-24.
 - **Files and change:** `#cr-select` toggles `.cr-selecting` on `#mainqueue`: a checkbox on each row, dragging off, and a floating neutral bar `#cr-bulk` ("3 selected · Top · Bottom · Copy to… · Delete · ×"). Top and Bottom keep the selected songs' relative order, done in one atomic rearrange (`ftapi.utilities.rearrangeList`, as `addTrackToTop` does). Copy to… uses the steal picker for several. Delete asks once ("Delete 3 songs?") and offers Undo (re-add at the same positions).

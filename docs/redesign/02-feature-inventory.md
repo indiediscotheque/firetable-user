@@ -145,12 +145,13 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | CR-21 | Remove duplicates | M | `removeDupesFromQueue`, `removeDuplicatesFromList` | ✅ 1.16 (November 19, 2026): Remove duplicates in the playlist ⋮ menu, with how many went; Show only: Duplicates (`#cr-dupesOnly`) shows them first |
 | CR-22 | Delete and search for another | M | `deleteSongAndSearch` | ✅ 1.15 (November 19, 2026): the row ⋮ (`data-act="delsearch"`) |
 | CR-23 | Edit tags (Artist - Title) | M | `editTagsPrompt`, `#tagEditorPopover` (`#tagMachine`), `tagLog` | 1.15 row ⋮. ✅ 1.15 in part (November 15, 2026): a playlist track's tags before it's played, from its ⋮ (`renameQueueTrack` → `ftapi.actions.renameTrack`, with Undo); the hostbot plays it under that name and its first play saves those tags |
-| CR-24 | Undo after add / move / swap | M | `savedToast`, toast actions | keep |
+| CR-24 | Undo after add / move / swap | M | `savedToast`, toast actions | keep; Select several's Delete adds one (1.17) |
 | CR-25 | The built-in list ("Default Playlist", renamable) | M | `queues/<uid>`, `defaultListName`, `playlistPrefs/<uid>/defaultName` | keep; any list, the built-in one too, is renamed from the playlist ⋮ menu (`#cr-renameBox`, 1.16) or in All Playlists |
 | CR-26 | Discover's "Save all" into a new playlist | M | `discover.js` `saveAll` | keep; also a source in Import (1.19) |
 | CR-27 | Saved marks (this song is in your playlists) | M | `firetable.saved`, `markSaved` | keep |
 | CR-28 | (new) Export a playlist as a list of songs ("Artist - Title" lines, a .txt) | M | `firetable.actions.exportList`, the playlist ⋮ menu | ✅ 1.16 (November 19, 2026) |
 | CR-29 | (new) Sort a playlist by artist or title, view only | M | `#cr-sort`, `#cr-sortMenu`, `#cr-sortBar`, `firetable.actions.sortedQueueKeys` | ✅ 1.16 (November 19, 2026): the play order never changes; dragging is off while sorted; Back to your order |
+| CR-30 | (new) Select several: tick songs (Shift for a run, or all shown), then Top, Bottom, Copy to…, Delete | M | `#cr-select`, `#cr-bulk`, `ftapi.actions.moveTracks` / `removeTracks` / `restoreTracks` / `addTracksToTop` | ✅ 1.17 (November 19, 2026): one step each; Top and Bottom keep their order; Delete asks once and has Undo |
 
 ## IM · Import
 

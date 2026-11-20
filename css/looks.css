@@ -3158,6 +3158,105 @@ input.ft-filter {
 .cr-sortOpt input:checked { border-color: var(--color-accent); }
 .cr-sortOpt input:checked::before { transform: scale(1); }
 .cr-sortOpt input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+/* Select several (#cr-select, 1.17): a tick on each row, the picked rows lit,
+   and a light bar floating at the bottom of the list (#cr-bulk) */
+#cr-select { flex: none; }
+#cr-select.is-on { color: var(--color-accent); }
+#mainqueue .q-check { display: none; }
+#mainqueue.cr-selecting .q-check {
+    display: inline-grid;
+    place-content: center;
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0 var(--pad2) 0 var(--pad2);
+    border: 1px solid var(--color-bg-t3);
+    border-radius: 0.25rem;
+    background: var(--color-bg);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+#mainqueue.cr-selecting .q-check::before {
+    content: "";
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 0.15rem;
+    background: var(--color-text-light);
+    transform: scale(0);
+    transition: transform var(--dur-fast) var(--ease-out);
+}
+#mainqueue.cr-selecting .q-check:checked { border-color: var(--color-text-light); }
+#mainqueue.cr-selecting .q-check:checked::before { transform: scale(1); }
+#mainqueue.cr-selecting .q-check:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+#mainqueue.cr-selecting .pvbar { cursor: pointer; }
+/* the cover's play button and flag sit on the cover, which the tick pushes along */
+#mainqueue.cr-selecting .previewicon { left: calc(1.1rem + 2 * var(--pad2)); }
+#mainqueue.cr-selecting .track-warning { left: calc(1.3rem + 1.1rem + 2 * var(--pad2)); }
+#mainqueue.cr-selecting .pvbar.is-picked {
+    background-color: var(--color-bg-t2);
+    box-shadow: inset 3px 0 0 var(--color-text-light);
+}
+.cr-bulk {
+    position: sticky;
+    bottom: var(--pad2);
+    z-index: 4;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--pad1);
+    width: fit-content;
+    max-width: calc(100% - 2 * var(--pad2));
+    margin: var(--pad2) auto 0;
+    padding: var(--pad1) var(--pad1) var(--pad1) var(--pad3);
+    border-radius: var(--radius-pill);
+    background: #ececef;
+    color: #18181b;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+    font-size: var(--fs-title);
+}
+.cr-bulk[hidden] { display: none; }
+.cr-bulkAll {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pad2);
+    margin-right: var(--pad1);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.cr-bulkAll input { width: 1rem; height: 1rem; margin: 0; accent-color: #18181b; }
+.cr-bulkBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 2rem;
+    padding: 0 0.7rem;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.cr-bulkBtn [class*="material-symbols-"] { margin: 0; font-size: 1.15rem; }
+.cr-bulkBtn:hover:not(:disabled) { background: rgba(0, 0, 0, 0.08); }
+.cr-bulkBtn:focus-visible { outline: 2px solid #18181b; outline-offset: 1px; }
+.cr-bulkBtn:disabled { opacity: 0.4; cursor: default; }
+.cr-bulkDanger { color: #a3261a; }
+.cr-bulkDanger.confirming { background: #a3261a; color: #fff; }
+.cr-bulkDone { padding: 0 0.45rem; }
+@media (pointer: coarse) {
+    .cr-bulkBtn { min-height: var(--tap-min); }
+}
+@container queuelist (width < 28rem) {
+    /* a phone: icons only, the count stays */
+    .cr-bulkBtn { font-size: 0; gap: 0; padding: 0 0.55rem; }
+    .cr-bulkBtn [class*="material-symbols-"] { font-size: 1.25rem; }
+    .cr-bulkDanger.confirming { font-size: var(--fs-label); gap: 0.3rem; }
+}
 /* The sorted view's note sits over the list; it doesn't stick, so the swap bar can */
 .cr-sortBar { position: relative; z-index: auto; }
 #mainqueue.cr-sorted .pvbar { cursor: default; }

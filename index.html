@@ -438,6 +438,10 @@
 							<i class="material-symbols-outlined">sort</i>
 						</button>
 						<span id="tip-cr-sort" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-sort">Sort</span>
+						<button type="button" class="butt graybutt iconbutt" id="cr-select" aria-label="Select several" aria-pressed="false" style="anchor-name: --tip-cr-select" aria-describedby="tip-cr-select">
+							<i class="material-symbols-outlined">checklist</i>
+						</button>
+						<span id="tip-cr-select" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-select">Select several</span>
 					</form>
 				</div>
 				<div id="searchMachine">
@@ -468,6 +472,15 @@
 						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:14rem"></div></div>
 						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:10rem"></div></div>
 						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:17rem"></div></div>
+					</div>
+					<!-- Select several (#cr-select): what to do with the songs ticked -->
+					<div id="cr-bulk" class="cr-bulk" role="toolbar" aria-label="Selected songs" hidden>
+						<label class="cr-bulkAll"><input type="checkbox" id="cr-bulkAll" /><span id="cr-bulkCount">0 selected</span></label>
+						<button type="button" class="cr-bulkBtn" id="cr-bulkTop"><i class="material-symbols-outlined" aria-hidden="true">vertical_align_top</i> Top</button>
+						<button type="button" class="cr-bulkBtn" id="cr-bulkBottom"><i class="material-symbols-outlined" aria-hidden="true">vertical_align_bottom</i> Bottom</button>
+						<button type="button" class="cr-bulkBtn" id="cr-bulkCopy"><i class="material-symbols-outlined" aria-hidden="true">playlist_add</i> Copy to…</button>
+						<button type="button" class="cr-bulkBtn cr-bulkDanger" id="cr-bulkDelete"><i class="material-symbols-outlined" aria-hidden="true">delete</i> <span>Delete</span></button>
+						<button type="button" class="cr-bulkBtn cr-bulkDone" id="cr-bulkDone" aria-label="Stop selecting"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 					</div>
 				</div>
 				<div id="addbox">
