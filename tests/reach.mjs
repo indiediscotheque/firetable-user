@@ -71,7 +71,7 @@ const FEATURES = [
   // ── phones: the bottom tab bar (NV-01) ──
   { row: "NV-01", name: "Tab bar: Home", who: ALL, widths: PHONE, via: ['#nav-tabs [data-tab="home"]'], target: "#dBrowse .ft-cards .pvbar", hash: "#discover" },
   { row: "NV-01", name: "Tab bar: Discover's pages", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="discover"]'], target: '#dNav [data-view="years"]' },
-  { row: "NV-01", name: "Tab bar: Live", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="live"]'], target: "#djStage", hash: "#live" },
+  { row: "NV-01", name: "Tab bar: Live", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="live"]'], target: "#stage", hash: "#live" },
   { row: "NV-01", name: "Tab bar: Library", who: IN, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="library"]'], target: "#mainqueue", hash: "#live" },
   { row: "NV-01", name: "Tab bar: Library (visitors: what joining opens)", who: ["visitor"], widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="library"]'], target: "#welcomeInfo .d-createaccount" },
   { row: "NV-01", name: "Tab bar: You (the account menu)", who: IN, widths: PHONE, via: ['#nav-tabs [data-tab="you"]'], target: "#nav-accountMenu" },
