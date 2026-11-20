@@ -1311,6 +1311,10 @@ try {
   lib.dj.dj1.firstHere = Array.from({ length: 14 }, (_, i) => ({ cid: "fh" + String(i).padStart(9, "0"), type: 1, a: "Firsts", t: "First " + (i + 1), plays: 20 - i, first: now - (400 - i) * 86400000 }));
   // a year's playlist with one song three times (an old library build did that): the page lists it once
   lib.year[2026].top = [lib.year[2026].top[0], Object.assign({}, lib.year[2026].top[0]), Object.assign({}, lib.year[2026].top[0], { cid: "lib0000099" })];
+  // two sets on one night (a break between): one line, "12 songs in 2 sets" (2.7)
+  lib.dj.dj1.sets = [{ at: now - 86400000 + 3 * 3600000, n: 3 }, { at: now - 86400000, n: 9 }];
+  // a year's covers on the Years list (2.7)
+  lib.years[2026].covers = ["1_lib0000002"];
   await put("/discover/lib", lib);
   await openPage(dPage, SITE);
   await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
@@ -2139,11 +2143,17 @@ try {
     more.click();
     out.uncapped = shownRows() + "|" + !document.querySelector("#dBrowse .d-showall") + "|" + firetable.discover.state().list;
     out.userCardLink = firetable.discover.djPage("dj1", "dj1");
+    out.sets = [...document.querySelectorAll("#dBrowse .d-set")].map((x) => x.lastElementChild.textContent).join("|");
+    out.chips = [...document.querySelectorAll("#dBrowse .d-pagehead .d-facts li")].length;
     out.dj = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelector("#dBrowse .d-pagehead .d-fact").textContent;
     location.hash = "#discover/artist/alpha";
     const h2 = (text) => () => (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent === text;
     await until(h2("Alpha"));
     out.artist = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length;
+    location.hash = "#discover/years";
+    await until(() => document.querySelector("#dBrowse .d-yearrow"));
+    const yr = document.querySelector('#dBrowse .d-yearrow[href="#discover/years/2026"]');
+    out.yearRow = !!(yr && yr.querySelector(".d-mosaic i[style]")) + "|" + /released in 2026/.test(yr ? yr.textContent : "");
     location.hash = "#discover/years/2026";
     await until(h2("2026"));
     out.year = document.querySelectorAll("#dBrowse .ft-rows .pvbar").length + "|" + document.querySelectorAll("#dBrowse .ft-cards .pvbar").length;
@@ -2164,6 +2174,8 @@ try {
     "the sound map by decade, and a genre's line (" + libPages.decade + " / " + libPages.about + ")");
   check(libPages.ytm === "https://music.youtube.com/playlist?list=PLsmokeNuDisco", "a genre page links to its YouTube Music playlist (" + libPages.ytm + ")");
   check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
+  check(libPages.sets === "12 songs in 2 sets" && libPages.chips >= 4, "a DJ's sets on one night are one line, and the page's facts are chips (" + libPages.sets + " / " + libPages.chips + ")");
+  check(libPages.yearRow === "true|true", "the Years list shows each year's covers and says they're its releases (" + libPages.yearRow + ")");
   check(libPages.taste === "Nu-Disco70%|Everything else30%|2", "a DJ's sound: one stacked bar of their top genres and the rest, with a legend (" + libPages.taste + ")");
   check(libPages.capped === "10|expand_moreShow all 14" && /^14\|true\|/.test(libPages.uncapped || ""),
     "a long list shows its top 10 and Show all, which opens the rest in place (" + libPages.capped + " / " + libPages.uncapped + ")");
@@ -2465,6 +2477,9 @@ try {
     const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
     const heads = () => [...document.querySelectorAll("#dBrowse .d-head h2")].map((e) => e.textContent);
     ftapi.uid = "dj1";
+    // the page already listens on users/, so its reads answer from what it holds:
+    // wait until the picks put a moment ago have reached it
+    await until(() => { const u = ftapi.users && ftapi.users.dj1; return !!(u && JSON.stringify(u.featured || "").includes("cardP")); });
     firetable.discover.forgetFeatured("dj1"); // read before the picks were put
     location.hash = "#discover/djs/dj1";
     await until(() => document.querySelector('#dBrowse .d-card[data-card="cardP"]'));

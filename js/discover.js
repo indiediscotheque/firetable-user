@@ -664,6 +664,10 @@ firetable.discover = (function () {
     var i = String(key || "").indexOf("_");
     return artOf({ type: Number(key.slice(0, i)) || 1, cid: key.slice(i + 1) });
   }
+  /** A page's facts as chips under its title (2.7): "120 plays", "usually Friday nights"… */
+  function factChips(facts) {
+    return '<ul class="d-fact d-facts">' + facts.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul>";
+  }
   function mosaic(covers, big) {
     var c = (covers || []).slice(0, 4);
     while (c.length < 4) c.push(null);
@@ -910,7 +914,7 @@ firetable.discover = (function () {
     var tracks = withType(tabs[tab][1]);
     setList("genre", g.name + " · " + tabs[tab][0], tracks);
     h += '<div class="d-pagehead">' + mosaic(g.covers, true) + '<div class="d-pagetext"><h2>' + esc(g.name) + "</h2>" +
-      (g.about ? '<p class="d-about">' + esc(g.about) + "</p>" : "") + '<p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
+      (g.about ? '<p class="d-about">' + esc(g.about) + "</p>" : "") + factChips(facts) +
       '<div class="d-actions"><button type="button" class="butt d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>Play " + esc(g.name) + " radio</span></button>" +
       saveAllButton("genre") + ytmButton(slug, g.name) + "</div></div></div>";
     h += "<section>" + '<div class="d-headrow">' + chips("gtab", [["fav", "Room favorites"], ["newHere", "New here"], ["deep", "Deep cuts"]], tab) + "</div>" +
@@ -984,7 +988,7 @@ firetable.discover = (function () {
     var tab = D.djTab === "most" || D.djTab === "firstHere" ? D.djTab : ((d.firstHere || []).length ? "firstHere" : "most");
     var tracks = withType(tab === "most" ? d.most : d.firstHere);
     setList("dj", d.name + " · " + (tab === "most" ? "Most played" : "Brought here first"), tracks);
-    h += '<div class="d-pagehead">' + '<span class="d-bigrobot">' + robot(dj, "160x160") + '</span><div class="d-pagetext"><h2>' + esc(d.name) + '</h2><p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
+    h += '<div class="d-pagehead">' + '<span class="d-bigrobot">' + robot(dj, "160x160") + '</span><div class="d-pagetext"><h2>' + esc(d.name) + "</h2>" + factChips(facts) +
       '<div class="d-actions">' + playAllButton("dj", tab === "firstHere" ? "Play what they brought here" : "Play their favorites") + "</div></div></div>";
     var cardButton = function (c) {
       return '<button type="button" class="d-card" data-card="' + esc(c.key) + '" aria-label="' + esc("Card: " + (c.djname || "") + ", " + (c.artist || "") + " - " + (c.title || "")) + '">' +
@@ -1035,15 +1039,25 @@ firetable.discover = (function () {
     }
     var similar = (d.similar || []).map(function (p) { return person(p, esc(p.pct + "% alike")); }).filter(Boolean);
     if (similar.length) h += "<section>" + head("Similar DJs") + '<p class="d-fact">The most songs in common</p><div class="d-people">' + similar.join("") + "</div></section>";
-    var sets = d.sets || [];
-    if (sets.length) {
+    // recent sets, one line a night (2.7): a set after midnight belongs to the night before
+    var nightsOf = [];
+    (d.sets || []).forEach(function (x) {
+      var key = new Date(x.at - 6 * 3600000).toDateString();
+      var last = nightsOf[nightsOf.length - 1];
+      if (last && last.key === key) { last.n += x.n; last.sets++; last.at = Math.min(last.at, x.at); }
+      else nightsOf.push({ key: key, at: x.at, n: x.n, sets: 1 });
+    });
+    if (nightsOf.length) {
       var nights = nightIndex();
-      h += "<section>" + head("Recent sets") + '<div class="d-sets">' + sets.map(function (x) {
+      h += "<section>" + head("Recent sets") + '<div class="d-sets">' + nightsOf.map(function (x) {
         var when = new Date(x.at);
         var night = nightAt(nights, x.at);
-        return '<div class="d-set"><span class="d-num">' + esc(when.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: when.getFullYear() === new Date().getFullYear() ? undefined : "numeric" })) +
-          "</span>" + (night ? '<a class="d-settheme" href="#discover/themes/' + esc(night.id) + '">' + esc(night.theme) + "</a>" : "<span></span>") +
-          "<span>" + esc(firetable.utilities.pluralize(x.n, "song", "songs")) + "</span></div>";
+        var day = '<span class="d-num">' + esc(when.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: when.getFullYear() === new Date().getFullYear() ? undefined : "numeric" })) + "</span>";
+        var what = "<span>" + esc(firetable.utilities.pluralize(x.n, "song", "songs") + (x.sets > 1 ? " in " + x.sets + " sets" : "")) + "</span>";
+        // a theme night's line opens that night's page
+        return night
+          ? '<a class="d-set d-setlink" href="#discover/themes/' + esc(night.id) + '">' + day + '<span class="d-settheme">' + esc(night.theme) + "</span>" + what + "</a>"
+          : '<div class="d-set">' + day + "<span></span>" + what + "</div>";
       }).join("") + "</div></section>";
     }
     if (d.djid) {
@@ -1323,7 +1337,7 @@ firetable.discover = (function () {
     var facts = [firetable.utilities.pluralize(a.songs, "song", "songs") + " played here", n(a.plays) + " plays"];
     var firstDj = a.firstDj ? djShown(a.firstDjid, a.firstDj) : null;
     var h = '<div class="d-pagehead">' + mosaic(tracks.slice(0, 4).map(function (t) { return t.type + "_" + t.cid; }), true) +
-      '<div class="d-pagetext"><h2>' + esc(a.name) + '</h2><p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
+      '<div class="d-pagetext"><h2>' + esc(a.name) + "</h2>" + factChips(facts) +
       (a.first ? '<p class="d-fact">First played here ' + esc(firetable.utilities.shortDate(a.first)) + (firstDj ? " by " + nameLink(firstDj) : "") + "</p>" : "") +
       '<div class="d-actions">' + playAllButton("artist", "Play all") + "</div></div></div>";
     h += "<section>" + head("Most played here") + rankedRows(tracks, "artist") + "</section>";
@@ -1338,12 +1352,13 @@ firetable.discover = (function () {
     var wait = libWaiting(all, "Years arrive with the weekly play history update.");
     if (wait) return h + wait;
     var ys = Object.keys(all).sort().reverse();
-    h += '<p class="d-fact">The room\'s playlist for each year, and how much of it was played here</p>';
+    h += '<p class="d-fact">The room\'s playlist of each year\'s releases, and how much of it was played here</p>';
     h += '<div class="d-yearlist">' + ys.map(function (y) {
       var v = all[y] || {};
       var pct = v.songs ? Math.round((v.played / v.songs) * 100) : 0;
-      return '<a class="d-yearrow" href="#discover/years/' + esc(y) + '"><b class="d-num">' + esc(y) + "</b>" +
-        '<span class="d-yeartext"><span>' + esc(n(v.songs)) + " songs · " + esc(n(v.played)) + " played here · " + esc(n(v.plays)) + " plays</span>" +
+      return '<a class="d-yearrow' + (v.covers && v.covers.length ? " has-covers" : "") + '" href="#discover/years/' + esc(y) + '">' +
+        (v.covers && v.covers.length ? mosaic(v.covers) : "") + '<b class="d-num">' + esc(y) + "</b>" +
+        '<span class="d-yeartext"><span>' + esc(n(v.songs)) + " songs released in " + esc(y) + " · " + esc(n(v.played)) + " played here · " + esc(n(v.plays)) + " plays</span>" +
         (v.genre ? "<span>mostly " + esc(v.genre) + "</span>" : "") + "</span>" +
         '<span class="d-bar" title="' + esc(pct + "% played here") + '"><i style="width:' + pct + '%"></i></span></a>';
     }).join("") + "</div>";
@@ -1361,7 +1376,8 @@ firetable.discover = (function () {
     setList("year", y + " · Most played", top);
     setList("year-more", y + " · Not played here yet", extra);
     h += '<div class="d-pagehead">' + mosaic(top.slice(0, 4).map(function (t) { return t.type + "_" + t.cid; }), true) +
-      '<div class="d-pagetext"><h2 class="d-num">' + esc(y) + '</h2><p class="d-fact">' + esc(n(v.songs) + " songs on the playlist · " + n(v.played) + " played here" + (v.genre ? " · mostly " + v.genre : "")) + "</p>" +
+      '<div class="d-pagetext"><h2 class="d-num">' + esc(y) + "</h2>" +
+      factChips([n(v.songs) + " songs released in " + y, n(v.played) + " played here"].concat(v.plays ? [n(v.plays) + " plays"] : [], v.genre ? ["mostly " + v.genre] : [])) +
       '<div class="d-actions">' + playAllButton("year", "Play the year") + "</div></div></div>";
     h += "<section>" + head("Most played here") + rankedRows(top, "year") + "</section>";
     if (extra.length) {

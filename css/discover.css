@@ -681,9 +681,11 @@ section .d-chips a.d-chip {
 }
 .d-set span:last-child { color: var(--color-text-muted); }
 .d-set { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; align-items: baseline; }
+.d-setlink { mix-blend-mode: normal; }
 .d-settheme { color: var(--color-text); mix-blend-mode: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) {
-    .d-settheme:hover { color: var(--color-text-light); text-decoration: underline; text-underline-offset: 2px; }
+    .d-setlink:hover { background: var(--color-bg-t1); }
+    .d-setlink:hover .d-settheme { color: var(--color-text-light); text-decoration: underline; text-underline-offset: 2px; }
 }
 
 /* Theme nights: one line each, the theme first */
@@ -740,6 +742,32 @@ section .d-chips a.d-chip {
 @media only screen and (max-width: 639px) {
     .d-yearrow { grid-template-columns: 3.25rem minmax(0, 1fr); }
     .d-yearrow .d-bar { display: none; }
+}
+/* with covers (2.7): the year's four most played first */
+.d-yearrow.has-covers { grid-template-columns: 3rem 4rem minmax(0, 1fr) 6rem; }
+.d-yearrow .d-mosaic { width: 3rem; }
+@media only screen and (max-width: 639px) {
+    .d-yearrow.has-covers { grid-template-columns: 2.75rem 3.25rem minmax(0, 1fr); }
+    .d-yearrow .d-mosaic { width: 2.75rem; }
+}
+
+/* a page's facts, as chips under its title (2.7) */
+.d-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    margin: var(--space-1) 0 var(--space-2);
+    padding: 0;
+    list-style: none;
+}
+.d-facts li {
+    padding: 0.15rem 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-bg-t1);
+    color: var(--color-text);
+    font-size: var(--fs-meta);
+    white-space: nowrap;
 }
 
 /* A song's menu */
