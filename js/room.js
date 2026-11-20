@@ -766,8 +766,10 @@ firetable.ui.setupRoomEvents = function () {
     if (e.key === 'ArrowDown') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
   });
-  // ── Narrow Recent rows (mods): ⋮ menu with Open / Edit tags / Flag ──
+  // ── Narrow Recent rows (mods): ⋮ menu with About this song, Open, Copy the link, Edit tags, Flag ──
   var histMenuEl = document.getElementById('histMenuPopover');
+  // its items come from the one song menu (firetable.songMenu, 2.8)
+  histMenuEl.querySelector('.ft-menu').innerHTML = firetable.songMenu.html(['sheet', 'open', 'copy', 'tags', 'flag']);
   var histMenuRow = null, histMenuBtn = null;
   $(document).on('click', '#thehistory .row-more', function () {
     var $p = $(this).closest('.pvbar');
@@ -783,6 +785,7 @@ firetable.ui.setupRoomEvents = function () {
     $menu.find('[data-act="open"]').attr('href', $link.attr('href') || '#');
     $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
     $menu.find('.ft-menu-open-logo').html($link.find('svg').prop('outerHTML') || '');
+    $menu.find('[data-act="copy"]').prop('hidden', !/^https?:/.test($link.attr('href') || ''));
     $(this).addClass('on').attr('aria-expanded', 'true');
     histMenuEl.style.visibility = 'hidden';
     histMenuEl.showPopover();
@@ -801,7 +804,11 @@ firetable.ui.setupRoomEvents = function () {
     if (!$p || !$p.length || act === 'open') return; // the link opens the track itself
     e.preventDefault();
     var label = $p.attr('data-tag') || '';
-    if (act === 'tags') {
+    if (act === 'copy') {
+      firetable.songMenu.copyLink($p.find('.tracklink-btn').attr('href'));
+    } else if (act === 'sheet') {
+      firetable.songMenu.sheet($p.attr('data-cid'), $p.attr('data-type'), label, $p.find('.tracklink-btn').attr('href'));
+    } else if (act === 'tags') {
       firetable.actions.editTagsPrompt($p.attr('data-key'), label, btn);
     } else if (act === 'flag') {
       firetable.ui.openFlagMenu(btn, { histID: $p.attr('data-histid'), label: label });

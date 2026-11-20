@@ -69,7 +69,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | NP-05 | Album art thumbnail | All | `#albumArt` | keep (used on narrow layouts) |
 | NP-06 | Progress bar | All | `#prgbar` > `#prgbarbar` | keep (1.8 superseded; the stage's bottom edge only if the owner asks) |
 | NP-07 | Time: elapsed (`#timrUp`) and remaining (`#timr`, shown as −m:ss since November 15, 2026) | All | `room.js` `newSong` countdown | ✗ 1.8 superseded: −m:ss time left with "Time played" / "Time left" tooltips (November 15, 2026); the player bar leaves time out on the room's song |
-| NP-08 | Song sheet (cover, links, tempo, source, plays, firsts, versions, Play, Save, Open, Copy link) from any title | All | `discover.js` `openSheet` (`.d-sheetlink`) | keep; reachable from the stage title (1.4) |
+| NP-08 | Song sheet (cover, links, tempo, source, plays, firsts, versions, Play, Save, Open, Copy link) from any title | All | `discover.js` `openSheet` (`.d-sheetlink`), `firetable.discover.songSheet` | keep; reachable from the stage title (1.4), and since 2.8 from "About this song" in a playlist row's ⋮ and Recent's ⋮ |
 
 ## DJ · Decks, waitlist, your turn
 
@@ -251,7 +251,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | DI-16 | Step inside (Live as visitors see it, locked tabs: Join, Playlists, Recent, Cards) | V | `lockedTabs`, `.d-stepin` | keep |
 | DI-17 | Members' playlist and chat in the right column | M | `playlistPanel`, `sideTabs`, `chatIn` / `chatBack` | ✅ 2.3: Playlists tab with switch, DJ from, filter, drag, Top / Bottom / Remove + Undo (`plAct`, `listReady`), Play / Shuffle, Hop on; Chat for visitors too |
 | DI-18 | Play a whole list (play the year, their favourites, genre radio), Save all | All | `playAllButton`, `saveAllButton` | keep |
-| DI-19 | Song ⋮ menu (Save, add to playlist, open, share) | All | `openMenu`, `menuAct` | 2.8 same items as Live's song menu |
+| DI-19 | Song ⋮ menu (Save, add to playlist, open, share) | All | `openMenu`, `menuAct`, `firetable.songMenu` | ✅ 2.8 (November 20, 2026): its shared items (Play it in the room, About this song, Add to playlist… when signed in, Open, Copy the song's link) come from `firetable.songMenu`, in its order and words; the artist, genre and DJ links stay Discover's own |
 | DI-20 | Share menu (link, image, embed) | All | `openShareMenu`, `copyLink` | keep |
 | DI-21 | Library pages for search engines (`/music/…`) | All | `tools/plain-pages.mjs`, deploy step | keep; check every Discover step still renders in plain pages (smoke checks them) |
 | DI-22 | Found-via tracking for new accounts | V | `FOUND_KEY`, `users/<uid>/foundVia` | keep |

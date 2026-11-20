@@ -567,6 +567,12 @@ try {
   });
   const rowOrder = (p = page) => p.evaluate(() => [...document.querySelectorAll("#mainqueue .pvbar")].map((r) => r.getAttribute("data-key")).join());
   const box = (sel, p = page) => p.$eval(sel, (el) => { el.scrollIntoView({ block: "center" }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
+  // where a drag starts and ends: both measured after one scroll, so the first isn't stale when the second scrolls
+  const dragEnds = async (from, to, p = page) => {
+    await p.$eval('#mainqueue .pvbar[data-key="k2"]', (el) => el.scrollIntoView({ block: "center" }));
+    const at = (sel) => p.$eval(sel, (el) => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
+    return [await at('#mainqueue .pvbar[data-key="' + from + '"] .listwords'), await at('#mainqueue .pvbar[data-key="' + to + '"] .listwords')];
+  };
   const drag = {};
   drag.before = await rowOrder();
   // a click isn't a drag
@@ -574,8 +580,8 @@ try {
   await page.mouse.click(b1.x, b1.y);
   drag.click = await page.evaluate(() => window.__saved.length);
   // the first row, dragged below the third
-  b1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords');
-  const b3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords');
+  let b3;
+  [b1, b3] = await dragEnds("k1", "k3");
   await page.mouse.move(b1.x, b1.y);
   await page.mouse.down();
   for (let i = 1; i <= 8; i++) await page.mouse.move(b1.x, b1.y + (b3.y + b3.h * 0.4 - b1.y) * i / 8);
@@ -614,8 +620,7 @@ try {
   const cdpT = await touchPhone.newCDPSession(tPage);
   const touch = (type, x, y) => cdpT.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
   const t = {};
-  let s1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords', tPage);
-  let s3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords', tPage);
+  let [s1, s3] = await dragEnds("k1", "k3", tPage);
   // swipe without holding: no drag
   await touch("touchStart", s1.x, s1.y);
   for (let i = 1; i <= 5; i++) { await touch("touchMove", s1.x, s1.y + i * 12); await sleep(16); }
@@ -623,11 +628,17 @@ try {
   await sleep(300);
   t.swipe = await rowOrder(tPage);
   // hold, then move below the third row
-  s1 = await box('#mainqueue .pvbar[data-key="k1"] .listwords', tPage);
-  s3 = await box('#mainqueue .pvbar[data-key="k3"] .listwords', tPage);
+  [s1, s3] = await dragEnds("k1", "k3", tPage);
   await touch("touchStart", s1.x, s1.y);
   await sleep(450);
-  for (let i = 1; i <= 8; i++) { await touch("touchMove", s1.x, s1.y + (s3.y + s3.h * 0.4 - s1.y) * i / 8); await sleep(16); }
+  // each step aims at the third row where it is now (something above the list can appear mid-drag
+  // and move every row), ending in its lower quarter
+  const rowNow = (k) => tPage.$eval('#mainqueue .pvbar[data-key="' + k + '"]', (el) => { const r = el.getBoundingClientRect(); return { top: r.top, h: r.height }; });
+  for (let i = 1; i <= 8; i++) {
+    const r3 = await rowNow("k3");
+    await touch("touchMove", s1.x, s1.y + (r3.top + r3.h * 0.75 - s1.y) * i / 8);
+    await sleep(16);
+  }
   await touch("touchEnd");
   await sleep(300);
   t.hold = await rowOrder(tPage);
@@ -688,6 +699,42 @@ try {
   check(rowLook.k1 === "Next+Low audio" && rowLook.k4 === "Remix" && rowLook.k2 === "Broken" && rowLook.notDj === "Low audio",
     "tags: Next on the first song of the list you DJ from (only that list), Broken (or why) when flagged, Remix when the title says so (" + JSON.stringify(rowLook) + ")");
   check(rowLook.delsearch === "k2|Daft Punk - One More Time|1", "the row's ⋮ has Delete and search for another (" + rowLook.delsearch + ")");
+
+  console.log("-- one song menu: the same items, words and order in each ⋮");
+  const oneMenu = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const acts = (sel) => [...document.querySelectorAll(sel + " [data-act]")].map((b) => b.getAttribute("data-act")).join();
+    const M = firetable.songMenu;
+    const out = { crate: acts("#trackMenuPopover"), recent: acts("#histMenuPopover") };
+    // every shared item says the same thing wherever it is
+    out.words = [...document.querySelectorAll("#trackMenuPopover [data-act], #histMenuPopover [data-act]")]
+      .filter((b) => b.getAttribute("data-act") !== "open")
+      .every((b) => b.lastChild.textContent.trim() === M.ITEMS[b.getAttribute("data-act")].label); // the text after the icon
+    // a playlist row's ⋮: Copy the song's link, and About this song
+    const copied = [];
+    const realClip = navigator.clipboard && navigator.clipboard.writeText;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: (t) => { copied.push(t); return Promise.resolve(); } } });
+    const row = document.querySelector('#mainqueue .pvbar[data-key="k4"]');
+    row.querySelector(".row-more").click();
+    await wait(150);
+    out.copyShown = !document.querySelector('#trackMenuPopover [data-act="copy"]').hidden;
+    document.querySelector('#trackMenuPopover [data-act="copy"]').click();
+    await wait(100);
+    out.copied = copied.join() + "|" + (document.getElementById("ft-toast")?.textContent || "");
+    row.querySelector(".row-more").click();
+    await wait(150);
+    document.querySelector('#trackMenuPopover [data-act="sheet"]').click();
+    await wait(200);
+    const sheet = document.getElementById("dSheetBox");
+    out.sheet = !!(sheet && sheet.open) && sheet.querySelector(".d-title").textContent + "|" + sheet.querySelector(".d-artist").textContent;
+    if (sheet) sheet.close();
+    if (realClip) Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: realClip } });
+    return out;
+  });
+  check(oneMenu.crate === "sheet,add,open,copy,tags,swaptags,swap,bottom,delsearch,delete" && oneMenu.recent === "sheet,open,copy,tags,flag" && oneMenu.words,
+    "a playlist row's ⋮ and Recent's ⋮ come from the one song menu, in its order and words (" + JSON.stringify(oneMenu) + ")");
+  check(oneMenu.copyShown && /^https:\/\/www\.youtube\.com\/watch\?v=finevideo01\|Link copied/.test(oneMenu.copied) && oneMenu.sheet === "Track|Fine",
+    "a playlist row's ⋮: Copy the song's link, and About this song opens the song's sheet (" + JSON.stringify(oneMenu) + ")");
 
   console.log("-- Sort: by artist or title, view only");
   await page.evaluate(() => { window.__saved = []; return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")); });
