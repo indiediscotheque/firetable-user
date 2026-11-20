@@ -597,6 +597,16 @@ firetable.utilities = {
     return ta.value;
   },
 
+  /**
+   * Is this "Artist - Title" a remix or an edit? Says so in
+   * brackets: "(Tame Impala Remix)", "[Extended Mix]", "(Radio Edit)".
+   * @param {string} name
+   * @returns {boolean}
+   */
+  isRemixName: function (name) {
+    return /[([][^)\]]*\b(re-?mix|mix|edit|rework|re-?edit|dub|vip|bootleg|flip)\b[^)\]]*[)\]]/i.test(String(name || ""));
+  },
+
   // ─── Date / Time Formatting ──────────────────────────────────────────────
 
   /**

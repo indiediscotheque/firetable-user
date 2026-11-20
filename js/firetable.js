@@ -646,11 +646,13 @@ ftapi.actions = {
     var uref = ftapi.db().ref("users/" + ftapi.uid + "/selectedList");
     uref.set(listID).catch(ftapi.saveFailed("which playlist you DJ from"));
     ftapi.selectedListThing = listID;
+    ftapi.events.emit("djListChanged", listID);
   },
   switchList: function(listID) {
     var uref = ftapi.db().ref("users/" + ftapi.uid + "/selectedList");
     uref.set(listID).catch(ftapi.saveFailed("which playlist you DJ from"));
     ftapi.selectedListThing = listID;
+    ftapi.events.emit("djListChanged", listID);
 
     // update queue bind
     ftapi.queueRef.off("value", ftapi.queueBind); //stop listening for changes on old list

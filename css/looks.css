@@ -2862,6 +2862,15 @@ input.ft-filter {
     #mainqueue .row-more {
         display: inline-flex;
     }
+
+    /* the name keeps its room: no number, length, Remix or Discover labels */
+    #mainqueue :is(.q-num, .q-remix, .trackDuration, .pl-from) {
+        display: none;
+    }
+
+    #mainqueue .q-name {
+        min-width: 5.5rem;
+    }
 }
 
 :is(#thehistory, .ft-rows) button[class*="material-symbols-"]:not(.previewicon) {
@@ -2964,6 +2973,60 @@ input.ft-filter {
     margin-left: 0.45em;
     color: rgba(255, 255, 255, 0.52);
     font-size: 0.82em;
+}
+
+/* Playlist rows (1.15): the place in the play order, the cover, Title · Artist
+   in two tones, a tag when it matters (Next on the list you DJ from, Broken,
+   Remix), the length. The stored "Artist - Title" (data-tags) is unchanged. */
+#mainqueue .q-num {
+    flex: none;
+    min-width: 1.6rem;
+    margin-left: var(--pad2);
+    color: var(--color-text-muted);
+    font-family: var(--font-numbers);
+    font-size: var(--fs-micro);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+#mainqueue .q-num + .listwords { margin-left: var(--pad2); }
+#mainqueue .listwords {
+    display: flex;
+    align-items: center;
+    gap: 0.45em;
+}
+#mainqueue .q-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+#mainqueue .q-title { font-weight: 600; }
+#mainqueue .q-artist { color: rgba(255, 255, 255, 0.6); }
+#mainqueue .q-artist::before { content: " · "; }
+#mainqueue :is(.q-tag, .trackDuration, .pl-from) { flex: none; margin-left: 0; }
+.q-tag {
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-micro);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.q-next {
+    display: none;
+    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    color: var(--color-orange-lite);
+}
+#mainqueue.is-djlist .q-next { display: inline-block; }
+.q-broken {
+    background: color-mix(in srgb, var(--color-danger) 28%, transparent);
+    color: #ffb3a8;
+}
+.q-remix {
+    background: var(--color-bg-t2);
+    color: #c8c8c8;
 }
 
 

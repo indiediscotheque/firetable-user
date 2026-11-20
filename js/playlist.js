@@ -784,10 +784,16 @@ firetable.actions.editTagsPrompt = function (songid, tag, anchorEl) {
 
 // ─── Queue item HTML builder ─────────────────────────────────────────────────
 
-function buildQueueItemHTML(key, track, isPreview) {
+function buildQueueItemHTML(key, track, isPreview, pos) {
   // Names are plain text; decode ones older code saved HTML-escaped
   var trackName = firetable.utilities.decodeEntities(track.name || "Unknown");
   var safeTrackName = firetable.utilities.htmlEscape(trackName);
+  // Shown as Title · Artist; the stored "Artist - Title" (data-tags) is unchanged
+  var sep = trackName.indexOf(" - ");
+  var showTitle = sep > 0 ? trackName.slice(sep + 3).trim() : trackName;
+  var showArtist = sep > 0 ? trackName.slice(0, sep).trim() : "";
+  var nameHtml = '<span class="q-name"><span class="q-title">' + firetable.utilities.htmlEscape(showTitle || trackName) + '</span>' +
+    (showArtist ? '<span class="q-artist">' + firetable.utilities.htmlEscape(showArtist) + '</span>' : '') + '</span>';
 
   var trackSeconds = firetable.actions.parseTrackDurationSeconds(
     track.duration || track.length || track.dur || track.time ||
@@ -824,6 +830,16 @@ function buildQueueItemHTML(key, track, isPreview) {
     flagHtml = '<button type="button" class="track-warning" title="' + flagTitle + '" aria-label="' + flagTitle + '"><span class="material-symbols-filled" aria-hidden="true"> ' + flagIcon + ' </span></button>';
   }
 
+  // Tags, when they matter: Next (the first song of the list you DJ from; shown
+  // by CSS while this is that list), Broken, Remix
+  var tagHtml = '';
+  if (pos === 1) tagHtml += '<span class="q-tag q-next">Next</span>';
+  if (track.flagged) {
+    var code = track.flagged.code;
+    tagHtml += '<span class="q-tag q-broken">' + (code === 9 ? 'Low audio' : code === 10 ? 'Off theme' : 'Broken') + '</span>';
+  }
+  if (firetable.utilities.isRemixName(trackName)) tagHtml += '<span class="q-tag q-remix">Remix</span>';
+
   // A working copy on YouTube Music the bot found (#swap): one tap to swap it in
   var swap = firetable.utilities.activeSwap(track);
   var swapHtml = '';
@@ -842,7 +858,8 @@ function buildQueueItemHTML(key, track, isPreview) {
     '<div class="' + artClass + '"' + artStyle + '></div>' +
     '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
     (track.flagged ? flagHtml : '<span class="track-warning"></span>') +
-    '<div class="listwords">' + safeTrackName + durationHtml + (track.from === "discover" ? '<span class="pl-from" title="Saved from Discover">Discover</span>' : '') + '</div>' +
+    (pos ? '<span class="q-num" aria-hidden="true">' + pos + '</span>' : '') +
+    '<div class="listwords">' + nameHtml + tagHtml + durationHtml + (track.from === "discover" ? '<span class="pl-from" title="Saved from Discover">Discover</span>' : '') + '</div>' +
     swapHtml +
     // Order matches Recent / Fresh: move actions, link, add, destructive last
     '<button type="button" class="material-symbols-outlined row-icon bumpsongs" title="Send to top" aria-label="Send to top">vertical_align_top</button>' +
@@ -862,6 +879,17 @@ function buildQueueItemHTML(key, track, isPreview) {
  * Set up the playlistChanged event handler and queue-related UI bindings.
  * Called once from firetable.ui.init().
  */
+/**
+ * Mark the playlist on screen when it's the one you DJ from, so its first
+ * song shows Next (#mainqueue.is-djlist).
+ */
+firetable.ui.markDjList = function () {
+  var me = window.ftapi && ftapi.users && ftapi.users[ftapi.uid];
+  var dj = String((window.ftapi && ftapi.selectedListThing) || (me && me.selectedList) || "0");
+  var shown = String(firetable._queueList != null ? firetable._queueList : ($("#listpicker").val() || "0"));
+  $("#mainqueue").toggleClass("is-djlist", dj === shown);
+};
+
 /** Track count (and flagged count) in the playlist picker, after the name (#210, #226). */
 firetable.ui.renderListCount = function (tracks, listID) {
   if (listID == null) listID = firetable.viewListID || $("#listpicker").val() || "0";
@@ -1035,6 +1063,8 @@ firetable.ui.setupPlaylistEvents = function () {
         firetable.actions.editTagsPrompt($p.attr('data-key'), $p.attr('data-tags') || $p.find('.listwords').text(), btn);
       } else if (act === 'swaptags') {
         firetable.actions.swapTrackTags($p);
+      } else if (act === 'delsearch') {
+        firetable.actions.deleteSongAndSearch($p.attr('data-key'), $p.attr('data-tags') || '', $p.attr('data-type'));
       }
     })
     .on('keydown', function (e) {
@@ -1078,6 +1108,8 @@ firetable.ui.setupPlaylistEvents = function () {
     renderQueue(okdata, listID);
   });
 
+  ftapi.events.on("djListChanged", function () { firetable.ui.markDjList(); });
+
   /** Draw the playlist on screen, in play order or the view-only sort. */
   function renderQueue(okdata, listID) {
     // Each render gets a number; chunks from an older render stop when a
@@ -1086,6 +1118,10 @@ firetable.ui.setupPlaylistEvents = function () {
 
     var container = document.getElementById('mainqueue');
     var keys = firetable.actions.sortedQueueKeys(okdata);
+    // each row's place in the play order (the number shown), sorted or not
+    var posOf = {};
+    if (okdata) Object.keys(okdata).forEach(function (k, n) { posOf[k] = n + 1; });
+    firetable.ui.markDjList();
 
     // Is this an update to the playlist already on screen (send to top/bottom,
     // delete, reorder, add) rather than a playlist being opened?
@@ -1109,7 +1145,7 @@ firetable.ui.setupPlaylistEvents = function () {
     var html = '', block = '';
     for (var i = 0; i < FIRST; i++) {
       var k = keys[i];
-      block += buildQueueItemHTML(k, okdata[k], k === firetable.preview);
+      block += buildQueueItemHTML(k, okdata[k], k === firetable.preview, posOf[k]);
       if ((i + 1) % BLOCK === 0 || i === FIRST - 1) {
         html += firetable.ui.queueBlockHTML(block, (i % BLOCK) + 1);
         block = '';
@@ -1140,7 +1176,7 @@ firetable.ui.setupPlaylistEvents = function () {
       var chunkHtml = '';
       for (var j = idx; j < end; j++) {
         var ck = keys[j];
-        chunkHtml += buildQueueItemHTML(ck, okdata[ck], ck === firetable.preview);
+        chunkHtml += buildQueueItemHTML(ck, okdata[ck], ck === firetable.preview, posOf[ck]);
       }
       tmp.innerHTML = firetable.ui.queueBlockHTML(chunkHtml, end - idx);
       var newRows = Array.prototype.slice.call(tmp.firstChild.children);

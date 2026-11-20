@@ -634,7 +634,60 @@ try {
   t.saved = await tPage.evaluate(() => window.__saved.join(" / "));
   check(t.swipe === "k1,k2,k3,k4" && t.hold === "k2,k3,k1,k4" && t.saved === "k2,k3,k1,k4",
     "on a phone, holding a row drags it and saves the order; a swipe doesn't (" + JSON.stringify(t) + ")");
+  // a phone's rows keep Top and ⋮ (the rest is in ⋮), and drop the number, the length and the Remix tag
+  const narrowRow = await tPage.evaluate(() => {
+    const row = document.querySelector('#mainqueue .pvbar[data-key="k4"]');
+    const on = (sel) => { const el = row.querySelector(sel); return !!el && getComputedStyle(el).display !== "none"; };
+    return [".bumpsongs", ".row-more", ".bottomsongs", ".tracklink-btn", ".histeal", ".deletesong", ".q-num"].map((q) => q + ":" + on(q)).join(" ");
+  });
+  check(narrowRow === ".bumpsongs:true .row-more:true .bottomsongs:false .tracklink-btn:false .histeal:false .deletesong:false .q-num:false",
+    "a phone's playlist rows show Top and ⋮ only (" + narrowRow + ")");
   await touchPhone.close();
+
+  console.log("-- playlist rows: number, Title · Artist, Next / Broken / Remix, and ⋮'s Delete and search for another");
+  const rowLook = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const list = (await ftapi.queueRef.once("value")).val();
+    list.k4 = Object.assign({}, list.k4, { name: "Fine - Track (Smoke Remix)" });
+    list.k1 = Object.assign({}, list.k1, { flagged: { date: 1, code: 9 } });
+    list.k2 = Object.assign({}, list.k2, { flagged: { date: 1, code: 2 } });
+    const realDj = ftapi.selectedListThing;
+    ftapi.selectedListThing = "0";
+    ftapi.events.emit("playlistChanged", list, "0");
+    await wait(100);
+    const row = (k) => document.querySelector('#mainqueue .pvbar[data-key="' + k + '"]');
+    const shown = (el) => !!el && getComputedStyle(el).display !== "none";
+    const tags = (k) => [...row(k).querySelectorAll(".q-tag")].filter(shown).map((t) => t.textContent).join("+");
+    const out = {
+      num: [..."1234"].map((n) => row("k" + n).querySelector(".q-num").textContent).join(),
+      name: row("k1").querySelector(".q-title").textContent + "|" + row("k1").querySelector(".q-artist").textContent,
+      read: getComputedStyle(row("k1").querySelector(".q-artist"), "::before").content,
+      stored: row("k1").getAttribute("data-tags"),
+      k1: tags("k1"), k4: tags("k4"), k2: tags("k2")
+    };
+    ftapi.events.emit("djListChanged", "elsewhere");
+    ftapi.selectedListThing = "elsewhere";
+    firetable.ui.markDjList();
+    out.notDj = tags("k1");
+    ftapi.selectedListThing = realDj;
+    firetable.ui.markDjList();
+    // ⋮ → Delete and search for another
+    const real = firetable.actions.deleteSongAndSearch;
+    let called = null;
+    firetable.actions.deleteSongAndSearch = (...a) => { called = a.join("|"); };
+    row("k2").querySelector(".row-more").click();
+    await wait(150);
+    document.querySelector('#trackMenuPopover [data-act="delsearch"]').click();
+    firetable.actions.deleteSongAndSearch = real;
+    out.delsearch = called;
+    ftapi.events.emit("playlistChanged", (await ftapi.queueRef.once("value")).val(), "0");
+    return out;
+  });
+  check(rowLook.num === "1,2,3,4" && rowLook.name === "Karma Police|Radiohead" && rowLook.read === '" · "' && rowLook.stored === "Radiohead - Karma Police",
+    "playlist rows show their place, then Title · Artist; the stored Artist - Title is kept (" + JSON.stringify(rowLook) + ")");
+  check(rowLook.k1 === "Next+Low audio" && rowLook.k4 === "Remix" && rowLook.k2 === "Broken" && rowLook.notDj === "Low audio",
+    "tags: Next on the first song of the list you DJ from (only that list), Broken (or why) when flagged, Remix when the title says so (" + JSON.stringify(rowLook) + ")");
+  check(rowLook.delsearch === "k2|Daft Punk - One More Time|1", "the row's ⋮ has Delete and search for another (" + rowLook.delsearch + ")");
 
   console.log("-- Sort: by artist or title, view only");
   await page.evaluate(() => { window.__saved = []; return ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")); });
