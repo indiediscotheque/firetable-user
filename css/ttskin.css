@@ -492,25 +492,25 @@ body.tt-skin #screenover { display: none; }
 /* the theme, over the stage, as a speech bubble */
 .tt-theme {
     left: 50%;
-    top: 56px;
-    max-width: 900px;
+    top: 64px;
+    max-width: 760px;
     margin: 0;
-    padding: 10px 26px;
+    padding: 5px 16px;
     transform: translateX(-50%);
-    border-radius: 30px;
-    background: rgba(0, 0, 0, 0.6);
+    border-radius: 18px;
+    background: rgba(0, 0, 0, 0.55);
     color: #fff;
-    font: 500 30px/1.2 var(--tt-font);
+    font: 400 19px/1.25 var(--tt-font); /* deepcut's size */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 8px;
     z-index: 3;
 }
 .tt-theme[hidden] { display: none; }
-.tt-theme i { font-size: 30px; color: #ddd; }
+.tt-theme i { font-size: 18px; color: #ddd; }
 
 /* the awesome meter */
 .tt-meter { left: 680px; top: 118px; width: 109px; height: 108px; background: url(../img/tt/dial.webp?v=01.12.08); }
@@ -588,8 +588,12 @@ body.tt-skin #screenover { display: none; }
 }
 .tt-line1 { top: 2px; font-size: 44px; line-height: 1.05; letter-spacing: 1px; }
 .tt-line2 { top: 50px; font-size: 22px; line-height: 1.1; }
+.tt-run { display: inline-block; white-space: nowrap; }
+.tt-run > span { display: inline-block; }
 .tt-led.tt-marquee { text-align: left; }
-.tt-led.tt-marquee span { display: inline-block; animation: tt-marquee var(--len, 14s) linear infinite; }
+.tt-led.tt-marquee .tt-run > span { padding-right: 2em; } /* 20 dark columns between the end and the start again */
+/* a dot column at a time, as an LED sign moves */
+.tt-led.tt-marquee .tt-run { animation: tt-marquee var(--len, 10s) steps(var(--cols, 100)) infinite; }
 .tt-times { top: 76px; display: flex; align-items: center; gap: 10px; font-size: 19px; line-height: 1; }
 .tt-prog {
     flex: 1;
@@ -646,7 +650,7 @@ body.tt-skin #screenover { display: none; }
 /* the DJs' table: dj-table is the table (its lavender top, the front, the speaker grille);
    laptops stand on the top at --seat-y, the DJs behind them, head and shoulders showing */
 .tt-djlight {
-    left: calc(560px + var(--i, 0) * 116px - 75px);
+    left: calc(587px + var(--i, 0) * 98px - 75px);
     top: 296px;
     width: 150px;
     height: 210px;
@@ -662,14 +666,16 @@ body.tt-skin #screenover { display: none; }
 .tt-tabletop { left: 475px; top: 486px; width: 518px; height: 58px; background: url(../img/tt/dj-table.webp?v=01.12.08); z-index: 3; pointer-events: none; }
 .tt-seat {
     position: absolute;
-    left: calc(560px + var(--i) * 116px);
+    left: calc(587px + var(--i) * 98px); /* laptops side by side, 98 apart, as deepcut */
     top: 436px; /* the laptops' top edge */
     width: 0;
     height: 0;
 }
 .tt-seat > * { pointer-events: auto; }
-/* the DJ, at the avatar's own size (as deepcut draws them): the top half shows over the laptop */
-#tt-room .tt-dj { left: 0; top: 0; z-index: 2; transform: translate(-50%, -50%); transform-origin: 50% 50%; }
+/* the DJ, as deepcut draws them: about 0.72 of the avatar's own size (a head a little
+   narrower than the laptop), their chin on the lid's top edge so the whole face shows
+   (--chin: how far down the figure the chin is, measured for each avatar by tools/tt-avatars.py) */
+#tt-room .tt-dj { left: 0; top: 0; z-index: 2; transform: translate(-50%, calc(var(--chin, 62%) * -1)) scale(0.72); transform-origin: 50% var(--chin, 62%); }
 .tt-seat > .tt-laptop { position: absolute; left: -43px; top: 0; width: 86px; height: 60px; z-index: 4; pointer-events: auto; cursor: pointer; }
 .tt-seat.tt-menu .tt-plate { opacity: 1; }
 .tt-figwrap { display: block; }
@@ -700,7 +706,7 @@ body.tt-skin #screenover { display: none; }
 .tt-empty { z-index: 4; }
 /* a DJ's menu, under their laptop (deepcut's: a dark list, their name in gold) */
 .tt-djmenu {
-    left: calc(560px + var(--i, 0) * 116px - 82px);
+    left: calc(587px + var(--i, 0) * 98px - 82px);
     top: 500px;
     width: 164px;
     padding: 0;
@@ -796,7 +802,7 @@ body.tt-skin #screenover { display: none; }
 /* the site's own button looks stay off the figures (no box around anyone) */
 #tt-room .tt-person { width: max-content; height: auto; min-width: 0; min-height: 0; line-height: 0; background: none; border: 0; box-shadow: none; border-radius: 0; }
 .tt-person:focus-visible { outline: 3px solid var(--tt-gold); outline-offset: 2px; border-radius: 8px; }
-.tt-listener { top: calc(745px + var(--f, 0) * var(--tt-fh, 400px)); animation: tt-arrive 0.5s ease-out both; }
+.tt-listener { top: calc(715px + var(--f, 0) * var(--tt-fh, 400px)); animation: tt-arrive 0.5s ease-out both; }
 .tt-listener.tt-leaving { opacity: 0; }
 .tt-listener.tt-idle { opacity: 0.55; }
 .tt-listener.tt-self::after {
@@ -824,7 +830,7 @@ body.tt-skin #screenover { display: none; }
 .tt-crowd > * { pointer-events: auto; }
 .tt-more {
     left: 50%;
-    top: calc(745px + var(--tt-fh, 400px) + 4px);
+    top: calc(715px + var(--tt-fh, 400px) + 4px);
     transform: translateX(-50%);
     margin: 0;
     padding: 6px 14px;
@@ -867,7 +873,7 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
 @keyframes tt-arrive { from { opacity: 0; translate: 0 12px; } }
 @keyframes tt-sweep { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(40deg) brightness(1.15); } }
 @keyframes tt-twinkle { 50% { opacity: 0.7; } }
-@keyframes tt-marquee { to { transform: translateX(-50%); } }
+@keyframes tt-marquee { to { transform: translateX(calc(var(--dist, 0px) * -1)); } }
 @keyframes tt-nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
 /* ── Laptops and their stickers ───────────────────────────────────────────── */
@@ -1068,7 +1074,8 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     html body.tt-skin #mainGrid,
     html body.tt-skin #mainGrid.login {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: 2.75rem min(44vh, 24rem) 2.6rem minmax(0, 1fr);
+        /* the stage across the width, and just enough floor for a few rows: the stage's height follows its width */
+        grid-template-rows: 2.75rem min(44vh, 66vw) 2.6rem minmax(0, 1fr);
     }
     html body.tt-skin #mainGrid > #topbar { grid-column: 1; grid-row: 1; }
     html body.tt-skin #mainGrid > #stage { grid-column: 1; grid-row: 2; }

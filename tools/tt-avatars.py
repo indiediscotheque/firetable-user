@@ -16,6 +16,11 @@ it goes in the whole figure. And the avatar picker's pages, img/tt/pick/<tier>-<
 one picture of PAGE fronts each, so a page of the picker is one request.
 
     python3 tools/tt-avatars.py /tmp/tt-avatars --pages   # only the picker's pages
+    python3 tools/tt-avatars.py /tmp/tt-avatars --chins   # only each front's chin (img/tt/avatars.json)
+
+Each front also gets `chin`: how far down the figure (in %) its chin is, where
+a DJ's laptop lid lines up. From the head's own picture when there is one,
+else from the figure's outline: the narrowest row under the head (the neck).
 """
 import json
 import os
@@ -77,6 +82,45 @@ def tier(av):
     return "classic"
 
 
+def chin(av, entry):
+    """% down the front figure where the chin is."""
+    if entry.get("head"):
+        _x, _w, hh, _dx, dy = entry["head"]
+        head = load(av, "HeadFront")
+        if head is not None:
+            a = np.asarray(head)[:, :, 3] > 40
+            filled = [i for i, r in enumerate(a) if r.any()]
+            if filled:
+                hh = filled[-1] - filled[0] + 1
+                dy += filled[0]
+        return round(min(85, max(40, (dy + hh * 0.9) / entry["h"] * 100)))
+    im = load(av, "FullFront")
+    if im is None:
+        return 62
+    a = np.asarray(im)[:, :, 3] > 40
+    rows = [int(r.sum()) for r in a]
+    filled = [i for i, n in enumerate(rows) if n]
+    if not filled:
+        return 62
+    top, bottom = filled[0], filled[-1]
+    tall = max(1, bottom - top)
+    # the neck: the narrowest row where necks are (the head's the top half or more)
+    lo, hi = top + int(tall * 0.45), top + int(tall * 0.78)
+    neck = min(range(lo, hi + 1), key=lambda i: rows[i])
+    return round(min(85, max(40, neck / len(rows) * 100)))
+
+
+def chins():
+    path = os.path.join(ROOT, "img", "tt", "avatars.json")
+    with open(path) as f:
+        manifest = json.load(f)
+    for rec in manifest:
+        rec["f"]["chin"] = chin(rec["id"], rec["f"])
+    with open(path, "w") as f:
+        json.dump(manifest, f, separators=(",", ":"))
+    print(len(manifest), "chins")
+
+
 def pages(ids):
     """The picker's pages: PAGE fronts in a row, each fitted into its cell, standing on its floor."""
     out = os.path.join(ROOT, "img", "tt", "pick")
@@ -99,6 +143,8 @@ def pages(ids):
 def main():
     os.makedirs(OUT, exist_ok=True)
     ids = sorted({f[: -len("_FullFront.png")] for f in os.listdir(SRC) if f.endswith("_FullFront.png")}, key=order)
+    if "--chins" in sys.argv:
+        return chins()
     pages(ids)
     if "--pages" in sys.argv:
         return
@@ -147,6 +193,7 @@ def main():
         manifest.append(rec)
     with open(os.path.join(ROOT, "img", "tt", "avatars.json"), "w") as f:
         json.dump(manifest, f, separators=(",", ":"))
+    chins()
     split = sum(1 for r in manifest if "head" in r["f"])
     print(len(manifest), "avatars,", split, "with a head that rocks")
 

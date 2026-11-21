@@ -25,7 +25,7 @@ firetable.tt = (function () {
   "use strict";
 
   var W = 1468; // the stage art's width: everything on it is placed in its units
-  var FLOOR = 745; // where the floor's first row stands; the rest spread down to the bottom of the room
+  var FLOOR = 715; // where the floor's first row stands; the rest spread down to the bottom of the room
   var SEATS = 4; // the bot's deck
   var BOT_AVATAR = "58", PAGE = 16;
   var TIERS = [{ id: "classic", label: "Classic" }, { id: "gold", label: "Gold" }, { id: "special", label: "Specials" }];
@@ -467,7 +467,8 @@ firetable.tt = (function () {
         seat.dataset.av = avatarOf(d.id);
         seat.dataset.lap = lapKey;
         seat.className = "tt-seat";
-        seat.innerHTML = '<button type="button" class="tt-person tt-dj" data-uid="' + esc(d.id) + '" aria-label="' + esc(d.name) + ', DJ">' +
+        var chin = (S.byId[seat.dataset.av] && S.byId[seat.dataset.av].f.chin) || 62;
+        seat.innerHTML = '<button type="button" class="tt-person tt-dj" data-uid="' + esc(d.id) + '" aria-label="' + esc(d.name) + ', DJ" style="--chin:' + chin + '%">' +
           '<span class="tt-figwrap"></span></button>' + laptopHtml(d.id) +
           '<span class="tt-plate"><b>' + esc(d.name) + '</b><span class="tt-plays"></span></span>';
         seat.querySelector(".tt-figwrap").appendChild(figure(seat.dataset.av, "f"));
@@ -494,7 +495,8 @@ firetable.tt = (function () {
    */
   var SPOTS = (function () {
     // rows from the back (f 0) to the front (f 1): further back stands smaller
-    var out = [], rows = [[0, 0.86, 13], [0.18, 0.93, 12], [0.37, 1.0, 12], [0.57, 1.08, 11], [0.78, 1.16, 10], [1, 1.24, 9]];
+    // sizes as deepcut's floor: the front row at the avatar's own size, the back row three quarters
+    var out = [], rows = [[0, 0.74, 14], [0.18, 0.79, 13], [0.37, 0.84, 13], [0.57, 0.89, 12], [0.78, 0.94, 11], [1, 1.0, 10]];
     rows.forEach(function (r, ri) {
       var n = r[2], span = 1180 - ri * 10;
       for (var k = 0; k < n; k++) {
@@ -672,17 +674,34 @@ firetable.tt = (function () {
     var el = $id(id);
     if (el.dataset.text === text) return;
     el.dataset.text = text;
-    el.classList.remove("tt-marquee");
-    el.innerHTML = "<span>" + esc(text) + "</span>";
+    el.innerHTML = '<span class="tt-run"><span>' + esc(text) + "</span></span>";
+    fitLed(el);
+  }
+
+  /**
+   * A line that doesn't fit scrolls as an LED sign does: a dot column at a
+   * time (Doto's dots are 0.1em apart), round and round, a gap between.
+   */
+  var LED_COLS_PER_SEC = 16;
+  function fitLed(el) {
     requestAnimationFrame(function () {
-      var span = el.firstChild;
-      if (span && span.scrollWidth > el.clientWidth + 2) {
-        el.innerHTML = "<span>" + esc(text) + "&emsp;&#9679;&emsp;" + esc(text) + "&emsp;&#9679;&emsp;</span>";
-        el.style.setProperty("--len", (text.length * 0.32 + 6).toFixed(1) + "s");
-        el.classList.add("tt-marquee");
-      }
+      var run = el.firstChild, one = run && run.firstChild;
+      if (!one) return;
+      el.classList.remove("tt-marquee");
+      while (run.childNodes.length > 1) run.removeChild(run.lastChild);
+      if (one.offsetWidth <= el.clientWidth) return;
+      var copy = one.cloneNode(true);
+      copy.setAttribute("aria-hidden", "true");
+      run.appendChild(copy);
+      el.classList.add("tt-marquee"); // the gap after each copy comes with it
+      var pitch = parseFloat(getComputedStyle(el).fontSize) / 10;
+      var cols = Math.max(1, Math.round(one.offsetWidth / pitch));
+      el.style.setProperty("--dist", (cols * pitch).toFixed(2) + "px");
+      el.style.setProperty("--cols", cols);
+      el.style.setProperty("--len", (cols / LED_COLS_PER_SEC).toFixed(2) + "s");
     });
   }
+  function refitLeds() { ["tt-line1", "tt-line2"].forEach(function (id) { var el = $id(id); if (el && el.dataset.text) fitLed(el); }); }
 
   function clock(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
@@ -1054,6 +1073,7 @@ firetable.tt = (function () {
       moveDjPicker(true);
       setLayout(store.get(STORAGE.ttLayout) || (window.innerWidth >= 1280 ? "two" : "one"), false);
       fit();
+      if (document.fonts && document.fonts.load) document.fonts.load('900 20px "Doto"').then(refitLeds, function () {});
       loadAvatars().then(function () {
         if (!S.active) return;
         setTab(S.tab);
