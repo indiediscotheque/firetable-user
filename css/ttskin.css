@@ -140,6 +140,11 @@ html body.tt-skin #mainGrid :is(#queuebox, #actualChat, #thehistoryWrap, #cardsW
     border-radius: 0;
 }
 
+/* no drop shadows in the theme: not even the site's own on every button (the people list,
+   the tabs, the menus); the theme's own looks below set what they need */
+:where(body.tt-skin) :is(button, a, .ft-avatar) { box-shadow: none; text-shadow: none; }
+:where(.tt-modal) :is(button, a) { box-shadow: none; text-shadow: none; }
+
 /* ── The bar ──────────────────────────────────────────────────────────────── */
 html body.tt-skin #mainGrid > #topbar {
     display: flex;
@@ -180,7 +185,6 @@ body.tt-skin #tt-brand {
     color: #fff;
     font-size: 1rem;
     font-weight: 600;
-    text-shadow: 0 1px 1px #000;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -352,7 +356,7 @@ body.tt-skin #queuebox > #djlistpickerWrap select { flex: 1; min-width: 0; }
     background: linear-gradient(#f1cf3a, var(--tt-gold-2));
     color: #2a2000;
     font: 800 0.95rem/1.1 var(--tt-font);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 2px 6px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
     cursor: pointer;
     padding: 0.5rem 1rem;
 }
@@ -689,7 +693,6 @@ body.tt-skin #screenover { display: none; }
     padding: 3px 10px;
     border-radius: 11px;
     background: #0c6a92;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
     color: #fff;
     font: 700 15px/1.25 var(--tt-font);
     white-space: nowrap;
@@ -713,7 +716,6 @@ body.tt-skin #screenover { display: none; }
     border: 1px solid #000;
     border-radius: 4px;
     background: #1d1d1d;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
     font-family: var(--tt-font);
     text-align: center;
     z-index: 1200;
@@ -751,7 +753,7 @@ body.tt-skin #screenover { display: none; }
     height: 20px;
     border-radius: 50%;
     background: radial-gradient(ellipse at 50% 45%, #ffd23a 0 11%, #b8860b 13%, #111 16% 55%, #2b2b2b 57% 63%, #111 65%);
-    box-shadow: 0 3px 0 -1px #0d0d0d, 0 6px 0 -2px #1c1c1c, 0 8px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 3px 0 -1px #0d0d0d, 0 6px 0 -2px #1c1c1c; /* the records under it */
     z-index: 4;
 }
 .tt-vinyl::before {
@@ -778,7 +780,6 @@ body.tt-skin #screenover { display: none; }
     border: 0;
     border-radius: 10px;
     background: linear-gradient(#f6d64a, #e2b520);
-    box-shadow: 0 2px 0 #a8830f, 0 4px 10px rgba(0, 0, 0, 0.55);
     color: #1d1600;
     font: 700 21px/1.05 var(--tt-font);
     text-align: center;
@@ -898,7 +899,7 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     height: 100%;
     border-radius: 9% / 12%;
     background: var(--lid);
-    box-shadow: inset 0 0 0 1.5px var(--edge), inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 -1px #6e6f75, 0 8px 10px rgba(0, 0, 0, 0.6);
+    box-shadow: inset 0 0 0 1.5px var(--edge), inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 -1px #6e6f75; /* the laptop's base under the lid */
     overflow: hidden;
 }
 .tt-sticker {
@@ -912,7 +913,6 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     border: 0;
     background: center / contain no-repeat;
     transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(var(--s, 1));
-    filter: drop-shadow(0 1px 0.5px rgba(0, 0, 0, 0.35));
 }
 
 /* ── The avatar picker and the sticker builder ────────────────────────────── */
@@ -923,7 +923,6 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     border-radius: 0.6rem;
     background: #2b2b2b;
     color: var(--tt-text);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
     overflow: auto;
     overscroll-behavior: contain;
     font-family: var(--tt-font);
@@ -985,7 +984,7 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     cursor: pointer;
 }
 .tt-pickCell:hover, .tt-pickCell:focus-visible { border-color: #777; outline: none; background: radial-gradient(ellipse at 50% 85%, #4a4a4a, #2f2f2f 70%); }
-.tt-pickCell[aria-selected="true"] { border-color: var(--tt-gold); box-shadow: 0 0 14px rgba(227, 191, 35, 0.35); }
+.tt-pickCell[aria-selected="true"] { border-color: var(--tt-gold); }
 .tt-pickFig {
     width: 100%;
     height: 100%;

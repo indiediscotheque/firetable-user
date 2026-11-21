@@ -209,20 +209,20 @@ firetable.tt = (function () {
   }
 
   /**
-   * A face for lists, chat and the bar: the front's head (or the top of the
-   * whole figure), centred in whatever circle it's drawn in (percentages, so
-   * one style fits every size).
+   * A face for lists, chat and the bar: the square round the front's whole
+   * head (f.face, measured by tools/tt-avatars.py), as a circle of any size
+   * (percentages). The sprite keeps clear space after the front, so a square
+   * that reaches past the picture's edge shows nothing else.
    */
   function faceStyle(id) {
     var a = S.byId[id];
     if (!a) return "";
-    var f = a.f, x, w, h;
-    if (f.head) { x = f.head[0]; w = f.head[1]; h = Math.min(f.head[2], f.head[1] * 1.1); }
-    else { x = f.x; w = f.w; h = Math.min(f.h, f.w); }
-    var m = Math.max(w, h), bw = a.sw / m, bh = a.sh / m;
-    var px = (-x / m + (1 - w / m) / 2) / (1 - bw), py = ((1 - h / m) / 2) / (1 - bh);
+    var f = a.f, box = f.face || [0, 0, Math.min(f.w, f.h)];
+    var x = f.x + box[0], y = box[1], m = box[2];
+    var bw = a.sw / m, bh = a.sh / m;
+    var px = (-x / m) / (1 - bw), py = (-y / m) / (1 - bh);
     return "--tt-face:url(" + src(id) + ");--tt-fsize:" + (bw * 100).toFixed(2) + "% " + (bh * 100).toFixed(2) + "%;--tt-fpos:" +
-      (px * 100).toFixed(2) + "% " + (isFinite(py) ? (py * 100).toFixed(2) : 0) + "%";
+      (isFinite(px) ? (px * 100).toFixed(2) : 0) + "% " + (isFinite(py) ? (py * 100).toFixed(2) : 0) + "%";
   }
 
   // ─── Building the room ────────────────────────────────────────────────────
