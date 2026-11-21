@@ -1140,6 +1140,20 @@ try {
     await wait(100);
     out.never = count() === start;
     firetable.actions.sendReaction = realSend;
+    // a DJ's menu: tap the DJ, the room's own actions for who's looking
+    const djBtn = document.querySelector("#tt-table .tt-seat[data-who] .tt-dj");
+    djBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+    const menu = document.getElementById("tt-djmenu");
+    out.djMenu = !menu.hidden && [...menu.querySelectorAll(".tt-djitem")].map((b) => b.textContent).join("|");
+    menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    out.djMenuClosed = menu.hidden;
+    // art tracks: a cover inside flat bars zooms on the right screen; a video's frame doesn't
+    const pic = (draw) => new Promise((r) => { const c = document.createElement("canvas"); c.width = 480; c.height = 360; const x = c.getContext("2d"); draw(x); const i = new Image(); i.onload = () => r(i); i.src = c.toDataURL(); });
+    const spots = (x, x0, y0, w, h, n) => { for (let k = 0; k < n; k++) { x.fillStyle = "hsl(" + (k * 37 % 360) + ",70%," + (25 + k % 45) + "%)"; x.fillRect(x0 + (k * 53 % (w - 12)), y0 + (k * 29 % (h - 12)), 12, 12); } };
+    const artPic = await pic((x) => { x.fillStyle = "#000"; x.fillRect(0, 0, 480, 360); x.fillStyle = "#6b3a1e"; x.fillRect(0, 45, 480, 270); spots(x, 105, 45, 270, 270, 400); });
+    const videoPic = await pic((x) => { x.fillStyle = "#000"; x.fillRect(0, 0, 480, 360); spots(x, 0, 45, 480, 270, 900); });
+    const cover = firetable.tt._coverBox(artPic);
+    out.artTrack = !!cover && Math.abs(cover.cw - 270) <= 10 && Math.abs(cover.ch - 270) <= 10 && !firetable.tt._coverBox(videoPic);
     // the sticker builder
     document.getElementById("nav-ttLaptop").click();
     out.laptop = document.getElementById("tt-laptopEdit").open;
@@ -1178,6 +1192,8 @@ try {
   check(tt.awesome && tt.storm && tt.never && !tt.join, "Awesome is Fire, Storm takes it back, and nothing counts below none");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
+  check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
+  check(tt.artTrack, "an art track's cover fills the right screen; a video's frame is left as it is");
   check(tt.off && tt.liveFace && tt.noTtFaceInLive, "Back to Live: Live as it was, with Live's avatars");
 
   console.log("-- the stage's volume slider (a native range input)");

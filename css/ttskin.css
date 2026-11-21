@@ -533,6 +533,11 @@ body.tt-skin #screenover { display: none; }
     top: 13px;
     width: 64px;
     height: 104px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    min-width: 0;
+    line-height: 1;
     border: 0;
     border-radius: 8px;
     color: rgba(0, 0, 0, 0.55);
@@ -540,7 +545,7 @@ body.tt-skin #screenover { display: none; }
     box-shadow: inset 0 0 0 1px #000, 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 2px 0 rgba(255, 255, 255, 0.35);
     transition: filter 0.15s ease, box-shadow 0.15s ease;
 }
-.tt-vote i { font-size: 40px; }
+.tt-vote i { display: block; width: 1em; height: 1em; font-size: 40px; line-height: 1; text-align: center; }
 .tt-storm { left: 8px; background: linear-gradient(#5a5a66, #2f2f39); color: rgba(255, 255, 255, 0.35); }
 .tt-storm:not(:disabled):hover { background: linear-gradient(#7d7d91, #44445a); color: #cfe3ff; }
 .tt-storm:disabled { cursor: default; opacity: 0.6; }
@@ -663,9 +668,10 @@ body.tt-skin #screenover { display: none; }
     height: 0;
 }
 .tt-seat > * { pointer-events: auto; }
-/* the DJ: the point 58% down the figure (about the chest) sits on the laptop's top edge */
-#tt-room .tt-dj { left: 0; top: 0; z-index: 2; transform: translate(-50%, -58%) scale(1.15); transform-origin: 50% 58%; }
-.tt-seat > .tt-laptop { position: absolute; left: -43px; top: 0; width: 86px; height: 60px; z-index: 4; }
+/* the DJ, at the avatar's own size (as deepcut draws them): the top half shows over the laptop */
+#tt-room .tt-dj { left: 0; top: 0; z-index: 2; transform: translate(-50%, -50%); transform-origin: 50% 50%; }
+.tt-seat > .tt-laptop { position: absolute; left: -43px; top: 0; width: 86px; height: 60px; z-index: 4; pointer-events: auto; cursor: pointer; }
+.tt-seat.tt-menu .tt-plate { opacity: 1; }
 .tt-figwrap { display: block; }
 /* the DJ's name and plays, under the laptop: always for the one playing, the others when pointed at */
 .tt-plate {
@@ -691,20 +697,45 @@ body.tt-skin #screenover { display: none; }
 .tt-plays { font-weight: 400; opacity: 0.85; }
 .tt-plays::before { content: " · "; }
 .tt-seat.tt-on .tt-plate, .tt-seat:hover .tt-plate, .tt-seat:focus-within .tt-plate { opacity: 1; }
-.tt-seatacts { position: absolute; left: 0; top: 100px; transform: translateX(-50%); display: flex; gap: 6px; z-index: 6; opacity: 0; transition: opacity 0.2s; }
-.tt-seat:hover .tt-seatacts, .tt-seat:focus-within .tt-seatacts { opacity: 1; }
-.tt-mini {
-    padding: 5px 10px;
-    border: 1px solid #666;
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.85);
-    color: #fff;
-    font: 700 14px/1 var(--tt-font);
-    white-space: nowrap;
+.tt-empty { z-index: 4; }
+/* a DJ's menu, under their laptop (deepcut's: a dark list, their name in gold) */
+.tt-djmenu {
+    left: calc(560px + var(--i, 0) * 116px - 82px);
+    top: 500px;
+    width: 164px;
+    padding: 0;
+    border: 1px solid #000;
+    border-radius: 4px;
+    background: #1d1d1d;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
+    font-family: var(--tt-font);
+    text-align: center;
+    z-index: 1200;
+    overflow: hidden;
+}
+.tt-djmenu[hidden] { display: none; }
+.tt-djhead { padding: 7px 8px 6px; border-bottom: 1px solid #000; background: #262626; }
+.tt-djhead b { display: block; color: var(--tt-gold); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-djhead span { display: block; margin-top: 1px; color: #e6e6e6; font-size: 12px; line-height: 1.3; }
+#tt-room .tt-djitem {
+    display: block;
+    width: 100%;
+    height: auto;
+    padding: 7px 8px;
+    border: 0;
+    border-top: 1px solid #2f2f2f;
+    border-radius: 0;
+    background: #1d1d1d;
+    box-shadow: none;
+    color: #e8e8e8;
+    font: 400 14px/1.2 var(--tt-font);
+    text-decoration: none;
     cursor: pointer;
 }
-.tt-mini.armed { background: #a11; border-color: #f55; }
-.tt-empty { z-index: 4; }
+#tt-room .tt-djitem:hover, #tt-room .tt-djitem:focus-visible { background: #3a3a3a; color: #fff; outline: none; }
+#tt-room .tt-djitem.tt-danger { color: #ff8a8a; }
+#tt-room .tt-djitem.armed { background: #8f1a1a; color: #fff; }
+
 /* an open seat: a stack of records with a light glowing up out of it */
 .tt-vinyl {
     position: absolute;
@@ -808,8 +839,12 @@ body.tt-skin #screenover { display: none; }
 /* Turntable's moves (the timings of its rock, smallrock and bob) */
 .tt-listener.tt-fired .tt-head { animation: tt-rock 1.2s linear infinite; animation-delay: inherit; }
 .tt-listener.tt-fired .tt-whole { animation: tt-sway 1.2s linear infinite; animation-delay: inherit; }
-.tt-seat.tt-on .tt-head, .tt-seat.tt-fired .tt-head { animation: tt-smallrock 1.2s linear infinite; }
-.tt-seat.tt-on .tt-whole, .tt-seat.tt-fired .tt-whole { animation: tt-smallsway 1.2s linear infinite; }
+/* the DJ playing nods up and down, on the song's beat when the room knows it (as Live's DJ does);
+   a DJ who fires rocks side to side like everyone else */
+.tt-seat.tt-on :is(.tt-head, .tt-whole) { animation: tt-nod 1s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(--bop); animation-delay: var(--beat-phase); }
+.tt-seat.tt-fired .tt-head { animation: tt-rock 1.2s linear infinite; }
+.tt-seat.tt-fired .tt-whole { animation: tt-sway 1.2s linear infinite; }
 #tt-room.tt-dance .tt-person .tt-fig { animation: tt-bob 0.6s linear infinite; }
 #tt-room.tt-dance .tt-listener .tt-head { animation: tt-rock 1.2s linear infinite; }
 
@@ -822,26 +857,13 @@ body.tt-skin #screenover { display: none; }
     66.7%, 75% { transform: translate(-6px, 3px) rotate(-10deg); }
     83.3% { transform: translate(-3px, 1px); }
 }
-@keyframes tt-smallrock {
-    0%, 41.7%, 50%, 91.7%, 100% { transform: none; }
-    8.3% { transform: translate(2px, 1px) rotate(6deg); }
-    16.7%, 25% { transform: translate(4px, 2px) rotate(6deg); }
-    33.3% { transform: translate(2px, 1px); }
-    58.3% { transform: translate(-2px, 1px) rotate(-6deg); }
-    66.7%, 75% { transform: translate(-4px, 2px) rotate(-6deg); }
-    83.3% { transform: translate(-2px, 1px); }
-}
 @keyframes tt-sway {
     0%, 50%, 100% { transform: none; }
     20%, 30% { transform: rotate(4deg); }
     70%, 80% { transform: rotate(-4deg); }
 }
-@keyframes tt-smallsway {
-    0%, 50%, 100% { transform: none; }
-    20%, 30% { transform: rotate(2.5deg); }
-    70%, 80% { transform: rotate(-2.5deg); }
-}
 @keyframes tt-bob { 0%, 83%, 100% { transform: none; } 33%, 50% { transform: translateY(7px); } }
+@keyframes tt-nod { 50% { transform: translateY(8px); } }
 @keyframes tt-arrive { from { opacity: 0; translate: 0 12px; } }
 @keyframes tt-sweep { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(40deg) brightness(1.15); } }
 @keyframes tt-twinkle { 50% { opacity: 0.7; } }
