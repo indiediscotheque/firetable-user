@@ -258,7 +258,7 @@ Nothing moves region. Regulars find everything where it was.
 - **Undo:** revert.
 
 ### 1.19 Import, step by step (YouTube and SoundCloud) ✅ shipped (the owner's ask, November 20, 2026)
-- **Shipped:** `js/import.js` (`firetable.importer`). `#importPromptBox` is two steps. **Find:** YouTube | SoundCloud as one segmented control (`#ytimportchoice`, `#scimportchoice`), one box for a link or a name (`#plMachine`); a pasted link picks its own source. Results show who made each playlist and how many songs (YouTube's counts cost 1 unit for the page); "Searching YouTube…" while the 100-unit search runs. A result opens its songs; nothing is added yet. **Check:** every song in order (`playlistItems` with `status`, 1 unit per 50), private and deleted videos listed as **Not available**, songs already in the chosen playlist as **Already there**, a song in it twice as **Twice in this playlist** (Skip songs already in that playlist, on). **Put them in** a new playlist (named, the source's name to start) or one you have (`sortedLists`), at the bottom or the top; a list kept to the other source refuses with `formatRefusal`'s words. **Import N songs** writes them in one go and closes; the toast says what was left out and why, with **Undo** (deletes the new playlist, or removes exactly the tracks it added if they're still there) and **Open**. A playlist link in Find tracks or Discover search says "That's a playlist: [name] · N songs." with **Import it** (no 100-unit search for it). `firetable.actions.importList(id, name, type, opts)` keeps the old call (a new playlist of what can play). Smoke: links told from songs, a 4-song playlist with a deleted video and one already there lists 4 rows, imports 2 at the top of a list you have, Undo takes them back; the old call; the offer in Find tracks.
+- **Shipped:** `js/import.js` (`firetable.importer`). `#importPromptBox` is two steps. **Find:** YouTube | SoundCloud as one segmented control (`#ytimportchoice`, `#scimportchoice`), one box for a link or a name (`#plMachine`); a pasted link picks its own source. Results show who made each playlist and how many songs (YouTube's counts cost 1 unit for the page); "Searching YouTube…" while the 100-unit search runs. A result opens its songs; nothing is added yet. **Check:** every song in order (`playlistItems` with `status`, 1 unit per 50), private and deleted videos listed as **Not available**, songs already in the chosen playlist as **Already there**, a song in it twice as **Twice in this playlist** (Skip songs already in that playlist, on). **Put them in** a new playlist (named, the source's name to start) or one you have (`sortedLists`), at the bottom or the top; a list kept to the other source refuses with `formatRefusal`'s words. **Import N songs** writes them in one go and closes; the toast says what was left out and why, with **Undo** (deletes the new playlist, or removes exactly the tracks it added if they're still there) and **Open**. A playlist link in Find tracks or Discover search says "That's a playlist: [name] · N songs." with **Import it** (no 100-unit search for it). `firetable.actions.importList(id, name, type, opts)` keeps the old call (a new playlist of what can play). Smoke: links told from songs, a 4-song playlist with a deleted video and one already there lists 4 rows, imports 2 at the top of a list you have, Undo takes them back; the old call; the offer in Find tracks. **Later (November 21, 2026):** an empty playlist says so and offers **Import a playlist** and **Find tracks**; a new member's empty library reads **Bring your playlists** (the design's third way in).
 - **Goal:** see what's in a playlist before importing; import into a new or existing list; nothing dropped silently.
 - **Rows:** IM-01, IM-02, IM-03, IM-06, CR-12, CR-15.
 - **Files and change:**
@@ -406,36 +406,42 @@ Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the
 
 Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what people know from other apps, and it leaves the screen for content. It ships to everyone at once, visitors and members alike (no opt-in switch, the owner, November 15, 2026). Because it changes how regulars move around Live on a phone, keep each step's first-run moment clear: the old tab's content is one tap away under its new tab, and nothing is reachable only by gesture.
 
+### 4.1b One sign-in ✅ shipped (the owner's ask, November 20, 2026)
+- **Why:** visitors met two sign-ups: the form under Live's stage and the dialog everywhere else. It felt like two sites.
+- **Shipped:** the site's one sign-in form (`#authBox`: Google / Apple where on, Create account, Log in, Forgot your password) lives in `#joinBox` and nowhere else. Live's welcome (`#welcomeInfo`: the room, who's here, what members get) ends with the same Google / Create account / Log in buttons as Discover (`joinButtons`), and they, the header's Join, the You tab and Fresh's "Join or log in" all open that dialog. Smoke checks there's one form and that Live's welcome and the header open it.
+
 ### 4.0 Measure first: skipped (the owner, November 20, 2026)
 - **Decided:** no measuring. Phones are assumed to matter; the safe steps (4.3, 4.5) go first and today's tabs stay. The bottom tab bar (4.1, 4.2) waits for a separate call.
 - **Goal:** know how many people use the site on phones, and which tabs they use, before moving their navigation (the risk register's "phone work is wasted if few use phones").
 - **Change:** count phone and computer visits in a month of the server's access logs (user agents; no tracking script on the site), and ask the room which Live tabs they use on a phone. Write the numbers here. If phones are few, ship 4.5 and 4.3 first and keep today's tabs.
 
-### 4.1 Bottom tab bar
-- **Rows:** NV-01.
+### 4.1 Bottom tab bar ✅ shipped (the owner's ask, November 20, 2026)
+- **Shipped:** under 640px, `#nav-tabs` (Home · Discover · Live · Library · You) sits along the bottom under the player bar, for everyone; `#modeTabs`, Discover's row of pages and Live's Playlists tab step aside there (all still in the page, and on wider screens). Which tab is lit comes from where you are (Discover's view, Live's panel), so it can't disagree with the page. **Home** is Discover's Home with search. **Discover** lists Discover's pages (with search on top); a page opens under the same tab, and tapping the tab again goes back to the list. **Live** is the stage with Chat · Recent · Fresh · Cards · People (Fresh kept: RE-04). **Library** is the playlists with the screen to themselves (the stage keeps playing out of sight); for visitors, the welcome with Join. **You** opens the account menu (4.5), or Join / Log in for visitors. Smoke checks each tab for a visitor and a member; reach routes phones through the bar.
 - **Change:** under 640px, for everyone, new `#nav-tabs` (Home · Discover · Live · Library · You) replaces `#modeTabs` (Discover | Live), Discover's sideways row of view tabs and `#minimodeoptions` (all kept in the DOM; their handlers still run). **Home** is Discover Home: logo, theme, search, the room in one row with Listen in, New this week, Not played live yet, the chart. **Discover** is search and the list of views. **Live** shows the stage with Chat · Recent · People · Cards. **Library** shows Playlists full screen (for visitors: the crate, and what joining opens). **You** opens Settings as a page, with community, about and install (for visitors: join or log in).
 
 ### 4.2 Live on a phone
 - **Rows:** ST-*, NP-*, CH-*.
 - **Change:** the stage full width at 16:9; the song row with Fire, Grab and ⋯ (44px); the You're next row; the tabs; about 320px of chat; a ⋮ on the stage for screen, avatars, full screen and reload.
-- **Realigned:** the stage's tools are in the player bar since 2.3c, so there's no ⋮ on the stage to add, and Chat is already the first tab and the default (November 15, 2026). Left: the song row's size and the You're next row.
+- **Realigned:** the stage's tools are in the player bar since 2.3c, so there's no ⋮ on the stage to add, and Chat is already the first tab and the default (November 15, 2026). The tab bar (4.1) gives Live the screen above it. Left: the song row's size and the You're next row.
 
 ### 4.3 Library on a phone ✅ shipped (November 20, 2026)
 - **Shipped:** most of it came with 1.15 to 1.17 (the switcher, ⋮ and Find tracks on one row; filter, Show only, Sort and Select several on the next; rows keeping Top and ⋮; hold to drag; Undo toasts). Now a phone's rows are a thumb's height (56px or more, with Comfortable's 44px covers; Compact keeps its own), and the play button sits in the middle of the cover at every size (it sat at the cover's left edge). Smoke checks the height and the centring.
 - **Rows:** CR-*.
 - **Change:** the switcher + Find tracks on one row; the tool row (filter, tune, sort, select, ⋮); rows of 56px with Top and ⋮; hold to drag (already: `dragSort`'s touch hold, since jQuery UI left); Undo toasts.
 
-### 4.4 Grab and More sheets
+### 4.4 Grab and More sheets ✅ shipped (November 21, 2026)
+- **Shipped:** Grab's toast with Change came with 1.6. On phones every ⋮ and ⋯ menu (a playlist row's, Recent's, the playlist's, Show only, Sort, the account menu, the mod and flag menus, Discover's song menu) opens as a short sheet from the bottom: the same items as on a computer, 48px rows, a handle, over a dimmed page that only closes it when tapped (`#dMenuScrim` for Discover's menu). Recent's ⋮ sets the mods' items apart under **Mods** (`firetable.songMenu.html(acts, {mods})`). Smoke checks the sheet's place, width and rows on a phone, and the Mods group.
 - **Change:** Grab's toast with Change; ⋯ as a short bottom sheet (the same menu as desktop, at 48px rows), with a separate Mods section.
 
-### 4.5 The You tab: covered, while today's tabs stay (November 20, 2026)
+### 4.5 The You tab: the account menu (November 20, 2026)
+- **Shipped with 4.1:** You opens the header avatar's account menu (`#nav-accountMenu`), or the sign-in dialog for visitors: one place for the account on every width.
 - **Decided:** with today's tabs kept (4.0), a You tab would repeat the header: Community, About (`#roomInfo`) and Mentions (`#inboxTrigger`) are its buttons on every width, and the avatar's account menu (`#nav-accountMenu`, 2.5) holds Profile, Account and sign-in, Settings, Mod tools, Get the app and Log out. Revisit with the bottom tab bar (4.1).
 - **Rows:** TB-03 to TB-06, SE-*, AU-07 to AU-09, MO-01.
 - **Change:** a page listing profile, settings, mentions, community links, install the app, about, privacy, terms, log out, and the Mod tab for mods. Reuses `#accountSettingsBox`'s contents (moved, not copied).
 
-### 4.6 The mini player ✅ mostly shipped with 2.3 and 2.3c
+### 4.6 The mini player ✅ shipped with 2.3, 2.3c and 4.1
 - **Change:** above the tab bar: the room (art with the DJ's avatar, "● Live · jarvis", Fire) or the Discover song (art, title, Grab, play/pause). Reuses `#dMini`.
-- **Shipped:** on phones `#dMini` is one row (the room or the Discover song, its source, play/pause) that opens the full-screen player. Left: sitting above the tab bar (4.1), and Fire on it for the room.
+- **Shipped:** on phones `#dMini` is one row (the room or the Discover song, its source, play/pause) that opens the full-screen player, sitting above the tab bar (4.1), with the stage's Fire and Grab on it for the room (2.3c).
 
 ---
 

@@ -180,7 +180,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| NV-01 | Phone tabs: Chat (first, and the default until you pick another, since November 15, 2026), Playlists, Recent, Fresh, Cards, People | All | `#minimodeoptions` (`#mm-playlists`, `#mm-history`, `#mm-discover`, `#mm-cards`, `#mmchat`, `#mmusrs`), `STORAGE.navMobile` | 4.1 bottom tab bar Home · Discover · Live · Library · You; Live keeps Chat · Recent · People · Cards |
+| NV-01 | Phone tabs: Chat (first, and the default until you pick another, since November 15, 2026), Playlists, Recent, Fresh, Cards, People | All | `#minimodeoptions` (`#mm-playlists`, `#mm-history`, `#mm-discover`, `#mm-cards`, `#mmchat`, `#mmusrs`), `STORAGE.navMobile` | 4.1 bottom tab bar Home · Discover · Live · Library · You; Live keeps Chat · Recent · People · Cards ✅ 4.1: `#nav-tabs` under 640px (`discover.js` `goTab`/`renderTabs`); Live keeps Chat · Recent · Fresh · Cards · People; Playlists is Library |
 | NV-02 | Tablet side tabs: Chat, People | All | `#sidepanel-tabs` (`#sp-chat`, `#sp-people`), `STORAGE.navSide` | keep |
 | NV-03 | View under the stage (Playlists, Recent, Fresh, Cards) | All | `firetable.ui.showView`, `syncNavState`, `STORAGE.navView`, `#mainGrid.view-*` | keep |
 | NV-04 | Addresses (`#live`, `#discover/...`) and back button | All | `discover.js` `route`, `writeAddress` | keep; 2.2 adds nothing new |
@@ -189,8 +189,8 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| AU-01 | Welcome and room pulse for visitors | V | `#login` > `#welcomeInfo`, `#roomPulse` (`renderRoomPulse`) | 2.4 |
-| AU-02 | Create account (email, username, password, terms) | V | `#createscreen`, `#createAccountFormShell`; from anywhere: `#nav-signin` → `#joinBox` (`openAuth`) | 2.5 shipped |
+| AU-01 | Welcome and room pulse for visitors | V | `#login` > `#welcomeInfo`, `#roomPulse` (`renderRoomPulse`) | 2.4; ✅ 4.1b ends with the same Join buttons as Discover, which open `#joinBox` |
+| AU-02 | Create account (email, username, password, terms) | V | `#createscreen`, `#createAccountFormShell`, only in `#joinBox` (`openAuth`) | 2.5 shipped; ✅ 4.1b one form, in the dialog only |
 | AU-03 | Log in, show password, forgot password | V | `#logscreen`, `#resetscreen`, `.showPass`; in `#joinBox` from the header | 2.5 shipped |
 | AU-04 | Google / Apple sign-in | V | `#oauthBox`, `setupProviderSignIn`, `ftconfigs.signInProviders` | keep |
 | AU-05 | Pick a username after Google sign-in | V | `#pickNameBox`, `setupPickName` | keep |

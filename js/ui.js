@@ -1102,6 +1102,8 @@ firetable.nav = {
     // Recent and Fresh download the first time they're opened
     if (n.view === 'history') ftapi.watchFeed('history');
     if (n.view === 'discover') ftapi.watchFeed('fresh');
+    // the bottom tab bar on phones: Live or Library
+    if (firetable.discover && firetable.discover.renderTabs) firetable.discover.renderTabs();
   }
 };
 

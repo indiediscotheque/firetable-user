@@ -1072,7 +1072,17 @@ firetable.ui.setupPlaylistEvents = function () {
     firetable._queueShownList = listKey;
 
     if (!keys.length) {
-      container.innerHTML = '';
+      // an empty playlist says so and offers the two ways to fill it; a new
+      // member's empty library offers to bring their playlists (1.19)
+      var lists = firetable.allPlaylists || {};
+      var newLibrary = String(listID) === "0" && !Object.keys(lists).some(function (id) { return lists[id] && lists[id].list && Object.keys(lists[id].list).length; });
+      container.innerHTML = '<div class="q-empty">' +
+        '<i class="material-symbols-outlined" aria-hidden="true">' + (newLibrary ? 'library_music' : 'queue_music') + '</i>' +
+        '<h3>' + (newLibrary ? 'Bring your playlists' : 'This playlist is empty') + '</h3>' +
+        '<p>' + (newLibrary ? 'Import a playlist from YouTube or SoundCloud, or find songs one by one. What you play for the room comes from here.'
+          : 'Add songs with Find tracks, or import a playlist from YouTube or SoundCloud.') + '</p>' +
+        '<div class="q-emptyActs"><button type="button" class="butt darkbutt q-emptyImport"><i class="material-symbols-outlined" aria-hidden="true">download</i>Import a playlist</button>' +
+        '<button type="button" class="butt graybutt q-emptyFind"><i class="material-symbols-outlined" aria-hidden="true">add</i>Find tracks</button></div></div>';
       firetable.actions.filterQueue('');
       return;
     }
@@ -1494,6 +1504,10 @@ firetable.ui.setupPlaylistEvents = function () {
     closePlAddMenu(false);
     enterCreateMode();
   });
+
+  // ── An empty playlist's two ways to fill it ──
+  $("#mainqueue").on("click", ".q-emptyImport", function () { firetable.importer.open(); })
+    .on("click", ".q-emptyFind", function () { $("#addToQueueBttn").trigger("click"); });
 
   // ── Popover: Import Playlist ──
   $("#plAddImport").on("click", function () {

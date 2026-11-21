@@ -2868,6 +2868,31 @@ input.ft-filter {
     content: "this playlist is empty";
 }
 
+/* An empty playlist: what to do next (1.19) */
+.q-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 24rem;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-4);
+    text-align: center;
+
+    & > i { font-size: 2.5rem; color: var(--color-accent); }
+    & h3 { margin: 0; font-size: var(--fs-h3); color: var(--color-text-light); }
+    & p { margin: 0; font-size: var(--fs-body); line-height: 1.5; color: var(--color-text-subtle); }
+}
+.q-emptyActs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+
+    & .butt { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 2.75rem; padding: 0 var(--space-4); }
+}
+
 .searchStatus {
     padding: var(--pad2);
     font-style: italic;
@@ -4940,6 +4965,24 @@ img.emoji,
     padding-bottom: var(--pad4);
 }
 
+#welcomeInfo h2 {
+    margin: 0 0 var(--pad2);
+    font-size: clamp(var(--fs-h2), 5vw, var(--fs-display));
+    line-height: 1.2;
+    color: var(--color-text-light);
+}
+
+#welcomeInfo > p {
+    max-width: 32rem;
+    line-height: 1.5;
+}
+
+/* Join and Log in, the same as everywhere else: they open #joinBox */
+.au-join {
+    max-width: 22rem;
+    margin: var(--pad3) 0;
+}
+
 #login {
     display: none;
     grid-area: login;
@@ -4954,7 +4997,8 @@ img.emoji,
     }
 }
 
-#login h3 {
+#login h3,
+#authBox h3 {
     font-size: 1.25rem;
     font-weight: 300;
 }
@@ -4963,7 +5007,8 @@ img.emoji,
     font-size: 1rem;
 }
 
-#login .butt {
+#login .butt,
+#authBox .butt {
     width: auto;
 }
 
@@ -5028,7 +5073,8 @@ img.emoji,
     border-left-color: var(--color-success);
 }
 
-#login a {
+#login a,
+#authBox a {
     color: var(--color-accent);
 }
 
@@ -5137,7 +5183,7 @@ img.emoji,
 .authForm .formMessage {
     margin: 0;
 }
-#login .authForm .butt[type="submit"] {
+#authBox .authForm .butt[type="submit"] {
     width: 100%;
     height: 2.75rem;
 }
@@ -7551,19 +7597,9 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
     #mainGrid.login #nav-signin [class*="material-symbols-"] { display: none; }
 }
 
-/* The sign-in dialog: the form, moved in from the page */
+/* The sign-in dialog: the site's one sign-in form */
 #joinBox .modalBox { width: 26rem; max-width: min(26rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); }
 #joinBox .modalContent { display: block; overflow-y: auto; }
-body.ft-discover #joinBox #login,
-#joinBox #login {
-    display: block !important;
-    height: auto;
-    max-width: none;
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-}
-#joinBox #welcomeInfo { display: none; }
 #joinBox #authBox,
 #joinBox #oauthBox { max-width: none; }
 #joinBox #resetscreen h3 { display: none; } /* the dialog's title says it */

@@ -40,7 +40,10 @@ const PHONE = [390];
 const WIDE = [1024, 1440];
 
 // shorthands for the routes
-const playlists = ["#mm-playlists"];
+// phones: the bottom tab bar (4.1) stands in for Live's Playlists tab and Discover's row of pages
+const tab = (t) => '?#nav-tabs [data-tab="' + t + '"]';
+const playlists = ["?#mm-playlists", tab("library")];
+const pages = (v) => [tab("discover"), '#dNav [data-view="' + v + '"]'];
 const listMenu = [...playlists, "#cr-listBtn"];
 const account = ["#loggedInUser"];
 const chatTab = ["?#mmchat", "?#sp-chat"];
@@ -63,8 +66,16 @@ const FEATURES = [
   { row: "TB-04", name: "About", who: ALL, target: "#roomInfo" },
   { row: "TB-05", name: "Mentions inbox", who: IN, via: ["#inboxTrigger"], target: "#inboxList", notFor: ["visitor"], notTarget: "#inboxTrigger" },
   { row: "TB-06", name: "The account menu", who: IN, via: account, target: "#nav-accountMenu" },
-  { row: "TB-08", name: "Discover / Live: to Live", who: ALL, mode: "discover", via: ['#modeTabs [data-mode="live"]'], target: "#stage", hash: "#live" },
-  { row: "TB-08", name: "Discover / Live: to Discover", who: ALL, via: ['#modeTabs [data-mode="discover"]'], target: "#dBrowse", hash: "#discover" },
+  { row: "TB-08", name: "Discover / Live: to Live", who: ALL, widths: WIDE, mode: "discover", via: ['#modeTabs [data-mode="live"]'], target: "#stage", hash: "#live" },
+  { row: "TB-08", name: "Discover / Live: to Discover", who: ALL, widths: WIDE, via: ['#modeTabs [data-mode="discover"]'], target: "#dBrowse", hash: "#discover" },
+  // ── phones: the bottom tab bar (NV-01) ──
+  { row: "NV-01", name: "Tab bar: Home", who: ALL, widths: PHONE, via: ['#nav-tabs [data-tab="home"]'], target: "#dBrowse .ft-cards .pvbar", hash: "#discover" },
+  { row: "NV-01", name: "Tab bar: Discover's pages", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="discover"]'], target: '#dNav [data-view="years"]' },
+  { row: "NV-01", name: "Tab bar: Live", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="live"]'], target: "#stage", hash: "#live" },
+  { row: "NV-01", name: "Tab bar: Library", who: IN, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="library"]'], target: "#mainqueue", hash: "#live" },
+  { row: "NV-01", name: "Tab bar: Library (visitors: what joining opens)", who: ["visitor"], widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="library"]'], target: "#welcomeInfo .d-createaccount" },
+  { row: "NV-01", name: "Tab bar: You (the account menu)", who: IN, widths: PHONE, via: ['#nav-tabs [data-tab="you"]'], target: "#nav-accountMenu" },
+  { row: "NV-01", name: "Tab bar: You (join or log in)", who: ["visitor"], widths: PHONE, via: ['#nav-tabs [data-tab="you"]'], target: "#joinBox #newemail" },
   { row: "AU-02", name: "Join or log in", who: ["visitor"], via: ["#nav-signin"], target: "#joinBox #newemail", notFor: IN, notTarget: "#nav-signin" },
   { row: "AU-07", name: "Profile: change username", who: IN, via: [...account, '#nav-accountMenu [data-acct="profile-tab"]'], target: "#changeUsername" },
   // AU-08, members choosing their avatar style: retired (the owner, November 19, 2026); a supermod sets everyone's (MO-05)
@@ -147,11 +158,11 @@ const FEATURES = [
   // ── Discover (DI) ──
   { row: "DI-12", name: "Search", who: ALL, mode: "discover", target: "#dQ" },
   { row: "DI-01", name: "Home", who: ALL, mode: "discover", target: "#dBrowse .ft-cards .pvbar" },
-  { row: "DI-02", name: "New", who: ALL, mode: "discover", via: ['[data-view="new"]'], hash: "#discover/new", target: "#dBrowse .pvbar" },
-  { row: "DI-03", name: "Charts", who: ALL, mode: "discover", via: ['[data-view="charts"]'], hash: "#discover/charts", target: "#dBrowse .pvbar" },
-  { row: "DI-04", name: "Genres", who: ALL, mode: "discover", via: ['[data-view="genres"]'], hash: "#discover/genres", target: "#dBrowse .d-mapg" },
-  { row: "DI-06", name: "DJs", who: ALL, mode: "discover", via: ['[data-view="djs"]'], hash: "#discover/djs", target: "#dBrowse" },
-  { row: "DI-08", name: "Years", who: ALL, mode: "discover", via: ['[data-view="years"]'], hash: "#discover/years", target: "#dBrowse" },
+  { row: "DI-02", name: "New", who: ALL, mode: "discover", via: pages("new"), hash: "#discover/new", target: "#dBrowse .pvbar" },
+  { row: "DI-03", name: "Charts", who: ALL, mode: "discover", via: pages("charts"), hash: "#discover/charts", target: "#dBrowse .pvbar" },
+  { row: "DI-04", name: "Genres", who: ALL, mode: "discover", via: pages("genres"), hash: "#discover/genres", target: "#dBrowse .d-mapg" },
+  { row: "DI-06", name: "DJs", who: ALL, mode: "discover", via: pages("djs"), hash: "#discover/djs", target: "#dBrowse" },
+  { row: "DI-08", name: "Years", who: ALL, mode: "discover", via: pages("years"), hash: "#discover/years", target: "#dBrowse" },
   { row: "DI-13", name: "The player bar", who: ALL, mode: "discover", target: "#dMini .pb-main" },
   { row: "DI-14", name: "Listen in / stop the room", who: ALL, mode: "discover", target: "#dMini .pb-main" },
   { row: "DI-27", name: "The full-screen player", who: ALL, widths: WIDE, mode: "discover", via: ["#fullscreenBtn"], target: "#pv-full" },
@@ -205,6 +216,12 @@ async function reset(page, mode) {
     if (window.firetable && firetable.discover && firetable.discover.state().full) firetable.discover.closeFull();
     document.body.classList.remove("d-sheet-open");
   });
+  // phones: back out of Discover's list of pages and the Library tab
+  await page.evaluate((m) => {
+    const tap = (t) => { const b = document.querySelector('#nav-tabs [data-tab="' + t + '"]'); if (b && b.offsetParent) b.click(); };
+    if (m === "discover" && document.body.classList.contains("nt-browse")) tap("home");
+    if (m !== "discover" && document.body.classList.contains("nt-library")) tap("live");
+  }, mode);
   await page.waitForFunction(() => { const f = document.getElementById("pv-full"); return !f || !f.checkVisibility(); }, null, { timeout: 3000 }).catch(() => {});
   const want = mode === "discover" ? "#discover" : "#live";
   if (await page.evaluate(() => location.hash) !== want) await page.evaluate((h) => { location.hash = h; }, want);
