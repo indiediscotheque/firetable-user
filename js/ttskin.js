@@ -248,7 +248,7 @@ firetable.tt = (function () {
         '<p id="tt-theme" class="tt-theme" hidden></p>' +
         '<div class="tt-meter" aria-hidden="true"><span class="tt-needle" id="tt-needle"></span></div>' +
         '<div class="tt-board" id="tt-board">' +
-          '<button type="button" class="tt-vote tt-storm" id="tt-storm" aria-label="Storm: take back your fire" title="Storm: take back your fire">' + ms("thunderstorm", "material-symbols-filled") + "</button>" +
+          '<button type="button" class="tt-vote tt-storm" id="tt-storm" aria-label="Storm: take back your fire" title="Storm: take back your fire">' + ms("thumb_down", "material-symbols-filled") + "</button>" +
           '<div class="tt-songboard" role="status" aria-live="off">' +
             '<div class="tt-led tt-line1" id="tt-line1"><span></span></div>' +
             '<div class="tt-led tt-line2" id="tt-line2"><span></span></div>' +
@@ -265,6 +265,7 @@ firetable.tt = (function () {
         '<div class="tt-table" id="tt-table" role="group" aria-label="The DJs"></div>' +
         '<div class="tt-tabletop" aria-hidden="true"></div>' +
         '<div class="tt-crowd" id="tt-crowd" role="group" aria-label="The floor"></div>' +
+        '<div class="tt-djmenu" id="tt-djmenu" role="menu" hidden></div>' +
         '<p class="tt-more" id="tt-more" hidden></p>' +
       "</div>";
     stage.insertBefore(room, stage.firstChild);
@@ -428,10 +429,6 @@ firetable.tt = (function () {
     return out.slice(0, SEATS);
   }
 
-  function isMod() {
-    var me = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
-    return !!(me && (me.mod || me.supermod));
-  }
 
   function renderSeats() {
     var table = $id("tt-table");
@@ -472,20 +469,16 @@ firetable.tt = (function () {
         seat.className = "tt-seat";
         seat.innerHTML = '<button type="button" class="tt-person tt-dj" data-uid="' + esc(d.id) + '" aria-label="' + esc(d.name) + ', DJ">' +
           '<span class="tt-figwrap"></span></button>' + laptopHtml(d.id) +
-          '<span class="tt-plate"><b>' + esc(d.name) + '</b><span class="tt-plays"></span></span>' +
-          '<span class="tt-seatacts"></span>';
+          '<span class="tt-plate"><b>' + esc(d.name) + '</b><span class="tt-plays"></span></span>';
         seat.querySelector(".tt-figwrap").appendChild(figure(seat.dataset.av, "f"));
       }
       seat.classList.toggle("tt-on", d.id === active);
       seat.classList.toggle("tt-fired", !!fired[d.id]);
       seat.classList.toggle("tt-self", d.id === ftapi.uid);
       seat.querySelector(".tt-plays").textContent = d.plays + "/" + (firetable.playlimit || "∞");
-      var acts = seat.querySelector(".tt-seatacts");
-      var actHtml = d.id === ftapi.uid
-        ? '<button type="button" class="tt-mini" data-tt-stickers>Stickers</button><button type="button" class="tt-mini" data-tt-stepdown>Step down</button>'
-        : isMod() ? '<button type="button" class="tt-mini" data-tt-remove="' + esc(d.id) + '">Remove</button>' : "";
-      if (acts.innerHTML !== actHtml) acts.innerHTML = actHtml;
     }
+    // a DJ who left takes their menu with them
+    if (M.uid && !keep[M.uid]) closeDjMenu();
     // the spotlight
     var on = table.querySelector(".tt-seat.tt-on");
     var light = $id("tt-djlight");
@@ -606,10 +599,73 @@ firetable.tt = (function () {
     $id("tt-board").classList.toggle("tt-playing", playing);
     var artUrl = $id("albumArt") && $id("albumArt").dataset.albumArtCurrent;
     var art = playing && artUrl ? "url(" + JSON.stringify(abs(artUrl)) + ")" : "none";
-    ["tt-artL", "tt-artR"].forEach(function (id) { $id(id).style.backgroundImage = art; });
+    ["tt-artL", "tt-artR"].forEach(function (id) {
+      var el = $id(id);
+      el.style.backgroundImage = art;
+      el.style.backgroundSize = el.style.backgroundPosition = "";
+    });
+    if (playing && artUrl) artTrackZoom(abs(artUrl));
     var link = $id("songlink");
     $id("tt-link").hidden = !playing || !link || !link.getAttribute("href");
     tick();
+  }
+
+  /**
+   * An art track (a still cover shown as a video) comes as a picture with flat
+   * bars on all four sides: the right screen zooms so the cover fills its
+   * height. Anything else (a video's frame, square art) stays as it is. One
+   * look per picture, at a 96-pixel copy, kept.
+   */
+  var ART = { seen: {} };
+  var SCREEN_W = 302, SCREEN_H = 239; // .tt-screenart's size, in the stage's units
+  function artTrackZoom(url) {
+    var apply = function (box) {
+      var el = $id("tt-artR");
+      if (!box || !el || el.style.backgroundImage.indexOf(url) === -1) return;
+      var k = SCREEN_H / box.ch;
+      el.style.backgroundSize = (box.iw * k).toFixed(1) + "px " + (box.ih * k).toFixed(1) + "px";
+      el.style.backgroundPosition = (SCREEN_W / 2 - (box.cx + box.cw / 2) * k).toFixed(1) + "px " + (SCREEN_H / 2 - (box.cy + box.ch / 2) * k).toFixed(1) + "px";
+    };
+    if (url in ART.seen) return apply(ART.seen[url]);
+    var img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = function () {
+      var box = null;
+      try { box = coverBox(img); } catch (e) { /* the picture can't be read: leave it as it is */ }
+      ART.seen[url] = box;
+      apply(box);
+    };
+    img.onerror = function () { ART.seen[url] = null; };
+    img.src = url;
+  }
+  /** The cover inside a picture with flat bars round it, in the picture's pixels; null when it isn't one. */
+  function coverBox(img) {
+    var w = 96, h = Math.max(1, Math.round(96 * img.naturalHeight / img.naturalWidth));
+    var c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    var x = c.getContext("2d", { willReadFrequently: true });
+    x.drawImage(img, 0, 0, w, h);
+    var px = x.getImageData(0, 0, w, h).data;
+    var lum = function (i) { return px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11; };
+    // a line is a bar when it's all one colour
+    var flat = function (from, to, step) {
+      var n = 0, s = 0, s2 = 0;
+      for (var i = from; i < to; i += step) { var l = lum(i); s += l; s2 += l * l; n++; }
+      var mean = s / n;
+      return s2 / n - mean * mean < 60;
+    };
+    var row = function (y, x0, x1) { return flat((y * w + x0) * 4, (y * w + x1) * 4, 4); };
+    var col = function (xx, y0, y1) { return flat((y0 * w + xx) * 4, (y1 * w + xx) * 4, w * 4); };
+    var top = 0, bottom = h - 1, left = 0, right = w - 1;
+    while (top < bottom && row(top, 0, w)) top++;
+    while (bottom > top && row(bottom, 0, w)) bottom--;
+    while (left < right && col(left, top, bottom + 1)) left++;
+    while (right > left && col(right, top, bottom + 1)) right--;
+    var cw = right - left + 1, ch = bottom - top + 1;
+    // bars at the sides, each a good part of the width, round something about square: a cover
+    if (left < w * 0.08 || w - 1 - right < w * 0.08 || ch < h * 0.3 || cw / ch < 0.75 || cw / ch > 1.35) return null;
+    var f = img.naturalWidth / w;
+    return { iw: img.naturalWidth, ih: img.naturalHeight, cx: left * f, cy: top * f, cw: cw * f, ch: ch * f };
   }
 
   function setLed(id, text) {
@@ -1114,16 +1170,15 @@ firetable.tt = (function () {
     $id("tt-exit").addEventListener("click", leave);
     $id("tt-layout").addEventListener("click", function () { setLayout(S.layout === "two" ? "one" : "two", true); });
 
+    bindDjMenu(room);
     room.addEventListener("click", function (e) {
       var t = e.target;
       if (t.closest("[data-tt-addme]")) return ftapi.actions.sendBotCommand("!addme");
-      var b;
-      if (t.closest("[data-tt-stickers]")) return openLaptop();
-      if ((b = t.closest("[data-tt-stepdown]"))) return confirmTwice(b, "Tap to step down", function () { ftapi.actions.sendBotCommand("!removeme"); });
-      if ((b = t.closest("[data-tt-remove]"))) {
-        var uid = b.getAttribute("data-tt-remove");
-        var dj = djs().filter(function (d) { return d.id === uid; })[0];
-        return confirmTwice(b, "Tap to remove", function () { if (dj) ftapi.actions.sendBotCommand("!remove " + dj.name); });
+      var dj = t.closest(".tt-seat[data-who] .tt-dj, .tt-seat[data-who] > .tt-laptop");
+      if (dj) {
+        var seat = dj.closest(".tt-seat");
+        if (M.uid === seat.dataset.who && e.pointerType !== "mouse" && e.detail) return closeDjMenu();
+        return openDjMenu(seat, !e.detail); // a keyboard press goes into the menu
       }
       var p = t.closest(".tt-person[data-uid]");
       if (p && firetable.ui.tooltip && firetable.ui.tooltip.user) firetable.ui.tooltip.user(p, p.dataset.uid);
@@ -1204,6 +1259,131 @@ firetable.tt = (function () {
     });
   }
 
+  // ─── A DJ's menu (hover the laptop, or tap the DJ), as Turntable's ─────────
+
+  var M = { uid: null, timer: 0 };
+  function rank(u) { return !u ? 0 : u.supermod ? 2 : u.mod ? 1 : 0; }
+
+  /** What the person looking may do to this DJ: the room's own actions only. */
+  function djMenuItems(d) {
+    var users = ftapi.users || {}, me = ftapi.uid && users[ftapi.uid], them = users[d.id] || {};
+    var self = d.id === ftapi.uid, entry = null, t = firetable.tableData || {};
+    for (var k in t) if (Object.prototype.hasOwnProperty.call(t, k) && t[k] && t[k].id === d.id) entry = t[k];
+    var leaving = !!(entry && entry.removeAfter);
+    var items = [];
+    if (self) {
+      items.push(["stickers", "Laptop stickers"]);
+      items.push(["bus", leaving ? "Stay after this song" : "Step down after this song"]);
+      items.push(["stepdown", "Step down", "Tap again to step down"]);
+      return items;
+    }
+    if (ftapi.uid) items.push(["mention", "@ Mention"]);
+    items.push(["card", "Their card"]);
+    var page = firetable.discover && firetable.discover.djPage && firetable.discover.djPage(d.id, d.name);
+    if (page) items.push(["page", "Their DJ page", null, page]);
+    if (me && (me.mod || me.supermod) && !them.hostbot && rank(them) <= rank(me)) {
+      if (d.id === firetable.displayedDjId && firetable.song && firetable.song.cid != 0) items.push(["skip", "Skip their song", "Tap again to skip"]);
+      items.push(["theirbus", leaving ? "Let them stay" : "Step them down after this song"]);
+      items.push(["remove", "Remove DJ", "Tap again to remove"]);
+    }
+    if (me && me.supermod && !them.supermod && !them.hostbot) {
+      items.push(them.mod ? ["unmod", "Remove moderator"] : ["mod", "Make moderator"]);
+      items.push(["suspend", "Suspend", "Tap again to suspend", null, true]);
+    }
+    return items;
+  }
+
+  function openDjMenu(seat, focus) {
+    var uid = seat && seat.dataset.who, d = djs().filter(function (x) { return x.id === uid; })[0];
+    if (!d) return;
+    clearTimeout(M.timer);
+    var menu = $id("tt-djmenu"), them = (ftapi.users || {})[d.id] || {};
+    var role = them.hostbot ? "Bot" : them.supermod ? "Supermod" : them.mod ? "Moderator" : "";
+    var fires = firetable.fireReactors && firetable.fireReactors[d.id] ? " · gave it an Awesome" : "";
+    menu.innerHTML = '<div class="tt-djhead"><b>' + esc(d.name) + "</b><span>" + d.plays + "/" + esc(firetable.playlimit || "∞") + " plays" +
+      (role ? " · " + role : "") + fires + "</span></div>" +
+      djMenuItems(d).map(function (it) {
+        var attrs = ' role="menuitem" class="tt-djitem' + (it[4] ? " tt-danger" : "") + '" data-act="' + it[0] + '"' + (it[2] ? ' data-ask="' + esc(it[2]) + '"' : "");
+        return it[3] ? "<a" + attrs + ' href="' + esc(it[3]) + '">' + esc(it[1]) + "</a>" : '<button type="button"' + attrs + ">" + esc(it[1]) + "</button>";
+      }).join("");
+    menu.setAttribute("aria-label", d.name);
+    menu.style.setProperty("--i", seat.style.getPropertyValue("--i"));
+    menu.hidden = false;
+    M.uid = d.id;
+    document.querySelectorAll("#tt-table .tt-seat.tt-menu").forEach(function (s) { s.classList.remove("tt-menu"); });
+    seat.classList.add("tt-menu");
+    if (focus) { var first = menu.querySelector(".tt-djitem"); if (first) first.focus(); }
+  }
+  function closeDjMenu(back) {
+    clearTimeout(M.timer);
+    var menu = $id("tt-djmenu");
+    if (!menu || menu.hidden) return;
+    var seat = document.querySelector("#tt-table .tt-seat.tt-menu");
+    menu.hidden = true;
+    M.uid = null;
+    if (seat) {
+      seat.classList.remove("tt-menu");
+      if (back) { var b = seat.querySelector(".tt-dj"); if (b) b.focus(); }
+    }
+  }
+  function djMenuAct(btn) {
+    var uid = M.uid, d = djs().filter(function (x) { return x.id === uid; })[0];
+    if (!d) return closeDjMenu();
+    var act = btn.dataset.act, name = d.name;
+    var run = function () {
+      if (act === "stickers") openLaptop();
+      else if (act === "bus") ftapi.actions.sendBotCommand(btn.textContent.indexOf("Stay") === 0 ? "!dontremoveme" : "!removeafter");
+      else if (act === "stepdown") ftapi.actions.sendBotCommand("!removeme");
+      else if (act === "mention") firetable.ui.mentionInChat(name);
+      else if (act === "card") { var p = document.querySelector('#tt-table .tt-dj[data-uid="' + CSS.escape(uid) + '"]'); if (p && firetable.ui.tooltip.user) firetable.ui.tooltip.user(p, uid); }
+      else if (act === "skip") ftapi.actions.sendBotCommand("!skip");
+      else if (act === "theirbus") ftapi.actions.sendBotCommand((btn.textContent.indexOf("Let") === 0 ? "!dontremoveme " : "!removeafter ") + name);
+      else if (act === "remove") ftapi.actions.sendBotCommand("!remove " + name);
+      else if (act === "mod") ftapi.actions.modUser(uid);
+      else if (act === "unmod") ftapi.actions.unmodUser(uid);
+      else if (act === "suspend") ftapi.actions.banUser(uid);
+      closeDjMenu();
+    };
+    if (act === "page") { closeDjMenu(); return; } // the link goes to Discover itself
+    if (btn.dataset.ask) return confirmTwice(btn, btn.dataset.ask, run);
+    run();
+  }
+
+  function bindDjMenu(room) {
+    var table = $id("tt-table"), menu = $id("tt-djmenu");
+    var hover = function (e) { return e.pointerType === "mouse"; };
+    // pointing at a laptop (or the DJ) opens their menu, as Turntable's did; leaving closes it
+    table.addEventListener("pointerover", function (e) {
+      var seat = hover(e) && e.target.closest(".tt-seat[data-who]:not(.tt-empty)");
+      if (!seat) return;
+      clearTimeout(M.timer);
+      if (M.uid !== seat.dataset.who) M.timer = setTimeout(function () { openDjMenu(seat); }, 160);
+    });
+    [table, menu].forEach(function (el) {
+      el.addEventListener("pointerout", function (e) {
+        if (!hover(e) || (e.relatedTarget && (menu.contains(e.relatedTarget) || (e.relatedTarget.closest && e.relatedTarget.closest(".tt-seat.tt-menu"))))) return;
+        clearTimeout(M.timer);
+        M.timer = setTimeout(function () { closeDjMenu(); }, 260);
+      });
+      el.addEventListener("pointerover", function (e) { if (hover(e) && el === menu) clearTimeout(M.timer); });
+    });
+    menu.addEventListener("click", function (e) {
+      var b = e.target.closest(".tt-djitem");
+      if (b) djMenuAct(b);
+    });
+    menu.addEventListener("keydown", function (e) {
+      var items = Array.prototype.slice.call(menu.querySelectorAll(".tt-djitem")), i = items.indexOf(document.activeElement);
+      if (e.key === "Escape") { e.preventDefault(); closeDjMenu(true); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+      else if (e.key === "Tab") closeDjMenu();
+    });
+    // a tap anywhere else closes it
+    document.addEventListener("pointerdown", function (e) {
+      if (M.uid && !menu.contains(e.target) && !e.target.closest(".tt-seat.tt-menu")) closeDjMenu();
+    });
+  }
+
   function confirmTwice(btn, ask, go) {
     if (btn.classList.contains("armed")) { go(); return; }
     var was = btn.textContent;
@@ -1260,6 +1440,7 @@ firetable.tt = (function () {
     isOn: function () { return S.active; },
     // for the tests
     _avatarOf: avatarOf,
+    _coverBox: coverBox,
     _spots: SPOTS.length
   };
 })();
