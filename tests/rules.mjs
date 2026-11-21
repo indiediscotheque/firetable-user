@@ -166,7 +166,10 @@ try {
     document.querySelector('#bm-parts .bm-step[data-part="hat"][data-step="1"]').click();
     document.getElementById("bm-save").click();
     for (let i = 0; i < 100 && document.getElementById("bm-builderBox").open; i++) await new Promise((r) => setTimeout(r, 100));
-    if (!Bouletmaton.isCode(firetable.myBoulet)) throw new Error("the Bouletmaton wasn't saved: " + document.getElementById("bm-message").textContent);
+    if (!Bouletmaton.isCode(firetable.myBoulet) || !firetable.myBouletOn) throw new Error("the Bouletmaton wasn't saved: " + document.getElementById("bm-message").textContent);
+    // switched off and on again from Profile
+    await ftapi.db().ref("users/" + ftapi.uid + "/bouletOn").set(false);
+    await ftapi.db().ref("users/" + ftapi.uid + "/bouletOn").set(true);
     await ftapi.db().ref("users/" + ftapi.uid + "/publicName").set(false);
     await ftapi.db().ref("users/" + ftapi.uid + "/featured").set(["card1"]);
     await ftapi.db().ref("users/" + ftapi.uid + "/featured").set(null);
@@ -233,7 +236,7 @@ try {
     queue: Object.keys((db.queues || {})[FAN] || {}).length >= 1,
     prefs: (db.playlistPrefs || {})[FAN] && db.playlistPrefs[FAN].defaultName === "My default",
     turntable: /^[0-9a-f]{1,24}$/.test(me.ttAvatar || "") && /^silver;e1faa9,/.test(me.ttLaptop || ""),
-    profile: me.username === "fan" && me.avatarStyle === "dicebear:pixel-art" && /^[1-4]\.\d+(\.\d+){16}$/.test(me.boulet || "") && me.publicName === false && me.selectedList !== undefined,
+    profile: me.username === "fan" && me.avatarStyle === "dicebear:pixel-art" && /^[1-4]\.\d+\.\d+(\.\d+){16}$/.test(me.boulet || "") && me.bouletOn === true && me.publicName === false && me.selectedList !== undefined,
     presence: me.status === false && typeof me.closed === "number" && typeof me.offlineAt === "number" && typeof me.joined === "number",
     grab: !!(db.grabs && db.grabs.dj1 && Object.values(db.grabs.dj1).some((t) => t[FAN])),
     hidden: db.chatFeed.fother1.hidden === true,

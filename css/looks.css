@@ -1577,7 +1577,8 @@ button.waitlist-pos {
 /* Each avatar style sits differently in its pictures, so each gets its own
    framing in the circles (zoom, where the face is) and its own fill behind
    it. html[data-avatars] is the room's style (helpers.js avatarKind), set
-   when the page starts and when a supermod changes it. tests/avatars.mjs
+   when the page starts and when a supermod changes it; a Bouletmaton gets
+   its own (.bm-face, below). tests/avatars.mjs
    checks every style fills the circles and the stage. */
 :root {
     --av-zoom: 125%;      /* the picture's height, as a share of the circle's */
@@ -1600,9 +1601,11 @@ html[data-avatars="pixel-art"] {
     --av-list-y: 50%;
     --av-fill: #d9d4c7;
 }
-/* a Bouletmaton picture is the whole drawing (head to waist), on transparent:
-   the circles zoom to the head and shoulders */
-html[data-avatars="bouletmaton"] {
+/* A member's own Bouletmaton, whatever the room's style (js/bouletmaton.js
+   marks it .bm-face): the picture is the whole drawing (head to waist), on
+   transparent, so the circles zoom to the head and shoulders, on a light
+   fill so its black lines show. The stage shows it whole (.avtr: contain). */
+.bm-face {
     --av-zoom: 170%;
     --av-x: 57%;
     --av-y: 40%;
@@ -7833,6 +7836,19 @@ body:not(.is-mod) .helpMods { display: none; }
     border-radius: var(--radius-md);
     background: #e8e3d8 center bottom / contain no-repeat;
 }
+.ac-bouletFace.is-empty {
+    background-image: none;
+    border: 1px dashed var(--color-border);
+    background-color: transparent;
+}
+.ac-bouletSwitch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pad2);
+    font-size: 0.9rem;
+
+    &:has(input:disabled) { opacity: 0.55; }
+}
 .ac-bouletText {
     display: grid;
     gap: var(--pad2);
@@ -7849,12 +7865,14 @@ body:not(.is-mod) .helpMods { display: none; }
     grid-template-areas:
         "intro intro"
         "stage controls"
+        "use use"
         "msg msg"
         "actions actions";
     gap: var(--pad3) var(--pad4);
     align-items: start;
 
     & #bm-intro { grid-area: intro; margin: 0; }
+    & .bm-use { grid-area: use; display: inline-flex; align-items: center; gap: var(--pad2); justify-self: end; }
     & .formMessage { grid-area: msg; }
     & .modal-actions { grid-area: actions; }
 }
@@ -7969,6 +7987,7 @@ body:not(.is-mod) .helpMods { display: none; }
             "intro"
             "stage"
             "controls"
+            "use"
             "msg"
             "actions";
     }

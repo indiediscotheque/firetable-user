@@ -63,8 +63,10 @@ var STORAGE = {
 var AVATAR_BASE_URL = "https://indiediscotheque.com/robots/";
 /**
  * The room's avatar styles, the only ones there are (a supermod picks one
- * for everyone in Mod tools). The first is the default; seasons.js turns the
- * room to monsters in October. The bot's lib/avatars.js lists the same six.
+ * for everyone in Mod tools). The first is the default; seasons.js makes
+ * everyone a monster in October. Members' own Bouletmatons, switched on,
+ * show whatever the style (helpers.js avatarURL); "bouletmaton" means robot
+ * busts for everyone else. The bot's lib/avatars.js lists the same six.
  */
 var AVATAR_STYLES = [
   { value: "robohash:set1", label: "Robohash robots", kind: "robohash" },
@@ -72,7 +74,7 @@ var AVATAR_STYLES = [
   { value: "robohash:set4", label: "Robohash cats", kind: "robohash" },
   { value: "dicebear:notionists", label: "DiceBear Notionists", kind: "notionists" },
   { value: "dicebear:pixel-art", label: "DiceBear Pixel Art", kind: "pixel-art" },
-  { value: "bouletmaton", label: "Bouletmaton (everyone builds their own)", kind: "bouletmaton" }
+  { value: "bouletmaton", label: "Bouletmaton (members' own; robots for the rest)", kind: "bouletmaton" }
 ];
 var DEFAULT_AVATAR_STYLE = AVATAR_STYLES[0].value;
 /**

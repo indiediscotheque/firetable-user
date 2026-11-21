@@ -36,21 +36,25 @@ firetable.utilities = {
   },
 
   /**
-   * Build an avatar URL for a user, in the room's style (AVATAR_STYLES):
-   * Robohash (via the site's proxy), DiceBear (SVG) or Bouletmaton (drawn
-   * here, js/bouletmaton.js: the member's own, else the one made from their
-   * uid; a stand-in URL until it's drawn, swapped by itself).
-   * Style: the explicit `style` (a printed card's stamp) → the room's
-   * (a supermod's choice, else config.js avatarset, else the season's) →
-   * Robohash robots.
+   * Build an avatar URL for a user. Who looks like what:
+   *   1. October (the season, AVATAR_SEASONS): everyone is a monster bust,
+   *      Bouletmatons too (firetable.avatarForced).
+   *   2. Otherwise a member who built a Bouletmaton and switched it on shows
+   *      it (users/<uid>/boulet, bouletOn), whatever the room's style.
+   *   3. Everyone else shows the room's style (a supermod's choice, else
+   *      config.js avatarset, else Robohash robot busts); when that's
+   *      Bouletmaton, they're robot busts.
+   * A Bouletmaton is drawn here (js/bouletmaton.js); someone not in the room
+   * is looked up first. Either way the URL comes back at once (a stand-in
+   * until it's ready, swapped by itself).
    * @param {string} uid - User ID
    * @param {string} username - Display name
    * @param {string|null} [size="110x110"] - Dimensions ("110x110")
-   * @param {string} [style] - Style key e.g. "robohash:set1", "dicebear:pixel-art", "bouletmaton"
+   * @param {string} [style] - Draw in this style instead (a printed card's stamp, a preview), e.g. "robohash:set1", "bouletmaton"
    * @param {boolean} [keepName] - Use `username` as given (trading cards, which
    *   keep the face they were made with; the settings preview of a new name).
    *   Otherwise the person's current name wins, so a rename shows everywhere.
-   * @param {string} [boulet] - A Bouletmaton code to draw instead of theirs (a card's stamp, the builder's preview)
+   * @param {string} [boulet] - With style "bouletmaton": the code to draw (a card's stamp)
    * @returns {string} Full avatar URL
    */
   avatarURL: function (uid, username, size, style, keepName, boulet) {
@@ -60,25 +64,49 @@ firetable.utilities = {
         (firetable.knownNames && firetable.knownNames[uid]);
       if (current) username = current;
     }
-    style = firetable.utilities.normalizeAvatarStyle(style) || firetable.roomAvatarStyle || DEFAULT_AVATAR_STYLE;
-    if (style === "bouletmaton" && typeof Bouletmaton !== "undefined") {
-      return Bouletmaton.url(uid, parseInt(size, 10) || 110, boulet || undefined);
+    var px = parseInt(size, 10) || 110;
+    var plain = function (st) {
+      if (st.indexOf("dicebear:") === 0) return "https://api.dicebear.com/9.x/" + st.slice(9) + "/svg?seed=" + encodeURIComponent(uid + username);
+      var set = st.indexOf("robohash:") === 0 ? st.slice(9) : "set1";
+      return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + set;
+    };
+    var hasBoulet = typeof Bouletmaton !== "undefined";
+    if (style) {
+      style = firetable.utilities.normalizeAvatarStyle(style) || DEFAULT_AVATAR_STYLE;
+      if (style === "bouletmaton") return hasBoulet && Bouletmaton.isCode(boulet) ? Bouletmaton.url(boulet, px) : plain(DEFAULT_AVATAR_STYLE);
+      return plain(style);
     }
-    if (style.indexOf("dicebear:") === 0) {
-      return "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + username);
-    }
-    var set = style.indexOf("robohash:") === 0 ? style.slice(9) : "set1";
-    return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + set;
+    var base = firetable.utilities.baseAvatarStyle();
+    if (firetable.avatarForced || !hasBoulet || !firetable.avatars) return plain(base);
+    var mine = firetable.avatars.bouletOf(uid);
+    if (mine) return Bouletmaton.url(mine, px);
+    if (mine === null) return plain(base);
+    // not in the room: look them up, then their Bouletmaton or the room's style
+    var robot = plain(base);
+    return Bouletmaton.later("u" + uid + "@" + Bouletmaton.hash(robot), function () {
+      return firetable.avatars.lookup(uid).then(function (code) { return code ? Bouletmaton.picture(code, px) : robot; });
+    });
+  },
+
+  /**
+   * What everyone without a Bouletmaton of their own looks like right now:
+   * October's monsters, else the room's style (Bouletmaton → robot busts).
+   * @returns {string} one of AVATAR_STYLES, never "bouletmaton"
+   */
+  baseAvatarStyle: function () {
+    var room = firetable.avatarForced || firetable.roomAvatarStyle || DEFAULT_AVATAR_STYLE;
+    return room === "bouletmaton" ? DEFAULT_AVATAR_STYLE : room;
   },
 
   /**
    * Which framing the avatars get (css/looks.css, html[data-avatars]): each
-   * style's drawings sit differently in their pictures.
-   * @param {string} [style] - defaults to the room's
+   * style's drawings sit differently in their pictures. A Bouletmaton's own
+   * framing goes on its element (.bm-face, js/bouletmaton.js).
+   * @param {string} [style] - defaults to what everyone without a Bouletmaton looks like
    * @returns {string} "robohash", "notionists", "pixel-art" or "bouletmaton"
    */
   avatarKind: function (style) {
-    style = firetable.utilities.normalizeAvatarStyle(style) || firetable.roomAvatarStyle || DEFAULT_AVATAR_STYLE;
+    style = firetable.utilities.normalizeAvatarStyle(style) || firetable.utilities.baseAvatarStyle();
     for (var i = 0; i < AVATAR_STYLES.length; i++) if (AVATAR_STYLES[i].value === style) return AVATAR_STYLES[i].kind;
     return "robohash";
   },

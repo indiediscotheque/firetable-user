@@ -2146,8 +2146,9 @@ firetable.ui.setupMiscEvents = function () {
     var style = chosen || firetable.roomAvatarDefault || DEFAULT_AVATAR_STYLE;
     if (style === firetable.roomAvatarStyle) return;
     firetable.roomAvatarStyle = style;
-    firetable.avatarset = style.indexOf('robohash:') === 0 ? style.slice(9) : 'set1';
-    document.documentElement.setAttribute('data-avatars', firetable.utilities.avatarKind(style));
+    var base = firetable.utilities.baseAvatarStyle();
+    firetable.avatarset = base.indexOf('robohash:') === 0 ? base.slice(9) : 'set1';
+    document.documentElement.setAttribute('data-avatars', firetable.utilities.avatarKind());
     firetable.utilities.redrawAvatars();
     firetable.ui.promptBoulet();
   }
@@ -2156,7 +2157,8 @@ firetable.ui.setupMiscEvents = function () {
   $('#mo-avatarStyle').on('change', function () {
     var box = this, val = box.value || null, label = $(box).find('option:selected').text();
     ftapi.actions.setRoomSetting('avatarStyle', val).then(function (saved) {
-      if (saved) firetable.ui.toast(val ? 'Everyone is ' + label + ' now' : 'Avatars are back to the room\'s default', 'success');
+      if (saved) firetable.ui.toast((val ? (val === 'bouletmaton' ? 'Bouletmatons on: everyone who built one shows it, everyone else is a robot' : 'Everyone is ' + label + ' now') : 'Avatars are back to the room\'s default') +
+        (firetable.avatarForced ? ' (after this month: it\'s monster month)' : ''), 'success');
       else applyRoomAvatars(ftapi.roomSettings);
     });
   });

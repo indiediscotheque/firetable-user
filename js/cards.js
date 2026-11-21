@@ -461,7 +461,7 @@ firetable.actions.showCard = function (cardid, chatid) {
  * @param {number} data.temp - "Max operating temperature" gag value
  * @param {number} data.date - Timestamp when the card was created
  * @param {string} [data.set] - Robohash set stamped at printing (cards before data.avs)
- * @param {string} [data.avs] - The room's avatar style when it was printed (AVATAR_STYLES)
+ * @param {string} [data.avs] - The DJ's avatar when it was printed (AVATAR_STYLES; "bouletmaton": their own, data.bm)
  * @param {string} [data.bm] - The DJ's Bouletmaton when it was printed (with avs "bouletmaton")
  * @param {string|boolean} [data.special] - Card style key: false/empty (classic), "id8", "id9", or "v2"
  * @param {string} chatid - Suffix for the canvas element ID ("cardMaker" + chatid)
@@ -505,10 +505,8 @@ firetable.actions.displayCard = function (data, chatid, opts) {
   var avatarPx = function (px) { var n = Math.round(px * Math.min(scale, 2)); return n + "x" + n; };
   /** The card's avatar picture at a size: a URL, or (Bouletmaton) a promise of one. */
   var avatarSrc = function (size) {
-    if (cardStyle === "bouletmaton") {
-      var bm = Bouletmaton.isCode(data.bm) ? data.bm : Bouletmaton.random(String(data.djid || ""));
-      return Bouletmaton.picture(bm, parseInt(size, 10) || 256);
-    }
+    if (cardStyle === "bouletmaton" && Bouletmaton.isCode(data.bm)) return Bouletmaton.picture(data.bm, parseInt(size, 10) || 256);
+    if (cardStyle === "bouletmaton") return firetable.utilities.avatarURL(data.djid, data.djname, size, DEFAULT_AVATAR_STYLE, true); // no Bouletmaton stamped: a robot
     if (cardStyle) return firetable.utilities.avatarURL(data.djid, data.djname, size, cardStyle, true);
     return AVATAR_BASE_URL + data.djid + data.djname + ".png?size=" + size + "&set=" + set;
   };

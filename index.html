@@ -947,15 +947,16 @@
 						</div>
 					</div>
 					<div class="bm-quick">
-						<button type="button" class="butt graybutt" id="bm-random"><i class="material-symbols-outlined" aria-hidden="true">shuffle</i> Surprise me</button>
 						<button type="button" class="butt graybutt" id="bm-reset"><i class="material-symbols-outlined" aria-hidden="true">undo</i> Start over</button>
 					</div>
 				</div>
 				<div class="bm-controls">
 					<fieldset class="bm-swatches" id="bm-skins"><legend>Skin tone</legend></fieldset>
 					<fieldset class="bm-swatches" id="bm-hairs"><legend>Hair colour</legend></fieldset>
+					<fieldset class="bm-swatches" id="bm-beards"><legend>Beard colour</legend></fieldset>
 					<div class="bm-parts" id="bm-parts"></div>
 				</div>
+				<label class="bm-use"><input type="checkbox" id="bm-use" checked> Show it as my avatar</label>
 				<div class="formMessage" id="bm-message" role="alert"></div>
 				<div class="modal-actions">
 					<button type="button" class="butt graybutt" id="bm-cancel">Not now</button>
@@ -1009,7 +1010,7 @@
 							<option value="dicebear:pixel-art">DiceBear Pixel Art</option>
 						</optgroup>
 						<optgroup label="Bouletmaton">
-							<option value="bouletmaton">Bouletmaton (everyone builds their own)</option>
+							<option value="bouletmaton">Bouletmaton (members' own; robots for the rest)</option>
 						</optgroup>
 					</select>
 					</div><!-- /#avatarPickerSection -->
@@ -1018,8 +1019,9 @@
 						<div class="ac-boulet">
 							<span class="ac-bouletFace" id="ac-bouletFace" role="img" aria-label="Your Bouletmaton"></span>
 							<div class="ac-bouletText">
-								<p class="settingHint" id="ac-bouletHint">Your face when the room's avatars are Bouletmatons. Until you build your own, you have one made for you.</p>
+								<p class="settingHint" id="ac-bouletHint">Build one and switch it on to use it as your avatar.</p>
 								<button type="button" class="butt darkbutt" id="ac-bouletEdit">Build your Bouletmaton</button>
+								<label class="ac-bouletSwitch"><input type="checkbox" id="ac-bouletOn" role="switch" disabled> Use my Bouletmaton as my avatar</label>
 							</div>
 						</div>
 					</section>
@@ -1167,7 +1169,7 @@
 						<select id="mo-avatarStyle" aria-describedby="mo-avatarHint">
 							<option value="">The room's default</option>
 						</select>
-						<p class="settingHint" id="mo-avatarHint">One style for everyone in the room: the stage, the people, chat, Discover and new trading cards. It changes for everyone at once. The room's default is Robohash robots (monsters in October), or config.js's avatarset. With Bouletmaton, everyone builds their own.</p>
+						<p class="settingHint" id="mo-avatarHint">One style for everyone in the room: the stage, the people, chat, Discover and new trading cards. It changes for everyone at once. Members who built a Bouletmaton and switched it on keep it whatever you pick; with Bouletmaton, everyone else is a robot bust (and members without one are asked to build one). In October everyone is a monster bust, Bouletmatons too; your pick comes back in November. The room's default is Robohash robot busts, or config.js's avatarset.</p>
 					</section>
 				</div>
 			</div>

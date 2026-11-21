@@ -10,7 +10,8 @@
  */
 
 /**
- * Seasonal room avatar themes, checked against the visitor's local date.
+ * Seasonal avatars that everyone wears, Bouletmatons too (over a supermod's
+ * pick, which comes back after), checked against the visitor's local date.
  * months are 1-12. Used only when ftconfigs.avatarset is empty.
  * Override with ftconfigs.avatarSeasons, or set it to false to turn off.
  */

@@ -2940,11 +2940,12 @@ try {
     "a supermod's choice dresses everyone at once: the stage and the people redrawn (" + JSON.stringify({ before: avDefault.stage.slice(-40), after: avCats.stage.slice(-40), people: avCats.people.slice(-40) }) + ")");
   check(avBack.style === avDefault.style && avBack.menu === "", "clearing it goes back to the room's default (" + avBack.style + ")");
 
-  console.log("-- Bouletmaton: everyone has one; the builder opens until you save yours, then lives in Profile");
-  const bmWas = await dPage.evaluate(() => ({ uid: ftapi.uid, mine: firetable.myBoulet }));
+  console.log("-- Bouletmaton: members build their own and switch it on; robot busts for everyone else; monsters in October");
+  const bmWas = await dPage.evaluate(() => ({ uid: ftapi.uid, mine: firetable.myBoulet, on: firetable.myBouletOn }));
   await dPage.evaluate(() => {
     ftapi.uid = "bmfan";
-    firetable.myBoulet = null; // signed in, none saved
+    firetable.myBoulet = null; // signed in, none built
+    firetable.myBouletOn = false;
     document.querySelectorAll("dialog[open]").forEach((d) => d.close());
   });
   await put("/roomSettings", { avatarStyle: "bouletmaton" });
@@ -2957,58 +2958,97 @@ try {
     const g = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
     let drawn = 0;
     for (let i = 3; i < g.length; i += 4) if (g[i]) drawn++;
-    const before = [...document.querySelectorAll("#bm-parts select")].map((x) => x.value).join(".");
+    const values = () => [...document.querySelectorAll("#bm-parts select")].map((x) => x.value);
+    const start = values();
+    const colours = ["#bm-skins", "#bm-hairs", "#bm-beards"].map((id) => (document.querySelector(id + " input:checked") || {}).value).join(",");
     document.querySelector('#bm-parts .bm-step[data-part="hat"][data-step="1"]').click();
-    document.querySelector('#bm-hairs input[value="7"]').click();
+    document.querySelector('#bm-beards input[value="7"]').click();
     await wait(300);
     return {
       open: box.open, intro: document.getElementById("bm-intro").textContent, drawn: drawn / (c.width * c.height),
-      parts: document.querySelectorAll("#bm-parts select").length, skins: document.querySelectorAll("#bm-skins input").length,
-      hairs: document.querySelectorAll("#bm-hairs input").length, steps: document.querySelectorAll("#bm-parts .bm-step").length,
-      noBackground: !/background/i.test(box.textContent) && !box.querySelector("[id*=bg], [data-part=bg]"),
-      madeUp: before === Bouletmaton.random("bmfan").split(".").slice(2).join("."),
-      changed: [...document.querySelectorAll("#bm-parts select")].map((x) => x.value).join(".") !== before,
-      mini: document.getElementById("bm-miniCircle").style.backgroundImage
+      rows: [...document.querySelectorAll("#bm-parts label")].map((l) => l.textContent).join(","),
+      skins: document.querySelectorAll("#bm-skins input").length, hairs: document.querySelectorAll("#bm-hairs input").length,
+      beards: document.querySelectorAll("#bm-beards input").length, steps: document.querySelectorAll("#bm-parts .bm-step").length,
+      noBackground: !/background/i.test(box.textContent), noRandom: !document.getElementById("bm-random") && !/surprise/i.test(box.textContent),
+      atOne: start.every((v) => v === "1") && colours === "1,1,1", use: document.getElementById("bm-use").checked,
+      changed: values().join() !== start.join(), mini: document.getElementById("bm-miniCircle").style.backgroundImage
     };
   });
-  check(bmOpen.open && /Bouletmatons now/.test(bmOpen.intro) && bmOpen.drawn > 0.1 && bmOpen.madeUp,
-    "a member with no Bouletmaton gets the builder, showing the one made for them (" + JSON.stringify({ open: bmOpen.open, drawn: bmOpen.drawn, madeUp: bmOpen.madeUp }) + ")");
-  check(bmOpen.parts === 16 && bmOpen.skins === 4 && bmOpen.hairs === 12 && bmOpen.steps === 32 && bmOpen.noBackground && bmOpen.changed && /blob:/.test(bmOpen.mini),
-    "every part, skin tone and hair colour can be changed, and there's no background option (" + JSON.stringify(bmOpen) + ")");
+  check(bmOpen.open && /Bouletmatons now/.test(bmOpen.intro) && bmOpen.drawn > 0.1 && bmOpen.atOne && bmOpen.noRandom,
+    "with the room on Bouletmaton, a member without one gets the builder, every choice at 1, nothing made up (" + JSON.stringify({ open: bmOpen.open, drawn: bmOpen.drawn, atOne: bmOpen.atOne, noRandom: bmOpen.noRandom }) + ")");
+  check(bmOpen.rows === "Head,Body,Hair,Mouth,Eyes,Eyebrows,Nose,Beard,Ears,Chin,Face details,Neckwear,Glasses,Earrings,In hand,Hat" &&
+    bmOpen.skins === 4 && bmOpen.hairs === 12 && bmOpen.beards === 12 && bmOpen.steps === 32 && bmOpen.noBackground && bmOpen.changed && bmOpen.use && /blob:/.test(bmOpen.mini),
+    "every part, skin tone, hair and beard colour can be changed, and there's no background option (" + JSON.stringify(bmOpen) + ")");
   const bmSaved = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-    const code = Bouletmaton.encode({ skin: Number(document.querySelector("#bm-skins input:checked").value), hair: Number(document.querySelector("#bm-hairs input:checked").value),
+    const code = Bouletmaton.encode({ skin: 1, hair: 1, beard: 7,
       parts: Object.fromEntries([...document.querySelectorAll("#bm-parts select")].map((x) => [x.getAttribute("data-part"), Number(x.value)])) });
     document.getElementById("bm-save").click();
     for (let i = 0; i < 50 && document.getElementById("bm-builderBox").open; i++) await wait(100);
     firetable.ui.openAccount("profile-tab");
     await wait(500);
-    const out = { code, closed: !document.getElementById("bm-builderBox").open, mine: firetable.myBoulet,
-      edit: document.getElementById("ac-bouletEdit").textContent, face: document.getElementById("ac-bouletFace").style.backgroundImage };
+    const out = { code, closed: !document.getElementById("bm-builderBox").open, mine: firetable.myBoulet, on: firetable.myBouletOn,
+      edit: document.getElementById("ac-bouletEdit").textContent, switchOn: document.getElementById("ac-bouletOn").checked,
+      face: document.getElementById("ac-bouletFace").style.backgroundImage };
     document.getElementById("accountSettingsBox").close();
-    firetable.ui.promptBoulet(); // saved: it doesn't open by itself again
+    firetable.ui.promptBoulet(); // built: it doesn't open by itself again
     await wait(200);
     out.again = document.getElementById("bm-builderBox").open;
     return out;
   });
-  const stored = await (await fetch(DB + "/users/bmfan/boulet.json?ns=" + NS)).json();
-  check(bmSaved.closed && bmSaved.mine === bmSaved.code && stored === bmSaved.code && !bmSaved.again,
-    "saving keeps it (users/<uid>/boulet), and the builder doesn't open by itself again (" + JSON.stringify({ stored, code: bmSaved.code, again: bmSaved.again }) + ")");
-  check(/Change your Bouletmaton/.test(bmSaved.edit) && /blob:|#bm=/.test(bmSaved.face),
-    "Profile always has your Bouletmaton, to change it (" + bmSaved.edit + ")");
-  const bmRoom = await dPage.evaluate(async () => {
+  const stored = await (await fetch(DB + "/users/bmfan.json?ns=" + NS)).json();
+  check(bmSaved.closed && bmSaved.mine === bmSaved.code && stored && stored.boulet === bmSaved.code && stored.bouletOn === true && !bmSaved.again,
+    "saving keeps it, switched on (users/<uid>/boulet, bouletOn), and the builder doesn't open by itself again (" + JSON.stringify({ stored, code: bmSaved.code, again: bmSaved.again }) + ")");
+  check(/Change your Bouletmaton/.test(bmSaved.edit) && bmSaved.switchOn && /blob:|#bm=/.test(bmSaved.face),
+    "Profile has your Bouletmaton, to change it or switch it off (" + bmSaved.edit + ")");
+  // the DJ on the stage builds one and switches it on; the people without one stay robot busts
+  const deckDJ = await dPage.evaluate(() => (document.querySelector("#deck .avtr") || { getAttribute: () => "" }).getAttribute("data-stage-uid"));
+  if (deckDJ) await put("/users/" + deckDJ + "/boulet", bmSaved.code), await put("/users/" + deckDJ + "/bouletOn", true);
+  const roomLook = () => dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-    for (let i = 0; i < 50 && document.querySelector('[style*="#bm="]'); i++) await wait(100);
+    firetable.utilities.redrawAvatars();
+    for (let i = 0; i < 60 && document.querySelector('[style*="#bm="]'); i++) await wait(100);
+    await wait(300);
+    const stage = document.querySelector("#deck .avtr");
     return { html: document.documentElement.getAttribute("data-avatars"),
-      stage: (document.querySelector("#deck .avtr") || { style: {} }).style.backgroundImage || "",
-      people: (document.querySelector("#allUsers .ft-avatar") || { style: {} }).style.backgroundImage || "",
+      stage: stage ? (stage.classList.contains("bm-face") ? "boulet" : (/set=(set\d)/.exec(stage.style.backgroundImage) || [, stage.style.backgroundImage.slice(0, 40)])[1]) : "",
+      people: [...document.querySelectorAll("#allUsers .ft-avatar")].filter((e) => /url\(/.test(e.style.backgroundImage)).map((e) => e.classList.contains("bm-face") ? "boulet" : (/set=(set\d)|9\.x\/([a-z-]+)/.exec(e.style.backgroundImage) || [])[1] || (/9\.x\/([a-z-]+)/.exec(e.style.backgroundImage) || [, "?"])[1]),
       left: document.querySelectorAll('[style*="#bm="]').length };
   });
-  check(bmRoom.html === "bouletmaton" && (!bmRoom.stage || /blob:/.test(bmRoom.stage)) && (!bmRoom.people || /blob:/.test(bmRoom.people)) && bmRoom.left === 0,
-    "with Bouletmaton, the stage and the people are drawn as Bouletmatons, none left half-drawn (" + JSON.stringify({ html: bmRoom.html, stage: bmRoom.stage.slice(0, 30), people: bmRoom.people.slice(0, 30), left: bmRoom.left }) + ")");
+  await dPage.waitForTimeout(1500);
+  const lookBoulet = await roomLook();
+  check(lookBoulet.html === "robohash" && (!deckDJ || lookBoulet.stage === "boulet") && lookBoulet.people.every((x) => x === "set1" || x === "boulet") && lookBoulet.left === 0,
+    "with the room on Bouletmaton, the DJ with one switched on shows it and everyone else is a robot bust (" + JSON.stringify(lookBoulet) + ")");
+  await put("/roomSettings", { avatarStyle: "dicebear:pixel-art" });
+  await dPage.waitForFunction(() => firetable.roomAvatarStyle === "dicebear:pixel-art", null, { timeout: 5000 }).catch(() => {});
+  const lookPixel = await roomLook();
+  check((!deckDJ || lookPixel.stage === "boulet") && lookPixel.html === "pixel-art",
+    "with another style picked, a switched-on Bouletmaton stays (" + JSON.stringify(lookPixel) + ")");
+  // October: everyone a monster, Bouletmatons too; the pick comes back after
+  await dPage.evaluate(() => { firetable.avatarForced = "robohash:set2"; document.documentElement.setAttribute("data-avatars", firetable.utilities.avatarKind()); });
+  const lookOctober = await roomLook();
+  await dPage.evaluate(() => { firetable.avatarForced = null; document.documentElement.setAttribute("data-avatars", firetable.utilities.avatarKind()); });
+  const lookNovember = await roomLook();
+  check(lookOctober.stage === "set2" && lookOctober.people.every((x) => x === "set2") && (!deckDJ || lookNovember.stage === "boulet"),
+    "in October everyone is a monster bust, Bouletmatons too, and they come back after (" + JSON.stringify({ october: lookOctober, november: lookNovember.stage }) + ")");
+  // switched off in Profile: the room's style again
+  const bmOff = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    firetable.ui.openAccount("profile-tab");
+    await wait(200);
+    document.getElementById("ac-bouletOn").click();
+    for (let i = 0; i < 50 && firetable.myBouletOn; i++) await wait(100);
+    await wait(300);
+    const out = { on: firetable.myBouletOn, hint: document.getElementById("ac-bouletHint").textContent };
+    document.getElementById("accountSettingsBox").close();
+    return out;
+  });
+  const storedOff = await (await fetch(DB + "/users/bmfan/bouletOn.json?ns=" + NS)).json();
+  check(!bmOff.on && storedOff === false && /Off/.test(bmOff.hint), "a member switches theirs off any time (" + JSON.stringify({ storedOff, hint: bmOff.hint }) + ")");
   await put("/roomSettings", null);
   await put("/users/bmfan", null);
-  await dPage.evaluate((w) => { ftapi.uid = w.uid; firetable.myBoulet = w.mine; }, bmWas);
+  if (deckDJ) await put("/users/" + deckDJ + "/boulet", null), await put("/users/" + deckDJ + "/bouletOn", null);
+  await dPage.evaluate((w) => { ftapi.uid = w.uid; firetable.myBoulet = w.mine; firetable.myBouletOn = w.on; }, bmWas);
 
   console.log("-- Discover: members pick cards to feature on their DJ page");
   await put("/users/dj1/featured", ["cardP", "cardA"]); // cardA isn't dj1's: left out
@@ -3253,14 +3293,15 @@ console.log("-- the live stage for other sites (embed/stage/)");
       "with the hostbot's stage summary, the stage shows who's here, the deck, the looks and the fire from it alone, and no longer follows users/ or reads the theme (" + JSON.stringify(summary) + ")");
     // the room's avatars are Bouletmatons: each DJ's own (bm), or the one made from their uid
     await put2("/stage/style", "bouletmaton");
-    await put2("/stage/deck/0/bm", "2.5.12.30.4.9.40.10.50.20.0.8.3.40.0.0.12.0");
-    await sp.waitForFunction(() => /blob:/.test((document.querySelector("#st-deck .st-avtr") || { style: {} }).style.backgroundImage) &&
-      [...document.querySelectorAll("#st-ondeck li")].every((li) => /blob:/.test(li.style.backgroundImage)), null, { timeout: 15000 }).catch(() => {});
+    await put2("/stage/deck/0/bm", "2.3.5.10.8.20.5.30.40.6.12.3.4.7.10.5.2.33.20");
+    await sp.waitForFunction(() => /blob:/.test((document.querySelector("#st-deck .st-avtr") || { style: {} }).style.backgroundImage), null, { timeout: 15000 }).catch(() => {});
+    await sp.waitForTimeout(300);
     const bmStage = await sp.evaluate(() => ({ kind: document.documentElement.getAttribute("data-avatars"),
       deck: (document.querySelector("#st-deck .st-avtr") || { style: {} }).style.backgroundImage.slice(0, 12),
-      line: [...document.querySelectorAll("#st-ondeck li")].map((li) => li.style.backgroundImage.slice(0, 12)).join() }));
-    check(bmStage.kind === "bouletmaton" && /blob:/.test(bmStage.deck) && /blob:/.test(bmStage.line),
-      "with the room on Bouletmaton (stage/style), the stage draws everyone's Bouletmaton (" + JSON.stringify(bmStage) + ")");
+      face: !!document.querySelector("#st-deck .st-avtr.bm-face"),
+      line: [...document.querySelectorAll("#st-ondeck li")].map((li) => (/set=(set\d)/.exec(li.style.backgroundImage) || [, li.style.backgroundImage.slice(0, 12)])[1]).join() }));
+    check(bmStage.kind === "robohash" && /blob:/.test(bmStage.deck) && bmStage.face && bmStage.line === "set1",
+      "with the room on Bouletmaton (stage/style), the stage draws the DJ's switched-on Bouletmaton (bm) and robot busts for the rest (" + JSON.stringify(bmStage) + ")");
   } catch (e) {
     check(false, "stage test threw: " + e.message);
   } finally {
