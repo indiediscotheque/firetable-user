@@ -468,14 +468,17 @@ firetable.tt = (function () {
         table.appendChild(seat);
       }
       if (!d) {
-        var offer = !offered && !mine && !!ftapi.uid;
-        offered = offered || offer;
-        var want = "empty" + (offer ? "+offer" : "");
+        // Play Music on the first open seat, for everyone (as Turntable's): it takes the seat,
+        // asks a visitor to sign in, and tells a DJ already playing that they are
+        var offer = !offered;
+        offered = true;
+        var does = !ftapi.uid ? "data-tt-signin" : mine ? "data-tt-ondeck" : "data-tt-addme";
+        var want = "empty" + (offer ? "+" + does : "");
         if (seat.dataset.who !== want) {
           seat.dataset.who = want;
           seat.className = "tt-seat tt-empty";
           seat.innerHTML = offer
-            ? '<button type="button" class="tt-play tt-yellow" data-tt-addme>Play<br>Music</button><span class="tt-vinyl" aria-hidden="true"></span>'
+            ? '<button type="button" class="tt-play tt-yellow" ' + does + (mine ? ' aria-label="Play Music: you\'re on the decks"' : "") + ">Play<br>Music</button><span class=\"tt-vinyl\" aria-hidden=\"true\"></span>"
             : '<span class="tt-vinyl" aria-hidden="true"></span>';
         }
         continue;
@@ -1226,6 +1229,7 @@ firetable.tt = (function () {
     room.addEventListener("click", function (e) {
       var t = e.target;
       if (t.closest("[data-tt-addme]")) return ftapi.actions.sendBotCommand("!addme");
+      if (t.closest("[data-tt-ondeck]")) return firetable.ui.toast("You're on the decks already: this seat's for the next DJ.");
       var dj = t.closest(".tt-seat[data-who] .tt-dj, .tt-seat[data-who] > .tt-laptop");
       if (dj) {
         var seat = dj.closest(".tt-seat");
