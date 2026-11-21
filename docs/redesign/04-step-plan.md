@@ -258,7 +258,7 @@ Nothing moves region. Regulars find everything where it was.
 - **Undo:** revert.
 
 ### 1.19 Import, step by step (YouTube and SoundCloud) ✅ shipped (the owner's ask, November 20, 2026)
-- **Shipped:** `js/import.js` (`firetable.importer`). `#importPromptBox` is two steps. **Find:** YouTube | SoundCloud as one segmented control (`#ytimportchoice`, `#scimportchoice`), one box for a link or a name (`#plMachine`); a pasted link picks its own source. Results show who made each playlist and how many songs (YouTube's counts cost 1 unit for the page); "Searching YouTube…" while the 100-unit search runs. A result opens its songs; nothing is added yet. **Check:** every song in order (`playlistItems` with `status`, 1 unit per 50), private and deleted videos listed as **Not available**, songs already in the chosen playlist as **Already there**, a song in it twice as **Twice in this playlist** (Skip songs already in that playlist, on). **Put them in** a new playlist (named, the source's name to start) or one you have (`sortedLists`), at the bottom or the top; a list kept to the other source refuses with `formatRefusal`'s words. **Import N songs** writes them in one go and closes; the toast says what was left out and why, with **Undo** (deletes the new playlist, or removes exactly the tracks it added if they're still there) and **Open**. A playlist link in Find tracks or Discover search says "That's a playlist: [name] · N songs." with **Import it** (no 100-unit search for it). `firetable.actions.importList(id, name, type, opts)` keeps the old call (a new playlist of what can play). Smoke: links told from songs, a 4-song playlist with a deleted video and one already there lists 4 rows, imports 2 at the top of a list you have, Undo takes them back; the old call; the offer in Find tracks.
+- **Shipped:** `js/import.js` (`firetable.importer`). `#importPromptBox` is two steps. **Find:** YouTube | SoundCloud as one segmented control (`#ytimportchoice`, `#scimportchoice`), one box for a link or a name (`#plMachine`); a pasted link picks its own source. Results show who made each playlist and how many songs (YouTube's counts cost 1 unit for the page); "Searching YouTube…" while the 100-unit search runs. A result opens its songs; nothing is added yet. **Check:** every song in order (`playlistItems` with `status`, 1 unit per 50), private and deleted videos listed as **Not available**, songs already in the chosen playlist as **Already there**, a song in it twice as **Twice in this playlist** (Skip songs already in that playlist, on). **Put them in** a new playlist (named, the source's name to start) or one you have (`sortedLists`), at the bottom or the top; a list kept to the other source refuses with `formatRefusal`'s words. **Import N songs** writes them in one go and closes; the toast says what was left out and why, with **Undo** (deletes the new playlist, or removes exactly the tracks it added if they're still there) and **Open**. A playlist link in Find tracks or Discover search says "That's a playlist: [name] · N songs." with **Import it** (no 100-unit search for it). `firetable.actions.importList(id, name, type, opts)` keeps the old call (a new playlist of what can play). Smoke: links told from songs, a 4-song playlist with a deleted video and one already there lists 4 rows, imports 2 at the top of a list you have, Undo takes them back; the old call; the offer in Find tracks. **Later (November 21, 2026):** an empty playlist says so and offers **Import a playlist** and **Find tracks**; a new member's empty library reads **Bring your playlists** (the design's third way in).
 - **Goal:** see what's in a playlist before importing; import into a new or existing list; nothing dropped silently.
 - **Rows:** IM-01, IM-02, IM-03, IM-06, CR-12, CR-15.
 - **Files and change:**
@@ -429,7 +429,8 @@ Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what peop
 - **Rows:** CR-*.
 - **Change:** the switcher + Find tracks on one row; the tool row (filter, tune, sort, select, ⋮); rows of 56px with Top and ⋮; hold to drag (already: `dragSort`'s touch hold, since jQuery UI left); Undo toasts.
 
-### 4.4 Grab and More sheets
+### 4.4 Grab and More sheets ✅ shipped (November 21, 2026)
+- **Shipped:** Grab's toast with Change came with 1.6. On phones every ⋮ and ⋯ menu (a playlist row's, Recent's, the playlist's, Show only, Sort, the account menu, the mod and flag menus, Discover's song menu) opens as a short sheet from the bottom: the same items as on a computer, 48px rows, a handle, over a dimmed page that only closes it when tapped (`#dMenuScrim` for Discover's menu). Recent's ⋮ sets the mods' items apart under **Mods** (`firetable.songMenu.html(acts, {mods})`). Smoke checks the sheet's place, width and rows on a phone, and the Mods group.
 - **Change:** Grab's toast with Change; ⋯ as a short bottom sheet (the same menu as desktop, at 48px rows), with a separate Mods section.
 
 ### 4.5 The You tab: the account menu (November 20, 2026)
@@ -438,9 +439,9 @@ Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what peop
 - **Rows:** TB-03 to TB-06, SE-*, AU-07 to AU-09, MO-01.
 - **Change:** a page listing profile, settings, mentions, community links, install the app, about, privacy, terms, log out, and the Mod tab for mods. Reuses `#accountSettingsBox`'s contents (moved, not copied).
 
-### 4.6 The mini player ✅ mostly shipped with 2.3 and 2.3c
+### 4.6 The mini player ✅ shipped with 2.3, 2.3c and 4.1
 - **Change:** above the tab bar: the room (art with the DJ's avatar, "● Live · jarvis", Fire) or the Discover song (art, title, Grab, play/pause). Reuses `#dMini`.
-- **Shipped:** on phones `#dMini` is one row (the room or the Discover song, its source, play/pause) that opens the full-screen player, sitting above the tab bar (4.1). Left: Fire on it for the room.
+- **Shipped:** on phones `#dMini` is one row (the room or the Discover song, its source, play/pause) that opens the full-screen player, sitting above the tab bar (4.1), with the stage's Fire and Grab on it for the room (2.3c).
 
 ---
 

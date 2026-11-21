@@ -2426,3 +2426,59 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 .d-sw-3 { background: #6cbf8b; }
 .d-sw-4 { background: #a685cf; }
 .d-sw-rest { background: var(--color-bg-t3, #444); }
+
+/* ── Menus on phones (4.4): every ⋮ and ⋯ opens as a short sheet from the
+   bottom, the same items as on a computer at 48px rows, over a dimmed page.
+   A tap on the page around it only closes it. ── */
+#dMenuScrim { display: none; }
+@media only screen and (max-width: 639px) {
+    [popover].ft-popover:has(> .ft-popover-box.ft-menu),
+    #dMenu {
+        inset: auto 0 0 0 !important;
+        top: auto !important;
+        left: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        max-height: 75dvh;
+        translate: none !important;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    [popover].ft-popover:has(> .ft-popover-box.ft-menu) > .ft-arrow { display: none; }
+    [popover].ft-popover:has(> .ft-popover-box.ft-menu)::backdrop { background: rgb(0 0 0 / 0.5); }
+    [popover].ft-popover > .ft-popover-box.ft-menu,
+    #dMenu {
+        min-width: 0;
+        max-width: none;
+        padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+        border: 0;
+        border-top: 1px solid var(--color-border);
+        border-radius: var(--radius-dialog) var(--radius-dialog) 0 0;
+        box-shadow: 0 -0.5rem 2rem -0.5rem black;
+    }
+    /* the sheet's handle */
+    [popover].ft-popover > .ft-popover-box.ft-menu::before,
+    #dMenu::before {
+        content: "";
+        flex: none;
+        align-self: center;
+        width: 2.5rem;
+        height: 0.25rem;
+        margin: 0 0 var(--space-2);
+        border-radius: var(--radius-pill);
+        background: var(--color-bg-t3);
+    }
+    [popover].ft-popover > .ft-popover-box.ft-menu .butt,
+    #dMenu .d-menuitem {
+        min-height: 3rem;
+        font-size: var(--fs-body);
+    }
+    .ft-menu-title { max-width: none; }
+    #dMenu:not([hidden]) + #dMenuScrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 59;
+        background: rgb(0 0 0 / 0.5);
+    }
+}
