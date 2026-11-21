@@ -323,6 +323,10 @@ body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
 .tt-bmod { color: #5fb760; }
 .tt-bawe { color: var(--tt-gold); }
 
+/* a persona's name over the chat line's own (the line itself is Live's, untouched) */
+body.tt-skin #actualChat .chatName[data-tt-name] { font-size: 0; }
+body.tt-skin #actualChat .chatName[data-tt-name]::before { content: attr(data-tt-name); font-size: var(--fs-meta); }
+
 /* chat on the theme's panel: its names and times kept readable */
 body.tt-skin #actualChat .chatName { color: #d6d6d6; }
 body.tt-skin #actualChat .chatTime { color: #a8a8a8; }
