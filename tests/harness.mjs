@@ -162,6 +162,31 @@ const CACHE = join(ROOT, "tests", "screens", ".cache");
  * uncached.
  */
 export async function cachePictures(context) {
+  const inFlight = new Map(); // url -> Promise of {status, headers, body}: one fetch per picture
+  const fetchOnce = (route, url) => {
+    if (!inFlight.has(url)) {
+      // The site's robot server (it passes robohash.org's pictures through) can be
+      // down, slow or refuse a burst of requests: then the same picture from robohash.org
+      const robohash = /^https:\/\/(www\.)?indiediscotheque\.com\/robots\//.test(url) ? url.replace(/^https:\/\/(www\.)?indiediscotheque\.com\/robots\//, "https://robohash.org/") : null;
+      const get = async (u) => { try { return await route.fetch({ url: u || url, timeout: 10000 }); } catch (e) { return null; } };
+      inFlight.set(url, (async () => {
+        let res = await get();
+        if (!res || !res.ok()) { await sleep(1500); res = await get(); }
+        if ((!res || !res.ok()) && robohash) res = await get(robohash);
+        if (!res) return null;
+        const body = await res.body();
+        const headers = Object.fromEntries(Object.entries(res.headers()).filter(([k]) => !/^(content-length|content-encoding|transfer-encoding|set-cookie)$/i.test(k)));
+        if (res.ok() && body.length) {
+          const file = join(CACHE, createHash("sha1").update(url).digest("hex"));
+          mkdirSync(CACHE, { recursive: true });
+          writeFileSync(file, body);
+          writeFileSync(file + ".json", JSON.stringify({ url, status: res.status(), headers }));
+        }
+        return { status: res.status(), headers, body };
+      })().finally(() => setTimeout(() => inFlight.delete(url), 0)));
+    }
+    return inFlight.get(url);
+  };
   await context.route(PICTURES, async (route) => {
     const url = route.request().url();
     const file = join(CACHE, createHash("sha1").update(url).digest("hex"));
@@ -169,25 +194,8 @@ export async function cachePictures(context) {
       const m = JSON.parse(readFileSync(file + ".json", "utf8"));
       return route.fulfill({ status: m.status, headers: m.headers, body: readFileSync(file) });
     }
-    // The site's robot server (it passes robohash.org's pictures through) can be
-    // down or refuse a burst of requests: then the same picture from robohash.org
-    const robohash = /^https:\/\/(www\.)?indiediscotheque\.com\/robots\//.test(url) ? url.replace(/^https:\/\/(www\.)?indiediscotheque\.com\/robots\//, "https://robohash.org/") : null;
-    const get = async (u) => { try { return await route.fetch(u ? { url: u } : undefined); } catch (e) { return null; } };
-    try {
-      let res = await get();
-      if (!res || !res.ok()) { await sleep(1500); res = await get(); }
-      if ((!res || !res.ok()) && robohash) res = await get(robohash);
-      if (!res) return route.abort();
-      const body = await res.body();
-      const headers = Object.fromEntries(Object.entries(res.headers()).filter(([k]) => !/^(content-length|content-encoding|transfer-encoding|set-cookie)$/i.test(k)));
-      if (res.ok() && body.length) {
-        mkdirSync(CACHE, { recursive: true });
-        writeFileSync(file, body);
-        writeFileSync(file + ".json", JSON.stringify({ url, status: res.status(), headers }));
-      }
-      return route.fulfill({ status: res.status(), headers, body });
-    } catch (e) {
-      return route.abort();
-    }
+    const got = await fetchOnce(route, url).catch(() => null);
+    if (!got) return route.abort().catch(() => {});
+    return route.fulfill(got).catch(() => {});
   });
 }

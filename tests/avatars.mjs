@@ -150,11 +150,14 @@ for (const style of STYLES) {
     await page.waitForFunction(() => {
       const els = [...document.querySelectorAll("#__avtest .__cell .ft-avatar, #__avtest .__cell .avtr")];
       if (els.some((e) => /#bm=/.test(e.style.backgroundImage))) return false;
-      return Promise.all(els.map((e) => new Promise((ok) => {
+      // one load per picture (not one per poll): ready when every one has loaded
+      const seen = window.__loaded = window.__loaded || {};
+      return els.every((e) => {
         const m = /url\("?([^")]+)"?\)/.exec(e.style.backgroundImage);
-        if (!m) return ok(false);
-        const i = new Image(); i.onload = () => ok(true); i.onerror = () => ok(false); i.src = m[1];
-      }))).then((all) => all.every(Boolean));
+        if (!m) return false;
+        if (!(m[1] in seen)) { seen[m[1]] = false; const i = new Image(); i.onload = () => { seen[m[1]] = true; }; i.onerror = () => { delete seen[m[1]]; }; i.src = m[1]; }
+        return seen[m[1]] === true;
+      });
     }, null, { timeout: 30000, polling: 250 });
     // a picture the avatar server refused at first (it rate-limits) is in the
     // cache now: draw each again so none is left empty
@@ -216,9 +219,15 @@ for (const style of STYLES.filter((s) => s !== "october")) {
     const e0 = [await (await embed.$("#__emb .st-avtr")).screenshot(), await (await embed.$("#__emb li")).screenshot()];
     await prep(true);
     await embed.waitForFunction(() => [...document.querySelectorAll("#__emb .st-avtr, #__emb li")].every((e) => !/#bm=/.test(e.style.backgroundImage)), null, { timeout: 30000 });
-    await embed.waitForFunction(() => Promise.all([...document.querySelectorAll("#__emb .st-avtr")].map((e) => new Promise((ok) => {
-      const m = /url\("?([^")]+)"?\)/.exec(e.style.backgroundImage); const i = new Image(); i.onload = () => ok(true); i.onerror = () => ok(false); i.src = m[1];
-    }))).then((a) => a.every(Boolean)), null, { timeout: 30000 });
+    await embed.waitForFunction(() => {
+      const seen = window.__loaded = window.__loaded || {};
+      return [...document.querySelectorAll("#__emb .st-avtr")].every((e) => {
+        const m = /url\("?([^")]+)"?\)/.exec(e.style.backgroundImage);
+        if (!m) return false;
+        if (!(m[1] in seen)) { seen[m[1]] = false; const i = new Image(); i.onload = () => { seen[m[1]] = true; }; i.onerror = () => { delete seen[m[1]]; }; i.src = m[1]; }
+        return seen[m[1]] === true;
+      });
+    }, null, { timeout: 30000, polling: 250 });
     await embed.evaluate(() => document.querySelectorAll("#__emb .st-avtr, #__emb li").forEach((e) => {
       const bg = e.style.backgroundImage; e.style.backgroundImage = "none"; void e.offsetWidth; e.style.backgroundImage = bg;
     }));
