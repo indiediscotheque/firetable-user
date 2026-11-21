@@ -286,3 +286,18 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | OT-06 | Link previews: the room's title, description, canonical address, Open Graph and Twitter tags, `img/og.png`; library pages' own tags and covers | `index.html` head, `tools/plain-pages.mjs` | ✅ added November 15, 2026; keep (smoke checks one set per page) |
 | OT-07 | A save the database refuses says so ("Couldn't save … Try again in a moment.", once per burst) | `ftapi.saveFailed` (`firetable.js`) | ✅ added November 14, 2026; new writes in later steps use it |
 | OT-08 | The live stage for QueUp's screen: the stage with its screen up (cover, song, who picked it, tempo, the DJ at their plaque, the line, times, theme, who's online, the song's colours), the room's radio stream with Listen live, fire behind the DJ (`songFires` from the hostbot), one picture at any size | `embed/stage/` (own policy; only this site and QueUp may frame it; unlisted) | ✅ added November 15, 2026; keep (smoke checks it) |
+
+## TT · The Turntable theme (an easter egg in Live; `js/ttskin.js`, `css/ttskin.css`)
+
+Added November 21, 2026, at the owner's request. A skin over Live, off unless someone goes in; Live's own look is untouched. Every row below uses the room's own controls and data.
+
+| Id | Feature | Who | Today | Goes to |
+|---|---|---|---|---|
+| TT-01 | Ways in and out: `/turntable` or `/tt` in chat, the Konami code, the `:id:` logo three times; Back to Live (`#tt-exit`); kept per device; Live's alone (suspends in Discover, back with Live) | All | `firetable.tt.enter`, `leave`, `toggle`; `STORAGE.ttSkin`; `chat.js` slash commands | ✅ added |
+| TT-02 | The music never stops: the room's player stays in place, placed over the left screen | All | `#screenBox` positioned by CSS (`--tt-s`, `--tt-x`, `--tt-y`), never re-parented | ✅ added |
+| TT-03 | The room: stage, theme bubble, awesome meter, lights by fires, LED songboard (artist, title, times), the art on the screens | All | `#tt-room`, `renderSong`, `renderVotes`, `renderTheme` | ✅ added |
+| TT-04 | Awesome = Fire, Storm = take it back (never below none); Grab, its playlist picker and the song link on the songboard | M | `#tt-awesome` → `#fire`, `#tt-storm`, `#tt-grab` → `#grab`, `#tt-grabPick` → `#st-grabPick`, `#tt-link` → `#songlink` | ✅ added |
+| TT-05 | DJs at their laptops (plays, the spotlight, Play Music, Step down / Remove with a second tap), everyone on the floor in a place that stays theirs; heads rock to fires, everyone bobs in dance mode; click for the person's card | All | `renderSeats`, `renderCrowd`, `firetable.ui.tooltip.user` | ✅ added |
+| TT-06 | Turntable avatars: all 628 unlocked, picked the first time in, changed from the account menu; Turntable faces only in the theme, never in Live | M | `#tt-picker`, `#nav-ttAvatar`, `faceAll`; `users/<uid>/ttAvatar` | ✅ added |
+| TT-07 | Laptop sticker builder: lid colour, up to ten stickers dragged, turned and sized (keys too) | M | `#tt-laptopEdit`, `#nav-ttLaptop`, Stickers on your seat; `users/<uid>/ttLaptop` | ✅ added |
+| TT-08 | The panel: Queue · Room · Chat, or two sidebars; Room's welcome, People here (DJs, Moderators, Bots, Audience), Recently played, Fresh, Cards; the DJ playlist picker in Queue | All | `#tt-tabs`, `#tt-pane`, `#tt-layout` (`STORAGE.ttLayout`), `moveDjPicker` | ✅ added |

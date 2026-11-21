@@ -174,6 +174,19 @@ try {
     await ftapi.db().ref("users/" + ftapi.uid + "/featured").set(["card1"]);
     await ftapi.db().ref("users/" + ftapi.uid + "/featured").set(null);
   });
+  await step(fan, "the Turntable theme: your avatar and your laptop's stickers", async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    firetable.tt.enter();
+    for (let i = 0; i < 100 && !document.querySelector("#tt-pickGrid .tt-pickCell"); i++) await wait(100);
+    document.querySelectorAll("#tt-pickGrid .tt-pickCell")[2].click();
+    firetable.tt.openLaptop();
+    document.querySelector('#tt-laptopEdit [data-add="e1faa9"]').click();
+    document.querySelector('#tt-laptopEdit [data-lap="save"]').click();
+    const saved = async (k) => { for (let i = 0; i < 50; i++) { if ((await ftapi.db().ref("users/" + ftapi.uid + "/" + k).once("value")).val()) return true; await wait(100); } return false; };
+    const ok = (await saved("ttAvatar")) && (await saved("ttLaptop"));
+    firetable.tt.leave();
+    if (!ok) throw new Error("the Turntable avatar or laptop didn't save");
+  });
   await step(fan, "profile: change your name and back", async () => {
     await new Promise((r, j) => ftapi.actions.changeName("fan_two", (e) => (e ? j(new Error(e)) : r())));
     await new Promise((r, j) => ftapi.actions.changeName("fan", (e) => (e ? j(new Error(e)) : r())));
@@ -222,6 +235,7 @@ try {
     lists: !db.playlists || !db.playlists[FAN] || !Object.keys(db.playlists[FAN]).length,
     queue: Object.keys((db.queues || {})[FAN] || {}).length >= 1,
     prefs: (db.playlistPrefs || {})[FAN] && db.playlistPrefs[FAN].defaultName === "My default",
+    turntable: /^[0-9a-f]{1,24}$/.test(me.ttAvatar || "") && /^black;e1faa9,/.test(me.ttLaptop || ""),
     profile: me.username === "fan" && me.avatarStyle === "dicebear:pixel-art" && /^[1-4]\.\d+\.\d+(\.\d+){16}$/.test(me.boulet || "") && me.bouletOn === true && me.publicName === false && me.selectedList !== undefined,
     presence: me.status === false && typeof me.closed === "number" && typeof me.offlineAt === "number" && typeof me.joined === "number",
     grab: !!(db.grabs && db.grabs.dj1 && Object.values(db.grabs.dj1).some((t) => t[FAN])),

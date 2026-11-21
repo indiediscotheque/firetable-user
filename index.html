@@ -38,6 +38,8 @@
 	<link rel="stylesheet" href="css/discover.css?v=01.12.08" type="text/css" />
 	<!-- Last: the playing song's colours (js/room.js turns them on) -->
 	<link rel="stylesheet" href="css/room-colors.css?v=01.12.08" type="text/css" />
+	<!-- The Turntable theme's stylesheet (js/ttskin.js adds it the first time someone goes in; nothing downloads before) -->
+	<meta name="tt-css" content="css/ttskin.css?v=01.12.08" />
 </head>
 
 <body>
@@ -1186,6 +1188,9 @@
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="account-tab"><i class="material-symbols-outlined" aria-hidden="true">manage_accounts</i>Account and sign-in</button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="settings-tab"><i class="material-symbols-outlined" aria-hidden="true">settings</i>Settings</button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="mod-tab" id="nav-acctMod" hidden><i class="material-symbols-outlined" aria-hidden="true">shield</i>Mod tools</button>
+			<!-- only in the Turntable theme (js/ttskin.js) -->
+			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-ttAvatar" hidden><i class="material-symbols-outlined" aria-hidden="true">face</i>Turntable avatar</button>
+			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-ttLaptop" hidden><i class="material-symbols-outlined" aria-hidden="true">laptop_mac</i>Laptop stickers</button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-acctHelp"><i class="material-symbols-outlined" aria-hidden="true">keyboard</i>Shortcuts and commands</button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem showInstallGuide" id="nav-acctApp" hidden><i class="material-symbols-outlined" aria-hidden="true">install_mobile</i>Get the app</button>
 			<div class="nav-acctSep" role="separator"></div>
@@ -1532,6 +1537,7 @@
 	<script type="text/javascript" src="js/room.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/ui.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/discover.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/ttskin.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/glitch.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/snow.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/init.js?v=01.12.08"></script>

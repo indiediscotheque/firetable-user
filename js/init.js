@@ -186,6 +186,7 @@ firetable.init = function () {
   firetable.cast.init();
   firetable.push.init();
   firetable.snow.init();
+  if (firetable.tt) firetable.tt.init();
 };
 
 // ─── Auto-start ──────────────────────────────────────────────────────────────

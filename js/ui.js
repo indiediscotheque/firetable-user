@@ -1143,6 +1143,7 @@ firetable.ui.updateScreenBtn = function (val) {
 firetable.ui.tooltip = (function () {
   var tipEl;
   var refreshUserTip = null; // set by bind()
+  var openUserTip = null; // set by bind(): a person's card, from anywhere (the Turntable theme's floor)
 
   // Touch screens fire a fake hover on tap, which would leave tips stuck open
   var noHover = window.matchMedia('(hover: none)');
@@ -1398,6 +1399,7 @@ firetable.ui.tooltip = (function () {
       return null;
     }
 
+    openUserTip = function (anchorEl, userid) { showUserTip(anchorEl, userid); };
     refreshUserTip = function () {
       if (!userTipEl.matches(':popover-open')) return;
       var uid = $userTip.attr('data-for');
@@ -1632,7 +1634,9 @@ firetable.ui.tooltip = (function () {
   return {
     bind: bind, show: show, hide: hide,
     // Keep an open user card in step with the deck and waitlist
-    refreshUserTip: function () { if (refreshUserTip) refreshUserTip(); }
+    refreshUserTip: function () { if (refreshUserTip) refreshUserTip(); },
+    // a person's card beside `anchorEl`
+    user: function (anchorEl, userid) { if (openUserTip) openUserTip(anchorEl, userid); }
   };
 })();
 

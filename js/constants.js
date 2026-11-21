@@ -51,7 +51,11 @@ var STORAGE = {
   lastfmSession:      "ftLastfmSession",
   navView:            "firetableNavView",
   navSide:            "firetableNavSide",
-  navMobile:          "firetableNavMobile"
+  navMobile:          "firetableNavMobile",
+  ttSkin:             "firetableTurntable",   // "1": the Turntable theme is on, on this device (js/ttskin.js)
+  ttAvatar:           "firetableTurntableAvatar", // your Turntable avatar, also kept at users/<uid>/ttAvatar
+  ttLaptop:           "firetableTurntableLaptop", // your laptop's lid and stickers, also kept at users/<uid>/ttLaptop
+  ttLayout:           "firetableTurntableLayout"  // the theme's sidebars: "one" or "two"
 };
 
 // ─── External Service URLs ──────────────────────────────────────────────────
