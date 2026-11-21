@@ -35,8 +35,10 @@ var firetable = {
   // ── Avatars ──
   /** @type {string}  Robohash set name (e.g. "set1", "set2") */
   avatarset: "set1",
-  /** @type {string|null}  Room-wide avatar style forced by ftconfigs.avatarset (null = off) */
+  /** @type {string|null}  Everyone's avatar style (AVATAR_STYLES): a supermod's choice, else the room's default */
   roomAvatarStyle: null,
+  /** @type {string|null|undefined}  Your own saved Bouletmaton code (null = none saved yet, undefined = not loaded) */
+  myBoulet: undefined,
   /** @type {string|null}  Current user's own avatar style key e.g. "dicebear:pixel-art" (null = room default) */
   avatarStyle: null,
 

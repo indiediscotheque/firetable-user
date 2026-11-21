@@ -26,23 +26,6 @@ firetable.utilities = {
   // ─── Avatar URL ──────────────────────────────────────────────────────────
 
   /**
-   * Build an avatar URL for a user.
-   * Supports Robohash (via proxy) and DiceBear (SVG).
-   * Style lookup order:
-   *   explicit `style` param (e.g. a trading card's stamped set)
-   *   → room theme: ftconfigs.avatarset, else the seasonal theme (monsters in October)
-   *   → ftapi.users[uid].avatarStyle → firetable.avatarStyle (own user cache)
-   *   → "robohash:" + firetable.avatarset
-   * @param {string} uid - User ID
-   * @param {string} username - Display name
-   * @param {string|null} [size="110x110"] - Dimensions (Robohash only)
-   * @param {string} [style] - Style key e.g. "robohash:set1" or "dicebear:pixel-art"
-   * @param {boolean} [keepName] - Use `username` as given (trading cards, which
-   *   keep the face they were made with; the settings preview of a new name).
-   *   Otherwise the person's current name wins, so a rename shows everywhere.
-   * @returns {string} Full avatar URL
-   */
-  /**
    * The picture size to ask for, for an avatar drawn `cssPx` tall on this
    * screen: its pixels at the screen's density, in steps of 60 (60–600), so
    * it's never stretched (blurry) and the steps share the cache.
@@ -52,24 +35,52 @@ firetable.utilities = {
     return px + "x" + px;
   },
 
-  avatarURL: function (uid, username, size, style, keepName) {
+  /**
+   * Build an avatar URL for a user, in the room's style (AVATAR_STYLES):
+   * Robohash (via the site's proxy), DiceBear (SVG) or Bouletmaton (drawn
+   * here, js/bouletmaton.js: the member's own, else the one made from their
+   * uid; a stand-in URL until it's drawn, swapped by itself).
+   * Style: the explicit `style` (a printed card's stamp) → the room's
+   * (a supermod's choice, else config.js avatarset, else the season's) →
+   * Robohash robots.
+   * @param {string} uid - User ID
+   * @param {string} username - Display name
+   * @param {string|null} [size="110x110"] - Dimensions ("110x110")
+   * @param {string} [style] - Style key e.g. "robohash:set1", "dicebear:pixel-art", "bouletmaton"
+   * @param {boolean} [keepName] - Use `username` as given (trading cards, which
+   *   keep the face they were made with; the settings preview of a new name).
+   *   Otherwise the person's current name wins, so a rename shows everywhere.
+   * @param {string} [boulet] - A Bouletmaton code to draw instead of theirs (a card's stamp, the builder's preview)
+   * @returns {string} Full avatar URL
+   */
+  avatarURL: function (uid, username, size, style, keepName, boulet) {
     size = size || "110x110";
     if (!keepName && uid) {
       var current = (ftapi.users && ftapi.users[uid] && ftapi.users[uid].username) ||
         (firetable.knownNames && firetable.knownNames[uid]);
       if (current) username = current;
     }
-    if (!style) {
-      style = firetable.roomAvatarStyle
-           || (ftapi.users && ftapi.users[uid] && ftapi.users[uid].avatarStyle)
-           || (uid === ftapi.uid ? firetable.avatarStyle : null)
-           || firetable.utilities.normalizeAvatarStyle(firetable.avatarset);
+    style = firetable.utilities.normalizeAvatarStyle(style) || firetable.roomAvatarStyle || DEFAULT_AVATAR_STYLE;
+    if (style === "bouletmaton" && typeof Bouletmaton !== "undefined") {
+      return Bouletmaton.url(uid, parseInt(size, 10) || 110, boulet || undefined);
     }
     if (style.indexOf("dicebear:") === 0) {
       return "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + username);
     }
-    var set = style.indexOf("robohash:") === 0 ? style.slice(9) : style;
-    return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + (set || "set1");
+    var set = style.indexOf("robohash:") === 0 ? style.slice(9) : "set1";
+    return AVATAR_BASE_URL + uid + username + ".png?size=" + size + "&set=" + set;
+  },
+
+  /**
+   * Which framing the avatars get (css/looks.css, html[data-avatars]): each
+   * style's drawings sit differently in their pictures.
+   * @param {string} [style] - defaults to the room's
+   * @returns {string} "robohash", "notionists", "pixel-art" or "bouletmaton"
+   */
+  avatarKind: function (style) {
+    style = firetable.utilities.normalizeAvatarStyle(style) || firetable.roomAvatarStyle || DEFAULT_AVATAR_STYLE;
+    for (var i = 0; i < AVATAR_STYLES.length; i++) if (AVATAR_STYLES[i].value === style) return AVATAR_STYLES[i].kind;
+    return "robohash";
   },
 
   /**
@@ -184,16 +195,19 @@ firetable.utilities = {
   },
 
   /**
-   * Turn a config avatar value into a full style key.
+   * Turn a config or database avatar value into one of AVATAR_STYLES.
    * Accepts a bare Robohash set ("set2") or a full key ("robohash:set2",
-   * "dicebear:bottts"). Returns null for empty values.
+   * "dicebear:pixel-art", "bouletmaton"). Returns null for empty values and
+   * for styles the room no longer offers (robot heads, other DiceBear sets).
    * @param {string} val
    * @returns {string|null}
    */
   normalizeAvatarStyle: function (val) {
-    val = String(val || "").trim();
+    val = String(val == null ? "" : val).trim();
     if (!val) return null;
-    return /^(robohash|dicebear):/.test(val) ? val : "robohash:" + val;
+    if (/^set\d+$/.test(val)) val = "robohash:" + val;
+    for (var i = 0; i < AVATAR_STYLES.length; i++) if (AVATAR_STYLES[i].value === val) return val;
+    return null;
   },
 
   // ─── Playlist <option> Builder ───────────────────────────────────────────
@@ -475,7 +489,7 @@ firetable.utilities = {
     if (Notification.permission !== "granted") return;
     // The same tag as the bot's push for this mention, so one replaces the other
     var options = {
-      icon: firetable.utilities.avatarURL(chatData.id, namebo),
+      icon: (function (u) { return u.indexOf("#bm=") === -1 ? u : "favicon.png"; })(firetable.utilities.avatarURL(chatData.id, namebo)), // a Bouletmaton still being drawn: the site's icon
       body: chatData.txt,
       tag: chatData.chatID ? "m-" + chatData.chatID : undefined
     };

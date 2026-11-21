@@ -160,8 +160,13 @@ try {
   });
   await step(fan, "playlists: delete the list", () => firetable.actions.deleteLists([window.__list]));
 
-  await step(fan, "profile: avatar style, public name, featured card", async () => {
+  await step(fan, "profile: avatar style, your Bouletmaton (saved in the builder), public name, featured card", async () => {
     await ftapi.db().ref("users/" + ftapi.uid + "/avatarStyle").set("dicebear:pixel-art");
+    firetable.ui.openBouletBuilder(false);
+    document.querySelector('#bm-parts .bm-step[data-part="hat"][data-step="1"]').click();
+    document.getElementById("bm-save").click();
+    for (let i = 0; i < 100 && document.getElementById("bm-builderBox").open; i++) await new Promise((r) => setTimeout(r, 100));
+    if (!Bouletmaton.isCode(firetable.myBoulet)) throw new Error("the Bouletmaton wasn't saved: " + document.getElementById("bm-message").textContent);
     await ftapi.db().ref("users/" + ftapi.uid + "/publicName").set(false);
     await ftapi.db().ref("users/" + ftapi.uid + "/featured").set(["card1"]);
     await ftapi.db().ref("users/" + ftapi.uid + "/featured").set(null);
@@ -214,7 +219,7 @@ try {
     lists: !db.playlists || !db.playlists[FAN] || !Object.keys(db.playlists[FAN]).length,
     queue: Object.keys((db.queues || {})[FAN] || {}).length >= 1,
     prefs: (db.playlistPrefs || {})[FAN] && db.playlistPrefs[FAN].defaultName === "My default",
-    profile: me.username === "fan" && me.avatarStyle === "dicebear:pixel-art" && me.publicName === false && me.selectedList !== undefined,
+    profile: me.username === "fan" && me.avatarStyle === "dicebear:pixel-art" && /^[1-4]\.\d+(\.\d+){16}$/.test(me.boulet || "") && me.publicName === false && me.selectedList !== undefined,
     presence: me.status === false && typeof me.closed === "number" && typeof me.offlineAt === "number" && typeof me.joined === "number",
     grab: !!(db.grabs && db.grabs.dj1 && Object.values(db.grabs.dj1).some((t) => t[FAN])),
     hidden: db.chatFeed.fother1.hidden === true,

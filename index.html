@@ -926,6 +926,43 @@
 		</div>
 	</dialog>
 
+	<!-- The Bouletmaton builder (js/avatar-builder.js): from Profile, and by
+	     itself when the room's avatars are Bouletmatons and you haven't saved yours -->
+	<dialog id="bm-builderBox" aria-labelledby="bm-title" aria-describedby="bm-intro">
+		<div class="modalBox">
+			<div class="modalHeader">
+				<h2 id="bm-title">Build your Bouletmaton</h2>
+				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			</div>
+			<div class="modalContent bm-builder">
+				<p class="settingHint" id="bm-intro"></p>
+				<div class="bm-stage">
+					<div class="bm-previews">
+						<canvas id="bm-preview" class="bm-preview" width="512" height="512" role="img" aria-label="Your Bouletmaton"></canvas>
+						<div class="bm-minis" aria-hidden="true">
+							<span class="ft-avatar bm-mini" id="bm-miniCircle"></span>
+							<span class="bm-miniStage" id="bm-miniStage"></span>
+						</div>
+					</div>
+					<div class="bm-quick">
+						<button type="button" class="butt graybutt" id="bm-random"><i class="material-symbols-outlined" aria-hidden="true">shuffle</i> Surprise me</button>
+						<button type="button" class="butt graybutt" id="bm-reset"><i class="material-symbols-outlined" aria-hidden="true">undo</i> Start over</button>
+					</div>
+				</div>
+				<div class="bm-controls">
+					<fieldset class="bm-swatches" id="bm-skins"><legend>Skin tone</legend></fieldset>
+					<fieldset class="bm-swatches" id="bm-hairs"><legend>Hair colour</legend></fieldset>
+					<div class="bm-parts" id="bm-parts"></div>
+				</div>
+				<div class="formMessage" id="bm-message" role="alert"></div>
+				<div class="modal-actions">
+					<button type="button" class="butt graybutt" id="bm-cancel">Not now</button>
+					<button type="submit" class="butt darkbutt" id="bm-save">Save my Bouletmaton</button>
+				</div>
+			</div>
+		</div>
+	</dialog>
+
 	<dialog id="accountSettingsBox" aria-label="Your account">
 		<div class="modalBox">
 			<div class="tabs" id="accountSettingsTabs" role="tablist" aria-label="Your account">
@@ -959,29 +996,31 @@
 					</section>
 					<div id="avatarPickerSection" class="ac-section" hidden><!-- members don't choose: a supermod sets everyone's (Mod tools, #mo-avatarStyle) -->
 					<h3 class="ac-label"><label for="avatarStylePicker">Avatar</label></h3>
-					<select id="avatarStylePicker">
+					<select id="avatarStylePicker"><!-- the room's six styles (AVATAR_STYLES in js/constants.js), copied into #mo-avatarStyle -->
 						<optgroup label="Robohash">
-							<option value="robohash:set1">Robohash Robot Busts</option>
-							<option value="robohash:set2">Robohash Monster Busts</option>
-							<option value="robohash:set3">Robohash Robot Heads</option>
-							<option value="robohash:set4">Robohash Cats</option>
+							<option value="robohash:set1">Robohash robots</option>
+							<option value="robohash:set2">Robohash monsters</option>
+							<option value="robohash:set4">Robohash cats</option>
 						</optgroup>
 						<optgroup label="DiceBear">
-							<option value="dicebear:adventurer">DiceBear Adventurer</option>
-							<option value="dicebear:avataaars">DiceBear Avataaars</option>
-							<option value="dicebear:big-ears">DiceBear Big Ears</option>
-							<option value="dicebear:bottts">DiceBear Bottts (robots)</option>
-							<option value="dicebear:croodles">DiceBear Croodles</option>
-							<option value="dicebear:micah">DiceBear Micah</option>
-							<option value="dicebear:miniavs">DiceBear Miniavs</option>
 							<option value="dicebear:notionists">DiceBear Notionists</option>
-							<option value="dicebear:open-peeps">DiceBear Open Peeps</option>
-							<option value="dicebear:personas">DiceBear Personas</option>
 							<option value="dicebear:pixel-art">DiceBear Pixel Art</option>
-							<option value="dicebear:toon-head">DiceBear Toon Head</option>
+						</optgroup>
+						<optgroup label="Bouletmaton">
+							<option value="bouletmaton">Bouletmaton (everyone builds their own)</option>
 						</optgroup>
 					</select>
 					</div><!-- /#avatarPickerSection -->
+					<section class="ac-section" id="ac-bouletSection" aria-labelledby="ac-bouletLabel">
+						<h3 class="ac-label" id="ac-bouletLabel">Your Bouletmaton</h3>
+						<div class="ac-boulet">
+							<span class="ac-bouletFace" id="ac-bouletFace" role="img" aria-label="Your Bouletmaton"></span>
+							<div class="ac-bouletText">
+								<p class="settingHint" id="ac-bouletHint">Your face when the room's avatars are Bouletmatons. Until you build your own, you have one made for you.</p>
+								<button type="button" class="butt darkbutt" id="ac-bouletEdit">Build your Bouletmaton</button>
+							</div>
+						</div>
+					</section>
 				</div>
 				<div id="account-tab" class="tabPanel" role="tabpanel">
 					<section class="ac-section" aria-labelledby="ac-signedInLabel">
@@ -1126,7 +1165,7 @@
 						<select id="mo-avatarStyle" aria-describedby="mo-avatarHint">
 							<option value="">The room's default</option>
 						</select>
-						<p class="settingHint" id="mo-avatarHint">One style for everyone in the room: the stage, the people, chat and Discover. It changes for everyone at once. The room's default is the season's (monsters in October), or config.js's avatarset.</p>
+						<p class="settingHint" id="mo-avatarHint">One style for everyone in the room: the stage, the people, chat, Discover and new trading cards. It changes for everyone at once. The room's default is Robohash robots (monsters in October), or config.js's avatarset. With Bouletmaton, everyone builds their own.</p>
 					</section>
 				</div>
 			</div>
@@ -1473,6 +1512,7 @@
 	<script type="text/javascript" src="js/lazy.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/fire.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/helpers.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/bouletmaton.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/emoji.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/lastfm.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/player.js?v=01.12.08"></script>
@@ -1486,6 +1526,7 @@
 	<script type="text/javascript" src="js/playlists.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/import.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/users.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/avatar-builder.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/room.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/ui.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/discover.js?v=01.12.08"></script>

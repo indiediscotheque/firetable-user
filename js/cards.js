@@ -460,7 +460,9 @@ firetable.actions.showCard = function (cardid, chatid) {
  * @param {string} data.num - Display number (single digit on circle badge)
  * @param {number} data.temp - "Max operating temperature" gag value
  * @param {number} data.date - Timestamp when the card was created
- * @param {string} [data.set] - Robohash set override
+ * @param {string} [data.set] - Robohash set stamped at printing (cards before data.avs)
+ * @param {string} [data.avs] - The room's avatar style when it was printed (AVATAR_STYLES)
+ * @param {string} [data.bm] - The DJ's Bouletmaton when it was printed (with avs "bouletmaton")
  * @param {string|boolean} [data.special] - Card style key: false/empty (classic), "id8", "id9", or "v2"
  * @param {string} chatid - Suffix for the canvas element ID ("cardMaker" + chatid)
  * @param {{scale: number}} [opts] - Draw at this many times the 225×300 size
@@ -489,7 +491,11 @@ firetable.actions.displayCard = function (data, chatid, opts) {
     data.image = ftconfigs.defaultAlbumArtUrl;
   }
 
-  var set = data.set || "set1";
+  // The avatar the card was printed with: the room's style then (avs), and
+  // with Bouletmaton the DJ's own then (bm). Cards printed before avs kept
+  // only their Robohash set, drawn as it was (even one the room no longer offers).
+  var cardStyle = firetable.utilities.normalizeAvatarStyle(data.avs);
+  var set = /^set\d+$/.test(String(data.set || "")) ? data.set : "set1";
   var canvas = document.getElementById('cardMaker' + chatid);
   if (!canvas || !canvas.getContext) return;
   // Keep what it was drawn from, so "View larger" can redraw it sharply
@@ -497,20 +503,33 @@ firetable.actions.displayCard = function (data, chatid, opts) {
   // Bigger avatars when drawing larger (2× is plenty, and the avatar server
   // rate-limits big images)
   var avatarPx = function (px) { var n = Math.round(px * Math.min(scale, 2)); return n + "x" + n; };
+  /** The card's avatar picture at a size: a URL, or (Bouletmaton) a promise of one. */
+  var avatarSrc = function (size) {
+    if (cardStyle === "bouletmaton") {
+      var bm = Bouletmaton.isCode(data.bm) ? data.bm : Bouletmaton.random(String(data.djid || ""));
+      return Bouletmaton.picture(bm, parseInt(size, 10) || 256);
+    }
+    if (cardStyle) return firetable.utilities.avatarURL(data.djid, data.djname, size, cardStyle, true);
+    return AVATAR_BASE_URL + data.djid + data.djname + ".png?size=" + size + "&set=" + set;
+  };
+  /** Point an image at the card's avatar. */
+  var setAvatarSrc = function (img, size) {
+    Promise.resolve(avatarSrc(size)).then(function (src) { img.src = src; }, function () { if (img.onerror) img.onerror(); });
+  };
   /**
    * Load the DJ's avatar; if the big one fails (rate limit, offline), use the
    * normal size, and if that fails too, carry on without it (image = null).
    */
   var loadAvatar = function (px, onDone) {
     var img = new Image();
-    var tries = [firetable.utilities.avatarURL(data.djid, data.djname, avatarPx(px), "robohash:" + set, true)];
-    if (scale !== 1) tries.push(firetable.utilities.avatarURL(data.djid, data.djname, px + "x" + px, "robohash:" + set, true));
+    var tries = [avatarPx(px)];
+    if (scale !== 1) tries.push(px + "x" + px);
     img.onload = function () { onDone(img); };
     img.onerror = function () {
-      if (tries.length) img.src = tries.shift();
+      if (tries.length) setAvatarSrc(img, tries.shift());
       else onDone(null);
     };
-    img.src = tries.shift();
+    setAvatarSrc(img, tries.shift());
   };
 
   var ctx = canvas.getContext('2d');
@@ -705,7 +724,7 @@ firetable.actions.displayCard = function (data, chatid, opts) {
           };
           legId9.src = 'img/id9.png';
         };
-          legRobot.src = firetable.utilities.avatarURL(data.djid, data.djname, avatarPx(110), "robohash:" + set, true);
+          setAvatarSrc(legRobot, avatarPx(110));
       };
       legArnold.src = 'img/arnold.png';
 

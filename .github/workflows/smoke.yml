@@ -13,7 +13,7 @@
 #   the hostbot's database rules (firetable-hostbot master). Fails on any write
 #   or read the rules refuse
 # Run the same locally (Java 21 needed):
-#   cd tests && npm ci && npx playwright install chromium && npm run unit && npm run smoke && npm run reach && npm run a11y
+#   cd tests && npm ci && npx playwright install chromium && npm run unit && npm run smoke && npm run reach && npm run a11y && npm run avatars
 #   HOSTBOT_RULES=../../firetable-hostbot/firebase-rules.json npm run rules
 # Each suite runs as its own job, side by side. They load the CDN libraries
 # and YouTube's player API, so each suite gets a second try before it fails.
@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [smoke, reach, a11y, rules]
+        suite: [smoke, reach, a11y, rules, avatars]
     env:
       SUITE: ${{ matrix.suite }}
     steps:

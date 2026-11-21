@@ -2139,11 +2139,13 @@ firetable.ui.setupMiscEvents = function () {
   function applyRoomAvatars(settings) {
     var chosen = firetable.utilities.normalizeAvatarStyle(settings && settings.avatarStyle);
     $('#mo-avatarStyle').val(chosen || '');
-    var style = chosen || firetable.roomAvatarDefault || null;
+    var style = chosen || firetable.roomAvatarDefault || DEFAULT_AVATAR_STYLE;
     if (style === firetable.roomAvatarStyle) return;
     firetable.roomAvatarStyle = style;
-    if (style && style.indexOf('robohash:') === 0) firetable.avatarset = style.slice(9);
+    firetable.avatarset = style.indexOf('robohash:') === 0 ? style.slice(9) : 'set1';
+    document.documentElement.setAttribute('data-avatars', firetable.utilities.avatarKind(style));
     firetable.utilities.redrawAvatars();
+    firetable.ui.promptBoulet();
   }
   ftapi.events.on('roomSettingsChanged', applyRoomAvatars);
   if (ftapi.roomSettings) applyRoomAvatars(ftapi.roomSettings);
@@ -2223,6 +2225,7 @@ firetable.ui.init = function () {
   firetable.ui.setupPickName();
   firetable.ui.setupProviderSignIn();
   firetable.ui.setupAccount();
+  firetable.ui.setupAvatarBuilder();
   firetable.ui.setupUserEvents();
   firetable.ui.setupRoomEvents();
   firetable.ui.setupMiscEvents();

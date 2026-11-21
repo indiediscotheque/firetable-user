@@ -385,12 +385,18 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   padding: 0 0.75em;
   list-style: none;
 }
+/* each avatar style's framing in the circles, as the site's (css/looks.css
+   .ft-avatar, html[data-avatars]) */
+:root { --av-zoom: 125%; --av-x: 50%; --av-y: 66%; --av-fill: #000; }
+html[data-avatars="notionists"] { --av-zoom: 118%; --av-x: 50%; --av-y: 30%; --av-fill: #e8e3d8; }
+html[data-avatars="pixel-art"] { --av-zoom: 100%; --av-x: 50%; --av-y: 50%; --av-fill: #d9d4c7; }
+html[data-avatars="bouletmaton"] { --av-zoom: 170%; --av-x: 57%; --av-y: 40%; --av-fill: #e8e3d8; }
 .st-ondeck li {
   width: 3em;
   height: 3em;
   margin-bottom: 0.5em;
   border-radius: 50%;
-  background: #000 50% 66% / auto 125% no-repeat;
+  background: var(--av-fill) var(--av-x) var(--av-y) / auto var(--av-zoom) no-repeat;
   box-shadow: 0 0 0 0.06em rgba(255, 255, 255, 0.12);
 }
 
