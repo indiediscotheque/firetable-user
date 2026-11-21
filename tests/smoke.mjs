@@ -940,7 +940,24 @@ try {
     "Import: into a playlist you have, at the top, skipping the one already there; Undo takes exactly those back (" + JSON.stringify(imp) + ")");
   check(imp.newList === "true|Bb,Aa,Cc|1" && imp.newGone, "Import: the old call still makes a new playlist of what can play, and Undo deletes it (" + JSON.stringify(imp) + ")");
   check(imp.offer === "That's a playlist: Smoke Mix · 4 songs. Import it" && imp.offerOpens, "Import: a playlist link in Find tracks says what it is and opens its songs (" + JSON.stringify(imp) + ")");
+  // an empty playlist says so, with Import a playlist and Find tracks
+  await put("/queues/smoke", null);
+  const emptyList = await page.evaluate(async () => {
+    await ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0"));
+    await new Promise((r) => setTimeout(r, 200));
+    const box = document.querySelector("#mainqueue .q-empty");
+    const out = { shown: !!box, title: box && box.querySelector("h3").textContent, acts: box ? [...box.querySelectorAll("button")].map((b) => b.textContent.trim()).join(",") : "" };
+    if (box) box.querySelector(".q-emptyImport").click();
+    await new Promise((r) => setTimeout(r, 100));
+    const dlg = document.getElementById("importPromptBox");
+    out.opens = dlg.open && !document.getElementById("im-step1").hidden;
+    dlg.close();
+    return out;
+  });
+  check(emptyList.shown && /^(Bring your playlists|This playlist is empty)$/.test(emptyList.title) && emptyList.acts === "downloadImport a playlist,addFind tracks" && emptyList.opens,
+    "an empty playlist offers Import a playlist and Find tracks, and Import opens the import (" + JSON.stringify(emptyList) + ")");
   await put("/queues/smoke", beforeImport);
+  await page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
 
   console.log("-- Grab: one tap to the playlist you grabbed to last, with Undo and Change; ▾ opens the picker");
   const listBeforeGrab = await listNow(); // put back after: later checks count this list
