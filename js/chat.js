@@ -27,6 +27,7 @@ firetable.actions.syncDanceCtaButtons = function () {
 firetable.actions.syncFireReactionButtons = function () {
   var userHasFire = !!(ftapi.uid && firetable.fireReactors && firetable.fireReactors[ftapi.uid]);
   $("#fire").toggleClass("on", userHasFire);
+  if (firetable.tt) firetable.tt.fires(); // the Turntable theme's Awesome, meter and dancers
   if (userHasFire) {
     $("#cloud_with_rain").removeClass("on");
   }
@@ -1062,6 +1063,10 @@ firetable.ui.setupChatEvents = function () {
             break;
           case "tableflip":
             ftapi.actions.sendChat((args ? args + " " : "") + "(╯°□°）╯︵ ┻━┻");
+            break;
+          case "turntable":
+          case "tt":
+            if (firetable.tt) firetable.tt.toggle();
             break;
           case "unflip":
             ftapi.actions.sendChat((args ? args + " " : "") + "┬─┬ ノ( ゜-゜ノ)");

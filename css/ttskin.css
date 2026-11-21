@@ -1,0 +1,1010 @@
+/* ============================================================================
+   The Turntable theme (js/ttskin.js): an easter egg in Live.
+
+   Everything here sits under body.tt-skin, which is only ever on in Live.
+   This stylesheet is in the page switched off (<link disabled>), so nobody
+   downloads it, or any of its pictures, until they go in.
+
+   The stage art is drawn in its own units (1468 x 1000, the art's size) inside
+   .tt-canvas, which js/ttskin.js scales to the room: --tt-s (scale), --tt-x
+   and --tt-y (where the art's corner lands). The room's own screen (#screenBox)
+   is never moved in the page, only placed over the left screen with the same
+   numbers, so the music and the video carry on.
+   ========================================================================= */
+
+body.tt-skin {
+    --tt-gold: #e3bf23;
+    --tt-gold-2: #d7a31a;
+    --tt-bar: #232323;
+    --tt-panel: #2a2a2a;
+    --tt-panel-2: #333;
+    --tt-line: #3c3c3c;
+    --tt-text: #e8e8e8;
+    --tt-muted: #9a9a9a;
+    --tt-side: clamp(18rem, 24vw, 24rem);
+    --tt-s: 0.6;
+    --tt-x: 0px;
+    --tt-y: 0px;
+    background: #000;
+}
+
+/* outside the theme (Live, Discover), its pieces stay out of the page's layout */
+body:not(.tt-skin) :is(#tt-room, #tt-tabs, #tt-pane, #tt-qhead, .tt-guestNote, #tt-brand, #tt-exit, #tt-layout) { display: none; }
+
+/* ── The page: bar along the top, the room, the panel on the right ─────────── */
+html body.tt-skin #mainGrid,
+html body.tt-skin #mainGrid.login {
+    grid-template-columns: minmax(0, 1fr) var(--tt-side);
+    grid-template-rows: 2.75rem auto minmax(0, 1fr);
+    grid-template-areas: none;
+    padding: 0;
+    background: #000;
+}
+
+html body.tt-skin #mainGrid > #topbar { grid-column: 1; grid-row: 1; }
+html body.tt-skin #mainGrid > #tt-tabs { grid-column: 2; grid-row: 1; }
+html body.tt-skin #mainGrid > #stage { grid-column: 1; grid-row: 2 / 4; }
+html body.tt-skin #mainGrid > #tt-pane { grid-column: 2; grid-row: 2 / 4; }
+html body.tt-skin[data-tt-tab="room"]:not([data-tt-sub="front"]) #mainGrid > #tt-pane { grid-row: 2; }
+
+/* the panel's pages: one at a time, by the tab (and the Room tab's page) */
+html body.tt-skin #mainGrid #minimodeoptions,
+html body.tt-skin #mainGrid #sidepanel-tabs,
+html body.tt-skin #mainGrid #usersbox,
+html body.tt-skin #mainGrid #login,
+html body.tt-skin #mainGrid #queuebox,
+html body.tt-skin #mainGrid #actualChat,
+html body.tt-skin #mainGrid #thehistoryWrap,
+html body.tt-skin #mainGrid #cardsWrap,
+html body.tt-skin #mainGrid #discover,
+html body.tt-skin #mainGrid #tt-pane,
+html body.tt-skin #mainGrid #tt-qhead,
+html body.tt-skin #mainGrid .tt-guestNote { display: none; }
+
+html body.tt-skin #mainGrid #queuebox,
+html body.tt-skin #mainGrid #actualChat,
+html body.tt-skin #mainGrid .tt-guestNote { grid-column: 2; grid-row: 2 / 4; }
+html body.tt-skin #mainGrid #thehistoryWrap,
+html body.tt-skin #mainGrid #cardsWrap,
+html body.tt-skin #mainGrid #discover { grid-column: 2; grid-row: 3; }
+
+html body.tt-skin[data-tt-tab="queue"] #mainGrid #queuebox,
+html body.tt-skin[data-tt-tab="chat"] #mainGrid #actualChat,
+html body.tt-skin[data-tt-tab="room"] #mainGrid #tt-pane,
+html body.tt-skin[data-tt-tab="room"][data-tt-sub="recent"] #mainGrid #thehistoryWrap,
+html body.tt-skin[data-tt-tab="room"][data-tt-sub="fresh"] #mainGrid #discover { display: flex; }
+html body.tt-skin[data-tt-tab="room"][data-tt-sub="cards"] #mainGrid #cardsWrap { display: block; }
+/* visitors: no playlists or chat to show (the room's panels aren't in the page) */
+html body.tt-skin[data-tt-tab="queue"] #mainGrid:is(.login, .pre-auth) #tt-guest,
+html body.tt-skin[data-tt-tab="chat"] #mainGrid:is(.login, .pre-auth) #tt-guest { display: flex; }
+
+/* two sidebars (≥ 1024px): the Queue always on the left, Room · Chat on the right */
+@media only screen and (min-width: 1024px) {
+    html body.tt-skin[data-tt-layout="two"] #mainGrid,
+    html body.tt-skin[data-tt-layout="two"] #mainGrid.login {
+        grid-template-columns: var(--tt-side) minmax(0, 1fr) var(--tt-side);
+    }
+    html body.tt-skin[data-tt-layout="two"] #mainGrid > #tt-qhead { display: flex; grid-column: 1; grid-row: 1; }
+    html body.tt-skin[data-tt-layout="two"] #mainGrid > #topbar { grid-column: 2; }
+    html body.tt-skin[data-tt-layout="two"] #mainGrid > #stage { grid-column: 2; }
+    html body.tt-skin[data-tt-layout="two"] #mainGrid > :is(#tt-tabs, #tt-pane),
+    html body.tt-skin[data-tt-layout="two"] #mainGrid :is(#actualChat, #thehistoryWrap, #cardsWrap, #discover, #tt-guest) { grid-column: 3; }
+    html body.tt-skin[data-tt-layout="two"] #mainGrid #queuebox { display: flex; grid-column: 1; grid-row: 2 / 4; border-left: 0; border-right: 1px solid #111; }
+    html body.tt-skin[data-tt-layout="two"] #mainGrid:is(.login, .pre-auth) #tt-guestQ { display: flex; grid-column: 1; grid-row: 2 / 4; }
+    html body.tt-skin[data-tt-layout="two"] #tt-tabs { grid-template-columns: repeat(2, 1fr); }
+    html body.tt-skin[data-tt-layout="two"] #tt-tab-queue { display: none; }
+}
+#tt-qhead {
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    background: #262626;
+    border-bottom: 1px solid #111;
+    border-right: 1px solid #111;
+    color: var(--tt-gold);
+    font: 600 0.8rem/1 var(--font-family);
+    box-shadow: inset 0 -2px 0 var(--tt-gold);
+}
+#tt-qhead i { font-size: 1rem; }
+#tt-layout { display: none; }
+body.tt-skin #tt-layout { display: grid; place-items: center; flex: none; color: #bbb; }
+body.tt-skin #tt-layout:hover { color: #fff; }
+
+/* the side panel's look */
+html body.tt-skin #mainGrid :is(#queuebox, #actualChat, #thehistoryWrap, #cardsWrap, #discover, #tt-pane, .tt-guestNote) {
+    background: var(--tt-panel);
+    color: var(--tt-text);
+    border-left: 1px solid #111;
+    min-height: 0;
+    flex-direction: column;
+    margin: 0;
+    border-radius: 0;
+}
+
+/* ── The bar ──────────────────────────────────────────────────────────────── */
+html body.tt-skin #mainGrid > #topbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    align-self: stretch;
+    gap: 0.75rem;
+    height: 2.75rem;
+    padding: 0 0.75rem;
+    background: linear-gradient(#2f2f2f, #262626);
+    border-bottom: 1px solid #111;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+    z-index: 5;
+}
+body.tt-skin #roomlogo { width: 2.4rem; height: 1.6rem; margin: 0; flex: none; }
+body.tt-skin #themeSlot,
+body.tt-skin #socialTrigger,
+body.tt-skin #tip-socialTrigger { display: none; }
+body.tt-skin #topbar .flexpacer { display: none; }
+body.tt-skin #topbarUtils { gap: 0.15rem; flex: none; margin: 0; order: 2; }
+body.tt-skin #tt-layout { order: 3; }
+body.tt-skin #tt-exit { order: 4; }
+html body.tt-skin #topbar #modeTabs { order: 5; flex: none; margin: 0; width: auto; }
+body.tt-skin #topbarUtils .header_icon { color: #bbb; }
+body.tt-skin #topbarUtils .header_icon:hover { color: #fff; }
+body.tt-skin #modeTabs { margin: 0; flex: none; height: 100%; }
+body.tt-skin #modeTabs .tab { padding: 0 0.55rem; font-size: 0.72rem; min-height: 0; height: 100%; }
+
+#tt-brand { display: none; }
+body.tt-skin #tt-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1 1 auto;
+    min-width: 5rem;
+}
+.tt-roomname {
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    text-shadow: 0 1px 1px #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tt-socials { display: flex; gap: 0.5rem; }
+.tt-social { display: grid; place-items: center; color: #8d8d8d; }
+.tt-social:hover, .tt-social:focus-visible { color: #fff; }
+.tt-social svg { width: 1rem; height: 1rem; fill: currentColor; }
+
+#tt-exit { display: none; }
+body.tt-skin #tt-exit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: none;
+    height: 1.9rem;
+    padding: 0 0.7rem;
+    border: 1px solid var(--tt-gold);
+    border-radius: 0.3rem;
+    background: rgba(227, 191, 35, 0.08);
+    color: var(--tt-gold);
+    font: 600 0.8rem/1 var(--font-family);
+    cursor: pointer;
+}
+body.tt-skin #tt-exit:hover, body.tt-skin #tt-exit:focus-visible { background: var(--tt-gold); color: #1a1a1a; }
+body.tt-skin #tt-exit i { font-size: 1.05rem; }
+
+/* ── The panel's tabs ─────────────────────────────────────────────────────── */
+#tt-tabs { display: none; }
+body.tt-skin #tt-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: #262626;
+    border-bottom: 1px solid #111;
+    border-left: 1px solid #111;
+    z-index: 5;
+}
+.tt-tab {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    border: 0;
+    background: none;
+    color: var(--tt-muted);
+    font: 600 0.8rem/1 var(--font-family);
+    cursor: pointer;
+}
+.tt-tab i { font-size: 1rem; }
+.tt-tab:hover { color: #fff; background: #303030; }
+.tt-tab.on { color: var(--tt-gold); box-shadow: inset 0 -2px 0 var(--tt-gold); }
+.tt-badge {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.5rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--tt-gold);
+}
+
+/* ── The Room tab ─────────────────────────────────────────────────────────── */
+#tt-pane { display: none; }
+body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
+.tt-intro { padding: 0.9rem 1rem 0.6rem; border-bottom: 1px solid var(--tt-line); }
+.tt-welcome { margin: 0; color: var(--tt-muted); font-size: 0.8rem; }
+.tt-name { margin: 0.15rem 0 0; color: #fff; font-size: 1.15rem; font-weight: 700; }
+.tt-count2 { margin: 0.35rem 0 0; color: var(--tt-gold); font-size: 0.8rem; font-weight: 600; }
+.tt-about { padding: 0.6rem 1rem; border-bottom: 1px solid var(--tt-line); font-size: 0.82rem; line-height: 1.45; color: #cfcfcf; }
+.tt-about p { display: flex; gap: 0.5rem; margin: 0.4rem 0; }
+.tt-about i { font-size: 1rem; color: var(--tt-gold); flex: none; margin-top: 0.05rem; }
+.tt-about a { color: var(--tt-gold); }
+.tt-subnav { display: flex; flex-direction: column; padding: 0.5rem; gap: 0.4rem; }
+.tt-subitem, .tt-back {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: 2.6rem;
+    padding: 0 0.8rem;
+    border: 1px solid var(--tt-line);
+    border-radius: 0.35rem;
+    background: #303030;
+    color: var(--tt-text);
+    font: 500 0.85rem/1 var(--font-family);
+    text-align: left;
+    cursor: pointer;
+}
+.tt-subitem span { flex: 1; }
+.tt-subitem i:last-child { color: var(--tt-muted); }
+.tt-subitem:hover, .tt-subitem:focus-visible { background: #3a3a3a; border-color: #555; }
+.tt-back { border: 0; border-bottom: 1px solid var(--tt-line); border-radius: 0; background: #262626; font-weight: 700; }
+.tt-back:hover { color: var(--tt-gold); }
+
+.tt-people { padding-bottom: 0.5rem; }
+.tt-group {
+    margin: 0;
+    padding: 0.55rem 0.9rem 0.3rem;
+    color: var(--tt-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.tt-group span { color: #666; }
+.tt-people ul { list-style: none; margin: 0; padding: 0; }
+.tt-guest {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.3rem 0.9rem;
+    border: 0;
+    background: none;
+    color: var(--tt-text);
+    font: 600 0.85rem/1.2 var(--font-family);
+    text-align: left;
+    cursor: pointer;
+}
+.tt-guest:hover, .tt-guest:focus-visible { background: #343434; }
+.tt-guest.tt-idle { opacity: 0.55; }
+.tt-gname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-face, body.tt-skin .ft-avatar[data-tt]::after {
+    background: #1c1c1c var(--tt-face, none) no-repeat;
+    background-size: var(--tt-fsize, cover);
+    background-position: var(--tt-fpos, center);
+}
+.tt-face { flex: none; width: 1.75rem; height: 1.75rem; border-radius: 50%; box-shadow: 0 0 0 1px #444; }
+.tt-b { font-size: 0.95rem; color: var(--tt-muted); }
+.tt-bmod { color: #5fb760; }
+.tt-bawe { color: var(--tt-gold); }
+
+/* every face in this theme is a Turntable face: the Live one stays underneath, covered */
+body.tt-skin .ft-avatar[data-tt] { position: relative; overflow: hidden; }
+body.tt-skin .ft-avatar[data-tt]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+body.tt-skin .ft-avatar[data-tt=""]::after { background-image: none; }
+
+/* visitors' Queue and Chat */
+body.tt-skin #mainGrid .tt-guestNote { align-items: center; justify-content: center; gap: 0.75rem; padding: 2rem; text-align: center; color: #ccc; }
+
+/* the DJ playlist picker comes to the Queue tab */
+body.tt-skin #queuebox > #djlistpickerWrap {
+    flex: none;
+    height: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--tt-line);
+    background: #262626;
+    font-size: 0.8rem;
+}
+body.tt-skin #queuebox > #djlistpickerWrap select { flex: 1; min-width: 0; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.tt-yellow {
+    border: 1px solid #b08a12;
+    border-radius: 0.4rem;
+    background: linear-gradient(#f1cf3a, var(--tt-gold-2));
+    color: #2a2000;
+    font: 800 0.95rem/1.1 var(--font-family);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 2px 6px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+}
+.tt-yellow:hover, .tt-yellow:focus-visible { background: linear-gradient(#ffe066, #e5b522); }
+.tt-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid #4a4a4a;
+    border-radius: 0.4rem;
+    background: #2d2d2d;
+    color: #ddd;
+    font: 600 0.8rem/1 var(--font-family);
+    cursor: pointer;
+}
+.tt-ghost:hover, .tt-ghost:focus-visible { border-color: #777; color: #fff; }
+.tt-ghost i { font-size: 1.05rem; }
+
+/* ── The room ─────────────────────────────────────────────────────────────── */
+html body.tt-skin #mainGrid > #stage { display: block; position: relative; min-height: 0; overflow: hidden; width: auto; max-width: none; max-height: none; margin: 0; }
+html body.tt-skin #mainGrid #djStage {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    aspect-ratio: auto;
+    border-radius: 0;
+    background: #000;
+}
+body.tt-skin #nowplaying,
+body.tt-skin #prgbar,
+body.tt-skin #themebox,
+body.tt-skin #djStage > .lightrope,
+body.tt-skin #djStage > #deck,
+body.tt-skin #djStage > #ondeck,
+body.tt-skin #djStage > #stageBackdrop,
+body.tt-skin #djStage > #stageSnow,
+body.tt-skin #djStage > #stageActions,
+body.tt-skin #djStage > #stageTopRight,
+body.tt-skin #djStage > #ft-eq { display: none; }
+/* the room's fire is placed and shown inline by js/room.js: out of sight here (the meter and lights stand in for it) */
+body.tt-skin #djStage > #fyre { visibility: hidden; }
+
+#tt-room { display: none; }
+body.tt-skin #tt-room {
+    display: block;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+    background: radial-gradient(ellipse at 50% 30%, #17121a 0%, #050505 70%);
+    contain: strict;
+}
+/* the floor: its picture fades into the dark below, so there's no edge where it ends */
+.tt-floor {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: calc(var(--tt-y) + 560px * var(--tt-s));
+    background: linear-gradient(#131515 0, #101212 calc(260px * var(--tt-s)), #090909 70%, #050505);
+}
+.tt-floor::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(350px * var(--tt-s));
+    background: url(../img/tt/floor.webp) center top / max(100%, calc(1468px * var(--tt-s))) 100% no-repeat;
+    -webkit-mask: linear-gradient(#000 55%, transparent);
+    mask: linear-gradient(#000 55%, transparent);
+}
+.tt-canvas {
+    position: absolute;
+    left: var(--tt-x);
+    top: var(--tt-y);
+    width: 1468px;
+    height: 620px;
+    transform: scale(var(--tt-s));
+    transform-origin: 0 0;
+}
+.tt-canvas > * { position: absolute; }
+.tt-curtain { left: 389px; top: 110px; width: 690px; height: 395px; background: url(../img/tt/curtain.webp); }
+.tt-beams {
+    left: 384px;
+    top: 0;
+    width: 699px;
+    height: 601px;
+    background: url(../img/tt/lights0Add.webp);
+    mix-blend-mode: screen;
+    opacity: 0.25;
+    transition: opacity 1.2s ease;
+}
+#tt-room.tt-lit .tt-beams { opacity: 1; animation: tt-sweep 2.4s ease-in-out infinite alternate; }
+.tt-stageart { left: 0; top: 0; width: 1468px; height: 620px; background: url(../img/tt/stage.webp); }
+.tt-bulbs {
+    left: 0;
+    top: 0;
+    width: 1468px;
+    height: 574px;
+    background: url(../img/tt/lights2Normal.webp);
+    opacity: 0;
+    transition: opacity 0.8s ease;
+}
+#tt-room.tt-lit .tt-bulbs { opacity: 1; animation: tt-twinkle 0.6s steps(2) infinite; }
+
+/* the screens: the room's video on the left (#screenBox, below), the song's art on the right */
+.tt-screen { top: 150px; width: 340px; height: 272px; }
+.tt-screen::after { content: ""; position: absolute; inset: 0; background: url(../img/tt/screen.webp) 0 0 / 100% 100%; }
+.tt-screenL { left: 46px; }
+.tt-screenR { left: 1082px; }
+.tt-screenart {
+    position: absolute;
+    left: 19px;
+    top: 29px;
+    width: 302px;
+    height: 239px;
+    background: #000 center / contain no-repeat;
+}
+html body.tt-skin:not(.pv-full-on) #mainGrid #screenBox {
+    inset: auto;
+    left: calc(var(--tt-x) + 65px * var(--tt-s));
+    top: calc(var(--tt-y) + 179px * var(--tt-s));
+    width: calc(302px * var(--tt-s));
+    height: calc(239px * var(--tt-s));
+    z-index: 1;
+    transform: none;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+}
+html body.tt-skin.screen:not(.yt-stalled):not(.pv-full-on):not(.pb-elsewhere) #mainGrid #screenBox { opacity: 1; }
+html body.tt-skin:not(.pv-full-on) #mainGrid #screenFrame { width: 100%; height: 100%; max-width: none; aspect-ratio: auto; }
+body.tt-skin #screenover { display: none; }
+
+/* the theme, over the stage, as a speech bubble */
+.tt-theme {
+    left: 50%;
+    top: 56px;
+    max-width: 900px;
+    margin: 0;
+    padding: 10px 26px;
+    transform: translateX(-50%);
+    border-radius: 30px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font: 500 30px/1.2 var(--font-family);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    z-index: 3;
+}
+.tt-theme[hidden] { display: none; }
+.tt-theme i { font-size: 30px; color: #ddd; }
+
+/* the awesome meter */
+.tt-meter { left: 680px; top: 118px; width: 109px; height: 108px; background: url(../img/tt/dial.webp); }
+.tt-needle {
+    position: absolute;
+    left: 52px;
+    top: 14px;
+    width: 5px;
+    height: 41px;
+    background: url(../img/tt/needle.webp);
+    transform-origin: 50% 100%;
+    transform: rotate(var(--a, -58deg));
+    transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* the board: Storm, the songboard, Awesome */
+.tt-board { left: 469px; top: 178px; width: 529px; height: 140px; background: url(../img/tt/board.webp); }
+.tt-vote {
+    position: absolute;
+    top: 13px;
+    width: 64px;
+    height: 104px;
+    border: 0;
+    border-radius: 8px;
+    color: rgba(0, 0, 0, 0.55);
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px #000, 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 2px 0 rgba(255, 255, 255, 0.35);
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+}
+.tt-vote i { font-size: 40px; }
+.tt-storm { left: 8px; background: linear-gradient(#5a5a66, #2f2f39); color: rgba(255, 255, 255, 0.35); }
+.tt-storm:not(:disabled):hover { background: linear-gradient(#7d7d91, #44445a); color: #cfe3ff; }
+.tt-storm:disabled { cursor: default; opacity: 0.6; }
+.tt-awesome { right: 8px; background: linear-gradient(#6ec125, #42801a); }
+.tt-awesome:hover { background: linear-gradient(#9ae15e, #539c22); color: rgba(0, 0, 0, 0.7); }
+.tt-awesome.on { background: linear-gradient(#a6f05e, #5ab823); color: #fff; box-shadow: inset 0 0 0 1px #000, 0 0 24px rgba(140, 255, 70, 0.6), inset 0 1px 7px rgba(0, 0, 0, 0.5); }
+.tt-vote:active { box-shadow: inset 0 0 0 1px #000, inset 0 1px 7px 1px rgba(0, 0, 0, 0.8); }
+.tt-count {
+    position: absolute;
+    right: -6px;
+    top: -10px;
+    min-width: 30px;
+    padding: 3px 7px;
+    border-radius: 15px;
+    background: var(--tt-gold);
+    color: #2a2000;
+    font: 800 17px/1.2 var(--font-numbers);
+}
+.tt-songboard {
+    position: absolute;
+    left: 82px;
+    right: 82px;
+    top: 15px;
+    height: 98px;
+    overflow: hidden;
+    color: #ffd9c9;
+    text-shadow: 0 0 6px #ff2a1a, 0 0 2px #ff6a4a;
+    text-transform: uppercase;
+}
+/* LED dots: the letters seen through a grid of little holes */
+.tt-led {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: center;
+    -webkit-mask: radial-gradient(circle, #000 62%, transparent 68%) 0 0 / 3px 3px;
+    mask: radial-gradient(circle, #000 62%, transparent 68%) 0 0 / 3px 3px;
+}
+.tt-line1 { top: 4px; font: 900 40px/1.05 var(--font-family); letter-spacing: 1px; }
+.tt-line2 { top: 50px; font: 800 20px/1.1 var(--font-family); letter-spacing: 1px; }
+.tt-led.tt-marquee { text-align: left; }
+.tt-led.tt-marquee span { display: inline-block; animation: tt-marquee var(--len, 14s) linear infinite; }
+.tt-times { top: 76px; display: flex; align-items: center; gap: 10px; font: 700 16px/1 var(--font-numbers); }
+.tt-prog {
+    flex: 1;
+    height: 8px;
+    background: repeating-linear-gradient(90deg, rgba(255, 60, 40, 0.25) 0 4px, transparent 4px 6px);
+}
+.tt-prog i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(90deg, #ff6a4a 0 4px, transparent 4px 6px); transition: width 1s linear; }
+.tt-board:not(.tt-playing) .tt-times { visibility: hidden; }
+
+/* Grab and friends: on the songboard, when it's pointed at (as Turntable's did) */
+.tt-snag {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(8, 4, 6, 0.9);
+    text-shadow: none;
+    text-transform: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+.tt-board.tt-playing .tt-songboard:is(:hover, :focus-within, .tt-show) .tt-snag { opacity: 1; pointer-events: auto; }
+.tt-songboard { cursor: pointer; }
+.tt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 16px;
+    border: 1px solid #555;
+    border-radius: 20px;
+    background: rgba(20, 20, 20, 0.8);
+    color: #ddd;
+    font: 700 18px/1 var(--font-family);
+    cursor: pointer;
+}
+.tt-chip[hidden] { display: none; }
+.tt-chip i { font-size: 24px; }
+.tt-chip:hover, .tt-chip:focus-visible { border-color: #aaa; color: #fff; }
+.tt-chipIcon { padding: 0 8px; }
+#tt-grab i { color: #ff5aa5; }
+#tt-grab.on { border-color: #ff5aa5; }
+
+/* the DJs' table */
+.tt-djlight {
+    left: calc(554px + var(--i, 0) * 120px - 75px);
+    top: 300px;
+    width: 150px;
+    height: 210px;
+    background: url(../img/tt/dj-light.webp) center / 100% 100%;
+    mix-blend-mode: screen;
+    transition: left 0.6s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+.tt-djlight[hidden] { display: none; }
+/* no z-index: the table top goes between the DJs and their laptops */
+.tt-table { left: 0; top: 0; width: 1468px; height: 600px; pointer-events: none; }
+.tt-tabletop { left: 475px; top: 486px; width: 518px; height: 58px; background: url(../img/tt/dj-table.webp); z-index: 3; pointer-events: none; }
+.tt-seat {
+    position: absolute;
+    left: calc(554px + var(--i) * 120px);
+    top: 500px;
+    width: 0;
+    height: 0;
+}
+.tt-seat > * { pointer-events: auto; }
+.tt-dj { left: 0; top: 0; z-index: 2; --d: 1.22; }
+.tt-seat > .tt-laptop { position: absolute; left: 0; top: -44px; width: 112px; height: 77px; transform: translateX(-50%); z-index: 4; }
+.tt-figwrap { display: block; }
+.tt-plate {
+    position: absolute;
+    left: 50%;
+    top: 52px;
+    transform: translateX(-50%);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3px 12px;
+    border-radius: 14px;
+    background: rgba(10, 60, 90, 0.9);
+    color: #fff;
+    font: 700 22px/1.15 var(--font-family);
+    white-space: nowrap;
+    max-width: 200px;
+}
+.tt-plate b { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tt-plays { font: 600 15px/1.2 var(--font-numbers); color: #bfe3ff; }
+.tt-seat.tt-on .tt-plate { background: linear-gradient(#f1cf3a, var(--tt-gold-2)); color: #2a2000; }
+.tt-seat.tt-on .tt-plays { color: #4a3a00; }
+.tt-seatacts { position: absolute; left: 50%; top: 100px; transform: translateX(-50%); display: flex; gap: 6px; z-index: 6; opacity: 0; transition: opacity 0.2s; }
+.tt-seat:hover .tt-seatacts, .tt-seat:focus-within .tt-seatacts { opacity: 1; }
+.tt-mini {
+    padding: 5px 10px;
+    border: 1px solid #666;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    font: 700 14px/1 var(--font-family);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.tt-mini.armed { background: #a11; border-color: #f55; }
+.tt-empty { z-index: 4; }
+.tt-vinyl {
+    position: absolute;
+    left: -36px;
+    top: -8px;
+    width: 72px;
+    height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, #e3bf23 0 14%, #111 16% 60%, #2a2a2a 62% 100%);
+    box-shadow: 0 0 18px rgba(227, 191, 35, 0.45);
+    z-index: 4;
+}
+.tt-play {
+    position: absolute;
+    left: -62px;
+    top: -112px;
+    width: 124px;
+    padding: 14px 0;
+    font-size: 26px;
+    line-height: 1.05;
+    z-index: 5;
+    animation: tt-nudge 2.4s ease-in-out infinite;
+}
+
+/* ── People: standing on their feet, their head on their body ─────────────── */
+.tt-person {
+    position: absolute;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    transform: translate(-50%, -100%) scale(var(--d, 1));
+    transform-origin: 50% 100%;
+    transition: opacity 0.4s ease;
+}
+/* the site's own button looks stay off the figures (no box around anyone) */
+#tt-room .tt-person { width: max-content; height: auto; min-width: 0; min-height: 0; line-height: 0; background: none; border: 0; box-shadow: none; border-radius: 0; }
+.tt-person:focus-visible { outline: 3px solid var(--tt-gold); outline-offset: 2px; border-radius: 8px; }
+.tt-listener { top: calc(745px + var(--f, 0) * var(--tt-fh, 400px)); animation: tt-arrive 0.5s ease-out both; }
+.tt-listener.tt-leaving { opacity: 0; }
+.tt-listener.tt-idle { opacity: 0.55; }
+.tt-listener.tt-self::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    width: 70%;
+    height: 14px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(227, 191, 35, 0.55), transparent 70%);
+    z-index: -1;
+}
+.tt-fig { position: relative; display: block; width: var(--w); height: var(--h); }
+.tt-fig > span {
+    position: absolute;
+    background-image: var(--img);
+    background-size: var(--sw) var(--sh);
+    background-repeat: no-repeat;
+}
+.tt-head { transform-origin: 50% 88%; z-index: 1; }
+.tt-whole { transform-origin: 50% 100%; }
+.tt-crowd { left: 0; top: 0; width: 1468px; height: 620px; z-index: 4; pointer-events: none; }
+.tt-crowd > * { pointer-events: auto; }
+.tt-more {
+    left: 50%;
+    top: calc(745px + var(--tt-fh, 400px) + 4px);
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 6px 14px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #ddd;
+    font: 600 20px/1 var(--font-family);
+    z-index: 1100;
+}
+.tt-more[hidden] { display: none; }
+
+/* Turntable's moves (the timings of its rock, smallrock and bob) */
+.tt-listener.tt-fired .tt-head { animation: tt-rock 1.2s linear infinite; animation-delay: inherit; }
+.tt-listener.tt-fired .tt-whole { animation: tt-sway 1.2s linear infinite; animation-delay: inherit; }
+.tt-seat.tt-on .tt-head, .tt-seat.tt-fired .tt-head { animation: tt-smallrock 1.2s linear infinite; }
+.tt-seat.tt-on .tt-whole, .tt-seat.tt-fired .tt-whole { animation: tt-smallsway 1.2s linear infinite; }
+#tt-room.tt-dance .tt-person .tt-fig { animation: tt-bob 0.6s linear infinite; }
+#tt-room.tt-dance .tt-listener .tt-head { animation: tt-rock 1.2s linear infinite; }
+
+@keyframes tt-rock {
+    0%, 41.7%, 50%, 91.7%, 100% { transform: none; }
+    8.3% { transform: translate(3px, 1px) rotate(10deg); }
+    16.7%, 25% { transform: translate(6px, 3px) rotate(10deg); }
+    33.3% { transform: translate(3px, 1px); }
+    58.3% { transform: translate(-3px, 1px) rotate(-10deg); }
+    66.7%, 75% { transform: translate(-6px, 3px) rotate(-10deg); }
+    83.3% { transform: translate(-3px, 1px); }
+}
+@keyframes tt-smallrock {
+    0%, 41.7%, 50%, 91.7%, 100% { transform: none; }
+    8.3% { transform: translate(2px, 1px) rotate(6deg); }
+    16.7%, 25% { transform: translate(4px, 2px) rotate(6deg); }
+    33.3% { transform: translate(2px, 1px); }
+    58.3% { transform: translate(-2px, 1px) rotate(-6deg); }
+    66.7%, 75% { transform: translate(-4px, 2px) rotate(-6deg); }
+    83.3% { transform: translate(-2px, 1px); }
+}
+@keyframes tt-sway {
+    0%, 50%, 100% { transform: none; }
+    20%, 30% { transform: rotate(4deg); }
+    70%, 80% { transform: rotate(-4deg); }
+}
+@keyframes tt-smallsway {
+    0%, 50%, 100% { transform: none; }
+    20%, 30% { transform: rotate(2.5deg); }
+    70%, 80% { transform: rotate(-2.5deg); }
+}
+@keyframes tt-bob { 0%, 83%, 100% { transform: none; } 33%, 50% { transform: translateY(7px); } }
+@keyframes tt-arrive { from { opacity: 0; translate: 0 12px; } }
+@keyframes tt-sweep { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(40deg) brightness(1.15); } }
+@keyframes tt-twinkle { 50% { opacity: 0.7; } }
+@keyframes tt-marquee { to { transform: translateX(-50%); } }
+@keyframes tt-nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+/* ── Laptops and their stickers ───────────────────────────────────────────── */
+.tt-laptop {
+    --lid: linear-gradient(160deg, #f4f4f6, #c9cacf 60%, #b3b4ba);
+    --edge: #8e8f96;
+    display: block;
+    width: 96px;
+    height: 66px;
+    pointer-events: none;
+}
+.tt-laptop[data-lid="black"] { --lid: linear-gradient(160deg, #4a4a50, #1f1f24 60%, #141418); --edge: #000; }
+.tt-laptop[data-lid="white"] { --lid: linear-gradient(160deg, #fff, #ececef 60%, #dcdce0); --edge: #b9b9bf; }
+.tt-laptop[data-lid="gold"] { --lid: linear-gradient(160deg, #ffe7a3, #e3bf23 55%, #b68a10); --edge: #8a6a08; }
+.tt-laptop[data-lid="pink"] { --lid: linear-gradient(160deg, #ffd1e8, #ff86be 60%, #e0609e); --edge: #b84a7f; }
+.tt-laptop[data-lid="teal"] { --lid: linear-gradient(160deg, #b6fff2, #2fc8b0 60%, #1d9a87); --edge: #157263; }
+.tt-laptop[data-lid="purple"] { --lid: linear-gradient(160deg, #e2c9ff, #9a5cf0 60%, #7438c9); --edge: #5a2aa0; }
+.tt-lid {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 9% / 12%;
+    background: var(--lid);
+    box-shadow: inset 0 0 0 1.5px var(--edge), inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 -1px #6e6f75, 0 8px 10px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+.tt-sticker {
+    position: absolute;
+    width: 30%;
+    height: auto;
+    min-width: 0;
+    aspect-ratio: 1;
+    background-repeat: no-repeat;
+    padding: 0;
+    border: 0;
+    background: center / contain no-repeat;
+    transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(var(--s, 1));
+    filter: drop-shadow(0 1px 0.5px rgba(0, 0, 0, 0.35));
+}
+
+/* ── The avatar picker and the sticker builder ────────────────────────────── */
+#tt-picker::backdrop, #tt-laptopEdit::backdrop { background: rgba(0, 0, 0, 0.65); }
+.tt-modal {
+    width: min(33rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    border-radius: 0.6rem;
+    background: #2b2b2b;
+    color: var(--tt-text);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+    overflow: auto;
+    overscroll-behavior: contain;
+    font-family: var(--font-family);
+}
+.tt-lapModal { width: min(52rem, calc(100vw - 2rem)); }
+.tt-pickHead {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.6rem;
+    background: linear-gradient(#f1cf3a, var(--tt-gold-2));
+    color: #2a2000;
+    z-index: 1;
+}
+.tt-pickHead h2 { margin: 0; font-size: 0.95rem; font-weight: 800; }
+.tt-pickClose {
+    position: absolute;
+    left: 0.6rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: #2a2000;
+    cursor: pointer;
+}
+.tt-pickClose[hidden] { display: none; }
+.tt-pickClose i { font-size: 1.1rem; }
+.tt-pickBody { padding: 1rem 1.25rem 1.25rem; }
+.tt-pickHello { margin: 0 0 0.9rem; text-align: center; font-size: 0.95rem; color: #ddd; }
+.tt-pickHello b { color: #fff; }
+.tt-pickTiers { display: flex; justify-content: center; gap: 0.4rem; margin-bottom: 0.75rem; }
+.tt-pickTier {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #4a4a4a;
+    border-radius: 1rem;
+    background: #333;
+    color: #ccc;
+    font: 700 0.8rem/1 var(--font-family);
+    cursor: pointer;
+}
+.tt-pickTier.on { border-color: var(--tt-gold); color: var(--tt-gold); }
+.tt-pickGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; min-height: 20rem; }
+.tt-pickCell {
+    width: 100%;
+    height: auto;
+    min-width: 0;
+    display: grid;
+    place-items: end center;
+    aspect-ratio: 100 / 128;
+    padding: 0.25rem;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    background: radial-gradient(ellipse at 50% 85%, #3d3d3d, #2b2b2b 70%);
+    cursor: pointer;
+}
+.tt-pickCell:hover, .tt-pickCell:focus-visible { border-color: #777; outline: none; background: radial-gradient(ellipse at 50% 85%, #4a4a4a, #2f2f2f 70%); }
+.tt-pickCell[aria-selected="true"] { border-color: var(--tt-gold); box-shadow: 0 0 14px rgba(227, 191, 35, 0.35); }
+.tt-pickFig {
+    width: 100%;
+    height: 100%;
+    background-size: 1600% 100%;
+    background-repeat: no-repeat;
+    transition: transform 0.15s ease;
+}
+.tt-pickCell:hover .tt-pickFig, .tt-pickCell:focus-visible .tt-pickFig { transform: translateY(-3px) scale(1.06); }
+.tt-pickNav { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.9rem; }
+.tt-pickArrow {
+    width: 2.6rem;
+    height: 2.6rem;
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: none;
+    color: var(--tt-gold);
+    cursor: pointer;
+}
+.tt-pickArrow i { font-size: 2.6rem; font-weight: 700; }
+.tt-pickArrow:disabled { color: #555; cursor: default; }
+.tt-pickDots { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.15rem; }
+.tt-dot { width: 1rem; height: 1rem; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+.tt-dot::before { content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: #666; }
+.tt-dot.on::before { background: var(--tt-gold); }
+.tt-pickFoot { display: flex; justify-content: space-between; margin-top: 1rem; }
+
+.tt-lapBody { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.25rem; padding: 1.25rem; }
+.tt-lapStage { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+.tt-lapBig { width: 100%; max-width: 26rem; height: auto; aspect-ratio: 96 / 66; pointer-events: auto; }
+.tt-lapBig .tt-lid { touch-action: none; }
+.tt-lapBig .tt-sticker { cursor: grab; }
+.tt-lapBig .tt-sticker:active { cursor: grabbing; }
+.tt-lapBig .tt-sticker.on, .tt-lapBig .tt-sticker:focus-visible { outline: 2px dashed var(--tt-gold); outline-offset: 2px; }
+.tt-lapTools { display: flex; gap: 0.3rem; }
+.tt-lapTools button {
+    width: 2.3rem;
+    height: 2.3rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid #4a4a4a;
+    border-radius: 0.4rem;
+    background: #333;
+    color: #ddd;
+    cursor: pointer;
+}
+.tt-lapTools button:disabled { opacity: 0.35; cursor: default; }
+.tt-lapHint { margin: 0; color: var(--tt-muted); font-size: 0.78rem; text-align: center; }
+.tt-lapSide h3 { margin: 0 0 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tt-muted); }
+.tt-lapSide h3 span { color: #777; text-transform: none; letter-spacing: 0; }
+.tt-lids { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+.tt-lidPick {
+    width: 2rem;
+    height: 1.4rem;
+    border: 2px solid transparent;
+    border-radius: 0.3rem;
+    background: linear-gradient(160deg, #f4f4f6, #b3b4ba);
+    cursor: pointer;
+}
+.tt-lidPick[data-lid="black"] { background: linear-gradient(160deg, #4a4a50, #141418); }
+.tt-lidPick[data-lid="white"] { background: linear-gradient(160deg, #fff, #dcdce0); }
+.tt-lidPick[data-lid="gold"] { background: linear-gradient(160deg, #ffe7a3, #b68a10); }
+.tt-lidPick[data-lid="pink"] { background: linear-gradient(160deg, #ffd1e8, #e0609e); }
+.tt-lidPick[data-lid="teal"] { background: linear-gradient(160deg, #b6fff2, #1d9a87); }
+.tt-lidPick[data-lid="purple"] { background: linear-gradient(160deg, #e2c9ff, #7438c9); }
+.tt-lidPick[aria-checked="true"] { border-color: var(--tt-gold); box-shadow: 0 0 0 2px #2b2b2b inset; }
+.tt-palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr)); gap: 0.3rem; max-height: 17rem; overflow-y: auto; padding-right: 0.2rem; }
+.tt-palItem {
+    display: grid;
+    aspect-ratio: 1;
+    min-width: 0;
+    height: auto;
+    padding: 0.3rem;
+    border: 1px solid #3d3d3d;
+    border-radius: 0.4rem;
+    background: #333;
+    cursor: pointer;
+}
+.tt-palItem span { display: block; width: 100%; aspect-ratio: 1; background-repeat: no-repeat; }
+.tt-palItem:hover, .tt-palItem:focus-visible { border-color: var(--tt-gold); background-color: #3a3a3a; }
+.tt-lapFoot { display: flex; align-items: center; gap: 0.5rem; padding: 0 1.25rem 1.25rem; }
+.tt-lapFoot .flexpacer { flex: 1; }
+
+/* ── Phones: the room on top, the panel's tabs, then the panel ────────────── */
+@media only screen and (max-width: 639px) {
+    html body.tt-skin #mainGrid,
+    html body.tt-skin #mainGrid.login {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: 2.75rem min(44vh, 24rem) 2.6rem minmax(0, 1fr);
+    }
+    html body.tt-skin #mainGrid > #topbar { grid-column: 1; grid-row: 1; }
+    html body.tt-skin #mainGrid > #stage { grid-column: 1; grid-row: 2; }
+    html body.tt-skin #mainGrid > #tt-tabs { grid-column: 1; grid-row: 3; }
+    html body.tt-skin #mainGrid > #tt-pane,
+    html body.tt-skin[data-tt-tab="room"]:not([data-tt-sub="front"]) #mainGrid > #tt-pane { grid-column: 1; grid-row: 4; }
+    html body.tt-skin #mainGrid :is(#queuebox, #actualChat, #thehistoryWrap, #cardsWrap, #discover, .tt-guestNote) { grid-column: 1; grid-row: 4; }
+    body.tt-skin #tt-layout { display: none; }
+    html body.tt-skin[data-tt-tab="room"]:not([data-tt-sub="front"]) #mainGrid > #tt-pane { align-self: start; z-index: 1; }
+    html body.tt-skin[data-tt-tab="room"]:not([data-tt-sub="front"]) #mainGrid :is(#thehistoryWrap, #cardsWrap, #discover) { margin-top: 2.6rem; }
+    body.tt-skin #tt-brand .tt-socials,
+    body.tt-skin #modeTabs { display: none; }
+    body.tt-skin #tt-exit span { display: none; }
+    .tt-lapBody { grid-template-columns: 1fr; }
+    .tt-pickGrid { min-height: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.tt-skin #tt-room *,
+    body.tt-skin #tt-room *::after { animation: none !important; transition: none !important; }
+}

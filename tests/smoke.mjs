@@ -1077,6 +1077,109 @@ try {
   check(fires.none === "hidden|Fire!" && fires.one === "1|Fire! (1 so far)" && fires.two === "2|Fire! (2 so far)" && fires.off === "1|Fire! (1 so far)" && fires.otherSong === "1|Fire! (1 so far)" && fires.reset === "hidden|Fire!",
     "Fire shows how many fires this song has, one per person, and starts again at none (" + JSON.stringify(fires) + ")");
 
+  console.log("-- the Turntable theme: /turntable in chat, a required avatar pick, Awesome is Fire, Back to Live leaves the music alone");
+  const tt = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn, ms = 8000) => { for (let t = 0; t < ms; t += 100) { if (fn()) return true; await wait(100); } return false; };
+    const out = {};
+    location.hash = "#live";
+    await wait(300);
+    // as a member (this page is a visitor's): the room's panels in, someone signed in
+    const shellWasIn = !!document.getElementById("appShell"), loginWas = $("#mainGrid").hasClass("login");
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login");
+    const realUid = ftapi.uid;
+    ftapi.uid = "smoke";
+    const hadSmoke = ftapi.users.smoke ? Object.assign({}, ftapi.users.smoke) : null;
+    ftapi.users.smoke = ftapi.users.smoke || { username: "smoke", status: true };
+    ftapi.events.emit("usersChanged", ftapi.users);
+    await wait(200);
+    localStorage.removeItem("firetableTurntableAvatar");
+    delete ftapi.users.smoke.ttAvatar;
+    out.cssBefore = { disabled: document.getElementById("tt-css").disabled, fetched: performance.getEntriesByType("resource").some((e) => /ttskin\.css/.test(e.name)) };
+    const player = document.getElementById("playerArea"), src = player.getAttribute("src");
+    ftapi.events.emit("newChat", { chatID: "smktt" + Date.now(), feedID: "f", id: "dj1", name: "dj1", txt: "tt test", time: Date.now() });
+    await wait(200);
+    const chatFace = document.querySelector("#chats .ft-avatar[data-avatar-uid]");
+    const liveFace = chatFace && chatFace.style.backgroundImage;
+    // the easter egg: typed in chat
+    const box = document.getElementById("newchat");
+    box.value = "/turntable";
+    box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    out.on = await until(() => document.body.classList.contains("tt-skin") && firetable.tt.isOn() && document.querySelector("#tt-table .tt-seat"));
+    const room = document.getElementById("tt-room").getBoundingClientRect();
+    out.room = room.width > 300 && room.height > 200;
+    out.picker = await until(() => document.getElementById("tt-picker").open && document.querySelectorAll("#tt-pickGrid .tt-pickCell").length === 16);
+    out.required = document.getElementById("tt-pickClose").hidden;
+    const pick = document.querySelectorAll("#tt-pickGrid .tt-pickCell")[3].dataset.av;
+    document.querySelectorAll("#tt-pickGrid .tt-pickCell")[3].click();
+    out.chosen = !document.getElementById("tt-picker").open && localStorage.getItem("firetableTurntableAvatar") === pick;
+    await wait(300);
+    out.seats = document.querySelectorAll("#tt-table .tt-seat").length;
+    out.dj = !!document.querySelector("#tt-table .tt-dj .tt-fig[data-av]");
+    out.crowd = document.querySelectorAll("#tt-crowd .tt-listener .tt-fig[data-av]").length;
+    out.screen = player.isConnected && document.getElementById("playerArea") === player && player.getAttribute("src") === src;
+    // every face here is a Turntable one
+    const faces = [...document.querySelectorAll("#chats .ft-avatar[data-avatar-uid]")];
+    out.faces = faces.length > 0 && faces.every((el) => el.dataset.tt && getComputedStyle(el, "::after").content !== "none");
+    out.faceInfo = faces.length + ":" + faces.filter((el) => el.dataset.tt).length + ":" + document.querySelectorAll("#chats .ft-avatar").length;
+    out.menu = !document.getElementById("nav-ttAvatar").hidden && !document.getElementById("nav-ttLaptop").hidden;
+    // Awesome is Fire; Storm takes it back (never below none)
+    const count = () => firetable.fireCount || 0;
+    const start = count();
+    const at = firetable.song.started;
+    const realSend = firetable.actions.sendReaction; // sent to this page, not the database
+    firetable.actions.sendReaction = (txt) => firetable.actions.processFireReactionMessage({ id: ftapi.uid, txt: txt, time: Date.now(), forSong: at });
+    document.getElementById("tt-awesome").click();
+    await wait(100);
+    out.awesome = count() === start + 1 && document.getElementById("tt-awesome").classList.contains("on");
+    document.getElementById("tt-storm").click();
+    await wait(100);
+    out.storm = count() === start && !document.getElementById("tt-awesome").classList.contains("on");
+    document.getElementById("tt-storm").click();
+    await wait(100);
+    out.never = count() === start;
+    firetable.actions.sendReaction = realSend;
+    // the sticker builder
+    document.getElementById("nav-ttLaptop").click();
+    out.laptop = document.getElementById("tt-laptopEdit").open;
+    document.querySelector('#tt-laptopEdit [data-add="heart"]').click();
+    document.querySelector('#tt-laptopEdit [data-lid="teal"]').click();
+    document.querySelector('#tt-laptopEdit [data-lap="save"]').click();
+    out.stickers = localStorage.getItem("firetableTurntableLaptop") || "";
+    // one sidebar or two
+    document.getElementById("tt-layout").click();
+    const lay1 = document.body.getAttribute("data-tt-layout");
+    document.getElementById("tt-layout").click();
+    out.layout = lay1 !== document.body.getAttribute("data-tt-layout");
+    // and back
+    document.getElementById("tt-exit").click();
+    await wait(300);
+    out.off = !document.body.classList.contains("tt-skin") && getComputedStyle(document.getElementById("tt-room")).display === "none" &&
+      document.getElementById("djlistpickerWrap").closest("#themebox") !== null && localStorage.getItem("firetableTurntable") === null;
+    out.after = document.getElementById("playerArea") === player && player.getAttribute("src") === src;
+    out.liveFace = !chatFace || chatFace.style.backgroundImage === liveFace;
+    out.noTtFaceInLive = !chatFace || getComputedStyle(chatFace, "::after").content === "none" || getComputedStyle(chatFace, "::after").backgroundImage === "none";
+    out.join = document.getElementById("joinBox").open; // nothing asked a member to sign in
+    ftapi.uid = realUid;
+    if (hadSmoke) ftapi.users.smoke = hadSmoke; else delete ftapi.users.smoke;
+    ftapi.events.emit("usersChanged", ftapi.users);
+    if (!shellWasIn) firetable.$appShell = $("#appShell").detach();
+    $("#mainGrid").toggleClass("login", loginWas);
+    ["firetableTurntableAvatar", "firetableTurntableLaptop", "firetableTurntableLayout"].forEach((k) => localStorage.removeItem(k));
+    return out;
+  });
+  check(tt.cssBefore.disabled && !tt.cssBefore.fetched, "the theme's stylesheet isn't fetched until someone goes in (" + JSON.stringify(tt.cssBefore) + ")");
+  check(tt.on && tt.room, "/turntable in chat turns the Turntable theme on, and the room fills the stage");
+  check(tt.picker && tt.required && tt.chosen, "the first time in, an avatar is picked (every one unlocked), and kept");
+  check(tt.seats === 4 && tt.dj && tt.crowd > 0, "the DJs stand at their laptops and everyone else on the floor (" + tt.seats + " seats, " + tt.crowd + " on the floor)");
+  check(tt.screen && tt.after, "going in and out never touches the room's player (the same frame, the same video)");
+  check(tt.faces, "chat shows Turntable faces in the theme (" + tt.faceInfo + ")");
+  check(tt.awesome && tt.storm && tt.never && !tt.join, "Awesome is Fire, Storm takes it back, and nothing counts below none");
+  check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
+  check(tt.layout, "one sidebar or two");
+  check(tt.off && tt.liveFace && tt.noTtFaceInLive, "Back to Live: Live as it was, with Live's avatars");
+
   console.log("-- the stage's volume slider (a native range input)");
   const vol = await page.evaluate(async () => {
     const s = document.getElementById("slider");
@@ -1467,6 +1570,7 @@ try {
   await page.waitForFunction(() => firetable.waitlistData && ftapi.users && ftapi.users.boss, null, { timeout: 10000 }).catch(() => {});
   const wlCard = await page.evaluate(async () => {
     // the people panel is only in the page while signed in: put it back for this part
+    const shellWasIn = !!document.getElementById("appShell"), loginWas = $("#mainGrid").hasClass("login");
     if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
     $("#mainGrid").removeClass("login");
     const realUid = ftapi.uid;
