@@ -27,7 +27,7 @@ firetable.tt = (function () {
   var W = 1468; // the stage art's width: everything on it is placed in its units
   var FLOOR = 715; // where the floor's first row stands; the rest spread down to the bottom of the room
   var SEATS = 4; // the bot's deck
-  var BOT_AVATAR = "58", PAGE = 16;
+  var PAGE = 16;
   var TIERS = [{ id: "classic", label: "Classic" }, { id: "gold", label: "Gold" }, { id: "special", label: "Specials" }];
   // Laptop stickers: the room's own and Turntable's gold ones are one picture
   // (img/tt/stickers.webp, tools/tt-art.py: same names, same order); the rest
@@ -94,13 +94,17 @@ firetable.tt = (function () {
 
   /** Someone's avatar: what they picked, else one of the classics that stays theirs. */
   /**
-   * In this theme some accounts present as a character of their own: their
-   * name and avatar here (by username), whatever they picked. Live never shows it.
+   * In this theme the room's bot (the hostbot, jarvis) presents as a character
+   * of its own: #EVE, avatar 3, the redhead girl, whatever its name or pick.
+   * Live never shows it. Known by the hostbot flag, or by name while the bot is
+   * on deck but has dropped out of the room for a moment.
    */
-  var PERSONAS = { jarvis: { name: "#EVE", av: "3" } }; // #EVE: avatar 3, the redhead girl
+  var EVE = { name: "#EVE", av: "3" };
+  var BOT_NAMES = { jarvis: true };
   function personaOf(uid, name) {
     var u = ftapi.users && ftapi.users[uid];
-    return PERSONAS[String((u && u.username) || name || "").toLowerCase()] || null;
+    if (u ? u.hostbot : BOT_NAMES[String(name || "").toLowerCase()]) return EVE;
+    return null;
   }
   /** Who someone is in this theme: their persona's name, else their own. */
   function nameOf(uid, name) {
@@ -117,7 +121,6 @@ firetable.tt = (function () {
       if (mine) return mine;
     }
     if (u && validId(u.ttAvatar)) return u.ttAvatar;
-    if (u && u.hostbot && S.byId[BOT_AVATAR]) return BOT_AVATAR;
     var classic = S.tiers.classic || [];
     return classic.length ? classic[hash(String(uid || "guest")) % classic.length] : (S.list && S.list[0].id);
   }
