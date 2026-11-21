@@ -551,7 +551,6 @@ firetable.tt = (function () {
       el.dataset.name = name;
       el.classList.toggle("tt-fired", !!fired[u]);
       el.classList.toggle("tt-self", u === ftapi.uid);
-      el.classList.toggle("tt-idle", !!(users[u].idle && users[u].idle.isIdle));
     });
     Object.keys(existing).forEach(function (u) {
       var el = existing[u];
