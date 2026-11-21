@@ -40,6 +40,7 @@ firetable.tt = (function () {
 
   var S = {
     pref: false,       // on, on this device
+    cssReady: false,   // its stylesheet has arrived
     active: false,     // drawn now (on, and in Live)
     built: false,
     tab: "room",       // queue | room | chat
@@ -971,14 +972,23 @@ firetable.tt = (function () {
     if (want === S.active) return;
     S.active = want;
     if (want) {
-      // the theme's stylesheet is in the page but switched off (not even
-      // downloaded) until someone first comes in; nothing shows until it's here
-      var css = $id("tt-css");
-      if (css && css.disabled && !css.sheet) {
+      // the theme's stylesheet isn't in the page until someone first comes in
+      // (so nobody else downloads it); nothing shows until it's here
+      if (!S.cssReady) {
         S.active = false;
-        css.addEventListener("load", function () { apply(); }, { once: true });
-        css.addEventListener("error", function () { firetable.ui.toast("The Turntable theme didn't load. Try again in a moment.", "error"); }, { once: true });
-        css.disabled = false;
+        if (!$id("tt-css")) {
+          var meta = document.querySelector('meta[name="tt-css"]');
+          var css = document.createElement("link");
+          css.rel = "stylesheet";
+          css.id = "tt-css";
+          css.href = meta ? meta.content : "css/ttskin.css";
+          css.addEventListener("load", function () { S.cssReady = true; apply(); });
+          css.addEventListener("error", function () {
+            css.remove();
+            firetable.ui.toast("The Turntable theme didn't load. Try again in a moment.", "error");
+          });
+          document.head.appendChild(css);
+        }
         return;
       }
       build();

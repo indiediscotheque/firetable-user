@@ -1096,7 +1096,7 @@ try {
     await wait(200);
     localStorage.removeItem("firetableTurntableAvatar");
     delete ftapi.users.smoke.ttAvatar;
-    out.cssBefore = { disabled: document.getElementById("tt-css").disabled, fetched: performance.getEntriesByType("resource").some((e) => /ttskin\.css/.test(e.name)) };
+    out.cssBefore = { inPage: !!document.getElementById("tt-css"), fetched: performance.getEntriesByType("resource").some((e) => /ttskin\.css|img\/tt\/|Doto-/.test(e.name)) };
     const player = document.getElementById("playerArea"), src = player.getAttribute("src");
     ftapi.events.emit("newChat", { chatID: "smktt" + Date.now(), feedID: "f", id: "dj1", name: "dj1", txt: "tt test", time: Date.now() });
     await wait(200);
@@ -1169,7 +1169,7 @@ try {
     ["firetableTurntableAvatar", "firetableTurntableLaptop", "firetableTurntableLayout"].forEach((k) => localStorage.removeItem(k));
     return out;
   });
-  check(tt.cssBefore.disabled && !tt.cssBefore.fetched, "the theme's stylesheet isn't fetched until someone goes in (" + JSON.stringify(tt.cssBefore) + ")");
+  check(!tt.cssBefore.inPage && !tt.cssBefore.fetched, "nothing of the theme (its stylesheet, pictures or font) is fetched until someone goes in (" + JSON.stringify(tt.cssBefore) + ")");
   check(tt.on && tt.room, "/turntable in chat turns the Turntable theme on, and the room fills the stage");
   check(tt.picker && tt.required && tt.chosen, "the first time in, an avatar is picked (every one unlocked), and kept");
   check(tt.seats === 4 && tt.dj && tt.crowd > 0, "the DJs stand at their laptops and everyone else on the floor (" + tt.seats + " seats, " + tt.crowd + " on the floor)");
