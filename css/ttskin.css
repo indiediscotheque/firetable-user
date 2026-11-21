@@ -310,7 +310,8 @@ body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
     cursor: pointer;
 }
 .tt-guest:hover, .tt-guest:focus-visible { background: #343434; }
-.tt-guest.tt-idle { opacity: 0.55; }
+/* only someone gone from the room (a DJ still on deck) dims, as in Live; idle people don't */
+.tt-guest.tt-gone { opacity: 0.66; }
 .tt-gname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tt-face, body.tt-skin .ft-avatar[data-tt]::after {
     background: #1c1c1c var(--tt-face, none) no-repeat;
@@ -682,6 +683,7 @@ body.tt-skin #screenover { display: none; }
 #tt-room .tt-dj { left: 0; top: 0; z-index: 2; transform: translate(-50%, calc(var(--chin, 62%) * -1)) scale(0.72); transform-origin: 50% var(--chin, 62%); }
 .tt-seat > .tt-laptop { position: absolute; left: -43px; top: 0; width: 86px; height: 60px; z-index: 4; pointer-events: auto; cursor: pointer; }
 .tt-seat.tt-menu .tt-plate { opacity: 1; }
+.tt-seat.tt-ghost .tt-dj { opacity: 0.66; }
 .tt-figwrap { display: block; }
 /* the DJ's name and plays, under the laptop: always for the one playing, the others when pointed at */
 .tt-plate {

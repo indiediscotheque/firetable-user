@@ -476,6 +476,8 @@ firetable.tt = (function () {
       seat.classList.toggle("tt-on", d.id === active);
       seat.classList.toggle("tt-fired", !!fired[d.id]);
       seat.classList.toggle("tt-self", d.id === ftapi.uid);
+      // on deck but gone from the room (Live's "ghost"): dimmed, as Live dims them
+      seat.classList.toggle("tt-ghost", !!(ftapi.users && typeof ftapi.users === "object" && !ftapi.users[d.id]));
       seat.querySelector(".tt-plays").textContent = d.plays + "/" + (firetable.playlimit || "∞");
     }
     // a DJ who left takes their menu with them
@@ -822,18 +824,22 @@ firetable.tt = (function () {
       else if (d.mod || d.supermod) groups.mods.push(u);
       else groups.audience.push(u);
     });
-    var name = function (u) { return String((users[u] && users[u].username) || "").toLowerCase(); };
+    // a DJ on deck but gone from the room is still listed with the DJs, dimmed (as Live's list)
+    var gone = {};
+    djs().forEach(function (d) { if (!users[d.id]) { gone[d.id] = { username: d.name }; groups.djs.push(d.id); } });
+    var who = function (u) { return users[u] || gone[u] || {}; };
+    var name = function (u) { return String(who(u).username || "").toLowerCase(); };
     var html = [["djs", "DJs"], ["mods", "Moderators"], ["bots", "Bots"], ["audience", "Audience"]].map(function (g) {
       var list = groups[g[0]];
       if (!list.length) return "";
       if (g[0] !== "djs") list.sort(function (a, b) { return name(a) < name(b) ? -1 : 1; });
       else list.sort(function (a, b) { return seats.indexOf(a) - seats.indexOf(b); });
       return '<h2 class="tt-group">' + g[1] + " <span>" + list.length + "</span></h2><ul>" + list.map(function (u) {
-        var d = users[u];
+        var d = who(u);
         var badges = (d.supermod ? ms("verified_user", "material-symbols-filled tt-b tt-bmod") : d.mod ? ms("shield", "material-symbols-filled tt-b tt-bmod") : "") +
           (d.hostbot ? ms("smart_toy", "material-symbols-filled tt-b") : "") +
           (firetable.fireReactors && firetable.fireReactors[u] ? ms("thumb_up", "material-symbols-filled tt-b tt-bawe") : "");
-        return '<li><button type="button" class="tt-guest' + (d.idle && d.idle.isIdle ? " tt-idle" : "") + '" data-uid="' + esc(u) + '">' +
+        return '<li><button type="button" class="tt-guest' + (gone[u] ? " tt-gone" : "") + '" data-uid="' + esc(u) + '">' +
           '<span class="tt-face" style="' + faceStyle(avatarOf(u)) + '"></span><span class="tt-gname">' + esc(d.username || "someone") + "</span>" + badges + "</button></li>";
       }).join("") + "</ul>";
     }).join("");
