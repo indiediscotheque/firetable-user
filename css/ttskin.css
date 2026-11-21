@@ -1068,7 +1068,8 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     html body.tt-skin #mainGrid,
     html body.tt-skin #mainGrid.login {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: 2.75rem min(44vh, 24rem) 2.6rem minmax(0, 1fr);
+        /* the stage across the width, and just enough floor for a few rows: the stage's height follows its width */
+        grid-template-rows: 2.75rem min(44vh, 66vw) 2.6rem minmax(0, 1fr);
     }
     html body.tt-skin #mainGrid > #topbar { grid-column: 1; grid-row: 1; }
     html body.tt-skin #mainGrid > #stage { grid-column: 1; grid-row: 2; }
