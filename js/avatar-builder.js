@@ -266,7 +266,9 @@
       if (ftapi.uid) known[ftapi.uid] = lastSeen[ftapi.uid] = active(u);
       Bouletmaton.forget("u" + ftapi.uid + "@");
       firetable.ui.fillBouletFace();
-      redrawSoon();
+      // only when yours shows: otherwise nothing on the page changes (and a
+      // redraw re-renders the people and the stage just after signing in)
+      if (firetable.myBouletOn && firetable.myBoulet && !firetable.avatarForced) redrawSoon();
       firetable.ui.promptBoulet();
     });
   };
