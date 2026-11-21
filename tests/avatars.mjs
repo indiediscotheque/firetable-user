@@ -18,8 +18,14 @@ import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { policy, config, serveSite, launchOptions, openPage, cachePictures, ROOT } from "./harness.mjs";
 
-const STYLES = ["robohash:set1", "robohash:set2", "robohash:set4", "dicebear:notionists", "dicebear:pixel-art", "bouletmaton"];
-const PEOPLE = [["dj1", "Deejay"], ["OiJ7rcoNaNdvk3KlFGUJx1Fqjer2", "rohn"], ["u42", "night_owl"], ["zZ9", "Bea"], ["abc", "x"], ["hat5", "Hats"]];
+// The room's styles (a supermod's pick), then October, when everyone is a monster
+const STYLES = ["robohash:set1", "robohash:set2", "robohash:set4", "dicebear:notionists", "dicebear:pixel-art", "bouletmaton", "october"];
+// Half the members built a Bouletmaton and switched it on (it shows whatever the
+// style, except in October); the rest are the room's style. Bouletmatons with
+// hats, long hair, the taller hand items and every choice at 1.
+const PEOPLE = [["dj1", "Deejay", "2.3.5.10.8.20.5.30.40.6.12.3.4.7.10.5.2.33.20"], ["OiJ7rcoNaNdvk3KlFGUJx1Fqjer2", "rohn"],
+  ["u42", "night_owl", "4.12.9.62.26.54.17.93.96.25.42.17.20.32.31.18.24.32.25"], ["zZ9", "Bea"],
+  ["abc", "x", "1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1"], ["hat5", "Hats", "3.7.2.40.15.33.9.60.80.24.30.10.15.20.19.12.10.5.11"]];
 
 // The places, with the site's classes and sizes. kind "circle" or "stage".
 const PLACES = [
@@ -112,11 +118,14 @@ const targets = () => page.$$("#__avtest .__cell .ft-avatar:not(.skel), #__avtes
 const sheet = [];
 for (const style of STYLES) {
   console.log("-- " + style);
-  await page.evaluate((s) => {
-    firetable.roomAvatarStyle = s;
-    document.documentElement.setAttribute("data-avatars", firetable.utilities.avatarKind(s));
-  }, style);
-  for (const [uid, name] of PEOPLE) {
+  await page.evaluate(([s, people]) => {
+    firetable.roomAvatarStyle = s === "october" ? "bouletmaton" : s;
+    firetable.avatarForced = s === "october" ? "robohash:set2" : null;
+    document.documentElement.setAttribute("data-avatars", firetable.utilities.avatarKind());
+    ftapi.users = {};
+    people.forEach(([uid, name, bm]) => { ftapi.users[uid] = bm ? { username: name, status: true, boulet: bm, bouletOn: true } : { username: name, status: true }; });
+  }, [style, PEOPLE]);
+  for (const [uid, name, bm] of PEOPLE) {
     // Draw each place empty, photograph it, then with the person's picture
     const handles = [];
     for (let i = 0; i < PLACES.length; i++) {
@@ -153,12 +162,15 @@ for (const style of STYLES) {
       const bg = e.style.backgroundImage; e.style.backgroundImage = "none"; void e.offsetWidth; e.style.backgroundImage = bg;
     }));
     await page.waitForTimeout(150);
+    const faces = await page.evaluate(() => [...document.querySelectorAll("#__avtest .__cell .ft-avatar, #__avtest .__cell .avtr")].map((e) => e.classList.contains("bm-face")));
+    const wantFace = !!bm && style !== "october";
+    if (faces.some((f) => f !== wantFace)) failures.push(style + " · " + name + ": " + (wantFace ? "not every place shows their Bouletmaton" : "a Bouletmaton where there shouldn't be one"));
     for (let i = 0; i < PLACES.length; i++) {
       const place = PLACES[i];
       const shot = await handles[i].screenshot();
-      if (uid === PEOPLE[0][0] || uid === PEOPLE[5][0]) sheet.push({ style, uid, place: place.name, png: shot.toString("base64") });
+      if (uid === PEOPLE[0][0] || uid === PEOPLE[1][0]) sheet.push({ style, uid, place: place.name, png: shot.toString("base64") });
       const m = await measure(page, shot, empty[i], place.kind);
-      const label = style + " · " + place.name + " · " + name;
+      const label = style + " · " + place.name + " · " + name + (bm && style !== "october" ? " (Bouletmaton)" : "");
       const r2 = (v) => Math.round(v * 100) / 100;
       const facts = "(cover " + r2(m.cover) + ", centre " + r2(m.cx) + "," + r2(m.cy) + ", box " + r2(m.left) + "-" + r2(m.right) + " × " + r2(m.top) + "-" + r2(m.bottom) + ")";
       if (place.kind === "circle") {
@@ -180,10 +192,10 @@ const embed = await context.newPage();
 embed.on("pageerror", (e) => failures.push("embed page error: " + e.message));
 await openPage(embed, site.SITE + "embed/stage/");
 await embed.waitForFunction(() => window.Bouletmaton && window.AVATAR_STYLES, null, { timeout: 30000 });
-for (const style of STYLES) {
-  const kind = await page.evaluate((s) => firetable.utilities.avatarKind(s), style);
-  for (const [uid, name] of PEOPLE.slice(0, 3)) {
-    const prep = (withPic) => embed.evaluate(([kind, style, uid, name, withPic]) => {
+for (const style of STYLES.filter((s) => s !== "october")) {
+  const kind = await page.evaluate((s) => firetable.utilities.avatarKind(s === "bouletmaton" ? "robohash:set1" : s), style);
+  for (const [uid, name, bm] of PEOPLE.slice(0, 3)) {
+    const prep = (withPic) => embed.evaluate(([kind, style, uid, name, bm, withPic]) => {
       document.documentElement.setAttribute("data-avatars", kind);
       let box = document.getElementById("__emb");
       if (!box) {
@@ -193,11 +205,12 @@ for (const style of STYLES) {
         box.innerHTML = '<div class="st-spot" style="position:relative"><span class="st-avtr" style="animation:none"></span></div><ul class="st-ondeck" style="position:static;translate:none"><li></li></ul>';
         document.body.appendChild(box);
       }
-      const url = style === "bouletmaton" ? Bouletmaton.url(uid, 512, null)
+      if (style === "bouletmaton") style = "robohash:set1";
+      const url = bm ? Bouletmaton.url(bm, 512)
         : style.indexOf("dicebear:") === 0 ? "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + name)
           : "https://indiediscotheque.com/robots/" + encodeURIComponent(uid + name) + ".png?size=240x240&set=" + style.slice(9);
       box.querySelectorAll(".st-avtr, li").forEach((e) => { e.style.backgroundImage = withPic ? 'url("' + url + '")' : "none"; });
-    }, [kind, style, uid, name, withPic]);
+    }, [kind, style, uid, name, bm, withPic]);
     await prep(false);
     await embed.waitForTimeout(50);
     const e0 = [await (await embed.$("#__emb .st-avtr")).screenshot(), await (await embed.$("#__emb li")).screenshot()];

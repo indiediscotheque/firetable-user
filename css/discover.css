@@ -440,7 +440,7 @@ section .d-chips a.d-chip {
     height: 7.5rem;
     border-radius: 50%;
 }
-html[data-avatars="robohash"] .d-bigrobot .ft-avatar { background-color: var(--color-bg-t1); }
+html[data-avatars="robohash"] .d-bigrobot .ft-avatar:not(.bm-face) { background-color: var(--color-bg-t1); }
 @media only screen and (max-width: 639px) {
     .d-pagehead { flex-direction: column; align-items: flex-start; gap: var(--pad3); }
     .d-pagetext h2 { font-size: 1.6rem; }
