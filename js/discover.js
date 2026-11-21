@@ -3668,6 +3668,11 @@ firetable.discover = (function () {
     m.setAttribute("role", "menu");
     m.hidden = true;
     document.body.appendChild(m);
+    // phones: the menu is a sheet from the bottom; a tap on the page around it only closes it (4.4)
+    var scrim = document.createElement("div");
+    scrim.id = "dMenuScrim";
+    scrim.setAttribute("aria-hidden", "true");
+    m.insertAdjacentElement("afterend", scrim);
     m.addEventListener("keydown", function (e) {
       var items = Array.prototype.slice.call(m.querySelectorAll("[role=menuitem]"));
       var at = items.indexOf(document.activeElement);

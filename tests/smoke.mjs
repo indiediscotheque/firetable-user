@@ -681,6 +681,20 @@ try {
     return { h: Math.round(row.getBoundingClientRect().height), off: Math.abs((a.x + a.width / 2) - (b.x + b.width / 2)) };
   });
   check(thumbRow.h >= 56 && thumbRow.off <= 1, "a phone's playlist rows are a thumb's height, the play button in the middle of the cover (" + JSON.stringify(thumbRow) + ")");
+  // 4.4: on a phone ⋮ opens as a sheet from the bottom, the whole width, with 48px rows over a dimmed page
+  await tPage.click('#mainqueue .pvbar[data-key="k4"] .row-more');
+  await tPage.waitForFunction(() => document.getElementById("trackMenuPopover").matches(":popover-open"), null, { timeout: 5000 }).catch(() => {});
+  await sleep(300);
+  const sheet = await tPage.evaluate(() => {
+    const m = document.getElementById("trackMenuPopover"), r = m.getBoundingClientRect();
+    const items = [...m.querySelectorAll('[role="menuitem"]')].filter((b) => b.offsetParent);
+    return { open: m.matches(":popover-open"), bottom: Math.round(innerHeight - r.bottom), left: Math.round(r.left), wide: Math.round(r.width) === innerWidth,
+      rows: items.length, tall: items.every((b) => b.getBoundingClientRect().height >= 47.5), dim: getComputedStyle(m, "::backdrop").backgroundColor };
+  });
+  if (process.env.SHOTS) await tPage.screenshot({ path: process.env.SHOTS + "/phone-menu-sheet.png" });
+  await tPage.keyboard.press("Escape");
+  check(sheet.open && sheet.bottom === 0 && sheet.left === 0 && sheet.wide && sheet.rows >= 4 && sheet.tall && sheet.dim !== "rgba(0, 0, 0, 0)",
+    "on a phone ⋮ opens as a sheet from the bottom, the whole width, with 48px rows over a dimmed page (" + JSON.stringify(sheet) + ")");
   await touchPhone.close();
 
   console.log("-- playlist rows: number, Title · Artist, Next / Broken / Remix, and ⋮'s Delete and search for another");
@@ -734,6 +748,8 @@ try {
     const acts = (sel) => [...document.querySelectorAll(sel + " [data-act]")].map((b) => b.getAttribute("data-act")).join();
     const M = firetable.songMenu;
     const out = { crate: acts("#trackMenuPopover"), recent: acts("#histMenuPopover") };
+    // Recent's ⋮ sets the mods' items apart (4.4)
+    out.mods = [...document.querySelectorAll("#histMenuPopover .ft-menu > *")].map((el) => el.classList.contains("ft-menu-group") ? "|" + el.textContent + ":" : el.getAttribute("data-act") || "").filter(Boolean).join(",");
     // every shared item says the same thing wherever it is
     out.words = [...document.querySelectorAll("#trackMenuPopover [data-act], #histMenuPopover [data-act]")]
       .filter((b) => b.getAttribute("data-act") !== "open")
@@ -759,7 +775,7 @@ try {
     if (realClip) Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: realClip } });
     return out;
   });
-  check(oneMenu.crate === "sheet,add,open,copy,tags,swaptags,swap,bottom,delsearch,delete" && oneMenu.recent === "sheet,open,copy,tags,flag" && oneMenu.words,
+  check(oneMenu.crate === "sheet,add,open,copy,tags,swaptags,swap,bottom,delsearch,delete" && oneMenu.recent === "sheet,open,copy,tags,flag" && oneMenu.words && oneMenu.mods === "sheet,open,copy,|Mods:,tags,flag",
     "a playlist row's ⋮ and Recent's ⋮ come from the one song menu, in its order and words (" + JSON.stringify(oneMenu) + ")");
   check(oneMenu.copyShown && /^https:\/\/www\.youtube\.com\/watch\?v=finevideo01\|Link copied/.test(oneMenu.copied) && oneMenu.sheet === "Track|Fine",
     "a playlist row's ⋮: Copy the song's link, and About this song opens the song's sheet (" + JSON.stringify(oneMenu) + ")");

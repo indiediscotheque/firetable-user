@@ -429,7 +429,8 @@ Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what peop
 - **Rows:** CR-*.
 - **Change:** the switcher + Find tracks on one row; the tool row (filter, tune, sort, select, ⋮); rows of 56px with Top and ⋮; hold to drag (already: `dragSort`'s touch hold, since jQuery UI left); Undo toasts.
 
-### 4.4 Grab and More sheets
+### 4.4 Grab and More sheets ✅ shipped (November 21, 2026)
+- **Shipped:** Grab's toast with Change came with 1.6. On phones every ⋮ and ⋯ menu (a playlist row's, Recent's, the playlist's, Show only, Sort, the account menu, the mod and flag menus, Discover's song menu) opens as a short sheet from the bottom: the same items as on a computer, 48px rows, a handle, over a dimmed page that only closes it when tapped (`#dMenuScrim` for Discover's menu). Recent's ⋮ sets the mods' items apart under **Mods** (`firetable.songMenu.html(acts, {mods})`). Smoke checks the sheet's place, width and rows on a phone, and the Mods group.
 - **Change:** Grab's toast with Change; ⋯ as a short bottom sheet (the same menu as desktop, at 48px rows), with a separate Mods section.
 
 ### 4.5 The You tab: the account menu (November 20, 2026)
@@ -438,9 +439,9 @@ Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what peop
 - **Rows:** TB-03 to TB-06, SE-*, AU-07 to AU-09, MO-01.
 - **Change:** a page listing profile, settings, mentions, community links, install the app, about, privacy, terms, log out, and the Mod tab for mods. Reuses `#accountSettingsBox`'s contents (moved, not copied).
 
-### 4.6 The mini player ✅ mostly shipped with 2.3 and 2.3c
+### 4.6 The mini player ✅ shipped with 2.3, 2.3c and 4.1
 - **Change:** above the tab bar: the room (art with the DJ's avatar, "● Live · jarvis", Fire) or the Discover song (art, title, Grab, play/pause). Reuses `#dMini`.
-- **Shipped:** on phones `#dMini` is one row (the room or the Discover song, its source, play/pause) that opens the full-screen player, sitting above the tab bar (4.1). Left: Fire on it for the room.
+- **Shipped:** on phones `#dMini` is one row (the room or the Discover song, its source, play/pause) that opens the full-screen player, sitting above the tab bar (4.1), with the stage's Fire and Grab on it for the room (2.3c).
 
 ---
 

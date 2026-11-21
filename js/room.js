@@ -770,7 +770,7 @@ firetable.ui.setupRoomEvents = function () {
   // ── Narrow Recent rows (mods): ⋮ menu with About this song, Open, Copy the link, Edit tags, Flag ──
   var histMenuEl = document.getElementById('histMenuPopover');
   // its items come from the one song menu (firetable.songMenu, 2.8)
-  histMenuEl.querySelector('.ft-menu').innerHTML = firetable.songMenu.html(['sheet', 'open', 'copy', 'tags', 'flag']);
+  histMenuEl.querySelector('.ft-menu').innerHTML = firetable.songMenu.html(['sheet', 'open', 'copy', 'tags', 'flag'], { mods: ['tags', 'flag'] });
   var histMenuRow = null, histMenuBtn = null;
   $(document).on('click', '#thehistory .row-more', function () {
     var $p = $(this).closest('.pvbar');

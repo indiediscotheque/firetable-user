@@ -1148,19 +1148,30 @@ firetable.songMenu = {
    * "open" is a link whose label and logo the menu sets per song; "swap" and
    * "copy" start hidden, shown when the song has them.
    * @param {string[]} acts
+   * @param {{mods?: string[]}} [opts] - mods: items for mods only, set apart under "Mods" (4.4)
    * @returns {string} HTML
    */
-  html: function (acts) {
+  html: function (acts, opts) {
     var M = firetable.songMenu;
-    return M.sort(acts).map(function (act) {
+    var mods = (opts && opts.mods) || [];
+    var sorted = M.sort(acts);
+    var firstMod = sorted.filter(function (a) { return mods.indexOf(a) !== -1; })[0];
+    return sorted.map(function (act) {
       var it = M.ITEMS[act];
-      if (act === "open") {
-        return '<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><span class="ft-menu-open-logo" aria-hidden="true"></span> <span class="ft-menu-open-label">Open track</span></a>';
-      }
-      return '<button type="button" role="menuitem" class="butt graybutt' + (it.danger ? " ft-menu-danger" : "") + '" data-act="' + act + '"' +
-        (it.popup ? ' aria-haspopup="menu"' : "") + (act === "swap" || act === "copy" ? " hidden" : "") + ">" +
-        '<i class="material-symbols-outlined">' + it.icon + "</i> " + it.label + "</button>";
+      var head = act === firstMod && sorted[0] !== act
+        ? '<hr class="ft-menu-sep" /><div class="ft-menu-title ft-menu-group" role="presentation">Mods</div>' : "";
+      return head + M.item(act, it);
     }).join("");
+  },
+
+  /** One item of a song menu. */
+  item: function (act, it) {
+    if (act === "open") {
+      return '<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><span class="ft-menu-open-logo" aria-hidden="true"></span> <span class="ft-menu-open-label">Open track</span></a>';
+    }
+    return '<button type="button" role="menuitem" class="butt graybutt' + (it.danger ? " ft-menu-danger" : "") + '" data-act="' + act + '"' +
+      (it.popup ? ' aria-haspopup="menu"' : "") + (act === "swap" || act === "copy" ? " hidden" : "") + ">" +
+      '<i class="material-symbols-outlined">' + it.icon + "</i> " + it.label + "</button>";
   },
 
   /** Copy a song's link, saying so (or showing it where copying isn't allowed). */
