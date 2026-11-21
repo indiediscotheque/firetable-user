@@ -290,7 +290,12 @@ test("Bouletmaton: the code, everything at 1 to start, no made-up ones, and ever
         });
       }
     });
-    const there = await Promise.all(files.map((u) => fetch(u, { method: "HEAD" }).then((res) => res.ok)));
+    // in batches: thousands of requests at once overwhelm the test server on a CI runner
+    const head = (u) => fetch(u, { method: "HEAD" }).then((res) => res.ok);
+    const there = [];
+    for (let i = 0; i < files.length; i += 40) {
+      there.push(...await Promise.all(files.slice(i, i + 40).map((u) => head(u).catch(() => head(u)).catch(() => false))));
+    }
     return {
       parts: B.PARTS.map((p) => p.file + ":" + p.max + (p.blank ? "/" + p.blank : "") + (p.hide ? "/hide" : "")),
       first: B.FIRST, random: typeof B.random,
