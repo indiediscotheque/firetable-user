@@ -252,9 +252,102 @@ test("normalizeAvatarStyle and the seasonal default", async () => {
     firetable.utilities.normalizeAvatarStyle(""), firetable.utilities.normalizeAvatarStyle(null),
     firetable.utilities.seasonalAvatarStyle(new Date(2026, 9, 15)), firetable.utilities.seasonalAvatarStyle(new Date(2026, 4, 15))
   ]);
-  assert.deepEqual(r.slice(0, 4), ["robohash:set2", "dicebear:bottts", null, null]);
+  assert.deepEqual(r.slice(0, 4), ["robohash:set2", null, null, null]);
   assert.equal(r[4], "robohash:set2", "monsters in October");
   assert.equal(r[5], null);
+});
+
+test("the room's six avatar styles, robots by default", async () => {
+  const r = await run(() => ({
+    styles: AVATAR_STYLES.map((s) => s.value), def: DEFAULT_AVATAR_STYLE,
+    kept: AVATAR_STYLES.map((s) => firetable.utilities.normalizeAvatarStyle(s.value)),
+    gone: ["robohash:set3", "set3", "dicebear:bottts", "dicebear:adventurer", "https://x/y.png"].map(firetable.utilities.normalizeAvatarStyle),
+    kinds: AVATAR_STYLES.map((s) => firetable.utilities.avatarKind(s.value)),
+    menu: [...document.querySelectorAll("#mo-avatarStyle option")].map((o) => o.value),
+    // with no choice, no config and no season, the room is robots
+    fallback: firetable.utilities.avatarURL("u1", "Name", "40x40", "dicebear:bottts", true)
+  }));
+  assert.deepEqual(r.styles, ["robohash:set1", "robohash:set2", "robohash:set4", "dicebear:notionists", "dicebear:pixel-art", "bouletmaton"]);
+  assert.equal(r.def, "robohash:set1");
+  assert.deepEqual(r.kept, r.styles);
+  assert.deepEqual(r.gone, [null, null, null, null, null]);
+  assert.deepEqual(r.kinds, ["robohash", "robohash", "robohash", "notionists", "pixel-art", "bouletmaton"]);
+  assert.deepEqual(r.menu, [""].concat(r.styles), "Mod tools offers the room's default and the six");
+  assert.match(r.fallback, /set=set[12]$/, "a style the room no longer offers falls back to the room's");
+});
+
+test("Bouletmaton: codes, the one made from a uid (the bot's too), and the drawing", async () => {
+  const r = await run(async () => {
+    const B = Bouletmaton;
+    const ids = ["OiJ7rcoNaNdvk3KlFGUJx1Fqjer2", "dj1", "", "abc", "zZ9"];
+    const many = Array.from({ length: 300 }, (_, i) => B.random("u" + i));
+    const c = B.random("dj1");
+    const canvas = await B.draw(c, 256);
+    const g = canvas.getContext("2d").getImageData(0, 0, 256, 256).data;
+    let opaque = 0, corners = 0;
+    for (let i = 3; i < g.length; i += 4) if (g[i] > 0) opaque++;
+    [[0, 0], [255, 0]].forEach(([x, y]) => { corners += g[(y * 256 + x) * 4 + 3]; });
+    const layers = B.layers(c);
+    const loads = await Promise.all(layers.map((u) => fetch(u).then((res) => res.ok)));
+    // every part's every file is there
+    const files = [];
+    B.PARTS.forEach((p) => {
+      for (let v = p.min; v <= p.max; v++) {
+        const dir = p.dir === "skin" ? "skintone4" : p.dir === "hair" ? "haircolor12" : p.dir;
+        files.push(B.BASE + dir + "/" + p.file + v + ".png");
+      }
+    });
+    const there = await Promise.all(files.map((u) => fetch(u, { method: "HEAD" }).then((res) => res.ok)));
+    return {
+      made: ids.map(B.random), same: B.random("dj1") === B.random("dj1"),
+      allValid: many.every(B.isCode), distinct: new Set(many).size,
+      roundTrip: many.every((x) => B.encode(B.decode(x)) === x),
+      bad: ["", "5.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", "1.1.0.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", "1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", 42].map(B.isCode),
+      clamped: B.encode({ skin: 9, hair: 0, parts: { body: 999, hat: 0, head: -1 } }),
+      opaque: opaque / (256 * 256), corners, loads: loads.every(Boolean), layers: layers.length,
+      files: files.length, missing: files.filter((u, i) => !there[i]).slice(0, 3),
+      transparent: B.layers(c).every((u) => !/background/.test(u))
+    };
+  });
+  // the same uids give these codes in the bot (firetable-hostbot lib/avatars.js randomBoulet, its unit test)
+  assert.deepEqual(r.made, ["1.12.47.41.9.12.17.2.65.16.0.0.0.69.0.13.0.0", "1.2.25.14.10.0.37.32.14.32.0.0.0.0.4.0.15.0",
+    "3.6.26.4.4.0.24.15.54.27.0.0.0.2.13.0.5.3", "3.8.56.26.12.8.49.1.69.32.0.0.0.61.17.0.19.0", "3.11.46.26.6.3.57.29.63.11.11.0.3.69.7.0.0.0"]);
+  assert.ok(r.same && r.allValid && r.roundTrip);
+  assert.ok(r.distinct > 295, "made-up ones differ (" + r.distinct + " of 300)");
+  assert.deepEqual(r.bad, [false, false, false, false, false]);
+  assert.equal(r.clamped, "1.1.1.1.1.2.1.1.1.1.1.1.1.1.1.1.0.1", "out of range or left out: the first; 0 is none where a part can be left off");
+  assert.ok(r.loads && r.layers >= 8, "every layer loads (" + r.layers + ")");
+  assert.deepEqual(r.missing, [], "every part's files are in img/bouletmaton/ (" + r.files + ")");
+  assert.ok(r.opaque > 0.15 && r.opaque < 0.8, "it's drawn (" + r.opaque + ")");
+  assert.equal(r.corners, 0, "on a transparent background");
+});
+
+test("Bouletmaton: a stand-in at once, swapped for the picture wherever it was put", async () => {
+  const r = await run(async () => {
+    const was = firetable.roomAvatarStyle, users = ftapi.users;
+    firetable.roomAvatarStyle = "bouletmaton";
+    ftapi.users = Object.assign({}, users, { swapme: { username: "Name", status: true } }); // in the room, with none saved
+    const url = firetable.utilities.avatarURL("swapme", "Name", "40x40");
+    const el = document.createElement("span");
+    el.className = "ft-avatar";
+    el.style.backgroundImage = "url(" + url + ")";
+    document.body.appendChild(el);
+    const img = document.createElement("img");
+    img.src = firetable.utilities.avatarURL("swapme", "Name", "40x40");
+    document.body.appendChild(img);
+    const t0 = Date.now();
+    while (/#bm=/.test(el.style.backgroundImage + img.src) && Date.now() - t0 < 10000) await new Promise((ok) => setTimeout(ok, 50));
+    const after = el.style.backgroundImage;
+    const again = firetable.utilities.avatarURL("swapme", "Name", "40x40");
+    firetable.roomAvatarStyle = was;
+    ftapi.users = users;
+    el.remove(); img.remove();
+    return { url, after, img: img.src, again };
+  });
+  assert.match(r.url, /blank\.svg#bm=/);
+  assert.match(r.after, /^url\("blob:/, "the circle got the picture");
+  assert.match(r.img, /^blob:/, "the <img> got the picture");
+  assert.match(r.again, /^blob:/, "once drawn, it's given straight away");
 });
 
 test("avatarURL: names and ids are encoded into the address", async () => {
@@ -264,6 +357,35 @@ test("avatarURL: names and ids are encoded into the address", async () => {
   ]);
   assert.equal(r[0], AVATAR_BASE_URL_FOR_TEST + "u1Name.png?size=40x40&set=set4");
   assert.equal(r[1], "https://api.dicebear.com/9.x/pixel-art/svg?seed=u1a%20b%26c");
+});
+
+test("trading cards print the avatar the room had: robots, cats, DiceBear, the DJ's Bouletmaton", async () => {
+  const r = await run(async () => {
+    const draw = (card) => new Promise((ok) => {
+      const c = document.createElement("canvas");
+      c.id = "cardMakertest" + Math.random().toString(36).slice(2);
+      c.width = 225; c.height = 300;
+      document.body.appendChild(c);
+      const seen = [];
+      const desc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src");
+      Object.defineProperty(HTMLImageElement.prototype, "src", { configurable: true, get: desc.get, set(v) { seen.push(String(v)); desc.set.call(this, v); } });
+      firetable.actions.displayCard(Object.assign({ djid: "dj1", djname: "Deejay", title: "T", artist: "A", image: "img/idlogo.png", colors: { color: "#336699", txt: "#fff" }, cardnum: 1, num: "1", temp: 120, date: 0 }, card), c.id.slice(9));
+      setTimeout(() => { Object.defineProperty(HTMLImageElement.prototype, "src", desc); c.remove(); ok(seen); }, 1500);
+    });
+    return {
+      old: await draw({ set: "set3" }),
+      cats: await draw({ set: "set4", avs: "robohash:set4" }),
+      dice: await draw({ set: "set1", avs: "dicebear:notionists" }),
+      boulet: await draw({ set: "set1", avs: "bouletmaton", bm: "2.5.12.30.4.9.40.10.50.20.0.8.3.40.0.0.12.0" }),
+      made: await draw({ set: "set1", avs: "bouletmaton" })
+    };
+  });
+  const avatarOf = (seen) => seen.find((u) => /robots\/|dicebear|^blob:/.test(u)) || "";
+  assert.match(avatarOf(r.old), /set=set3$/, "a card printed before styles keeps its robot as printed");
+  assert.match(avatarOf(r.cats), /set=set4$/);
+  assert.match(avatarOf(r.dice), /dicebear\.com\/9\.x\/notionists\//);
+  assert.match(avatarOf(r.boulet), /^blob:/, "the DJ's Bouletmaton, drawn");
+  assert.match(avatarOf(r.made), /^blob:/, "the one made from their uid when none was stamped");
 });
 const AVATAR_BASE_URL_FOR_TEST = "https://indiediscotheque.com/robots/";
 

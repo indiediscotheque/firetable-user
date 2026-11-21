@@ -1574,15 +1574,50 @@ button.waitlist-pos {
 }
 
 /* ── Reusable avatar component ── */
+/* Each avatar style sits differently in its pictures, so each gets its own
+   framing in the circles (zoom, where the face is) and its own fill behind
+   it. html[data-avatars] is the room's style (helpers.js avatarKind), set
+   when the page starts and when a supermod changes it. tests/avatars.mjs
+   checks every style fills the circles and the stage. */
+:root {
+    --av-zoom: 125%;      /* the picture's height, as a share of the circle's */
+    --av-x: 50%;
+    --av-y: 66%;
+    --av-list-y: 72%;     /* the people list sits the robots a little lower */
+    --av-fill: #000;
+}
+html[data-avatars="notionists"] {
+    --av-zoom: 118%;
+    --av-x: 50%;
+    --av-y: 30%;
+    --av-list-y: 30%;
+    --av-fill: #e8e3d8;
+}
+html[data-avatars="pixel-art"] {
+    --av-zoom: 100%;
+    --av-x: 50%;
+    --av-y: 50%;
+    --av-list-y: 50%;
+    --av-fill: #d9d4c7;
+}
+/* a Bouletmaton picture is the whole drawing (head to waist), on transparent:
+   the circles zoom to the head and shoulders */
+html[data-avatars="bouletmaton"] {
+    --av-zoom: 170%;
+    --av-x: 57%;
+    --av-y: 40%;
+    --av-list-y: 40%;
+    --av-fill: #e8e3d8;
+}
 .ft-avatar {
-    --avatar-bg-x: 50%;
-    --avatar-bg-y: 66%;
+    --avatar-bg-x: var(--av-x);
+    --avatar-bg-y: var(--av-y);
     display: block;
     width: 100%;
     height: 100%;
     border-radius: var(--radius-pill);
-    background-color: #000;
-    background-size: auto 125%;
+    background-color: var(--av-fill);
+    background-size: auto var(--av-zoom);
     background-position: var(--avatar-bg-x) var(--avatar-bg-y);
     background-repeat: no-repeat;
     flex-shrink: 0;
@@ -1590,13 +1625,13 @@ button.waitlist-pos {
 }
 
 #allUsers .ft-avatar {
-    --avatar-bg-y: 72%;
+    --avatar-bg-y: var(--av-list-y);
     display: flex;
     align-items: center;
     position: relative;
     width: 2rem;
     height: 2rem;
-    background-position: 50% 72%;
+    background-position: var(--av-x) var(--av-list-y);
 }
 
 #allUsers .prson .ft-avatar,
@@ -7746,3 +7781,165 @@ body:not(.is-mod) .helpMods { display: none; }
     pointer-events: none;
 }
 .st-fireCount[hidden] { display: none; }
+
+/* ── Your Bouletmaton: Profile's section and the builder (js/avatar-builder.js) ── */
+/* The drawings are always on a transparent background; the light panel
+   behind them is only so their black lines show on the dark site. */
+.ac-boulet {
+    display: flex;
+    align-items: center;
+    gap: var(--pad3);
+}
+.ac-bouletFace {
+    flex: none;
+    width: 5rem;
+    height: 5rem;
+    border-radius: var(--radius-md);
+    background: #e8e3d8 center bottom / contain no-repeat;
+}
+.ac-bouletText {
+    display: grid;
+    gap: var(--pad2);
+    justify-items: start;
+    min-width: 0;
+
+    & p { margin: 0; }
+}
+
+#bm-builderBox .modalBox { width: min(46rem, 100vw); max-height: 100dvh; }
+.bm-builder {
+    display: grid;
+    grid-template-columns: minmax(12rem, 16rem) 1fr;
+    grid-template-areas:
+        "intro intro"
+        "stage controls"
+        "msg msg"
+        "actions actions";
+    gap: var(--pad3) var(--pad4);
+    align-items: start;
+
+    & #bm-intro { grid-area: intro; margin: 0; }
+    & .formMessage { grid-area: msg; }
+    & .modal-actions { grid-area: actions; }
+}
+.bm-stage {
+    grid-area: stage;
+    position: sticky;
+    top: 0;
+    display: grid;
+    gap: var(--pad2);
+}
+.bm-previews {
+    display: grid;
+    gap: var(--pad2);
+}
+.bm-preview {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    background: #e8e3d8;
+}
+/* how it looks in the circles (chat, the people) and standing on the stage */
+.bm-minis {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: var(--pad3);
+}
+.bm-mini.ft-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: #e8e3d8;
+    background-size: auto 170%;
+    background-position: 57% 40%;
+}
+.bm-miniStage {
+    width: 4.5rem;
+    height: 4.5rem;
+    border-bottom: 3px solid var(--color-accent);
+    background: center bottom / contain no-repeat;
+}
+.bm-quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--pad2);
+
+    & .butt { display: inline-flex; align-items: center; gap: var(--pad1); }
+    & .butt i { font-size: 1.1rem; }
+}
+.bm-controls {
+    grid-area: controls;
+    display: grid;
+    gap: var(--pad3);
+    min-width: 0;
+}
+.bm-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--pad1);
+    margin: 0;
+    padding: 0;
+    border: 0;
+
+    & legend {
+        margin-bottom: var(--pad1);
+        padding: 0;
+        color: var(--color-text-subtle);
+        font-size: 0.8rem;
+    }
+}
+.bm-swatch {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+
+    & input {
+        position: absolute;
+        opacity: 0;
+        inset: 0;
+        margin: 0;
+        cursor: pointer;
+    }
+    & span {
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 50%;
+        border: 2px solid var(--color-bg-t3);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+    }
+    & input:checked + span { border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent); }
+    & input:focus-visible + span { outline: 2px solid var(--color-text-light); outline-offset: 2px; }
+}
+.bm-parts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: var(--pad2) var(--pad3);
+}
+.bm-part {
+    display: grid;
+    grid-template-columns: 1fr auto 6.75rem auto;
+    align-items: center;
+    gap: var(--pad1);
+
+    & label { color: var(--color-text-subtle); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    & select { width: 100%; min-width: 0; }
+}
+@media only screen and (max-width: 639px) {
+    .bm-builder {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "intro"
+            "stage"
+            "controls"
+            "msg"
+            "actions";
+    }
+    .bm-stage {
+        position: static;
+        grid-template-columns: 9rem 1fr;
+        align-items: end;
+    }
+    .bm-parts { grid-template-columns: 1fr; }
+}

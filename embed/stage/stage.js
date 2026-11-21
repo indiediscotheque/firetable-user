@@ -167,7 +167,8 @@
     if (!S.staged) { S.staged = true; S.users = {}; endOldWay(); }
     S.online = st.online;
     S.table = (Array.isArray(st.deck) ? st.deck : []).filter(function (d) { return d && d.id; })
-      .map(function (d) { return { id: String(d.id), name: d.n, av: d.av }; });
+      .map(function (d) { return { id: String(d.id), name: d.n, bm: d.bm }; });
+    S.style = normStyle(st.style);
     colors(st.colors);
     theme(st.theme);
     S.bpmData = st.bpm || null;
@@ -342,9 +343,16 @@
     el("st-plays").textContent = plays.join(" · ");
   }
 
-  // Avatars, as the room shows them: the room's theme (config.js avatarset, or
-  // the season's), else each person's own style (js/helpers.js avatarURL)
-  function normStyle(v) { v = String(v || "").trim(); return !v ? null : /^(robohash|dicebear):/.test(v) ? v : "robohash:" + v; }
+  // Avatars, as the room shows them (js/helpers.js avatarURL): the room's
+  // style (a supermod's choice, from the stage summary; else config.js
+  // avatarset, else the season's; else Robohash robots). Only the room's six
+  // styles (AVATAR_STYLES); anything else counts as unset.
+  function normStyle(v) {
+    v = String(v == null ? "" : v).trim();
+    if (/^set\d+$/.test(v)) v = "robohash:" + v;
+    for (var i = 0; i < AVATAR_STYLES.length; i++) if (AVATAR_STYLES[i].value === v) return v;
+    return null;
+  }
   var roomStyle = normStyle(cfg.avatarset) || (function () {
     var seasons = cfg.avatarSeasons !== undefined ? cfg.avatarSeasons : (typeof AVATAR_SEASONS !== "undefined" ? AVATAR_SEASONS : null);
     var month = new Date().getMonth() + 1;
@@ -354,27 +362,36 @@
     }
     return null;
   })();
+  function styleNow() { return S.style || roomStyle || DEFAULT_AVATAR_STYLE; }
+  /** Each style's framing in the circles (stage.css, html[data-avatars]), as on the site. */
+  function frame() {
+    var style = styleNow(), kind = "robohash";
+    for (var i = 0; i < AVATAR_STYLES.length; i++) if (AVATAR_STYLES[i].value === style) kind = AVATAR_STYLES[i].kind;
+    document.documentElement.setAttribute("data-avatars", kind);
+  }
   /** A DJ's picture, asked for at the size it's drawn (`ems` tall) on this screen, so it's sharp at any size. */
-  function avatar(uid, name, ems, av) {
-    var u = S.users[uid] || {};
-    var style = roomStyle || normStyle(av || u.avatarStyle) || "robohash:set1";
-    if (style.indexOf("dicebear:") === 0) return "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + name);
+  function avatar(uid, name, ems, bm) {
+    var style = styleNow();
+    if (!bm && S.users[uid]) bm = S.users[uid].boulet; // the old way (before the summary): their profile
     var px = Math.min(600, Math.max(60, Math.ceil(ems * em() * (window.devicePixelRatio || 1) / 60) * 60));
+    if (style === "bouletmaton") return Bouletmaton.url(uid, px, Bouletmaton.isCode(bm) ? bm : null);
+    if (style.indexOf("dicebear:") === 0) return "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + name);
     return ROBOTS + encodeURIComponent(uid + name) + ".png?size=" + px + "x" + px + "&set=" + encodeURIComponent(style.slice(9) || "set1");
   }
 
   var deckHtml = "", lineHtml = "";
   /** The DJ playing on the deck, at their plaque; the others in line beside it (the site's #deck and #ondeck). */
   function renderDeck() {
+    frame();
     var seats = (Array.isArray(S.table) ? S.table : Object.keys(S.table || {}).map(function (k) { return S.table[k]; }))
       .filter(function (d) { return d && d.id; });
     var on = S.song && S.song.djid;
     var nameOf = function (d) { return text((S.users[d.id] && S.users[d.id].username) || d.name || "DJ"); };
     var playing = seats.filter(function (d) { return String(d.id) === String(on); })[0] || (S.song ? null : seats[0]);
     var html = playing ? '<li class="st-spot" aria-current="true"><span class="st-avtr" style="background-image:' +
-      escHtml(cssUrl(avatar(playing.id, nameOf(playing), 8, playing.av))) + '"></span><span class="st-plaque">' + escHtml(nameOf(playing)) + "</span></li>" : "";
+      escHtml(cssUrl(avatar(playing.id, nameOf(playing), 8, playing.bm))) + '"></span><span class="st-plaque">' + escHtml(nameOf(playing)) + "</span></li>" : "";
     var line = seats.filter(function (d) { return d !== playing; }).slice(0, 6).map(function (d) {
-      return '<li title="' + escHtml(nameOf(d)) + '" aria-label="' + escHtml(nameOf(d)) + '" style="background-image:' + escHtml(cssUrl(avatar(d.id, nameOf(d), 3.8, d.av))) + '"></li>';
+      return '<li title="' + escHtml(nameOf(d)) + '" aria-label="' + escHtml(nameOf(d)) + '" style="background-image:' + escHtml(cssUrl(avatar(d.id, nameOf(d), 3.8, d.bm))) + '"></li>';
     }).join("");
     if (html !== deckHtml) { el("st-deck").innerHTML = html; deckHtml = html; }
     if (line !== lineHtml) { el("st-ondeck").innerHTML = line; lineHtml = line; }

@@ -40,14 +40,14 @@ firetable.init = function () {
   $("#welcomeName").text(ftconfigs.roomName);
 
   // Room avatar theme: config.js avatarset (e.g. "set2") if set, otherwise the
-  // seasonal theme (monsters in October). It overrides every user's saved style.
-  // A supermod's choice (roomSettings/avatarStyle, Mod tools) wins over both once it loads (ui.js).
+  // seasonal theme (monsters in October), otherwise Robohash robots. It's
+  // everyone's: members don't have styles of their own.
+  // A supermod's choice (roomSettings/avatarStyle, Mod tools) wins once it loads (ui.js).
   firetable.roomAvatarDefault = firetable.utilities.normalizeAvatarStyle(ftconfigs.avatarset)
-    || firetable.utilities.seasonalAvatarStyle(new Date());
+    || firetable.utilities.seasonalAvatarStyle(new Date()) || DEFAULT_AVATAR_STYLE;
   firetable.roomAvatarStyle = firetable.roomAvatarDefault;
-  if (firetable.roomAvatarStyle && firetable.roomAvatarStyle.indexOf("robohash:") === 0) {
-    firetable.avatarset = firetable.roomAvatarStyle.slice(9);
-  }
+  firetable.avatarset = firetable.roomAvatarStyle.indexOf("robohash:") === 0 ? firetable.roomAvatarStyle.slice(9) : "set1";
+  document.documentElement.setAttribute("data-avatars", firetable.utilities.avatarKind(firetable.roomAvatarStyle));
 
   // Social links — show each icon only if the URL is configured
   var socialLinks = [

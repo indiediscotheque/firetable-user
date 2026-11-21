@@ -8,7 +8,8 @@
     "rules": "firebase emulators:exec --only database,auth --project demo-rules \"node rules.mjs\"",
     "screens": "firebase emulators:exec --only database,auth --project demo-screens \"node screens.mjs\"",
     "reach": "firebase emulators:exec --only database,auth --project demo-reach \"node reach.mjs\"",
-    "a11y": "firebase emulators:exec --only database,auth --project demo-a11y \"node a11y.mjs\""
+    "a11y": "firebase emulators:exec --only database,auth --project demo-a11y \"node a11y.mjs\"",
+    "avatars": "node avatars.mjs"
   },
   "devDependencies": {
     "axe-core": "4.14.0",

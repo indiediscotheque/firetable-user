@@ -433,13 +433,14 @@ section .d-chips a.d-chip {
 .d-actions .butt i { font-size: 1.2rem; }
 .d-panel .d-joinwait { display: inline-flex; align-items: center; justify-content: center; gap: var(--pad1); margin-top: var(--pad2); }
 .d-panel .d-joinwait i { font-size: 1.1rem; }
+/* framed like every avatar circle (looks.css .ft-avatar, per style): drawn
+   to fit (cover) the robots were small in it */
 .d-bigrobot .ft-avatar {
     width: 7.5rem;
     height: 7.5rem;
     border-radius: 50%;
-    background-color: var(--color-bg-t1);
-    background-size: cover;
 }
+html[data-avatars="robohash"] .d-bigrobot .ft-avatar { background-color: var(--color-bg-t1); }
 @media only screen and (max-width: 639px) {
     .d-pagehead { flex-direction: column; align-items: flex-start; gap: var(--pad3); }
     .d-pagetext h2 { font-size: 1.6rem; }

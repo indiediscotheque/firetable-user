@@ -68,6 +68,7 @@ const FEATURES = [
   { row: "AU-02", name: "Join or log in", who: ["visitor"], via: ["#nav-signin"], target: "#joinBox #newemail", notFor: IN, notTarget: "#nav-signin" },
   { row: "AU-07", name: "Profile: change username", who: IN, via: [...account, '#nav-accountMenu [data-acct="profile-tab"]'], target: "#changeUsername" },
   // AU-08, members choosing their avatar style: retired (the owner, November 19, 2026); a supermod sets everyone's (MO-05)
+  { row: "AU-12", name: "Profile: build your Bouletmaton", who: IN, via: [...account, '#nav-accountMenu [data-acct="profile-tab"]', "#ac-bouletEdit"], target: "#bm-builderBox #bm-save" },
   { row: "AU-11", name: "Account: email, password", who: IN, via: [...account, '#nav-accountMenu [data-acct="account-tab"]'], target: "#ac-passForm" },
   { row: "AU-09", name: "Log out", who: IN, via: account, target: "#nav-logout" },
   { row: "CH-13", name: "Shortcuts and commands", who: IN, via: [...account, "#nav-acctHelp"], target: "#helpBox .helpKeys" },

@@ -709,6 +709,7 @@ firetable.ui.openAccount = function (tab) {
   $("#" + tab).addClass("active");
   firetable.ui.fillAccount();
   if (firetable.ui.updateUsernamePreview) firetable.ui.updateUsernamePreview();
+  if (firetable.ui.fillBouletFace) firetable.ui.fillBouletFace();
   if (!dlg.open) dlg.showModal();
 };
 
@@ -913,7 +914,7 @@ function buildUserHTML(data) {
   if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; rolename = "Supermod"; }
   if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; rolename = "Room bot"; }
 
-  return '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + firetable.utilities.htmlEscape(data.username) + ' — profile" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username, null, firetable.roomAvatarStyle || data.avatarStyle)) + ');">' +
+  return '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + firetable.utilities.htmlEscape(data.username) + ' — profile" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username)) + ');">' +
          '<span class="material-symbols-outlined blockon">' + blockcon + '</span>' +
          '</div>' +
          '<span class="' + roleiconclass + ' prsnRole" role="img" title="' + rolename + '" aria-label="' + rolename + '">' + roleicon + '</span>' +
