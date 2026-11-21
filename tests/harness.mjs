@@ -169,9 +169,15 @@ export async function cachePictures(context) {
       const m = JSON.parse(readFileSync(file + ".json", "utf8"));
       return route.fulfill({ status: m.status, headers: m.headers, body: readFileSync(file) });
     }
+    // The site's robot server (it passes robohash.org's pictures through) can be
+    // down or refuse a burst of requests: then the same picture from robohash.org
+    const robohash = /^https:\/\/(www\.)?indiediscotheque\.com\/robots\//.test(url) ? url.replace(/^https:\/\/(www\.)?indiediscotheque\.com\/robots\//, "https://robohash.org/") : null;
+    const get = async (u) => { try { return await route.fetch(u ? { url: u } : undefined); } catch (e) { return null; } };
     try {
-      let res = await route.fetch();
-      if (!res.ok()) { await sleep(1500); res = await route.fetch(); }
+      let res = await get();
+      if (!res || !res.ok()) { await sleep(1500); res = await get(); }
+      if ((!res || !res.ok()) && robohash) res = await get(robohash);
+      if (!res) return route.abort();
       const body = await res.body();
       const headers = Object.fromEntries(Object.entries(res.headers()).filter(([k]) => !/^(content-length|content-encoding|transfer-encoding|set-cookie)$/i.test(k)));
       if (res.ok() && body.length) {
