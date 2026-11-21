@@ -674,17 +674,34 @@ firetable.tt = (function () {
     var el = $id(id);
     if (el.dataset.text === text) return;
     el.dataset.text = text;
-    el.classList.remove("tt-marquee");
-    el.innerHTML = "<span>" + esc(text) + "</span>";
+    el.innerHTML = '<span class="tt-run"><span>' + esc(text) + "</span></span>";
+    fitLed(el);
+  }
+
+  /**
+   * A line that doesn't fit scrolls as an LED sign does: a dot column at a
+   * time (Doto's dots are 0.1em apart), round and round, a gap between.
+   */
+  var LED_COLS_PER_SEC = 16;
+  function fitLed(el) {
     requestAnimationFrame(function () {
-      var span = el.firstChild;
-      if (span && span.scrollWidth > el.clientWidth + 2) {
-        el.innerHTML = "<span>" + esc(text) + "&emsp;&#9679;&emsp;" + esc(text) + "&emsp;&#9679;&emsp;</span>";
-        el.style.setProperty("--len", (text.length * 0.32 + 6).toFixed(1) + "s");
-        el.classList.add("tt-marquee");
-      }
+      var run = el.firstChild, one = run && run.firstChild;
+      if (!one) return;
+      el.classList.remove("tt-marquee");
+      while (run.childNodes.length > 1) run.removeChild(run.lastChild);
+      if (one.offsetWidth <= el.clientWidth) return;
+      var copy = one.cloneNode(true);
+      copy.setAttribute("aria-hidden", "true");
+      run.appendChild(copy);
+      el.classList.add("tt-marquee"); // the gap after each copy comes with it
+      var pitch = parseFloat(getComputedStyle(el).fontSize) / 10;
+      var cols = Math.max(1, Math.round(one.offsetWidth / pitch));
+      el.style.setProperty("--dist", (cols * pitch).toFixed(2) + "px");
+      el.style.setProperty("--cols", cols);
+      el.style.setProperty("--len", (cols / LED_COLS_PER_SEC).toFixed(2) + "s");
     });
   }
+  function refitLeds() { ["tt-line1", "tt-line2"].forEach(function (id) { var el = $id(id); if (el && el.dataset.text) fitLed(el); }); }
 
   function clock(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
@@ -1056,6 +1073,7 @@ firetable.tt = (function () {
       moveDjPicker(true);
       setLayout(store.get(STORAGE.ttLayout) || (window.innerWidth >= 1280 ? "two" : "one"), false);
       fit();
+      if (document.fonts && document.fonts.load) document.fonts.load('900 20px "Doto"').then(refitLeds, function () {});
       loadAvatars().then(function () {
         if (!S.active) return;
         setTab(S.tab);

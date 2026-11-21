@@ -588,8 +588,12 @@ body.tt-skin #screenover { display: none; }
 }
 .tt-line1 { top: 2px; font-size: 44px; line-height: 1.05; letter-spacing: 1px; }
 .tt-line2 { top: 50px; font-size: 22px; line-height: 1.1; }
+.tt-run { display: inline-block; white-space: nowrap; }
+.tt-run > span { display: inline-block; }
 .tt-led.tt-marquee { text-align: left; }
-.tt-led.tt-marquee span { display: inline-block; animation: tt-marquee var(--len, 14s) linear infinite; }
+.tt-led.tt-marquee .tt-run > span { padding-right: 2em; } /* 20 dark columns between the end and the start again */
+/* a dot column at a time, as an LED sign moves */
+.tt-led.tt-marquee .tt-run { animation: tt-marquee var(--len, 10s) steps(var(--cols, 100)) infinite; }
 .tt-times { top: 76px; display: flex; align-items: center; gap: 10px; font-size: 19px; line-height: 1; }
 .tt-prog {
     flex: 1;
@@ -869,7 +873,7 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
 @keyframes tt-arrive { from { opacity: 0; translate: 0 12px; } }
 @keyframes tt-sweep { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(40deg) brightness(1.15); } }
 @keyframes tt-twinkle { 50% { opacity: 0.7; } }
-@keyframes tt-marquee { to { transform: translateX(-50%); } }
+@keyframes tt-marquee { to { transform: translateX(calc(var(--dist, 0px) * -1)); } }
 @keyframes tt-nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
 /* ── Laptops and their stickers ───────────────────────────────────────────── */

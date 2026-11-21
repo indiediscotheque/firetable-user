@@ -1154,6 +1154,18 @@ try {
     const videoPic = await pic((x) => { x.fillStyle = "#000"; x.fillRect(0, 0, 480, 360); spots(x, 0, 45, 480, 270, 900); });
     const cover = firetable.tt._coverBox(artPic);
     out.artTrack = !!cover && Math.abs(cover.cw - 270) <= 10 && Math.abs(cover.ch - 270) <= 10 && !firetable.tt._coverBox(videoPic);
+    // the songboard: a line too long to fit scrolls a dot column at a time; a short one stays put
+    const artistEl = document.getElementById("artist"), wasArtist = artistEl.textContent;
+    artistEl.textContent = "Ezra Collective featuring Yazmin Lacey and Friends";
+    await wait(600);
+    const led = document.getElementById("tt-line1"), pitch = parseFloat(getComputedStyle(led).fontSize) / 10;
+    const ledAt = () => new DOMMatrix(getComputedStyle(led.querySelector(".tt-run")).transform).m41;
+    const a1 = ledAt(); await wait(250); const a2 = ledAt();
+    out.ledScroll = led.classList.contains("tt-marquee") && a2 < a1 && [a1, a2].every((x) => Math.abs(x / pitch - Math.round(x / pitch)) < 0.02);
+    artistEl.textContent = "Moby";
+    await wait(400);
+    out.ledStill = !led.classList.contains("tt-marquee");
+    artistEl.textContent = wasArtist;
     // the sticker builder
     document.getElementById("nav-ttLaptop").click();
     out.laptop = document.getElementById("tt-laptopEdit").open;
@@ -1194,6 +1206,7 @@ try {
   check(tt.layout, "one sidebar or two");
   check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
   check(tt.artTrack, "an art track's cover fills the right screen; a video's frame is left as it is");
+  check(tt.ledScroll && tt.ledStill, "the songboard scrolls a line too long to fit, a dot column at a time; a short one stays put");
   check(tt.off && tt.liveFace && tt.noTtFaceInLive, "Back to Live: Live as it was, with Live's avatars");
 
   console.log("-- the stage's volume slider (a native range input)");
