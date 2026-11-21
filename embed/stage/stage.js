@@ -343,17 +343,20 @@
     el("st-plays").textContent = plays.join(" · ");
   }
 
-  // Avatars, as the room shows them (js/helpers.js avatarURL): the room's
-  // style (a supermod's choice, from the stage summary; else config.js
-  // avatarset, else the season's; else Robohash robots). Only the room's six
-  // styles (AVATAR_STYLES); anything else counts as unset.
+  // Avatars, as the room shows them (js/helpers.js avatarURL): in October
+  // everyone is a monster (the season), Bouletmatons too, unless config.js
+  // sets avatarset. Otherwise a DJ who switched their Bouletmaton on shows it
+  // (the summary's bm), and everyone else the room's style: a supermod's
+  // choice (the summary's style), else config.js avatarset, else robot
+  // busts; Bouletmaton means robot busts for them. Only the room's six styles.
   function normStyle(v) {
     v = String(v == null ? "" : v).trim();
     if (/^set\d+$/.test(v)) v = "robohash:" + v;
     for (var i = 0; i < AVATAR_STYLES.length; i++) if (AVATAR_STYLES[i].value === v) return v;
     return null;
   }
-  var roomStyle = normStyle(cfg.avatarset) || (function () {
+  var configStyle = normStyle(cfg.avatarset);
+  var forced = configStyle ? null : (function () {
     var seasons = cfg.avatarSeasons !== undefined ? cfg.avatarSeasons : (typeof AVATAR_SEASONS !== "undefined" ? AVATAR_SEASONS : null);
     var month = new Date().getMonth() + 1;
     if (!Array.isArray(seasons)) return null;
@@ -362,19 +365,24 @@
     }
     return null;
   })();
-  function styleNow() { return S.style || roomStyle || DEFAULT_AVATAR_STYLE; }
+  /** What everyone without a Bouletmaton of their own looks like. */
+  function baseStyle() {
+    var style = forced || S.style || configStyle || DEFAULT_AVATAR_STYLE;
+    return style === "bouletmaton" ? DEFAULT_AVATAR_STYLE : style;
+  }
   /** Each style's framing in the circles (stage.css, html[data-avatars]), as on the site. */
   function frame() {
-    var style = styleNow(), kind = "robohash";
+    var style = baseStyle(), kind = "robohash";
     for (var i = 0; i < AVATAR_STYLES.length; i++) if (AVATAR_STYLES[i].value === style) kind = AVATAR_STYLES[i].kind;
     document.documentElement.setAttribute("data-avatars", kind);
   }
   /** A DJ's picture, asked for at the size it's drawn (`ems` tall) on this screen, so it's sharp at any size. */
   function avatar(uid, name, ems, bm) {
-    var style = styleNow();
-    if (!bm && S.users[uid]) bm = S.users[uid].boulet; // the old way (before the summary): their profile
+    var u = S.users[uid];
+    if (!bm && u && u.bouletOn === true) bm = u.boulet; // the old way (before the summary): their profile
     var px = Math.min(600, Math.max(60, Math.ceil(ems * em() * (window.devicePixelRatio || 1) / 60) * 60));
-    if (style === "bouletmaton") return Bouletmaton.url(uid, px, Bouletmaton.isCode(bm) ? bm : null);
+    if (!forced && Bouletmaton.isCode(bm)) return Bouletmaton.url(bm, px);
+    var style = baseStyle();
     if (style.indexOf("dicebear:") === 0) return "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + name);
     return ROBOTS + encodeURIComponent(uid + name) + ".png?size=" + px + "x" + px + "&set=" + encodeURIComponent(style.slice(9) || "set1");
   }

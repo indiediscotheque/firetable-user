@@ -37,8 +37,12 @@ var firetable = {
   avatarset: "set1",
   /** @type {string|null}  Everyone's avatar style (AVATAR_STYLES): a supermod's choice, else the room's default */
   roomAvatarStyle: null,
+  /** @type {string|null}  The season's style that everyone wears (October's monsters), Bouletmatons too; null = none */
+  avatarForced: null,
   /** @type {string|null|undefined}  Your own saved Bouletmaton code (null = none saved yet, undefined = not loaded) */
   myBoulet: undefined,
+  /** @type {boolean}  Whether you've switched your Bouletmaton on (users/<uid>/bouletOn) */
+  myBouletOn: false,
   /** @type {string|null}  Current user's own avatar style key e.g. "dicebear:pixel-art" (null = room default) */
   avatarStyle: null,
 

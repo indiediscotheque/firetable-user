@@ -276,57 +276,110 @@ test("the room's six avatar styles, robots by default", async () => {
   assert.match(r.fallback, /set=set[12]$/, "a style the room no longer offers falls back to the room's");
 });
 
-test("Bouletmaton: codes, the one made from a uid (the bot's too), and the drawing", async () => {
+test("Bouletmaton: the code, everything at 1 to start, no made-up ones, and every drawing there", async () => {
   const r = await run(async () => {
     const B = Bouletmaton;
-    const ids = ["OiJ7rcoNaNdvk3KlFGUJx1Fqjer2", "dj1", "", "abc", "zZ9"];
-    const many = Array.from({ length: 300 }, (_, i) => B.random("u" + i));
-    const c = B.random("dj1");
-    const canvas = await B.draw(c, 256);
+    const files = [];
+    // every choice of every part, in every skin tone and colour it comes in
+    B.PARTS.forEach((p) => {
+      for (let v = 1; v <= p.max; v++) {
+        const dirs = p.dir === "skin" ? [1, 2, 3, 4] : p.dir ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [1];
+        dirs.forEach((d) => {
+          const u = B.drawingOf(p, v, { skin: d, hair: d, beard: d });
+          if (u) files.push(u);
+        });
+      }
+    });
+    // in batches: thousands of requests at once overwhelm the test server on a CI runner
+    const head = (u) => fetch(u, { method: "HEAD" }).then((res) => res.ok);
+    const there = [];
+    for (let i = 0; i < files.length; i += 40) {
+      there.push(...await Promise.all(files.slice(i, i + 40).map((u) => head(u).catch(() => head(u)).catch(() => false))));
+    }
+    return {
+      parts: B.PARTS.map((p) => p.file + ":" + p.max + (p.blank ? "/" + p.blank : "") + (p.hide ? "/hide" : "")),
+      first: B.FIRST, random: typeof B.random,
+      bad: ["", "5.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", "1.1.13.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", "1.1.1.1.0.1.1.1.1.1.1.1.1.1.1.1.1.1.1",
+        "1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", "2.5.12.30.4.9.40.10.50.20.0.8.3.40.0.0.12.0", 42].map(B.isCode),
+      hidden: B.isCode("1.1.1.1.1.1.1.1.1.1.1.1.1.0.1.0.1.1.1"), // nose and ears hidden
+      clamped: B.encode({ skin: 9, hair: 0, beard: 4, parts: { body: 999, hat: 33, nose: 0, neck: 0 } }),
+      files: files.length, missing: files.filter((u, i) => !there[i]).slice(0, 3),
+      blankNone: [B.drawingOf(B.PARTS[1], 27, { skin: 1 }), B.drawingOf(B.PARTS[3], 1, { skin: 1 }), B.drawingOf(B.PARTS[15], 20, { skin: 1 })],
+      extras: B.drawingOf(B.PARTS[15], 27, { skin: 2 })
+    };
+  });
+  // the Bouletmaton's own stacking, back to front (zanorg.net/bouletmaton, js/interface.js)
+  assert.deepEqual(r.parts, ["cor:62", "col:27/27", "tete:54", "menton:17/1", "bou:93", "ye:96", "bar:25/25", "so:42", "tache:18/18", "lunette:21/21",
+    "nez:32/hide", "coi:72/72", "ore:18/hide", "boucle:25/25", "chapo:33/33", "divers:27/20"]);
+  assert.equal(r.first, "1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", "a new one starts with every choice at 1");
+  assert.equal(r.random, "undefined", "no made-up Bouletmatons");
+  assert.deepEqual(r.bad, [false, false, false, false, false, false, false]);
+  assert.equal(r.hidden, true, "the nose and ears can be hidden, as on the Bouletmaton");
+  assert.equal(r.clamped, "1.1.4.1.1.1.1.1.1.1.1.1.1.0.1.1.1.33.1", "out of range: 1; 0 only hides the nose and ears");
+  assert.deepEqual(r.missing, [], "every drawing is in img/bouletmaton/ (" + r.files + ")");
+  assert.ok(r.files > 2500, "the Bouletmaton's whole set (" + r.files + ")");
+  assert.deepEqual(r.blankNone, [null, null, null], "the Bouletmaton's blank drawings are drawn as nothing");
+  assert.match(r.extras, /\/img\/bouletmaton\/sec4\.png$/, "its hidden extras are in hand's last choices");
+});
+
+test("Bouletmaton: stacked exactly as the Bouletmaton does, hair lifted, on transparent", async () => {
+  const r = await run(async () => {
+    const B = Bouletmaton;
+    const code = "2.3.5.10.8.20.5.30.40.6.12.3.4.7.10.5.2.33.20";
+    const unlifted = "2.3.5.10.8.20.5.30.40.6.12.3.4.7.19.5.2.33.20";
+    const names = (c) => B.layers(c).map((l) => l.url.replace(/^.*\/img\/bouletmaton\//, "") + (l.dy ? "@" + l.dy : ""));
+    const canvas = await B.draw(code, 256);
     const g = canvas.getContext("2d").getImageData(0, 0, 256, 256).data;
     let opaque = 0, corners = 0;
     for (let i = 3; i < g.length; i += 4) if (g[i] > 0) opaque++;
     [[0, 0], [255, 0]].forEach(([x, y]) => { corners += g[(y * 256 + x) * 4 + 3]; });
-    const layers = B.layers(c);
-    const loads = await Promise.all(layers.map((u) => fetch(u).then((res) => res.ok)));
-    // every part's every file is there
-    const files = [];
-    B.PARTS.forEach((p) => {
-      for (let v = p.min; v <= p.max; v++) {
-        const dir = p.dir === "skin" ? "skintone4" : p.dir === "hair" ? "haircolor12" : p.dir;
-        files.push(B.BASE + dir + "/" + p.file + v + ".png");
-      }
-    });
-    const there = await Promise.all(files.map((u) => fetch(u, { method: "HEAD" }).then((res) => res.ok)));
-    return {
-      made: ids.map(B.random), same: B.random("dj1") === B.random("dj1"),
-      allValid: many.every(B.isCode), distinct: new Set(many).size,
-      roundTrip: many.every((x) => B.encode(B.decode(x)) === x),
-      bad: ["", "5.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", "1.1.0.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", "1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1", 42].map(B.isCode),
-      clamped: B.encode({ skin: 9, hair: 0, parts: { body: 999, hat: 0, head: -1 } }),
-      opaque: opaque / (256 * 256), corners, loads: loads.every(Boolean), layers: layers.length,
-      files: files.length, missing: files.filter((u, i) => !there[i]).slice(0, 3),
-      transparent: B.layers(c).every((u) => !/background/.test(u))
-    };
+    return { order: names(code), unlifted: names(unlifted).filter((n) => /coi/.test(n)), opaque: opaque / (256 * 256), corners };
   });
-  // the same uids give these codes in the bot (firetable-hostbot lib/avatars.js randomBoulet, its unit test)
-  assert.deepEqual(r.made, ["1.12.47.41.9.12.17.2.65.16.0.0.0.69.0.13.0.0", "1.2.25.14.10.0.37.32.14.32.0.0.0.0.4.0.15.0",
-    "3.6.26.4.4.0.24.15.54.27.0.0.0.2.13.0.5.3", "3.8.56.26.12.8.49.1.69.32.0.0.0.61.17.0.19.0", "3.11.46.26.6.3.57.29.63.11.11.0.3.69.7.0.0.0"]);
-  assert.ok(r.same && r.allValid && r.roundTrip);
-  assert.ok(r.distinct > 295, "made-up ones differ (" + r.distinct + " of 300)");
-  assert.deepEqual(r.bad, [false, false, false, false, false]);
-  assert.equal(r.clamped, "1.1.1.1.1.2.1.1.1.1.1.1.1.1.1.1.0.1", "out of range or left out: the first; 0 is none where a part can be left off");
-  assert.ok(r.loads && r.layers >= 8, "every layer loads (" + r.layers + ")");
-  assert.deepEqual(r.missing, [], "every part's files are in img/bouletmaton/ (" + r.files + ")");
+  assert.deepEqual(r.order, ["peau2/cor10.png", "col8.png", "peau2/tete20.png", "peau2/menton5.png", "peau2/bou30.png", "ye40.png", "coul5/bar6.png",
+    "so12.png", "tache3.png", "lunette4.png", "peau2/nez7.png", "coul3/coi10.png@-15", "peau2/ore5.png", "boucle2.png"],
+    "neckwear under the head, ears over the hair, nose over the glasses; the blank hat and hand left out");
+  assert.deepEqual(r.unlifted, ["coul3/coi19.png"], "hair 19, 25 and 31 aren't lifted");
   assert.ok(r.opaque > 0.15 && r.opaque < 0.8, "it's drawn (" + r.opaque + ")");
   assert.equal(r.corners, 0, "on a transparent background");
 });
 
-test("Bouletmaton: a stand-in at once, swapped for the picture wherever it was put", async () => {
+test("who looks like what: robot busts, members' switched-on Bouletmatons, the supermod's pick, October's monsters", async () => {
   const r = await run(async () => {
-    const was = firetable.roomAvatarStyle, users = ftapi.users;
-    firetable.roomAvatarStyle = "bouletmaton";
-    ftapi.users = Object.assign({}, users, { swapme: { username: "Name", status: true } }); // in the room, with none saved
+    const was = { room: firetable.roomAvatarStyle, forced: firetable.avatarForced, users: ftapi.users, uid: ftapi.uid };
+    const bm = "2.3.5.10.8.20.5.30.40.6.12.3.4.7.10.5.2.33.20";
+    ftapi.users = { on: { username: "on", status: true, boulet: bm, bouletOn: true }, off: { username: "off", status: true, boulet: bm, bouletOn: false },
+      none: { username: "none", status: true } };
+    const look = (uid) => {
+      const u = firetable.utilities.avatarURL(uid, uid, "40x40");
+      return /#bm=|^blob:/.test(u) ? "boulet" : (/set=(set\d)/.exec(u) || /9\.x\/([a-z-]+)/.exec(u) || [, u])[1];
+    };
+    const at = (room, forced) => { firetable.roomAvatarStyle = room; firetable.avatarForced = forced; return ["on", "off", "none"].map(look).join(","); };
+    const out = {
+      robots: at("robohash:set1", null), boulets: at("bouletmaton", null), cats: at("robohash:set4", null),
+      pixel: at("dicebear:pixel-art", null), october: at("bouletmaton", "robohash:set2"), octoberPixel: at("dicebear:pixel-art", "robohash:set2"),
+      base: (firetable.roomAvatarStyle = "bouletmaton", firetable.avatarForced = null, firetable.utilities.baseAvatarStyle()),
+      kind: firetable.utilities.avatarKind()
+    };
+    Object.assign(firetable, { roomAvatarStyle: was.room, avatarForced: was.forced });
+    ftapi.users = was.users;
+    return out;
+  });
+  assert.equal(r.robots, "boulet,set1,set1", "robot busts by default; a switched-on Bouletmaton shows");
+  assert.equal(r.boulets, "boulet,set1,set1", "the room on Bouletmaton: members' own, robot busts for the rest");
+  assert.equal(r.cats, "boulet,set4,set4", "another pick: a switched-on Bouletmaton stays");
+  assert.equal(r.pixel, "boulet,pixel-art,pixel-art");
+  assert.equal(r.october, "set2,set2,set2", "October: everyone a monster, Bouletmatons too");
+  assert.equal(r.octoberPixel, "set2,set2,set2", "October overrides the supermod's pick");
+  assert.equal(r.base, "robohash:set1");
+  assert.equal(r.kind, "robohash");
+});
+
+test("Bouletmaton: a stand-in at once, swapped for the picture (marked .bm-face) wherever it was put", async () => {
+  const r = await run(async () => {
+    const was = { room: firetable.roomAvatarStyle, forced: firetable.avatarForced, users: ftapi.users };
+    firetable.roomAvatarStyle = "robohash:set1";
+    firetable.avatarForced = null;
+    ftapi.users = Object.assign({}, was.users, { swapme: { username: "Name", status: true, boulet: "3.7.2.40.15.33.9.60.80.24.30.10.15.20.19.12.10.5.11", bouletOn: true } });
     const url = firetable.utilities.avatarURL("swapme", "Name", "40x40");
     const el = document.createElement("span");
     el.className = "ft-avatar";
@@ -336,27 +389,25 @@ test("Bouletmaton: a stand-in at once, swapped for the picture wherever it was p
     img.src = firetable.utilities.avatarURL("swapme", "Name", "40x40");
     document.body.appendChild(img);
     const t0 = Date.now();
-    while (/#bm=/.test(el.style.backgroundImage + img.src) && Date.now() - t0 < 10000) await new Promise((ok) => setTimeout(ok, 50));
-    const after = el.style.backgroundImage;
+    while ((/#bm=/.test(el.style.backgroundImage + img.src) || !el.classList.contains("bm-face")) && Date.now() - t0 < 10000) await new Promise((ok) => setTimeout(ok, 50));
+    const after = el.style.backgroundImage, face = el.classList.contains("bm-face");
     const again = firetable.utilities.avatarURL("swapme", "Name", "40x40");
-    firetable.roomAvatarStyle = was;
-    ftapi.users = users;
+    // switched off: a robot again, and no longer framed as a Bouletmaton
+    ftapi.users.swapme.bouletOn = false;
+    el.style.backgroundImage = "url(" + firetable.utilities.avatarURL("swapme", "Name", "40x40") + ")";
+    await new Promise((ok) => setTimeout(ok, 300));
+    const off = { bg: el.style.backgroundImage, face: el.classList.contains("bm-face") };
+    Object.assign(firetable, { roomAvatarStyle: was.room, avatarForced: was.forced });
+    ftapi.users = was.users;
     el.remove(); img.remove();
-    return { url, after, img: img.src, again };
+    return { url, after, face, img: img.src, again, off };
   });
   assert.match(r.url, /blank\.svg#bm=/);
   assert.match(r.after, /^url\("blob:/, "the circle got the picture");
+  assert.ok(r.face, "and a Bouletmaton's framing");
   assert.match(r.img, /^blob:/, "the <img> got the picture");
   assert.match(r.again, /^blob:/, "once drawn, it's given straight away");
-});
-
-test("avatarURL: names and ids are encoded into the address", async () => {
-  const r = await run(() => [
-    firetable.utilities.avatarURL("u1", "Name", "40x40", "robohash:set4", true),
-    firetable.utilities.avatarURL("u1", "a b&c", null, "dicebear:pixel-art", true)
-  ]);
-  assert.equal(r[0], AVATAR_BASE_URL_FOR_TEST + "u1Name.png?size=40x40&set=set4");
-  assert.equal(r[1], "https://api.dicebear.com/9.x/pixel-art/svg?seed=u1a%20b%26c");
+  assert.ok(/set=set1/.test(r.off.bg) && !r.off.face, "switched off: a robot bust, framed as one (" + JSON.stringify(r.off) + ")");
 });
 
 test("trading cards print the avatar the room had: robots, cats, DiceBear, the DJ's Bouletmaton", async () => {
@@ -376,8 +427,8 @@ test("trading cards print the avatar the room had: robots, cats, DiceBear, the D
       old: await draw({ set: "set3" }),
       cats: await draw({ set: "set4", avs: "robohash:set4" }),
       dice: await draw({ set: "set1", avs: "dicebear:notionists" }),
-      boulet: await draw({ set: "set1", avs: "bouletmaton", bm: "2.5.12.30.4.9.40.10.50.20.0.8.3.40.0.0.12.0" }),
-      made: await draw({ set: "set1", avs: "bouletmaton" })
+      boulet: await draw({ set: "set1", avs: "bouletmaton", bm: "2.3.5.10.8.20.5.30.40.6.12.3.4.7.10.5.2.33.20" }),
+      unstamped: await draw({ set: "set1", avs: "bouletmaton" })
     };
   });
   const avatarOf = (seen) => seen.find((u) => /robots\/|dicebear|^blob:/.test(u)) || "";
@@ -385,7 +436,7 @@ test("trading cards print the avatar the room had: robots, cats, DiceBear, the D
   assert.match(avatarOf(r.cats), /set=set4$/);
   assert.match(avatarOf(r.dice), /dicebear\.com\/9\.x\/notionists\//);
   assert.match(avatarOf(r.boulet), /^blob:/, "the DJ's Bouletmaton, drawn");
-  assert.match(avatarOf(r.made), /^blob:/, "the one made from their uid when none was stamped");
+  assert.match(avatarOf(r.unstamped), /set=set1$/, "no Bouletmaton stamped: a robot, never a made-up one");
 });
 const AVATAR_BASE_URL_FOR_TEST = "https://indiediscotheque.com/robots/";
 
