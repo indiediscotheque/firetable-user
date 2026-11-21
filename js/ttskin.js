@@ -35,7 +35,7 @@ firetable.tt = (function () {
   var STICKERS = ["id", "id9", "eight", "cake", "rohn", "heart", "happy", "wink", "laughing", "sad", "smh", "poop", "glowstick"];
   var EMOJI = ["1faa9", "1f525", "1f3a7", "1f4bf", "1f308", "2b50", "1f680", "1f47e", "1f496", "1f984", "1f918", "1f3b8", "1f3b9", "1f941", "1f3a4", "1f3b6",
     "1f4fc", "1f4fb", "26a1", "1f319", "1f6f8", "1f47d", "1f419", "1f412", "1f63a", "1f355", "1f32e", "1f369", "1f366", "1f352", "1f335", "1f344", "1f338", "1f30a", "1f389", "1f60e"];
-  var LIDS = ["silver", "black", "white", "gold", "pink", "teal", "purple"];
+  var LIDS = ["black", "silver", "white", "gold", "pink", "teal", "purple"];
   var MAX_STICKERS = 10;
 
   var S = {
@@ -136,7 +136,7 @@ firetable.tt = (function () {
    * the database rules to check in one pattern.
    */
   function parseLaptop(str) {
-    var out = { lid: "silver", items: [] };
+    var out = { lid: "black", items: [] }; // Turntable's laptops were dark
     if (typeof str !== "string" || !/^[a-z]{3,6}(;[a-z0-9]{1,10},[0-9]{1,3},[0-9]{1,3},-?[0-9]{1,3},[0-9]{2,3}){0,10}$/.test(str)) return out;
     var parts = str.split(";");
     if (LIDS.indexOf(parts[0]) !== -1) out.lid = parts[0];
@@ -258,7 +258,7 @@ firetable.tt = (function () {
             '<button type="button" id="tt-link" class="tt-chip tt-chipIcon" aria-label="Song link" title="Song link">' + ms("link") + "</button>" +
           "</div>" +
           "</div>" +
-          '<button type="button" class="tt-vote tt-awesome" id="tt-awesome" aria-label="Awesome! (Fire)" title="Awesome! (Fire)">' + ms("thumb_up", "material-symbols-filled") + '<span class="tt-count" id="tt-count" hidden></span></button>' +
+          '<button type="button" class="tt-vote tt-awesome" id="tt-awesome" aria-label="Awesome! (Fire)" title="Awesome! (Fire)">' + ms("thumb_up", "material-symbols-filled") + '<span class="tt-count" id="tt-count" aria-hidden="true" hidden></span></button>' +
         "</div>" +
         '<div class="tt-djlight" id="tt-djlight" aria-hidden="true"></div>' +
         '<div class="tt-table" id="tt-table" role="group" aria-label="The DJs"></div>' +
@@ -285,13 +285,12 @@ firetable.tt = (function () {
 
     // the panel's tabs, and the Room tab
     var grid = $id("mainGrid");
-    var tabs = document.createElement("div");
+    var tabs = document.createElement("nav");
     tabs.id = "tt-tabs";
-    tabs.setAttribute("role", "tablist");
     tabs.setAttribute("aria-label", "Panel");
-    tabs.innerHTML = [["queue", "queue_music", "Queue"], ["room", "info", "Room"], ["chat", "chat_bubble", "Chat"]].map(function (t) {
+    tabs.innerHTML = '<div class="tt-tablist" role="tablist" aria-label="Panel">' + [["queue", "queue_music", "Queue"], ["room", "info", "Room"], ["chat", "chat_bubble", "Chat"]].map(function (t) {
       return '<button type="button" role="tab" class="tt-tab" id="tt-tab-' + t[0] + '" data-tab="' + t[0] + '" aria-selected="false">' + ms(t[1], "material-symbols-filled") + "<span>" + t[2] + '</span><span class="tt-badge" hidden></span></button>';
-    }).join("");
+    }).join("") + "</div>";
     grid.appendChild(tabs);
 
     var pane = document.createElement("section");
@@ -479,7 +478,7 @@ firetable.tt = (function () {
       seat.classList.toggle("tt-on", d.id === active);
       seat.classList.toggle("tt-fired", !!fired[d.id]);
       seat.classList.toggle("tt-self", d.id === ftapi.uid);
-      seat.querySelector(".tt-plays").textContent = d.plays + "/" + (firetable.playlimit || "∞") + " plays";
+      seat.querySelector(".tt-plays").textContent = d.plays + "/" + (firetable.playlimit || "∞");
       var acts = seat.querySelector(".tt-seatacts");
       var actHtml = d.id === ftapi.uid
         ? '<button type="button" class="tt-mini" data-tt-stickers>Stickers</button><button type="button" class="tt-mini" data-tt-stepdown>Step down</button>'
@@ -575,6 +574,7 @@ firetable.tt = (function () {
     var c = $id("tt-count");
     c.hidden = !count;
     c.textContent = count > 99 ? "99+" : String(count);
+    aw.setAttribute("aria-label", count ? "Awesome! (Fire) " + count : "Awesome! (Fire)");
     $id("tt-storm").disabled = !mineOn;
     var people = Math.max(1, Object.keys(ftapi.users || {}).length - djs().length);
     var share = Math.min(1, count / Math.max(1, Math.ceil(people * 0.6)));
@@ -753,7 +753,7 @@ firetable.tt = (function () {
       if (!list.length) return "";
       if (g[0] !== "djs") list.sort(function (a, b) { return name(a) < name(b) ? -1 : 1; });
       else list.sort(function (a, b) { return seats.indexOf(a) - seats.indexOf(b); });
-      return '<h3 class="tt-group">' + g[1] + " <span>" + list.length + "</span></h3><ul>" + list.map(function (u) {
+      return '<h2 class="tt-group">' + g[1] + " <span>" + list.length + "</span></h2><ul>" + list.map(function (u) {
         var d = users[u];
         var badges = (d.supermod ? ms("verified_user", "material-symbols-filled tt-b tt-bmod") : d.mod ? ms("shield", "material-symbols-filled tt-b tt-bmod") : "") +
           (d.hostbot ? ms("smart_toy", "material-symbols-filled tt-b") : "") +

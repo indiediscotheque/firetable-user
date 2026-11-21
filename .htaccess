@@ -5,6 +5,11 @@
 
 Options -Indexes
 
+# The Turntable theme's pictures are WebP: say so (with nosniff, a wrong type isn't shown)
+<IfModule mod_mime.c>
+  AddType image/webp .webp
+</IfModule>
+
 # Never serve .htaccess files or the deploy's backup copy
 <FilesMatch "^\.ht">
   Require all denied

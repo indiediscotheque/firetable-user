@@ -235,7 +235,7 @@ try {
     lists: !db.playlists || !db.playlists[FAN] || !Object.keys(db.playlists[FAN]).length,
     queue: Object.keys((db.queues || {})[FAN] || {}).length >= 1,
     prefs: (db.playlistPrefs || {})[FAN] && db.playlistPrefs[FAN].defaultName === "My default",
-    turntable: /^[0-9a-f]{1,24}$/.test(me.ttAvatar || "") && /^silver;e1faa9,/.test(me.ttLaptop || ""),
+    turntable: /^[0-9a-f]{1,24}$/.test(me.ttAvatar || "") && /^black;e1faa9,/.test(me.ttLaptop || ""),
     profile: me.username === "fan" && me.avatarStyle === "dicebear:pixel-art" && /^[1-4]\.\d+\.\d+(\.\d+){16}$/.test(me.boulet || "") && me.bouletOn === true && me.publicName === false && me.selectedList !== undefined,
     presence: me.status === false && typeof me.closed === "number" && typeof me.offlineAt === "number" && typeof me.joined === "number",
     grab: !!(db.grabs && db.grabs.dj1 && Object.values(db.grabs.dj1).some((t) => t[FAN])),

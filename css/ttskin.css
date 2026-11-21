@@ -22,6 +22,7 @@ body.tt-skin {
     --tt-text: #e8e8e8;
     --tt-muted: #9a9a9a;
     --tt-side: clamp(18rem, 24vw, 24rem);
+    --tt-font: "Helvetica Neue", Helvetica, Arial, sans-serif; /* as deepcut.fm, and nothing to download */
     --tt-s: 0.6;
     --tt-x: 0px;
     --tt-y: 0px;
@@ -30,6 +31,24 @@ body.tt-skin {
 
 /* outside the theme (Live, Discover), its pieces stay out of the page's layout */
 body:not(.tt-skin) :is(#tt-room, #tt-tabs, #tt-pane, #tt-qhead, .tt-guestNote, #tt-brand, #tt-exit, #tt-layout) { display: none; }
+
+/* The songboard's dot-matrix letters: Doto (SIL Open Font License, github.com/oliverlalan/Doto),
+   declared here so it's only fetched in the theme; the second half only for letters past Latin-1 */
+@font-face {
+    font-family: "Doto";
+    src: url(../fonts/Doto-VariableFont.main.woff2) format("woff2");
+    font-weight: 100 900;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212;
+}
+@font-face {
+    font-family: "Doto";
+    src: url(../fonts/Doto-VariableFont.rest.woff2) format("woff2");
+    font-weight: 100 900;
+    font-display: swap;
+    unicode-range: U+0100-024F, U+1E00-1EFF;
+}
+body.tt-skin #mainGrid, body.tt-skin #dMini, .tt-modal { font-family: var(--tt-font); }
 
 /* ── The page: bar along the top, the room, the panel on the right ─────────── */
 html body.tt-skin #mainGrid,
@@ -102,7 +121,7 @@ html body.tt-skin[data-tt-tab="chat"] #mainGrid:is(.login, .pre-auth) #tt-guest 
     border-bottom: 1px solid #111;
     border-right: 1px solid #111;
     color: var(--tt-gold);
-    font: 600 0.8rem/1 var(--font-family);
+    font: 600 0.8rem/1 var(--tt-font);
     box-shadow: inset 0 -2px 0 var(--tt-gold);
 }
 #tt-qhead i { font-size: 1rem; }
@@ -183,7 +202,7 @@ body.tt-skin #tt-exit {
     border-radius: 0.3rem;
     background: rgba(227, 191, 35, 0.08);
     color: var(--tt-gold);
-    font: 600 0.8rem/1 var(--font-family);
+    font: 600 0.8rem/1 var(--tt-font);
     cursor: pointer;
 }
 body.tt-skin #tt-exit:hover, body.tt-skin #tt-exit:focus-visible { background: var(--tt-gold); color: #1a1a1a; }
@@ -199,6 +218,7 @@ body.tt-skin #tt-tabs {
     border-left: 1px solid #111;
     z-index: 5;
 }
+.tt-tablist { display: contents; }
 .tt-tab {
     position: relative;
     min-width: 0;
@@ -211,7 +231,7 @@ body.tt-skin #tt-tabs {
     border: 0;
     background: none;
     color: var(--tt-muted);
-    font: 600 0.8rem/1 var(--font-family);
+    font: 600 0.8rem/1 var(--tt-font);
     cursor: pointer;
 }
 .tt-tab i { font-size: 1rem; }
@@ -250,7 +270,7 @@ body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
     border-radius: 0.35rem;
     background: #303030;
     color: var(--tt-text);
-    font: 500 0.85rem/1 var(--font-family);
+    font: 500 0.85rem/1 var(--tt-font);
     text-align: left;
     cursor: pointer;
 }
@@ -270,7 +290,7 @@ body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
-.tt-group span { color: #666; }
+.tt-group span { color: #a3a3a3; }
 .tt-people ul { list-style: none; margin: 0; padding: 0; }
 .tt-guest {
     display: flex;
@@ -281,7 +301,7 @@ body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
     border: 0;
     background: none;
     color: var(--tt-text);
-    font: 600 0.85rem/1.2 var(--font-family);
+    font: 600 0.85rem/1.2 var(--tt-font);
     text-align: left;
     cursor: pointer;
 }
@@ -297,6 +317,11 @@ body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
 .tt-b { font-size: 0.95rem; color: var(--tt-muted); }
 .tt-bmod { color: #5fb760; }
 .tt-bawe { color: var(--tt-gold); }
+
+/* chat on the theme's panel: its names and times kept readable */
+body.tt-skin #actualChat .chatName { color: #d6d6d6; }
+body.tt-skin #actualChat .chatTime { color: #a8a8a8; }
+body.tt-skin #actualChat .ch-bot .chatText { color: #b4b4b4; }
 
 /* every face in this theme is a Turntable face: the Live one stays underneath, covered */
 body.tt-skin .ft-avatar[data-tt] { position: relative; overflow: hidden; }
@@ -326,7 +351,7 @@ body.tt-skin #queuebox > #djlistpickerWrap select { flex: 1; min-width: 0; }
     border-radius: 0.4rem;
     background: linear-gradient(#f1cf3a, var(--tt-gold-2));
     color: #2a2000;
-    font: 800 0.95rem/1.1 var(--font-family);
+    font: 800 0.95rem/1.1 var(--tt-font);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 2px 6px rgba(0, 0, 0, 0.5);
     cursor: pointer;
     padding: 0.5rem 1rem;
@@ -341,7 +366,7 @@ body.tt-skin #queuebox > #djlistpickerWrap select { flex: 1; min-width: 0; }
     border-radius: 0.4rem;
     background: #2d2d2d;
     color: #ddd;
-    font: 600 0.8rem/1 var(--font-family);
+    font: 600 0.8rem/1 var(--tt-font);
     cursor: pointer;
 }
 .tt-ghost:hover, .tt-ghost:focus-visible { border-color: #777; color: #fff; }
@@ -475,7 +500,7 @@ body.tt-skin #screenover { display: none; }
     border-radius: 30px;
     background: rgba(0, 0, 0, 0.6);
     color: #fff;
-    font: 500 30px/1.2 var(--font-family);
+    font: 500 30px/1.2 var(--tt-font);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -541,11 +566,11 @@ body.tt-skin #screenover { display: none; }
     top: 15px;
     height: 98px;
     overflow: hidden;
-    color: #ffd9c9;
-    text-shadow: 0 0 6px #ff2a1a, 0 0 2px #ff6a4a;
+    color: #ffc4cf;
+    text-shadow: 0 0 6px #ff2a3a, 0 0 2px #ff5a6a;
     text-transform: uppercase;
 }
-/* LED dots: the letters seen through a grid of little holes */
+/* the LED letters (Doto, a dot-matrix face) */
 .tt-led {
     position: absolute;
     left: 6px;
@@ -553,20 +578,27 @@ body.tt-skin #screenover { display: none; }
     overflow: hidden;
     white-space: nowrap;
     text-align: center;
-    -webkit-mask: radial-gradient(circle, #000 62%, transparent 68%) 0 0 / 3px 3px;
-    mask: radial-gradient(circle, #000 62%, transparent 68%) 0 0 / 3px 3px;
+    font-family: "Doto", var(--font-numbers);
+    font-weight: 900;
 }
-.tt-line1 { top: 4px; font: 900 40px/1.05 var(--font-family); letter-spacing: 1px; }
-.tt-line2 { top: 50px; font: 800 20px/1.1 var(--font-family); letter-spacing: 1px; }
+.tt-line1 { top: 2px; font-size: 44px; line-height: 1.05; letter-spacing: 1px; }
+.tt-line2 { top: 50px; font-size: 22px; line-height: 1.1; }
 .tt-led.tt-marquee { text-align: left; }
 .tt-led.tt-marquee span { display: inline-block; animation: tt-marquee var(--len, 14s) linear infinite; }
-.tt-times { top: 76px; display: flex; align-items: center; gap: 10px; font: 700 16px/1 var(--font-numbers); }
+.tt-times { top: 76px; display: flex; align-items: center; gap: 10px; font-size: 19px; line-height: 1; }
 .tt-prog {
     flex: 1;
-    height: 8px;
-    background: repeating-linear-gradient(90deg, rgba(255, 60, 40, 0.25) 0 4px, transparent 4px 6px);
+    height: 12px;
+    background: repeating-linear-gradient(90deg, rgba(255, 90, 110, 0.22) 0 6px, transparent 6px 8px);
 }
-.tt-prog i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(90deg, #ff6a4a 0 4px, transparent 4px 6px); transition: width 1s linear; }
+.tt-prog i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: repeating-linear-gradient(90deg, #ffc4cf 0 6px, transparent 6px 8px);
+    filter: drop-shadow(0 0 3px #ff2a3a);
+    transition: width 1s linear;
+}
 .tt-board:not(.tt-playing) .tt-times { visibility: hidden; }
 
 /* Grab and friends: on the songboard, when it's pointed at (as Turntable's did) */
@@ -596,7 +628,7 @@ body.tt-skin #screenover { display: none; }
     border-radius: 20px;
     background: rgba(20, 20, 20, 0.8);
     color: #ddd;
-    font: 700 18px/1 var(--font-family);
+    font: 700 18px/1 var(--tt-font);
     cursor: pointer;
 }
 .tt-chip[hidden] { display: none; }
@@ -606,10 +638,11 @@ body.tt-skin #screenover { display: none; }
 #tt-grab i { color: #ff5aa5; }
 #tt-grab.on { border-color: #ff5aa5; }
 
-/* the DJs' table */
+/* the DJs' table: dj-table is the table (its lavender top, the front, the speaker grille);
+   laptops stand on the top at --seat-y, the DJs behind them, head and shoulders showing */
 .tt-djlight {
-    left: calc(554px + var(--i, 0) * 120px - 75px);
-    top: 300px;
+    left: calc(560px + var(--i, 0) * 116px - 75px);
+    top: 296px;
     width: 150px;
     height: 210px;
     background: url(../img/tt/dj-light.webp) center / 100% 100%;
@@ -624,37 +657,41 @@ body.tt-skin #screenover { display: none; }
 .tt-tabletop { left: 475px; top: 486px; width: 518px; height: 58px; background: url(../img/tt/dj-table.webp); z-index: 3; pointer-events: none; }
 .tt-seat {
     position: absolute;
-    left: calc(554px + var(--i) * 120px);
-    top: 500px;
+    left: calc(560px + var(--i) * 116px);
+    top: 436px; /* the laptops' top edge */
     width: 0;
     height: 0;
 }
 .tt-seat > * { pointer-events: auto; }
-.tt-dj { left: 0; top: 0; z-index: 2; --d: 1.22; }
-.tt-seat > .tt-laptop { position: absolute; left: 0; top: -44px; width: 112px; height: 77px; transform: translateX(-50%); z-index: 4; }
+/* the DJ: the point 58% down the figure (about the chest) sits on the laptop's top edge */
+#tt-room .tt-dj { left: 0; top: 0; z-index: 2; transform: translate(-50%, -58%) scale(1.15); transform-origin: 50% 58%; }
+.tt-seat > .tt-laptop { position: absolute; left: -43px; top: 0; width: 86px; height: 60px; z-index: 4; }
 .tt-figwrap { display: block; }
+/* the DJ's name and plays, under the laptop: always for the one playing, the others when pointed at */
 .tt-plate {
     position: absolute;
-    left: 50%;
-    top: 52px;
+    left: 0;
+    top: 74px;
     transform: translateX(-50%);
     z-index: 5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 3px 12px;
-    border-radius: 14px;
-    background: rgba(10, 60, 90, 0.9);
+    padding: 3px 10px;
+    border-radius: 11px;
+    background: #0c6a92;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
     color: #fff;
-    font: 700 22px/1.15 var(--font-family);
+    font: 700 15px/1.25 var(--tt-font);
     white-space: nowrap;
-    max-width: 200px;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
-.tt-plate b { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.tt-plays { font: 600 15px/1.2 var(--font-numbers); color: #bfe3ff; }
-.tt-seat.tt-on .tt-plate { background: linear-gradient(#f1cf3a, var(--tt-gold-2)); color: #2a2000; }
-.tt-seat.tt-on .tt-plays { color: #4a3a00; }
-.tt-seatacts { position: absolute; left: 50%; top: 100px; transform: translateX(-50%); display: flex; gap: 6px; z-index: 6; opacity: 0; transition: opacity 0.2s; }
+.tt-plate b { font-weight: 700; }
+.tt-plays { font-weight: 400; opacity: 0.85; }
+.tt-plays::before { content: " · "; }
+.tt-seat.tt-on .tt-plate, .tt-seat:hover .tt-plate, .tt-seat:focus-within .tt-plate { opacity: 1; }
+.tt-seatacts { position: absolute; left: 0; top: 100px; transform: translateX(-50%); display: flex; gap: 6px; z-index: 6; opacity: 0; transition: opacity 0.2s; }
 .tt-seat:hover .tt-seatacts, .tt-seat:focus-within .tt-seatacts { opacity: 1; }
 .tt-mini {
     padding: 5px 10px;
@@ -662,34 +699,57 @@ body.tt-skin #screenover { display: none; }
     border-radius: 12px;
     background: rgba(0, 0, 0, 0.85);
     color: #fff;
-    font: 700 14px/1 var(--font-family);
+    font: 700 14px/1 var(--tt-font);
     white-space: nowrap;
     cursor: pointer;
 }
 .tt-mini.armed { background: #a11; border-color: #f55; }
 .tt-empty { z-index: 4; }
+/* an open seat: a stack of records with a light glowing up out of it */
 .tt-vinyl {
     position: absolute;
-    left: -36px;
-    top: -8px;
-    width: 72px;
-    height: 22px;
+    left: -34px;
+    top: 42px;
+    width: 68px;
+    height: 20px;
     border-radius: 50%;
-    background: radial-gradient(ellipse at center, #e3bf23 0 14%, #111 16% 60%, #2a2a2a 62% 100%);
-    box-shadow: 0 0 18px rgba(227, 191, 35, 0.45);
+    background: radial-gradient(ellipse at 50% 45%, #ffd23a 0 11%, #b8860b 13%, #111 16% 55%, #2b2b2b 57% 63%, #111 65%);
+    box-shadow: 0 3px 0 -1px #0d0d0d, 0 6px 0 -2px #1c1c1c, 0 8px 6px rgba(0, 0, 0, 0.6);
     z-index: 4;
 }
+.tt-vinyl::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 50%;
+    width: 46px;
+    height: 46px;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse 50% 100% at 50% 100%, rgba(255, 214, 70, 0.85), rgba(255, 190, 40, 0.25) 55%, transparent 75%);
+    mix-blend-mode: screen;
+    filter: blur(2px);
+    pointer-events: none;
+}
+/* Play Music: the card over the first open seat */
 .tt-play {
     position: absolute;
-    left: -62px;
-    top: -112px;
-    width: 124px;
-    padding: 14px 0;
-    font-size: 26px;
-    line-height: 1.05;
+    left: -44px;
+    top: -12px;
+    width: 88px;
+    height: 74px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(#f6d64a, #e2b520);
+    box-shadow: 0 2px 0 #a8830f, 0 4px 10px rgba(0, 0, 0, 0.55);
+    color: #1d1600;
+    font: 700 21px/1.05 var(--tt-font);
+    text-align: center;
+    cursor: pointer;
     z-index: 5;
-    animation: tt-nudge 2.4s ease-in-out infinite;
 }
+.tt-play:hover, .tt-play:focus-visible { background: linear-gradient(#ffe36a, #ecc02a); }
+.tt-empty:has(.tt-play) .tt-vinyl { display: none; }
 
 /* ── People: standing on their feet, their head on their body ─────────────── */
 .tt-person {
@@ -740,7 +800,7 @@ body.tt-skin #screenover { display: none; }
     border-radius: 14px;
     background: rgba(0, 0, 0, 0.7);
     color: #ddd;
-    font: 600 20px/1 var(--font-family);
+    font: 600 20px/1 var(--tt-font);
     z-index: 1100;
 }
 .tt-more[hidden] { display: none; }
@@ -838,7 +898,7 @@ body.tt-skin #screenover { display: none; }
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
     overflow: auto;
     overscroll-behavior: contain;
-    font-family: var(--font-family);
+    font-family: var(--tt-font);
 }
 .tt-lapModal { width: min(52rem, calc(100vw - 2rem)); }
 .tt-pickHead {
@@ -878,7 +938,7 @@ body.tt-skin #screenover { display: none; }
     border-radius: 1rem;
     background: #333;
     color: #ccc;
-    font: 700 0.8rem/1 var(--font-family);
+    font: 700 0.8rem/1 var(--tt-font);
     cursor: pointer;
 }
 .tt-pickTier.on { border-color: var(--tt-gold); color: var(--tt-gold); }
