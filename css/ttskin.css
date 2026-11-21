@@ -646,7 +646,7 @@ body.tt-skin #screenover { display: none; }
 /* the DJs' table: dj-table is the table (its lavender top, the front, the speaker grille);
    laptops stand on the top at --seat-y, the DJs behind them, head and shoulders showing */
 .tt-djlight {
-    left: calc(560px + var(--i, 0) * 116px - 75px);
+    left: calc(587px + var(--i, 0) * 98px - 75px);
     top: 296px;
     width: 150px;
     height: 210px;
@@ -662,14 +662,16 @@ body.tt-skin #screenover { display: none; }
 .tt-tabletop { left: 475px; top: 486px; width: 518px; height: 58px; background: url(../img/tt/dj-table.webp?v=01.12.08); z-index: 3; pointer-events: none; }
 .tt-seat {
     position: absolute;
-    left: calc(560px + var(--i) * 116px);
+    left: calc(587px + var(--i) * 98px); /* laptops side by side, 98 apart, as deepcut */
     top: 436px; /* the laptops' top edge */
     width: 0;
     height: 0;
 }
 .tt-seat > * { pointer-events: auto; }
-/* the DJ, at the avatar's own size (as deepcut draws them): the top half shows over the laptop */
-#tt-room .tt-dj { left: 0; top: 0; z-index: 2; transform: translate(-50%, -50%); transform-origin: 50% 50%; }
+/* the DJ, as deepcut draws them: about 0.72 of the avatar's own size (a head a little
+   narrower than the laptop), their chin on the lid's top edge so the whole face shows
+   (--chin: how far down the figure the chin is, measured for each avatar by tools/tt-avatars.py) */
+#tt-room .tt-dj { left: 0; top: 0; z-index: 2; transform: translate(-50%, calc(var(--chin, 62%) * -1)) scale(0.72); transform-origin: 50% var(--chin, 62%); }
 .tt-seat > .tt-laptop { position: absolute; left: -43px; top: 0; width: 86px; height: 60px; z-index: 4; pointer-events: auto; cursor: pointer; }
 .tt-seat.tt-menu .tt-plate { opacity: 1; }
 .tt-figwrap { display: block; }
@@ -700,7 +702,7 @@ body.tt-skin #screenover { display: none; }
 .tt-empty { z-index: 4; }
 /* a DJ's menu, under their laptop (deepcut's: a dark list, their name in gold) */
 .tt-djmenu {
-    left: calc(560px + var(--i, 0) * 116px - 82px);
+    left: calc(587px + var(--i, 0) * 98px - 82px);
     top: 500px;
     width: 164px;
     padding: 0;
@@ -796,7 +798,7 @@ body.tt-skin #screenover { display: none; }
 /* the site's own button looks stay off the figures (no box around anyone) */
 #tt-room .tt-person { width: max-content; height: auto; min-width: 0; min-height: 0; line-height: 0; background: none; border: 0; box-shadow: none; border-radius: 0; }
 .tt-person:focus-visible { outline: 3px solid var(--tt-gold); outline-offset: 2px; border-radius: 8px; }
-.tt-listener { top: calc(745px + var(--f, 0) * var(--tt-fh, 400px)); animation: tt-arrive 0.5s ease-out both; }
+.tt-listener { top: calc(715px + var(--f, 0) * var(--tt-fh, 400px)); animation: tt-arrive 0.5s ease-out both; }
 .tt-listener.tt-leaving { opacity: 0; }
 .tt-listener.tt-idle { opacity: 0.55; }
 .tt-listener.tt-self::after {
@@ -824,7 +826,7 @@ body.tt-skin #screenover { display: none; }
 .tt-crowd > * { pointer-events: auto; }
 .tt-more {
     left: 50%;
-    top: calc(745px + var(--tt-fh, 400px) + 4px);
+    top: calc(715px + var(--tt-fh, 400px) + 4px);
     transform: translateX(-50%);
     margin: 0;
     padding: 6px 14px;
