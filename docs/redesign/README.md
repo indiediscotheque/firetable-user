@@ -33,7 +33,7 @@ Keep this table current as steps ship (one line per step in [04-step-plan.md](04
 | Phase | Status |
 |---|---|
 | 0 Foundations | done: 0.1 (tokens), 0.2 (the screenshot harness), 0.4 (nothing lost) and 0.6 (accessibility) shipped; 0.3 (the opt-in switch) and 0.5 (icons up front) dropped |
-| 1 Inside today's layout | 1.16 shipped (rename, remove duplicates, export, the duplicates filter and a view-only sort, November 19, 2026; the Not played here yet filter waits); 1.17 shipped (Select several: Top, Bottom, Copy to…, Delete with Undo, November 19, 2026); 1.15 shipped (the rows: number, Title · Artist, Next / Broken / Remix, and Delete and search for another, November 19, 2026); 1.8 superseded; 1.14 dropped; 1.9 moved to Phase 2; 1.3, 1.5 and 1.10 narrowed by what Phase 2 did (see the step plan's notes) |
+| 1 Inside today's layout | 1.16 shipped (rename, remove duplicates, export, the duplicates filter and a view-only sort, November 19, 2026; the Not played here yet filter waits); 1.17 shipped (Select several: Top, Bottom, Copy to…, Delete with Undo, November 19, 2026); 1.15 shipped (the rows: number, Title · Artist, Next / Broken / Remix, and Delete and search for another, November 19, 2026); 1.8 superseded; 1.14 and 1.3 dropped; 1.9 moved to Phase 2; 1.5 and 1.10 narrowed by what Phase 2 did (see the step plan's notes) |
 | 2 Discover (round 4) | 2.7 shipped (the sound map with the room's, your and tonight's genres, a genre's card under it; library pages: chips, top 10 then Show all, DJ pages, sets by night, Years with covers; each song once in every list); 2.8 shipped (one song menu: the same items, order and words in every ⋮); 2.6 shipped (New's Show menu; Charts' controls and actions; tied ranks, 1.9); 2.4 shipped (Home leads with New this week, Not played live yet, the top DJs); 2.5 shipped (joining, logging in, the account menu and Account tab); 2.1 and 2.3 shipped (the player bar along the bottom, the On Air card, and the right column for Playlists and Chat); 2.3b shipped (the full-screen player, for TVs and second screens, in Discover and Live, replacing the Now playing tab); 2.3c shipped (the player along the bottom of the whole site with the stage's utilities in it, audio that stays put between Discover and Live, modern buttons and sliders, the chat for members only) |
 | 3 The new room | on hold |
 | 4 Phones | 4.0 skipped and 4.5 covered by the header and account menu while today's tabs stay (the owner, November 20, 2026); 4.3 shipped (56px rows, the rest came with 1.15 to 1.17); 4.6 (the mini player) mostly shipped with 2.3 and 2.3c; 4.1 and 4.2 (the bottom tab bar) wait for a call |
@@ -53,14 +53,14 @@ Phase 2's player work is in, plus a stream of owner requests. What isn't in is t
 6. ~~**2.8 One song menu everywhere.**~~ ✅ `firetable.songMenu`: one list of items for every song's ⋮.
 7. **2.7 Library pages and the sound map.** The trail on the map waits for the hostbot to put the genre on recent plays.
 8. **Phase 4, phones**, starting with 4.0 (measure), then 4.1, 4.5, 4.3, 4.4; 4.2 and 4.6 are mostly done.
-9. **Phase 1's Live steps**, one at a time with the owner's yes: 1.6 Grab, 1.19 Import, 1.5 Fire's count, 1.11 Your turn, 1.10 states, 1.18 shortcuts, 1.7, 1.12, 1.13, 1.2, 1.3 (the screen glyph only), 1.4. 1.20 waits for the bot's import job, 1.21 for a Spotify key.
+9. **Phase 1's Live steps**, one at a time with the owner's yes: 1.6 Grab, 1.19 Import, 1.5 Fire's count, 1.11 Your turn, 1.10 states, 1.18 shortcuts, 1.7, 1.12, 1.13, 1.2, ~~1.3~~ (dropped: the button already shows each setting's glyph), 1.4. 1.20 waits for the bot's import job, 1.21 for a Spotify key.
 10. **Phase 5:** 5.2 after Phase 4 has been live a few weeks.
 
 ### Decided (the owner, November 15, 2026)
 
 - **1.18:** Fire is **H**, for "h0t tracks". F stays the full-screen player.
 - **1.14:** dropped. The plain playlist select stays: it already shows each list's name and count, opens the phone's own picker, and jumps by typing on a computer; ⋮ has All playlists, New and Import. A custom switcher would add a tap and code for nothing new.
-- **1.3:** no "hide the avatars" view. The DJs always stand on the stage; the full-screen player is the view without them. 1.3 is down to a clearer screen icon.
+- **1.3:** no "hide the avatars" view. The DJs always stand on the stage; the full-screen player is the view without them. 1.3 was down to a clearer screen icon, then dropped (November 22, 2026): the button already cycles synced / always on / off with a glyph for each, and only its placeholder needed fixing.
 - **Chip rows:** New and Charts come first (2.6). Discover's other rows of buttons (a genre's tabs, the DJs' sort, a DJ's tabs, the decades) stay as they are.
 - **5.3:** Discover is always on. The site-without-Discover paths go (moved up to item 5).
 
