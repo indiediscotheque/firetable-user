@@ -1130,22 +1130,15 @@ ftapi.actions = {
     });
   },
   /**
-   * Sign in (or sign up) with Google or Apple. Uses a popup, or a full-page
-   * redirect where popups can't open (blocked, or an installed web app).
-   * @param {"google"|"apple"} name
+   * Sign in (or sign up) with Google. Uses a popup, or a full-page redirect
+   * where popups can't open (blocked, or an installed web app).
+   * @param {"google"} name
    * @param {Function} errorCallback - (error)
    */
   logInWithProvider: function(name, errorCallback) {
     ftapi.nameChangeAfterSignUp = null;
-    var provider;
-    if (name === "apple") {
-      provider = new firebase.auth.OAuthProvider("apple.com");
-      provider.addScope("email");
-      provider.addScope("name");
-    } else {
-      provider = new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: "select_account" });
-    }
+    var provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
     var auth = firebase.app("firetable").auth();
     var standalone = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
     if (standalone) return auth.signInWithRedirect(provider).catch(errorCallback);
@@ -1167,7 +1160,7 @@ ftapi.actions = {
   },
   /**
    * Who's signed in: their email and how they sign in.
-   * @returns {{email: string, providers: string[]}|null} providers: "password", "google.com", "apple.com"
+   * @returns {{email: string, providers: string[]}|null} providers: "password", "google.com"
    */
   accountInfo: function() {
     var user = firebase.app("firetable").auth().currentUser;

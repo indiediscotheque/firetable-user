@@ -193,7 +193,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | AU-01 | Welcome and room pulse for visitors | V | `#login` > `#welcomeInfo`, `#roomPulse` (`renderRoomPulse`) | 2.4; ✅ 4.1b ends with the same Join buttons as Discover, which open `#joinBox` |
 | AU-02 | Create account (email, username, password, terms) | V | `#createscreen`, `#createAccountFormShell`, only in `#joinBox` (`openAuth`) | 2.5 shipped; ✅ 4.1b one form, in the dialog only |
 | AU-03 | Log in, show password, forgot password | V | `#logscreen`, `#resetscreen`, `.showPass`; in `#joinBox` from the header | 2.5 shipped |
-| AU-04 | Google / Apple sign-in | V | `#oauthBox`, `setupProviderSignIn`, `ftconfigs.signInProviders` | keep |
+| AU-04 | Google sign-in (on; Apple won't be offered: the owner, November 22, 2026) | V | `#oauthBox`, `setupProviderSignIn`, `ftconfigs.signInProviders` | keep |
 | AU-05 | Pick a username after Google sign-in | V | `#pickNameBox`, `setupPickName` | keep |
 | AU-06 | Join box over the page (stay where you are) | V | `#joinBox` in `index.html`, `users.js` `openAuth` / `closeAuth`; `discover.js` `showSignIn` adds the crate note | 2.5 shipped: every page, Discover and Live |
 | AU-07 | Change username | M | `#ac-nameForm` (`#changeUsername`, `#ac-saveName`), `#usernameResponse`, `nameClaim` | keep (Profile tab) |

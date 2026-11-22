@@ -87,12 +87,12 @@ firetable.actions.logIn = function (email, password) {
   });
 };
 
-// ─── Sign in with Google / Apple (#128) ─────────────────────────────────────
+// ─── Sign in with Google (#128) ─────────────────────────────────────────────
 
 /** Providers this site has turned on (ftconfigs.signInProviders). */
 firetable.utilities.signInProviders = function () {
   var list = (typeof ftconfigs !== "undefined" && ftconfigs.signInProviders) || [];
-  return (Array.isArray(list) ? list : []).filter(function (p) { return p === "google" || p === "apple"; });
+  return (Array.isArray(list) ? list : []).filter(function (p) { return p === "google"; });
 };
 
 /** Show a button for each provider that's turned on. */
@@ -131,7 +131,7 @@ firetable.utilities.suggestUsername = function (user) {
   return base || "dj_" + Math.random().toString(36).slice(2, 8);
 };
 
-/** First visit with a new Google/Apple account: choose the name people see. */
+/** First visit with a new Google account: choose the name people see. */
 firetable.actions.promptForUsername = function () {
   var dlg = document.getElementById("pickNameBox");
   if (!dlg || dlg.open) return;
@@ -324,7 +324,7 @@ firetable.actions.loggedIn = function (user) {
     });
   }); });
 
-  // A brand-new Google/Apple account has no username yet
+  // A brand-new Google account has no username yet
   // (userByID stands the uid in for a missing name, so read the field itself)
   if (!ftapi.pendingSignUpName) {
     var askedFor = ftapi.uid;
@@ -356,7 +356,7 @@ firetable.ui.greet = function () {
     if (!ftapi.uid) return;
     var me = ftapi.users && ftapi.users[ftapi.uid];
     var name = ftapi.pendingSignUpName || (me && me.username) || (ftapi.uname !== ftapi.uid ? ftapi.uname : "");
-    // a new Google / Apple account picks its name first, and is welcomed then
+    // a new Google account picks its name first, and is welcomed then
     if (!name) return;
     firetable.ui.toast(intent === "create" ? "Welcome to the room, " + name + "!" : "Welcome back, " + name + ".", "success");
   }, 400);
@@ -458,7 +458,7 @@ firetable.ui.showAuth = function (which, opts) {
     var on = $(this).attr("data-auth") === tab;
     $(this).toggleClass("on", on).attr("aria-selected", String(on));
   });
-  // Google/Apple work for both, so they stay above Create and Log in
+  // Google works for both, so they stay above Create and Log in
   $("#authBox").attr("data-auth", which);
   $("#authBox .formMessage").text("").removeClass("is-success");
   firetable.ui.titleAuth(which);
@@ -701,7 +701,6 @@ function signInMethod(info) {
   var p = (info && info.providers) || [];
   var names = [];
   if (p.indexOf("google.com") !== -1) names.push("Google");
-  if (p.indexOf("apple.com") !== -1) names.push("Apple");
   if (p.indexOf("password") !== -1) names.push("Email and password");
   return names.join(", ") || "Email and password";
 }
