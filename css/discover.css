@@ -1757,6 +1757,20 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
         opacity: 0;
         pointer-events: none;
     }
+    /* Chatting with the keyboard up (ui.js keepFocusedFieldVisible): the
+       conversation gets the screen. The stage plays on out of sight, as it
+       does behind Library, the bar still names the song, and the tabs along
+       the bottom come back with the keyboard down. */
+    body.kb-chat:not(.pv-full-on) #stage {
+        position: fixed !important;
+        left: -10000px;
+        top: 0;
+        width: 640px;
+        height: 360px;
+        opacity: 0;
+        pointer-events: none;
+    }
+    body.kb-chat #nav-tabs { display: none; }
 }
 
 /* ============================================

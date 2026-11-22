@@ -3299,6 +3299,35 @@ try {
     "a chart row on a phone: plays shown under the artist, a long title in two lines, Play / Save / Share on one row (" + JSON.stringify(phoneChart) + ")");
   await cPage.close();
 
+  // chatting on a phone with the keyboard up: the stage and the bottom tabs step aside, and come back
+  const kPage = await context.newPage();
+  await kPage.setViewportSize({ width: 390, height: 844 });
+  await openPage(kPage, SITE + "#live");
+  await kPage.waitForFunction(() => window.firetable && firetable.nav && document.getElementById("nav-tabs") && firetable.$appShell !== undefined, null, { timeout: 30000 });
+  const kb = async (h) => {
+    await kPage.setViewportSize({ width: 390, height: h });
+    await sleep(350);
+    return kPage.evaluate(() => {
+      const s = document.getElementById("stage").getBoundingClientRect(), c = document.getElementById("chatsWrap").getBoundingClientRect();
+      return { on: document.body.classList.contains("kb-chat"), stage: s.right > 0 && s.height > 0, tabs: getComputedStyle(document.getElementById("nav-tabs")).display !== "none", chat: Math.round(c.height), focus: document.activeElement.id };
+    });
+  };
+  // as a member, in Live's chat (this page is a visitor's: the room's panels in)
+  await kPage.evaluate(() => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login pre-auth");
+    firetable.nav.setMobileTab("mmchat");
+    document.getElementById("newchat").focus();
+  });
+  const typing = { tall: await kb(844), up: await kb(500), down: await kb(844) };
+  await kPage.evaluate(() => document.getElementById("newchat").blur());
+  await sleep(300);
+  typing.blurUp = await kb(500);
+  check(!typing.tall.on && typing.tall.stage && typing.up.on && !typing.up.stage && !typing.up.tabs && typing.up.chat >= 200 && typing.up.focus === "newchat" &&
+    !typing.down.on && typing.down.stage && typing.down.tabs && !typing.blurUp.on && typing.blurUp.stage,
+    "a phone's keyboard up while chatting: the stage and the tab bar step aside and the chat keeps its room; back with the keyboard down or the box left (" + JSON.stringify(typing) + ")");
+  await kPage.close();
+
   console.log("-- Discover: members chat with the room from Discover");
   const chatHere = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
