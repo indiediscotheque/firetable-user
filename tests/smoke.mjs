@@ -1229,6 +1229,19 @@ try {
     const back = [...document.querySelectorAll("#tt-lapLid .tt-sticker")].map((el) => parseFloat(el.style.left));
     out.bleedBack = back.length === 2 && back[1] < 0 && Math.abs(back[1] - parseFloat(out.bleedInfo)) < 1;
     document.querySelector('#tt-laptopEdit [data-lap="cancel"]').click();
+    // the sound held back: Live's "Listen to the room" is a plain Turntable button, centred on the floor,
+    // and still starts the sound
+    document.body.classList.add("media-blocked");
+    const ttp = document.getElementById("tapToPlay"), tb = ttp.getBoundingClientRect(), sb = document.getElementById("djStage").getBoundingClientRect();
+    const tcs = getComputedStyle(ttp), realTap = firetable.media.tapToPlay;
+    let tapped = false;
+    firetable.media.tapToPlay = () => { tapped = true; };
+    ttp.click();
+    firetable.media.tapToPlay = realTap;
+    out.listen = tb.width > 0 && Math.abs(tb.left + tb.width / 2 - (sb.left + sb.width / 2)) < 3 && tcs.boxShadow.indexOf("rgba(0, 0, 0") === -1 &&
+      getComputedStyle(document.getElementById("tapToPlaySub")).display === "none" && /^rgb\(2(2[0-9]|[3-5][0-9])/.test(tcs.backgroundImage.replace(/^linear-gradient\(/, "")) && tapped;
+    out.listenInfo = [Math.round(tb.left + tb.width / 2), Math.round(sb.left + sb.width / 2), tcs.boxShadow, tcs.backgroundImage.slice(0, 40), tapped].join(" | ");
+    document.body.classList.remove("media-blocked");
     // one sidebar or two
     document.getElementById("tt-layout").click();
     const lay1 = document.body.getAttribute("data-tt-layout");
@@ -1271,6 +1284,7 @@ try {
   check(tt.turn && /;ttfm,/.test(tt.stickers), "the turntable.fm logo is a sticker, and a sticker turns by dragging its corner (" + tt.turnInfo + ")");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
+  check(tt.listen, "the sound held back: a plain Turntable Listen button, centred on the floor, that starts the sound (" + tt.listenInfo + ")");
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
   check(tt.turnBefore && tt.held && tt.turn && tt.turnBack, "a song change moves the spotlight and the nodding head to the DJ now playing (" + [tt.turnBefore, tt.held, tt.turn, tt.turnBack] + ")");
   check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
