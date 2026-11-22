@@ -172,7 +172,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | RE-01 | Recent plays, grouped by day and hour, with DJ avatars | All | `#thehistoryWrap` > `#thehistory`, `newHistory`, `songHistory`, `HISTORY_PAGE_SIZE`, "Show older plays" | keep; 1.13 type |
 | RE-02 | Filter Recent | All | `#histFilterBar` > `#histFilter` | keep |
 | RE-03 | Recent row actions: YouTube, Grab, Edit (mods), Flag (mods), ⋮ | All / Mod | `#histMenuPopover` (open, tags, flag) | keep; edit and flag for mods only (as today) |
-| RE-04 | Fresh (new to the room), with join prompt for visitors | All | `#discover` (the Live tab "Fresh"), `#freshIntro`, `#minijoin`, `#thediscovers`, `newProduce` | keep |
+| RE-04 | Fresh (new to the room), with join prompt for visitors | All | `#discover` (the Live tab "Fresh"), `#freshIntro`, `#minijoin`, `#thediscovers`, `newProduce` | keep. Since November 22, 2026 it downloads the first time it's on screen (`room.js`, an IntersectionObserver on `#discover`), not only when its tab is chosen: beside the welcome at 640px and up, visitors have no Fresh tab and it showed loading rows for good. With nothing new it says so |
 | RE-05 | Card case: stats (total, unique DJs, lowest and highest temp), cards per DJ, search, filter by DJ, sort | M | `#cardsWrap` > `#cardsMain`, `cards.js` (`#cardFilterRow`, `#cardFilterText`, `#cardFilterDj`, `#cardSortBy`) | 1.12 explain "temp" |
 | RE-06 | Card actions: share in chat, gift to the DJ, view larger, feature on your DJ page | M | `.cardShareChat`, `.cardGiftChat` (`#giftCardPopover`), `.cardViewLarger` (`#cardViewLargerModal`, `#cardPrev`, `#cardNext`), `.cardFeature` | keep |
 | RE-07 | Print a card / gift card (bot) | All | `!printcard`, `!giftcard` | keep |

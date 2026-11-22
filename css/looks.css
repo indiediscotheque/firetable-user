@@ -7017,6 +7017,11 @@ body.media-off .q-art.no-art {
 
 
 /* ─── Logged out: live room preview (#9) ──────────────────────────────────── */
+.fresh-empty {
+    color: var(--color-text-subtle);
+    font-size: var(--fs-body);
+    padding: var(--space-4) var(--space-2);
+}
 #freshIntro { display: none; }
 
 #roomPulse:empty { display: none; }

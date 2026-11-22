@@ -593,6 +593,26 @@ firetable.ui.setupRoomEvents = function () {
     firetable.ui.markSaved();
   });
 
+  // Fresh downloads the first time it's on screen, not only when its tab is
+  // chosen: signed out at 640px and up it sits beside the welcome, where
+  // visitors have no Fresh tab to choose (it showed its loading rows for good)
+  var freshBox = document.getElementById('discover');
+  if (freshBox && window.IntersectionObserver) {
+    var freshSeen = new IntersectionObserver(function (entries) {
+      if (!entries.some(function (e) { return e.isIntersecting; })) return;
+      freshSeen.disconnect();
+      ftapi.watchFeed('fresh').then(function () {
+        // nothing new lately: say so, instead of loading rows that never end
+        var list = document.getElementById('thediscovers');
+        if (!list || list.querySelector('.pvbar')) return;
+        list.querySelectorAll('.ft-skeleton').forEach(function (el) { el.remove(); });
+        freshBox.classList.remove('content-loading');
+        if (!list.querySelector('.fresh-empty')) $('<p class="fresh-empty"></p>').text('Nothing new yet. Songs show here the first time the room plays them.').appendTo(list);
+      });
+    });
+    freshSeen.observe(freshBox);
+  }
+
   // ── History (Your Play History) ──
   var $historyItem = $('#thehistory .pvbar').remove();
   firetable._historyCache = firetable._historyCache || [];
