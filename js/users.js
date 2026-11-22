@@ -320,6 +320,7 @@ firetable.actions.loggedIn = function (user) {
 
       // Initialize both pickers after handlers are attached.
       $("#djlistpicker").val(safeSelected);
+      firetable.ui.watchDjNext(safeSelected);
       $("#listpicker").val(viewSelected).trigger("change");
     });
   }); });

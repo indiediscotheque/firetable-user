@@ -2448,7 +2448,7 @@ firetable.discover = (function () {
       if (tip) h.appendChild(tip);
     });
     // a menu open on a button that moves would point at nothing
-    ["npModMenu", "skipPopover", "flagPopover", "tagEditorPopover"].forEach(function (id) {
+    ["npModMenu", "npAddDjMenu", "skipPopover", "flagPopover", "tagEditorPopover"].forEach(function (id) {
       var p = document.getElementById(id);
       try { if (p && p.matches(":popover-open")) p.hidePopover(); } catch (e) { /* none */ }
     });

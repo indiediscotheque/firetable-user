@@ -221,12 +221,16 @@
 			<div id="timrUp" class="themeTimr" title="Time played"></div>
 			<div class="themeCenter">
 				<div id="djlistpickerWrap">
-					<span id="djlistpickerLabel">DJ Playlist:</span>
+					<span id="djlistpickerLabel">You DJ from</span>
 					<select id="djlistpicker" aria-labelledby="djlistpickerLabel">
 						<option value="0">Default Playlist</option>
 					</select>
 					<button type="button" id="djlistOpen" class="butt graybutt iconbutt" title="Open in Playlists" aria-label="Open the DJ playlist in Playlists"><i class="material-symbols-outlined">playlist_play</i></button>
 					<div id="deckQueue"></div>
+				</div>
+				<!-- Your turn (1.11): the song you'll play next, while you're on the decks or in line (js/room.js renderTurnBar) -->
+				<div id="st-turn" hidden>
+					<p id="st-next"></p>
 				</div>
 			</div>
 			<div id="timr" class="themeTimr" title="Time left"></div>
@@ -1439,6 +1443,19 @@
 			<button type="button" role="menuitem" class="butt graybutt" id="npSkip"><i class="material-symbols-outlined">skip_next</i> Skip</button>
 			<button type="button" role="menuitem" class="butt graybutt" id="npFixTags"><i class="material-symbols-outlined">edit</i> Fix tags</button>
 			<button type="button" role="menuitem" class="butt graybutt" id="npFlag" aria-haspopup="menu"><i class="material-symbols-outlined">flag</i> Flag…</button>
+			<!-- the decks (1.7): the playing DJ off, someone on -->
+			<button type="button" role="menuitem" class="butt graybutt" id="npRemoveDj" hidden><i class="material-symbols-outlined">person_remove</i> <span id="npRemoveDjText">Remove from the decks</span></button>
+			<button type="button" role="menuitem" class="butt graybutt" id="npAddDj" aria-haspopup="dialog"><i class="material-symbols-outlined">add_2</i> Add someone to the decks…</button>
+		</div>
+	</div>
+
+	<!-- Mods: pick who to add to the decks (1.7) -->
+	<div id="npAddDjMenu" popover="auto" class="ft-popover">
+		<div id="npAddDjArrow" class="ft-arrow"></div>
+		<div class="ft-popover-box ft-menu" role="dialog" aria-labelledby="npAddDjTitle">
+			<div class="ft-menu-title" id="npAddDjTitle">Add to the decks</div>
+			<input type="search" id="npAddDjFind" placeholder="Find someone here" aria-label="Find someone here" autocomplete="off" />
+			<div id="npAddDjList"></div>
 		</div>
 	</div>
 

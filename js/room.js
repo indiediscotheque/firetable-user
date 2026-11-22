@@ -452,15 +452,19 @@ firetable.ui.setupRoomEvents = function () {
     $ondeck.html(ondeckHtml);
     firetable.ui.sharpenStage();
     $("#deckQueue").empty();
+    // the playing DJ, then the order after them (the Your turn bar says when you're next)
+    firetable.ui.deckRotation = (allDjs && allDjs.length && activeIdx < allDjs.length)
+      ? [allDjs[activeIdx].id].concat(onDeckDjs.map(function (o) { return o.id; })) : [];
+    firetable.ui.renderTurnBar();
     if (firetable.ui.tooltip) firetable.ui.tooltip.refreshUserTip();
 
     firetable.ui.applyDeckPlacement && firetable.ui.applyDeckPlacement();
 
     $("#deck").off('click.addme').on('click.addme', '.addmeButt', function () {
-      ftapi.actions.sendBotCommand("!addme");
+      firetable.actions.hopOn();
     });
     $ondeck.off('click.addme').on('click.addme', '.ondeck-slot.empty', function () {
-      ftapi.actions.sendBotCommand("!addme");
+      firetable.actions.hopOn();
     });
     // Only your own departure button is drawn. The bot keeps its own copy of
     // the deck (and the rules only let the bot write table/), so this always
@@ -873,6 +877,94 @@ firetable.ui.setupRoomEvents = function () {
     firetable.editingPvbar = null;
     firetable.tagEditNowPlaying = { cid: firetable.song.cid, type: firetable.song.type };
     firetable.ui.openTagEditor(npModBtn, firetable.ui.strip(firetable.song.artist + " - " + firetable.song.title));
+  });
+
+  // ── The decks from the mod menu (1.7) ──
+  // Remove the playing DJ (the same command as their user card's), and add
+  // someone here who isn't DJing, from a short list of names.
+  var rankOf = function (u) { return !u ? 0 : u.supermod ? 2 : u.mod ? 1 : 0; };
+  function playingDj() {
+    var id = firetable.displayedDjId || (firetable.song && firetable.song.djid);
+    if (!id) return null;
+    var st = firetable.ui.djStatus(id);
+    if (st.where !== 'deck') return null;
+    var person = ftapi.users && ftapi.users[id];
+    return { id: id, name: (person && person.username) || st.entry.name, person: person };
+  }
+  function syncNpDeckItems() {
+    var dj = playingDj();
+    var me = ftapi.users && ftapi.users[ftapi.uid];
+    var can = !!(dj && dj.name && dj.id !== ftapi.uid && !(dj.person && dj.person.hostbot) && rankOf(dj.person) <= rankOf(me));
+    $('#npRemoveDj').prop('hidden', !can).attr('data-name', can ? dj.name : '');
+    $('#npRemoveDjText').text(can ? 'Remove ' + dj.name + ' from the decks' : 'Remove from the decks');
+  }
+  npModMenu.addEventListener('beforetoggle', function (e) { if (e.newState === 'open') syncNpDeckItems(); });
+  $('#npRemoveDj').on('click', function () {
+    var name = $(this).attr('data-name');
+    npModMenu.hidePopover();
+    if (name) firetable.actions.removeDj(name);
+  });
+
+  var addMenu = document.getElementById('npAddDjMenu');
+  function deckFull() {
+    var n = 0;
+    for (var k in firetable.tableData || {}) if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k]) n++;
+    return n >= 4;
+  }
+  /** Everyone here who isn't on the decks or in line, but you and the bot, by name. */
+  firetable.ui.addableDjs = function () {
+    var users = ftapi.users || {}, out = [];
+    for (var uid in users) {
+      if (!users.hasOwnProperty(uid)) continue;
+      var u = users[uid];
+      if (!u || !u.username || u.hostbot || uid === ftapi.uid) continue;
+      if (firetable.ui.djStatus(uid).where) continue;
+      out.push({ id: uid, name: u.username });
+    }
+    return out.sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }); });
+  };
+  function renderAddList() {
+    var q = $('#npAddDjFind').val().trim().toLowerCase();
+    var all = firetable.ui.addableDjs();
+    var shown = all.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) !== -1; });
+    var esc = firetable.utilities.htmlEscape;
+    $('#npAddDjTitle').text(deckFull() ? 'Add to the waitlist (the decks are full)' : 'Add to the decks');
+    $('#npAddDjList').html(shown.length ? shown.map(function (p) {
+      return '<button type="button" class="butt graybutt np-adddj" data-name="' + esc(p.name) + '">' +
+        '<span class="ft-avatar" aria-hidden="true" style="background-image:url(' + esc(firetable.utilities.avatarURL(p.id, p.name)) + ')"></span>' +
+        '<span class="np-adddj-name">' + esc(p.name) + '</span></button>';
+    }).join('') : '<p class="np-adddj-none">' + (all.length ? 'No one here by that name.' : 'Everyone here is DJing or in line.') + '</p>');
+  }
+  $('#npAddDj').on('click', function () {
+    npModMenu.hidePopover();
+    $('#npAddDjFind').val('');
+    renderAddList();
+    addMenu.style.visibility = 'hidden';
+    addMenu.showPopover();
+    firetable.ui.positionPopover(npModBtn, addMenu, document.getElementById('npAddDjArrow')).then(function () {
+      document.getElementById('npAddDjFind').focus();
+    });
+  });
+  addMenu.addEventListener('toggle', function (e) { npModBtn.classList.toggle('on', e.newState === 'open'); });
+  ftapi.events.on('usersChanged', firetable.utilities.oncePerFrame(function () {
+    if (addMenu.matches(':popover-open')) renderAddList();
+  }));
+  $('#npAddDjFind').on('input', renderAddList).on('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); $('#npAddDjList .np-adddj').first().trigger('click'); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); $('#npAddDjList .np-adddj').first().focus(); }
+  });
+  $('#npAddDjList').on('click', '.np-adddj', function () {
+    var name = $(this).attr('data-name');
+    addMenu.hidePopover();
+    if (name) {
+      firetable.actions.addDj(name);
+      firetable.ui.toast('Adding ' + name + (deckFull() ? ' to the waitlist' : ' to the decks') + '…');
+    }
+  }).on('keydown', '.np-adddj', function (e) {
+    var $items = $('#npAddDjList .np-adddj');
+    var idx = $items.index(this);
+    if (e.key === 'ArrowDown') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (idx === 0) $('#npAddDjFind').focus(); else $items.eq(idx - 1).focus(); }
   });
 
   // ── Theme (#87) ──
@@ -1531,3 +1623,103 @@ firetable.ui.sharpenStage = function () {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
   else watch();
 })();
+
+// ─── Your turn (1.11) ─────────────────────────────────────────────────────────
+
+/**
+ * Where someone is DJing: on the decks, on the waitlist (with their place in
+ * line out of how many), or neither. The user card and the Your turn bar ask.
+ * @param {string} userid
+ * @returns {{where: (string|null), entry: (Object|null), pos?: number, count?: number}}
+ */
+firetable.ui.djStatus = function (userid) {
+  var k;
+  for (k in firetable.tableData || {}) {
+    if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k] && firetable.tableData[k].id === userid) {
+      return { where: "deck", entry: firetable.tableData[k] };
+    }
+  }
+  var pos = 0, found = null;
+  for (k in firetable.waitlistData || {}) {
+    if (!firetable.waitlistData.hasOwnProperty(k) || !firetable.waitlistData[k]) continue;
+    pos++;
+    if (!found && firetable.waitlistData[k].id === userid) found = { where: "waitlist", entry: firetable.waitlistData[k], pos: pos };
+  }
+  if (found) { found.count = pos; return found; }
+  return { where: null, entry: null };
+};
+
+/**
+ * The song you'll play next: the first track of your DJ playlist that isn't
+ * flagged, in play order, as the bot picks it (its firstPlayable). One small
+ * live query on the flagged/date index, so it follows reorders, grabs, and
+ * the bot moving the song you just played to the bottom.
+ * track: undefined until known, null for an empty list, false when the first
+ * tracks are all old flags (the bot looks further; the bar just says nothing).
+ */
+firetable.turnNext = { query: null, fn: null, list: null, uid: null, track: undefined };
+firetable.ui.watchDjNext = function (listID) {
+  var t = firetable.turnNext;
+  var uid = window.ftapi ? ftapi.uid : null;
+  listID = String(listID == null ? "0" : listID);
+  if (t.query && t.list === listID && t.uid === uid) return;
+  if (t.query) t.query.off("value", t.fn);
+  firetable.turnNext = t = { query: null, fn: null, list: listID, uid: uid, track: undefined };
+  if (uid) {
+    t.query = ftapi.lookup.listRef(listID).orderByChild("flagged/date").endAt(null).limitToFirst(20);
+    t.fn = t.query.on("value", function (snap) {
+      var found = null, any = false;
+      snap.forEach(function (child) {
+        var track = child.val();
+        any = true;
+        if (!found && track && !track.flagged) found = track;
+      });
+      if (firetable.turnNext === t) t.track = found || (any ? false : null);
+      firetable.ui.renderTurnBar();
+    }, function () {
+      if (firetable.turnNext === t) t.track = undefined;
+      firetable.ui.renderTurnBar();
+    });
+  }
+  firetable.ui.renderTurnBar();
+};
+
+/**
+ * Your turn (1.11): one quiet line beside the DJ playlist picker with the song
+ * you'll play next, only while you're on the decks or in line (and a warning
+ * when your DJ playlist is empty). Taking the bus, stepping down and hopping
+ * on stay where they are: the name plate, the user card, the stage's open spot.
+ */
+firetable.ui.renderTurnBar = function () {
+  var box = document.getElementById("st-turn");
+  if (!box) return;
+  var uid = window.ftapi && ftapi.uid;
+  var st = uid ? firetable.ui.djStatus(uid) : { where: null };
+  var track = uid ? firetable.turnNext.track : undefined;
+  var line = "", full = "";
+  if (track === null) {
+    line = full = "Your DJ playlist is empty";
+  } else if (track && st.where) {
+    var parts = firetable.utilities.decodeEntities(String(track.name || "")).split(" - ");
+    var artist = parts.length > 1 ? parts.shift() : "";
+    var title = parts.join(" - ");
+    var order = firetable.ui.deckRotation || [];
+    var lead = st.where === "waitlist" ? "In line " + st.pos + " of " + st.count + " · "
+      : order[0] === uid ? "Next from you: "
+      : order[1] === uid ? "You're up next: "
+      : "Your next: ";
+    line = firetable.utilities.htmlEscape(lead) + "<b>" + firetable.utilities.htmlEscape(title) + "</b>";
+    full = lead + title + (artist ? " by " + artist : "");
+  }
+  box.hidden = !line;
+  var next = document.getElementById("st-next");
+  next.innerHTML = line;
+  next.title = full;
+};
+
+firetable.ui.setupTurnBar = function () {
+  ftapi.events.on("djListChanged", function (listID) { firetable.ui.watchDjNext(listID); });
+  ftapi.events.on("loggedOut", function () { firetable.ui.watchDjNext(null); });
+  ftapi.events.on("waitlistChanged", function () { firetable.ui.renderTurnBar(); });
+  ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () { firetable.ui.renderTurnBar(); }));
+};
