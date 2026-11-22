@@ -3380,9 +3380,40 @@ try {
   await kPage.evaluate(() => document.getElementById("newchat").blur());
   await sleep(300);
   typing.blurUp = await kb(500);
+  await kPage.setViewportSize({ width: 390, height: 844 });
   check(!typing.tall.on && typing.tall.stage && typing.up.on && !typing.up.stage && !typing.up.tabs && typing.up.chat >= 200 && typing.up.focus === "newchat" &&
     !typing.down.on && typing.down.stage && typing.down.tabs && !typing.blurUp.on && typing.blurUp.stage,
     "a phone's keyboard up while chatting: the stage and the tab bar step aside and the chat keeps its room; back with the keyboard down or the box left (" + JSON.stringify(typing) + ")");
+
+
+  // the same in the Turntable theme, whose room has a row of its own in the page's grid
+  await kPage.evaluate(async () => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login pre-auth");
+    firetable.tt.enter();
+    for (let i = 0; i < 80 && !(document.body.classList.contains("tt-skin") && document.querySelector('#tt-tabs [data-tab="chat"]')); i++) await new Promise((r) => setTimeout(r, 100));
+    // the first time in, the theme asks for an avatar: not what this is about
+    await new Promise((r) => setTimeout(r, 400));
+    document.querySelectorAll("dialog[open]").forEach((d) => d.close());
+    document.querySelector('#tt-tabs [data-tab="chat"]').click();
+    for (let i = 0; i < 30 && document.activeElement.id !== "newchat"; i++) { document.getElementById("newchat").focus(); await new Promise((r) => setTimeout(r, 100)); }
+  });
+  const ttKb = async (h) => {
+    await kPage.setViewportSize({ width: 390, height: h });
+    await sleep(350);
+    return kPage.evaluate(() => {
+      const r = (id) => document.getElementById(id).getBoundingClientRect();
+      const s = r("stage"), c = r("chatsWrap"), box = r("newchat"), tabs = r("tt-tabs"), scr = r("screenBox");
+      return { skin: document.body.classList.contains("tt-skin"), on: document.body.classList.contains("kb-chat"), stage: s.right > 0 && s.height > 0 && s.width > 0, playerSize: Math.round(s.width) + "x" + Math.round(s.height),
+        tabsTop: Math.round(tabs.top), chat: Math.round(c.height), boxInView: box.top >= 0 && box.bottom <= innerHeight, bottomTabs: getComputedStyle(document.getElementById("nav-tabs")).display !== "none", focus: document.activeElement.id,
+        screen: [scr.left, scr.top, scr.width, scr.height].map(Math.round).join() };
+    });
+  };
+  const ttTyping = { tall: await ttKb(844), up: await ttKb(500), down: await ttKb(844) };
+  await kPage.evaluate(() => { document.getElementById("newchat").blur(); firetable.tt.leave(); }); // the theme is kept per device: out again for the pages after this
+  check(ttTyping.tall.skin && !ttTyping.tall.on && ttTyping.tall.stage && ttTyping.up.on && !ttTyping.up.stage && ttTyping.up.playerSize === "640x360" && ttTyping.up.tabsTop <= 48 &&
+    ttTyping.up.chat >= 200 && ttTyping.up.boxInView && !ttTyping.up.bottomTabs && !ttTyping.down.on && ttTyping.down.stage && ttTyping.down.screen === ttTyping.tall.screen,
+    "the Turntable theme too: keyboard up while chatting, the room steps out of sight at a size its player keeps, its row closes and the chat has the screen; keyboard down, the room and its video are back where they were (" + JSON.stringify(ttTyping) + ")");
   await kPage.close();
 
   // skip links: the first Tab stop, even on Discover Home, whose address is also the Fresh panel's id
