@@ -1140,6 +1140,27 @@ try {
     await wait(100);
     out.never = count() === start;
     firetable.actions.sendReaction = realSend;
+    // a song change: Live moves to the next DJ with the song's colours, after the seats' own events,
+    // and the spotlight and the nodding head go with it
+    const onSeat = () => { const el = document.querySelector("#tt-table .tt-seat.tt-on"); return el && el.dataset.who; };
+    const lightAt = () => { const el = document.querySelector("#tt-table .tt-seat.tt-on"), l = document.getElementById("tt-djlight"); return !l.hidden && el && l.style.getPropertyValue("--i") === el.style.getPropertyValue("--i"); };
+    const keys = Object.keys(firetable.tableData || {}), was = firetable.playdex, wasDj = firetable.displayedDjId;
+    const next = keys.find((k) => firetable.tableData[k].id !== wasDj && firetable.tableData[k].id !== (firetable.song && firetable.song.djid));
+    const colours = { color: firetable.color, txt: firetable.countcolor };
+    out.turnBefore = onSeat() === wasDj && lightAt() && firetable.song && firetable.song.djid === wasDj;
+    if (next !== undefined) {
+      // as the database sends it: the next seat first (held back for the song's colours), then the song, then its colours
+      ftapi.events.emit("spotlightStateChanged", next);
+      await wait(100);
+      out.held = onSeat() === wasDj;
+      firetable.song.djid = firetable.tableData[next].id;
+      ftapi.events.emit("colorsChanged", colours);
+      await until(() => onSeat() === firetable.tableData[next].id, 2000);
+      out.turn = firetable.displayedDjId === firetable.tableData[next].id && onSeat() === firetable.displayedDjId && lightAt();
+      firetable.song.djid = wasDj;
+      ftapi.events.emit("spotlightStateChanged", was);
+      out.turnBack = await until(() => onSeat() === wasDj && lightAt(), 2000);
+    }
     // a DJ's menu: tap the DJ, the room's own actions for who's looking
     const djBtn = document.querySelector("#tt-table .tt-seat[data-who] .tt-dj");
     djBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
@@ -1178,6 +1199,14 @@ try {
     const lay1 = document.body.getAttribute("data-tt-layout");
     document.getElementById("tt-layout").click();
     out.layout = lay1 !== document.body.getAttribute("data-tt-layout");
+    // People here: a short list, and the panel's grey still runs to the bottom (no black underneath)
+    document.getElementById("tt-tab-room").click();
+    document.querySelector('#tt-pane [data-tt-sub="people"]').click();
+    await wait(200);
+    const paneBox = document.getElementById("tt-pane").getBoundingClientRect(), stageBox = document.getElementById("stage").getBoundingClientRect();
+    out.peopleFull = getComputedStyle(document.getElementById("tt-pane")).display !== "none" && Math.abs(paneBox.bottom - stageBox.bottom) < 2;
+    out.peopleInfo = Math.round(paneBox.bottom) + "/" + Math.round(stageBox.bottom) + " " + window.innerWidth;
+    document.querySelector('#tt-pane .tt-back').click();
     // and back
     document.getElementById("tt-exit").click();
     await wait(300);
@@ -1204,6 +1233,8 @@ try {
   check(tt.awesome && tt.storm && tt.never && !tt.join, "Awesome is Fire, Storm takes it back, and nothing counts below none");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
+  check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
+  check(tt.turnBefore && tt.held && tt.turn && tt.turnBack, "a song change moves the spotlight and the nodding head to the DJ now playing (" + [tt.turnBefore, tt.held, tt.turn, tt.turnBack] + ")");
   check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
   check(tt.artTrack, "an art track's cover fills the right screen; a video's frame is left as it is");
   check(tt.ledScroll && tt.ledStill, "the songboard scrolls a line too long to fit, a dot column at a time; a short one stays put");

@@ -9,12 +9,14 @@
 //   stage:   the drawing stands on the table (its feet at the bottom), fills
 //            the box it's drawn in, and is centred
 // Several members per style (made-up Bouletmatons differ: hats, hands, hair).
+// And the Turntable theme's avatars: every one, both sides, put together whole.
 // Writes tests/screens/avatars.png, a contact sheet of them all.
 //   cd tests && npm ci && npm run avatars
 // No emulator needed. Robohash and DiceBear pictures come from their servers
 // once, then from the disk cache (harness.mjs cachePictures).
 import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, readFileSync, writeFileSync } from "fs";
+import { createHash } from "crypto";
 import { join } from "path";
 import { policy, config, serveSite, launchOptions, openPage, cachePictures, ROOT } from "./harness.mjs";
 
@@ -240,6 +242,43 @@ for (const style of STYLES.filter((s) => s !== "october")) {
       style + " · embedded on-deck circle · " + name + ": fills the circle, centred (" + circle.cover.toFixed(2) + ", " + circle.cx.toFixed(2) + "," + circle.cy.toFixed(2) + ")");
   }
 }
+
+// The Turntable theme's avatars, every one, front and back: put together from
+// their sprite as js/ttskin.js figure() does (the body, then the head over it, each
+// at its place), they make the whole figure the sprite also holds. (A part out of
+// place, say a body hidden behind its head, leaves a figure without a body.)
+console.log("-- the Turntable theme's avatars: every one, both sides, whole when put together");
+const tt = await page.evaluate(async () => {
+  const list = await (await fetch("img/tt/avatars.json")).json();
+  const load = (id) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error(id)); i.src = "img/tt/av/" + id + ".webp"; });
+  const bad = [];
+  let sides = 0, parts = 0;
+  for (const a of list) {
+    const img = await load(a.id);
+    if (img.naturalWidth !== a.sw || img.naturalHeight !== a.sh) { bad.push(a.id + " sprite size"); continue; }
+    for (const side of ["f", "b"]) {
+      const s = a[side];
+      sides++;
+      const alpha = (draw) => { const c = new OffscreenCanvas(s.w, s.h), x = c.getContext("2d"); draw(x); return x.getImageData(0, 0, s.w, s.h).data; };
+      const whole = alpha((x) => x.drawImage(img, s.x, 0, s.w, s.h, 0, 0, s.w, s.h));
+      let n = 0;
+      for (let k = 3; k < whole.length; k += 4) if (whole[k] > 128) n++;
+      if (n < 200) { bad.push(a.id + side + " no figure"); continue; }
+      if (!s.head) continue;
+      parts++;
+      const got = alpha((x) => ["body", "head"].forEach((p) => { const [px, w, h, dx, dy] = s[p]; x.drawImage(img, px, 0, w, h, dx, dy, w, h); }));
+      let miss = 0, extra = 0;
+      for (let k = 3; k < whole.length; k += 4) { const w = whole[k] > 128, g = got[k] > 128; if (w && !g) miss++; if (g && !w) extra++; }
+      if (miss / n > 0.03 || extra / n > 0.03) bad.push(a.id + side + " (" + (100 * miss / n).toFixed(0) + "% missing, " + (100 * extra / n).toFixed(0) + "% extra)");
+    }
+  }
+  return { count: list.length, sides, parts, bad };
+});
+// each sprite's version (its link's ?v=, js/ttskin.js src) is its file's hash, so a rebuilt one is fetched again
+const stale = JSON.parse(readFileSync(join(ROOT, "img/tt/avatars.json"), "utf8"))
+  .filter((a) => a.v !== createHash("sha256").update(readFileSync(join(ROOT, "img/tt/av", a.id + ".webp"))).digest("hex").slice(0, 10)).map((a) => a.id);
+check(stale.length === 0, "Turntable avatars: every sprite's version is its file's hash (tools/tt-avatars.py)" + (stale.length ? ": " + stale.slice(0, 20).join(", ") : ""));
+check(tt.count > 600 && tt.bad.length === 0, "Turntable avatars: " + tt.count + " avatars, " + tt.sides + " sides (" + tt.parts + " drawn as a head on a body) all whole" + (tt.bad.length ? ": " + tt.bad.slice(0, 20).join(", ") : ""));
 
 // The contact sheet: one row per style, each place, two members
 const html = "<!doctype html><meta charset=utf-8><title>Avatars</title><body style='background:#181818;color:#ccc;font:13px sans-serif;margin:16px'>" +
