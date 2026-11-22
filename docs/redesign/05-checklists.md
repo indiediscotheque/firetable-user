@@ -24,7 +24,7 @@ Walk these by hand on every step that touches Live, at 1440 and 390 wide, as the
 - [ ] Icon-only buttons have `aria-label` and a tooltip (`.ft-tip` with `aria-describedby`, as the header does).
 - [ ] Text contrast at least 4.5:1 (3:1 for 24px and up). Check `--text-4` uses, row numbers, drag handles, zero counts.
 - [ ] Nothing under 11px; labels people act on at 12px or more.
-- [ ] Targets: 32px in dense desktop rows, 44px on the stage and on phones.
+- [ ] Targets: 32px in dense desktop rows, 44px on the stage and on phones. On touch screens the icon buttons keep their size and carry an invisible tap margin (`.iconbutt::before`, `.row-icon::before`, `.plx-icon::before`, a row's `.previewicon::before` in `css/looks.css`, under `pointer: coarse`): measure the tap area, not the box. The working floor is 40px across and 44px tall in rows; small on purpose where a bigger control would crowd the song's name.
 - [ ] Keyboard: Tab order follows the screen; menus open with Enter/Space, move with arrows, close with Escape and return focus to their button; dialogs trap focus (native `<dialog>` does).
 - [ ] Popovers and toasts are announced (`role="status"` / `aria-live` as the toast does today).
 - [ ] `prefers-reduced-motion`: no new motion without a reduced version.

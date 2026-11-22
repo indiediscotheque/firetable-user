@@ -3305,6 +3305,36 @@ try {
   });
   check(phoneChart.shown && /play/.test(phoneChart.plays) && phoneChart.lines <= 2 && phoneChart.words >= 120 && phoneChart.under && phoneChart.row <= 110 && phoneChart.oneRow && /Share/.test(phoneChart.share) && phoneChart.wide <= 0,
     "a chart row on a phone: plays shown under the artist, a long title in two lines, Play / Save / Share on one row (" + JSON.stringify(phoneChart) + ")");
+  // touch screens: a row's icons and the play button on its small cover have the invisible tap area
+  const tContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const tPage = await tContext.newPage();
+  await openPage(tPage, SITE + "#discover/charts");
+  const taps = await tPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    for (let i = 0; i < 80 && !document.querySelector("#dBrowse .d-rowlist .pvbar"); i++) await wait(100);
+    const area = (sel) => {
+      const el = document.querySelector(sel), b = getComputedStyle(el, "::before"), r = el.getBoundingClientRect();
+      if (b.content === "none" || b.position !== "absolute") return null;
+      return [Math.round(r.width - parseFloat(b.left) - parseFloat(b.right)), Math.round(r.height - parseFloat(b.top) - parseFloat(b.bottom))];
+    };
+    // a tap area hangs from its own control: one on a control that isn't positioned would hang
+    // from a far ancestor and cover other things (it covered Join, from the lead card's icons)
+    const loose = () => [...new Set([...document.querySelectorAll("button, a, [role=button]")].filter((el) => {
+      if (!el.getClientRects().length || getComputedStyle(el).position !== "static") return false;
+      return ["::before", "::after"].some((p) => { const s = getComputedStyle(el, p); return s.content !== "none" && s.position === "absolute"; });
+    }).map((el) => el.id || el.className))];
+    const out = { coarse: matchMedia("(pointer: coarse)").matches, more: area("#dBrowse .d-rowlist .row-icon.d-more"), play: area("#dBrowse .d-rowlist .previewicon"), loose: loose() };
+    location.hash = "#discover";
+    for (let i = 0; i < 50 && !document.querySelector("#dBrowse .d-leadacts .row-icon"); i++) await wait(100);
+    out.loose = out.loose.concat(loose());
+    const join = document.getElementById("nav-signin"), r = join.getBoundingClientRect(), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    out.joinOnTop = !!top && (top === join || join.contains(top));
+    return out;
+  });
+  check(taps.coarse && taps.more && taps.more[0] >= 40 && taps.more[1] >= 44 && taps.play && taps.play[0] >= 40 && taps.play[1] >= 40,
+    "on a touch screen a row's ⋮ can be tapped over 40×44px and its play button over the whole cover, at the size they were (" + JSON.stringify(taps) + ")");
+  check(!taps.loose.length && taps.joinOnTop, "no tap area hangs loose from a control that isn't positioned, on Charts or Home, and nothing covers Join (" + JSON.stringify({ loose: taps.loose, join: taps.joinOnTop }) + ")");
+  await tContext.close();
   await cPage.close();
 
   // chatting on a phone with the keyboard up: the stage and the bottom tabs step aside, and come back
