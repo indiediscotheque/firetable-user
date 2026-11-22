@@ -10,7 +10,8 @@ and the Turntable.fm staff). Never deployed (tools/).
 
 Writes, for each avatar, one sprite img/tt/av/<id>.webp holding its front and
 back (as the archive draws them whole), then the head and body of each side
-apart, so the room can rock a head on its body the way Turntable did. And
+apart, so the room can rock a head on its body the way Turntable did (only
+when the two put back together make the whole figure: else it's drawn whole). And
 img/tt/avatars.json: per avatar, where each part sits in the sprite and where
 it goes in the whole figure. And the avatar picker's pages, img/tt/pick/<tier>-<n>.webp:
 one picture of PAGE fronts each, so a page of the picker is one request.
@@ -70,6 +71,46 @@ def place(full, part):
         ssd = ssd + _xcorr(f * f, M) - 2 * _xcorr(f, p) + (p * p).sum()
     y, x = np.unravel_index(np.argmin(ssd), ssd.shape)
     return (int(x), int(y)) if ssd[y, x] / n < 0.02 else None
+
+
+def place_under(full, head, hp, body):
+    """Where `body` sits in `full`, the head already at `hp`: matched only where
+    the head doesn't cover it, and each of its pixels the head would hide costs
+    something, so a flat body (one colour, like the head) can't hide behind
+    the head, the one place it matches everywhere."""
+    F = np.asarray(full, dtype=np.float64) / 255
+    P = np.asarray(body, dtype=np.float64) / 255
+    if P.shape[0] > F.shape[0] or P.shape[1] > F.shape[1]:
+        return None
+    Hm = np.zeros(F.shape[:2])
+    ha = np.asarray(head)[:, :, 3] > 128
+    y0, x0 = hp[1], hp[0]
+    y1, x1 = min(y0 + ha.shape[0], F.shape[0]), min(x0 + ha.shape[1], F.shape[1])
+    Hm[y0:y1, x0:x1] = ha[: y1 - y0, : x1 - x0]
+    W = 1 - Hm
+    M = (P[:, :, 3] > 0.8).astype(np.float64)
+    n = M.sum()
+    if n < 20:
+        return None
+    ssd = 0.25 * _xcorr(Hm, M)  # hidden pixels
+    for c in range(4):
+        f, p = F[:, :, c], P[:, :, c]
+        ssd = ssd + _xcorr(W * f * f, M) - 2 * _xcorr(W * f, p * M) + _xcorr(W, M * p * p)
+    y, x = np.unravel_index(np.argmin(ssd), ssd.shape)
+    return (int(x), int(y)) if ssd[y, x] / n < 0.05 else None
+
+
+def assembles(full, head, hp, body, bp):
+    """Whether the body, then the head over it, at those places, make the whole figure."""
+    want = np.asarray(full)[:, :, 3] > 128
+    got = np.zeros(want.shape, bool)
+    for im, (x, y) in ((body, bp), (head, hp)):
+        a = np.asarray(im)[:, :, 3] > 128
+        y1, x1 = min(y + a.shape[0], got.shape[0]), min(x + a.shape[1], got.shape[1])
+        if y1 > y and x1 > x:
+            got[y:y1, x:x1] |= a[: y1 - y, : x1 - x]
+    n = max(want.sum(), 1)
+    return (want & ~got).sum() / n < 0.02 and (got & ~want).sum() / n < 0.02
 
 
 def order(av):
@@ -236,11 +277,16 @@ def main():
             entry["x"] = None  # filled in below
             split = None
             if head is not None and body is not None and (head.size != full.size or body.size != full.size):
-                hp, bp = place(full, head), place(full, body)
+                hp = place(full, head)
+                bp = hp and place_under(full, head, hp, body)
                 if hp and bp:
                     split = (head, hp, body, bp)
             elif head is not None and body is not None:
                 split = (head, (0, 0), body, (0, 0))  # already the figure's size
+            # only when the parts make the whole figure (some archive parts leave a piece out): else it's drawn whole
+            if split and not assembles(full, split[0], split[1], split[2], split[3]):
+                print("drawn whole:", av, S, file=sys.stderr)
+                split = None
             sides[side] = (entry, full, split)
         # lay out: front, back, then the parts
         x = 0

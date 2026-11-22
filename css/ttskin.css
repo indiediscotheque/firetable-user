@@ -658,16 +658,32 @@ body.tt-skin #screenover { display: none; }
 
 /* the DJs' table: dj-table is the table (its lavender top, the front, the speaker grille);
    laptops stand on the top at --seat-y, the DJs behind them, head and shoulders showing */
+/* the spotlight: out of the songboard's lamp over the DJ who's playing (lamps 2, 4, 6, 8 of its nine,
+   93⅓ apart, their undersides at 316), tipped a touch to land on the DJ (98 apart) below it */
 .tt-djlight {
-    left: calc(587px + var(--i, 0) * 98px - 75px);
-    top: 296px;
+    left: calc(592.5px + var(--i, 0) * 93.333px - 75px);
+    top: 310px;
     width: 150px;
     height: 210px;
     background: url(../img/tt/dj-light.webp?v=01.12.08) center / 100% 100%;
     mix-blend-mode: screen;
-    transition: left 0.6s ease;
+    transform: rotate(calc((2.4 - 2.05 * var(--i, 0)) * 1deg));
+    transform-origin: 50% 2%;
+    transition: left 0.6s ease, transform 0.6s ease;
     pointer-events: none;
     z-index: 1;
+}
+/* the lamp itself, lit */
+.tt-djlight::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -3px;
+    width: 18px;
+    height: 12px;
+    margin-left: -9px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, #fff8e6, rgba(255, 236, 196, 0.75) 45%, rgba(255, 220, 170, 0) 100%);
 }
 .tt-djlight[hidden] { display: none; }
 /* no z-index: the table top goes between the DJs and their laptops */
