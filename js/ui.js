@@ -1682,7 +1682,20 @@ firetable.ui.keepFocusedFieldVisible = function () {
     var smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     el.scrollIntoView({ block: "center", inline: "nearest", behavior: smooth ? "smooth" : "auto" });
   };
+  // Phones, chatting with the keyboard up: the stage and the bottom tabs step
+  // aside so the conversation has the screen (body.kb-chat, css/discover.css).
+  // The keyboard is up when the chat box has focus and the visible area is well
+  // short of the tallest it has been at this width (a turned phone starts again).
+  var tallest = 0, wide = 0;
+  var keyboard = function () {
+    var h = vv ? vv.height : window.innerHeight;
+    if (window.innerWidth !== wide) { wide = window.innerWidth; tallest = 0; }
+    if (h > tallest) tallest = h;
+    var el = document.activeElement;
+    document.body.classList.toggle("kb-chat", !!el && el.id === "newchat" && wide < 640 && h < tallest - 120);
+  };
   var soon = function () {
+    keyboard();
     clearTimeout(timer);
     timer = setTimeout(reveal, 120); // let the keyboard finish opening
   };
@@ -1692,8 +1705,12 @@ firetable.ui.keepFocusedFieldVisible = function () {
   }
   window.addEventListener("resize", soon);
   document.addEventListener("focusin", function (e) {
+    keyboard();
     if (isField(e.target)) setTimeout(reveal, 350); // after the keyboard animation
   });
+  // a moment's grace: focus that comes straight back (the send button) doesn't flash the stage in
+  document.addEventListener("focusout", function () { setTimeout(keyboard, 150); });
+  keyboard();
 };
 
 firetable.ui.setupMiscEvents = function () {

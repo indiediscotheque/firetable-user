@@ -271,7 +271,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 |---|---|---|---|
 | PH-01 | Installable app (manifest, icons, Home Screen) | `manifest.webmanifest`, `icons/`, `install.js` | keep |
 | PH-02 | Service worker: push, and an offline page | `sw.js` (since November 15, 2026 its fetch handler serves `offline.html` only when one of the site's own pages can't be reached; nothing else passes through it), `offline.html`, registered by `install.js` | keep; the redesign adds no caching of the app itself |
-| PH-03 | Keyboard stays out of the way (fields scrolled into view), safe areas | `viewport.js`, `keepFocusedFieldVisible`, `env(safe-area-inset-*)` | keep |
+| PH-03 | Keyboard stays out of the way (fields scrolled into view), safe areas | `viewport.js`, `keepFocusedFieldVisible`, `env(safe-area-inset-*)` | keep; since November 22, 2026, while the chat box has focus on a phone and the keyboard is up, the stage and the bottom tab bar step aside (`body.kb-chat`, set in `keepFocusedFieldVisible`) so the conversation keeps the screen |
 | PH-04 | Wake lock while on deck | `ftapi.keepAwake` | keep |
 | PH-05 | Media Session (lock-screen controls for Discover) | `mediaSession` | keep |
 
