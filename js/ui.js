@@ -1763,7 +1763,9 @@ firetable.ui.setupMiscEvents = function () {
       var stealContainEl = document.getElementById('stealContain');
       stealContainEl.style.visibility = 'hidden';
       $("#stealContain").show();
-      firetable.ui.positionPopover(document.getElementById('grab'), stealContainEl, document.getElementById('stealArrow'));
+      // above Grab: it sits in the player along the bottom, so beside it the
+      // picker would cover the song (and on a phone, the tap that opens the player)
+      firetable.ui.positionPopover(document.getElementById('grab'), stealContainEl, document.getElementById('stealArrow'), 'top');
     });
   };
   firetable.actions.openGrabPicker = openGrabPicker;
