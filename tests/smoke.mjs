@@ -2323,6 +2323,10 @@ try {
         all: el.parentElement.querySelector("[data-newfilter]").getAttribute("data-newfilter"),
         order: [...document.querySelectorAll("#dBrowse section h2")].map((h) => h.textContent).slice(0, 4).join("|")
       };
+      // Not played live yet, under the week's row: none of the songs that row already shows
+      const unSec = [...document.querySelectorAll("#dBrowse section")].find((sec) => /Not played live yet/.test(sec.querySelector("h2")?.textContent || ""));
+      const cids = (box) => [...box.querySelectorAll(".pvbar[data-cid]")].map((p) => p.getAttribute("data-cid"));
+      out.unplayed = unSec ? { n: cids(unSec).length, twice: cids(unSec).filter((c) => cids(el.parentElement).includes(c)).join(), link: unSec.querySelector("[data-newfilter]").textContent } : null;
       // the test's videos aren't real: keep the player from skipping past them (the skip waits 800ms)
       window.__skip = firetable.discover.onFailed;
       firetable.discover.onFailed = () => {};
@@ -2337,6 +2341,8 @@ try {
     check(lead && lead.playAll === "Play the week's " + inWeek && lead.under === 6 && lead.all === "week" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),
       "Play the week's " + inWeek + " plays from the lead; the next six sit under it (" + JSON.stringify(lead) + ")");
     check(lead && /^New this week\|Not played live yet\|Room chart/.test(lead.order), "Home's order: New this week, Not played live yet, the chart (" + (lead && lead.order) + ")");
+    check(lead && lead.unplayed && lead.unplayed.n === 2 && lead.unplayed.twice === "" && lead.unplayed.link === "All 3",
+      "Not played live yet doesn't repeat the week's row: two of the three unplayed show, the third is already above, the link counts all three (" + JSON.stringify(lead && lead.unplayed) + ")");
     await dPage.evaluate(async () => {
       if (firetable.discover.state().playing) document.querySelector("#dMini .pb-main")?.click();
       await new Promise((r) => setTimeout(r, 1000));
