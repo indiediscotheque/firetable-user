@@ -120,11 +120,8 @@ const FEATURES = [
 
   // ── decks, people, chat (DJ, PE, CH) ──
   { row: "DJ-01", name: "Which playlist you DJ from", who: IN, target: "#djlistpicker" },
-  // the Your turn bar (1.11): on the decks, what you'll play, the bus and Step down; off them, Hop on
-  { row: "DJ-02", name: "Your next song (the Your turn bar)", who: ["dj"], target: "#st-next" },
-  { row: "DJ-04", name: "Take the bus (the Your turn bar)", who: ["dj"], target: "#st-bus", notFor: ["member", "mod"], notTarget: "#st-bus" },
-  { row: "DJ-05", name: "Step down (the Your turn bar)", who: ["dj"], target: "#st-stepdown", notFor: ["member", "mod"], notTarget: "#st-stepdown" },
-  { row: "ST-03", name: "Hop on the decks (the Your turn bar)", who: ["member", "mod"], target: "#st-hopon", notFor: ["visitor", "dj"], notTarget: "#st-hopon" },
+  // the Your turn bar (1.11): on the decks, the song you'll play next
+  { row: "DJ-02", name: "Your next song (the Your turn bar)", who: ["dj"], target: "#st-next", notFor: ["visitor", "member", "mod"], notTarget: "#st-next" },
   { row: "DJ-03", name: "The waitlist", who: IN, via: peopleTab, target: "#usersWaitlist" },
   { row: "PE-01", name: "The people in the room", who: IN, via: peopleTab, target: "#allUsers" },
   { row: "CH-01", name: "Chat", who: IN, via: chatTab, target: "#chats" },

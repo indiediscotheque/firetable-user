@@ -1790,44 +1790,24 @@ try {
     const vis = (id) => { const el = document.getElementById(id); return !!el && !el.hidden && !!el.offsetParent; };
     const text = (id) => document.getElementById(id).textContent.trim();
     const out = {};
-    // a member off the decks: one button on, and what they'd start with
+    // off the decks: nothing in the bar, just the picker
     ftapi.uid = "smokeMod";
     firetable.ui.watchDjNext("0");
     for (let i = 0; i < 40 && !firetable.turnNext.track; i++) await wait(50);
     ftapi.events.emit("tableChanged", firetable.tableData);
-    out.off = { next: text("st-next"), hop: vis("st-hopon") && text("st-hoponText"), bus: vis("st-bus"), down: vis("st-stepdown") };
-    document.getElementById("st-hopon").click();
-    out.hopSent = sent.splice(0).join();
-    // on the decks, after the playing DJ: up next, the bus and stepping down
+    out.off = vis("st-turn");
+    out.ids = ["st-hopon", "st-bus", "st-stepdown"].filter((id) => document.getElementById(id)).join();
+    // on the decks, after the playing DJ: you're up next, with the first song that can play (past a broken one)
     firetable.tableData = [{ name: "dj1", id: "dj1", plays: 1 }, { name: "smokeMod", id: "smokeMod", plays: 0 }, { name: "dj2", id: "dj2", plays: 0 }];
     firetable.displayedDjId = "dj1";
     ftapi.events.emit("tableChanged", firetable.tableData);
-    out.deck = { next: text("st-next"), hop: vis("st-hopon"), bus: vis("st-bus"), down: vis("st-stepdown") };
-    document.getElementById("st-bus").click();
-    out.busSent = sent.splice(0).join();
-    out.busOn = document.getElementById("st-bus").classList.contains("on") && document.getElementById("st-bus").getAttribute("aria-pressed") === "true";
-    // the bot confirms; the user card shows the same state, and its button goes through the same command
-    firetable.tableData[1].removeAfter = true;
-    ftapi.events.emit("tableChanged", firetable.tableData);
-    out.busKept = document.getElementById("st-bus").classList.contains("on");
-    document.querySelector('#ondeck .ondeck-slot[data-djid="smokeMod"]').click();
-    await wait(100);
-    const tip = document.getElementById("ft-user-tip");
-    out.cardDeparture = tip.classList.contains("departure-on");
-    tip.querySelector('[data-action="toggle-bus"]').click();
-    out.cardSent = sent.splice(0).join();
-    // stepping down takes two taps
-    const down = document.getElementById("st-stepdown");
-    down.click();
-    out.armed = down.classList.contains("armed") && /Tap again to step down/.test(down.textContent);
-    out.afterOne = sent.slice().join();
-    down.click();
-    out.afterTwo = sent.splice(0).join();
-    // the playlist changes: the bar follows (the bot played the song, it went to the bottom)
+    out.deck = vis("st-turn") && text("st-next");
+    out.full = document.getElementById("st-next").title;
+    // the playlist changes: the line follows (the bot played the song, it went to the bottom)
     await ftapi.db().ref("queues/smokeMod/2").remove();
-    for (let i = 0; i < 40 && !/X/.test(text("st-next")); i++) await wait(50);
+    for (let i = 0; i < 40 && !/Y/.test(text("st-next")); i++) await wait(50);
     out.followed = text("st-next");
-    // the playing DJ's own bar
+    // the playing DJ's own line
     firetable.displayedDjId = "smokeMod";
     ftapi.events.emit("tableChanged", firetable.tableData);
     out.playing = text("st-next");
@@ -1836,10 +1816,13 @@ try {
     firetable.waitlistData = [{ name: "wl1", id: "wl1", plays: 0 }, { name: "smokeMod", id: "smokeMod", plays: 0 }];
     firetable.displayedDjId = "dj1";
     ftapi.events.emit("tableChanged", firetable.tableData);
-    out.line = { next: text("st-next"), down: document.getElementById("st-stepdown").title };
+    out.line = text("st-next");
     firetable.waitlistData = [];
+    // an empty DJ playlist says so, on the decks or off
+    await ftapi.db().ref("queues/smokeMod").remove();
+    for (let i = 0; i < 40 && firetable.turnNext.track !== null; i++) await wait(50);
     ftapi.events.emit("tableChanged", firetable.tableData);
-    out.full = text("st-hoponText");
+    out.empty = vis("st-turn") && text("st-next");
 
     // the mod menu on the playing song: remove dj1, add someone here who isn't DJing
     firetable.tableData = [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }];
@@ -1888,17 +1871,13 @@ try {
     firetable.ui.watchDjNext(null);
     return out;
   });
-  check(turn.off.next === "You'd start with Maria También Khruangbin" && turn.off.hop === "Hop on the decks" && !turn.off.bus && !turn.off.down && turn.hopSent === "!addme",
-    "off the decks the bar shows the first song that can play and Hop on the decks, which sends !addme (" + JSON.stringify([turn.off, turn.hopSent]) + ")");
-  check(turn.deck.next === "You're up next with Maria También Khruangbin" && !turn.deck.hop && turn.deck.bus && turn.deck.down,
-    "after the playing DJ, the bar says you're up next, with the bus and Step down (" + JSON.stringify(turn.deck) + ")");
-  check(turn.busSent === "!removeafter" && turn.busOn && turn.busKept && turn.cardDeparture && turn.cardSent === "!dontremoveme",
-    "the bar's bus sends !removeafter and stays on; the user card shows the same and cancels through the same command (" + JSON.stringify(turn) + ")");
-  check(turn.armed && turn.afterOne === "" && turn.afterTwo === "!removeme", "Step down asks on the first tap and steps down on the second (" + turn.afterOne + " / " + turn.afterTwo + ")");
-  check(turn.followed === "You're up next with Y X", "the next song follows the DJ playlist as it changes (" + turn.followed + ")");
-  check(/^Playing now\. Next from you: Y X$/.test(turn.playing), "the playing DJ sees what they'll play after this (" + turn.playing + ")");
-  check(turn.line.next === "In line, 2 of 2. You'll start with Y X" && turn.line.down === "Leave the waitlist" && turn.full === "Join the waitlist",
-    "in line the bar gives your place, Step down leaves the waitlist, and with the decks full you join the waitlist (" + JSON.stringify([turn.line, turn.full]) + ")");
+  check(!turn.off && turn.ids === "", "off the decks the bar is just the picker: no extra line, no extra buttons (" + JSON.stringify([turn.off, turn.ids]) + ")");
+  check(turn.deck === "You're up next: Maria También" && turn.full === "You're up next: Maria También by Khruangbin",
+    "after the playing DJ, one line says you're up next with the first song that can play (" + JSON.stringify([turn.deck, turn.full]) + ")");
+  check(turn.followed === "You're up next: Y", "the next song follows the DJ playlist as it changes (" + turn.followed + ")");
+  check(turn.playing === "Next from you: Y", "the playing DJ sees what they'll play after this (" + turn.playing + ")");
+  check(turn.line === "In line 2 of 2 · Y", "in line, your place and your first song (" + turn.line + ")");
+  check(turn.empty === "Your DJ playlist is empty", "an empty DJ playlist says so (" + turn.empty + ")");
   check(turn.remove === "Remove dj1 from the decks" && turn.removeSent === "!remove dj1" && turn.noRemoveBoss,
     "the mod menu removes the playing DJ, not someone who outranks you (" + JSON.stringify([turn.remove, turn.removeSent, turn.noRemoveBoss]) + ")");
   check(turn.addOpen && turn.addable === "boss,wl1" && turn.filtered === "wl1" && turn.addSent === "!add wl1" && turn.addClosed,

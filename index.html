@@ -228,12 +228,9 @@
 					<button type="button" id="djlistOpen" class="butt graybutt iconbutt" title="Open in Playlists" aria-label="Open the DJ playlist in Playlists"><i class="material-symbols-outlined">playlist_play</i></button>
 					<div id="deckQueue"></div>
 				</div>
-				<!-- Your turn (1.11): what you'll play next and your deck buttons (js/room.js renderTurnBar) -->
+				<!-- Your turn (1.11): the song you'll play next, while you're on the decks or in line (js/room.js renderTurnBar) -->
 				<div id="st-turn" hidden>
-					<p id="st-next" hidden></p>
-					<button type="button" id="st-hopon" class="butt graybutt small" hidden><i class="material-symbols-filled" aria-hidden="true">queue_music</i> <span id="st-hoponText">Hop on the decks</span></button>
-					<button type="button" id="st-bus" class="butt graybutt iconbutt" aria-pressed="false" hidden><i class="material-symbols-filled" aria-hidden="true">departure_board</i></button>
-					<button type="button" id="st-stepdown" class="butt graybutt iconbutt" hidden><i class="material-symbols-outlined" aria-hidden="true">logout</i><span class="st-ask"></span></button>
+					<p id="st-next"></p>
 				</div>
 			</div>
 			<div id="timr" class="themeTimr" title="Time left"></div>

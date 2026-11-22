@@ -461,10 +461,10 @@ firetable.ui.setupRoomEvents = function () {
     firetable.ui.applyDeckPlacement && firetable.ui.applyDeckPlacement();
 
     $("#deck").off('click.addme').on('click.addme', '.addmeButt', function () {
-      ftapi.actions.sendBotCommand("!addme");
+      firetable.actions.hopOn();
     });
     $ondeck.off('click.addme').on('click.addme', '.ondeck-slot.empty', function () {
-      ftapi.actions.sendBotCommand("!addme");
+      firetable.actions.hopOn();
     });
     // Only your own departure button is drawn. The bot keeps its own copy of
     // the deck (and the rules only let the bot write table/), so this always
@@ -1684,111 +1684,42 @@ firetable.ui.watchDjNext = function (listID) {
   firetable.ui.renderTurnBar();
 };
 
-firetable.turnBar = { busPending: null, disarm: null };
-
-/** The Your turn bar under the stage: what you'll play next and your deck buttons. */
+/**
+ * Your turn (1.11): one quiet line beside the DJ playlist picker with the song
+ * you'll play next, only while you're on the decks or in line (and a warning
+ * when your DJ playlist is empty). Taking the bus, stepping down and hopping
+ * on stay where they are: the name plate, the user card, the stage's open spot.
+ */
 firetable.ui.renderTurnBar = function () {
   var box = document.getElementById("st-turn");
   if (!box) return;
   var uid = window.ftapi && ftapi.uid;
-  var me = uid && ftapi.users && ftapi.users[uid];
-  box.hidden = !uid;
-  if (!uid) return;
-  var esc = firetable.utilities.htmlEscape;
-  var st = firetable.ui.djStatus(uid);
-  var track = firetable.turnNext.track;
-  var song = "";
-  if (track) {
+  var st = uid ? firetable.ui.djStatus(uid) : { where: null };
+  var track = uid ? firetable.turnNext.track : undefined;
+  var line = "", full = "";
+  if (track === null) {
+    line = full = "Your DJ playlist is empty";
+  } else if (track && st.where) {
     var parts = firetable.utilities.decodeEntities(String(track.name || "")).split(" - ");
     var artist = parts.length > 1 ? parts.shift() : "";
     var title = parts.join(" - ");
-    song = "<b>" + esc(title) + "</b>" + (artist ? ' <span class="st-artist">' + esc(artist) + "</span>" : "");
+    var order = firetable.ui.deckRotation || [];
+    var lead = st.where === "waitlist" ? "In line " + st.pos + " of " + st.count + " · "
+      : order[0] === uid ? "Next from you: "
+      : order[1] === uid ? "You're up next: "
+      : "Your next: ";
+    line = firetable.utilities.htmlEscape(lead) + "<b>" + firetable.utilities.htmlEscape(title) + "</b>";
+    full = lead + title + (artist ? " by " + artist : "");
   }
-  var line = "";
-  if (track === null) {
-    line = "Your DJ playlist is empty. Add songs to play.";
-  } else if (song) {
-    if (st.where === "deck") {
-      var order = firetable.ui.deckRotation || [];
-      line = order[0] === uid ? (order.length > 1 ? "Playing now. Next from you: " : "Playing now. Then: ") + song
-        : order[1] === uid ? "You're up next with " + song
-        : "Your next song: " + song;
-    } else if (st.where === "waitlist") {
-      line = "In line, " + st.pos + " of " + st.count + ". You'll start with " + song;
-    } else {
-      line = "You'd start with " + song;
-    }
-  }
+  box.hidden = !line;
   var next = document.getElementById("st-next");
-  next.hidden = !line;
   next.innerHTML = line;
-  next.title = line ? next.textContent : "";
-
-  // Off the decks: one button on (the bot puts you in line when the decks are full)
-  var deckCount = 0;
-  for (var k in firetable.tableData || {}) if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k]) deckCount++;
-  var hopon = document.getElementById("st-hopon");
-  hopon.hidden = !!st.where || !me;
-  $("#st-hoponText").text(deckCount >= 4 ? "Join the waitlist" : "Hop on the decks");
-
-  // On the decks or in line: the bus and stepping down
-  var bus = document.getElementById("st-bus");
-  var pend = firetable.turnBar.busPending;
-  var busOn = !!(st.entry && st.entry.removeAfter);
-  if (pend && (Date.now() > pend.until || pend.on === busOn || !st.where)) firetable.turnBar.busPending = pend = null;
-  if (pend) busOn = pend.on;
-  var busTitle = busOn ? "Don't step down after your next play" : "Take the bus: step down after your next play";
-  bus.hidden = !st.where;
-  bus.classList.toggle("on", busOn);
-  bus.setAttribute("aria-pressed", String(busOn));
-  bus.setAttribute("aria-label", "Take the bus");
-  bus.title = busTitle;
-  var down = document.getElementById("st-stepdown");
-  var downTitle = st.where === "waitlist" ? "Leave the waitlist" : "Step down";
-  down.hidden = !st.where;
-  if (!down.classList.contains("armed")) {
-    down.title = downTitle;
-    down.setAttribute("aria-label", downTitle);
-  }
-  if (!st.where) firetable.ui.disarmStepDown();
-};
-
-/** Put an armed Step down back (the bar's first tap asks again; this undoes the asking). */
-firetable.ui.disarmStepDown = function () {
-  clearTimeout(firetable.turnBar.disarm);
-  var down = document.getElementById("st-stepdown");
-  if (!down || !down.classList.contains("armed")) return;
-  down.classList.remove("armed");
-  down.querySelector(".st-ask").textContent = "";
-  firetable.ui.renderTurnBar();
+  next.title = full;
 };
 
 firetable.ui.setupTurnBar = function () {
-  // the playing DJ and the order after them, as the stage shows it
   ftapi.events.on("djListChanged", function (listID) { firetable.ui.watchDjNext(listID); });
   ftapi.events.on("loggedOut", function () { firetable.ui.watchDjNext(null); });
   ftapi.events.on("waitlistChanged", function () { firetable.ui.renderTurnBar(); });
   ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () { firetable.ui.renderTurnBar(); }));
-  $("#st-hopon").on("click", function () { firetable.actions.hopOn(); });
-  $("#st-bus").on("click", function () {
-    var on = !this.classList.contains("on");
-    firetable.turnBar.busPending = { on: on, until: Date.now() + 8000 };
-    firetable.actions.toggleBus(on);
-    firetable.ui.renderTurnBar();
-  });
-  // one stray tap shouldn't take you off the decks: the first asks, the second (within 4s) does it
-  $("#st-stepdown").on("click", function () {
-    var down = this;
-    if (!down.classList.contains("armed")) {
-      var ask = $("#st-stepdown").attr("title") === "Leave the waitlist" ? "Tap again to leave" : "Tap again to step down";
-      down.classList.add("armed");
-      down.querySelector(".st-ask").textContent = ask;
-      down.setAttribute("aria-label", ask);
-      clearTimeout(firetable.turnBar.disarm);
-      firetable.turnBar.disarm = setTimeout(firetable.ui.disarmStepDown, 4000);
-      return;
-    }
-    firetable.ui.disarmStepDown();
-    firetable.actions.stepDown();
-  });
 };

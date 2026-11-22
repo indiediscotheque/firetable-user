@@ -3847,10 +3847,10 @@ a.importLinkCheck {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* ─── Your turn (1.11): the picker, what you'll play next, your deck buttons ─── */
+/* ─── Your turn (1.11): the picker and, while you DJ, the song you'll play next ─── */
 .themeCenter {
     display: flex;
-    flex-wrap: wrap; /* narrow: the next song and the buttons go on a second row */
+    flex-wrap: wrap; /* narrow: the next song goes on a second row */
     align-items: center;
     gap: var(--space-2) var(--pad2);
     min-width: 0;
@@ -3861,12 +3861,9 @@ a.importLinkCheck {
 #st-turn {
     display: flex;
     align-items: center;
-    gap: var(--pad2);
-    flex: 1 1 16rem;
+    flex: 1 1 12rem;
     min-width: 0;
-    justify-content: flex-end;
     &[hidden] { display: none; }
-    & [hidden] { display: none; }
 }
 #st-next {
     flex: 1 1 0;
@@ -3875,30 +3872,12 @@ a.importLinkCheck {
     font-size: var(--fs-meta);
     line-height: 1.3;
     text-align: start;
-    color: rgba(255, 255, 255, 0.72);
+    color: rgba(255, 255, 255, 0.62);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    & b { font-weight: 600; color: #fff; }
-    & .st-artist { color: rgba(255, 255, 255, 0.62); }
+    & b { font-weight: 600; color: rgba(255, 255, 255, 0.85); }
 }
-#st-hopon { flex-shrink: 0; white-space: nowrap; }
-#st-bus,
-#st-stepdown { flex-shrink: 0; }
-#st-bus [class*="material-symbols-"],
-#st-stepdown [class*="material-symbols-"] { font-size: 1.15rem; }
-/* armed (first tap): Step down says so and asks for a second tap, like the plate's */
-#st-stepdown.armed {
-    width: auto;
-    padding-inline: var(--space-3);
-    gap: var(--space-1);
-    color: #fff;
-    background: var(--color-danger);
-    font-size: var(--fs-meta);
-    font-weight: 600;
-    white-space: nowrap;
-}
-#st-stepdown .st-ask:empty { display: none; }
 
 /* Mods: who to add to the decks (1.7) */
 #npAddDjMenu .ft-menu { width: min(18rem, calc(100vw - 2rem)); }
