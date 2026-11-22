@@ -3317,10 +3317,23 @@ try {
       if (b.content === "none" || b.position !== "absolute") return null;
       return [Math.round(r.width - parseFloat(b.left) - parseFloat(b.right)), Math.round(r.height - parseFloat(b.top) - parseFloat(b.bottom))];
     };
-    return { coarse: matchMedia("(pointer: coarse)").matches, more: area("#dBrowse .d-rowlist .row-icon.d-more"), play: area("#dBrowse .d-rowlist .previewicon") };
+    // a tap area hangs from its own control: one on a control that isn't positioned would hang
+    // from a far ancestor and cover other things (it covered Join, from the lead card's icons)
+    const loose = () => [...new Set([...document.querySelectorAll("button, a, [role=button]")].filter((el) => {
+      if (!el.getClientRects().length || getComputedStyle(el).position !== "static") return false;
+      return ["::before", "::after"].some((p) => { const s = getComputedStyle(el, p); return s.content !== "none" && s.position === "absolute"; });
+    }).map((el) => el.id || el.className))];
+    const out = { coarse: matchMedia("(pointer: coarse)").matches, more: area("#dBrowse .d-rowlist .row-icon.d-more"), play: area("#dBrowse .d-rowlist .previewicon"), loose: loose() };
+    location.hash = "#discover";
+    for (let i = 0; i < 50 && !document.querySelector("#dBrowse .d-leadacts .row-icon"); i++) await wait(100);
+    out.loose = out.loose.concat(loose());
+    const join = document.getElementById("nav-signin"), r = join.getBoundingClientRect(), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    out.joinOnTop = !!top && (top === join || join.contains(top));
+    return out;
   });
   check(taps.coarse && taps.more && taps.more[0] >= 40 && taps.more[1] >= 44 && taps.play && taps.play[0] >= 40 && taps.play[1] >= 40,
     "on a touch screen a row's ⋮ can be tapped over 40×44px and its play button over the whole cover, at the size they were (" + JSON.stringify(taps) + ")");
+  check(!taps.loose.length && taps.joinOnTop, "no tap area hangs loose from a control that isn't positioned, on Charts or Home, and nothing covers Join (" + JSON.stringify({ loose: taps.loose, join: taps.joinOnTop }) + ")");
   await tContext.close();
   await cPage.close();
 
