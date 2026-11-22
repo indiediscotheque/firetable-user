@@ -3273,8 +3273,10 @@ try {
     for (let i = 0; i < 80 && !document.querySelector("#thediscovers .pvbar"); i++) await wait(100);
     const box = document.getElementById("discover");
     return { shown: box.offsetParent !== null, login: document.getElementById("mainGrid").classList.contains("login"), view: firetable.nav.view,
-      rows: document.querySelectorAll("#thediscovers .pvbar").length, loading: document.querySelectorAll("#thediscovers .ft-skeleton").length };
+      rows: document.querySelectorAll("#thediscovers .pvbar").length, loading: document.querySelectorAll("#thediscovers .ft-skeleton").length,
+      djPicker: getComputedStyle(document.getElementById("djlistpicker")).visibility, clock: document.getElementById("timr").offsetParent !== null };
   });
+  check(freshBeside.djPicker === "hidden" && freshBeside.clock, "a visitor isn't offered a playlist to DJ from under the stage; the clocks stay (" + freshBeside.djPicker + ")");
   check(freshBeside.shown && freshBeside.login && freshBeside.view !== "discover" && freshBeside.rows >= 1 && !freshBeside.loading,
     "a visitor's Fresh, beside the welcome, loads without its tab being chosen (" + JSON.stringify(freshBeside) + ")");
   await fPage.close();
