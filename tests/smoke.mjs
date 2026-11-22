@@ -1194,9 +1194,41 @@ try {
     document.getElementById("nav-ttLaptop").click();
     out.laptop = document.getElementById("tt-laptopEdit").open;
     document.querySelector('#tt-laptopEdit [data-add="heart"]').click();
+    out.food = ["e2615", "e1f32f"].every((id) => document.querySelector('#tt-laptopEdit [data-add="' + id + '"]'));
+    // the turntable.fm logo, turned a quarter by dragging its corner round its middle (no turn buttons)
+    document.querySelector('#tt-laptopEdit [data-add="ttfm"]').click();
+    const handle = document.getElementById("tt-lapTurn"), picked = document.querySelector("#tt-lapLid .tt-sticker.on");
+    const pb = picked.getBoundingClientRect(), hb = handle.getBoundingClientRect();
+    const cx = pb.left + pb.width / 2, cy = pb.top + pb.height / 2, hx = hb.left + hb.width / 2, hy = hb.top + hb.height / 2;
+    const r0 = +getComputedStyle(picked).getPropertyValue("--r").replace("deg", "");
+    const ptr = (type, x, y) => handle.dispatchEvent(new PointerEvent(type, { pointerId: 7, clientX: x, clientY: y, bubbles: true, isPrimary: true }));
+    ptr("pointerdown", hx, hy);
+    ptr("pointermove", cx - (hy - cy), cy + (hx - cx)); // a quarter turn clockwise round the middle
+    ptr("pointerup", cx - (hy - cy), cy + (hx - cx));
+    const turned = document.querySelector("#tt-lapLid .tt-sticker.on");
+    const r1 = +turned.style.getPropertyValue("--r").replace("deg", "");
+    out.turn = !handle.hidden && !document.querySelector('#tt-laptopEdit [data-lap="left"], #tt-laptopEdit [data-lap="right"]') &&
+      Math.abs(((r1 - r0 - 90) % 360 + 540) % 360 - 180) <= 2;
+    out.turnInfo = r0 + "→" + r1;
+    // and off the lid's edge: dragged far left, it hangs off (the lid cuts it), some of it still on
+    const lidBox = document.getElementById("tt-lapLid").getBoundingClientRect();
+    const logo = document.querySelector("#tt-lapLid .tt-sticker.on"), lb = logo.getBoundingClientRect();
+    const sx = lb.left + lb.width / 2, sy = lb.top + lb.height / 2;
+    const drag = (type, x, y) => (type === "pointerdown" ? logo : document.getElementById("tt-lapLid")).dispatchEvent(new PointerEvent(type, { pointerId: 8, clientX: x, clientY: y, bubbles: true, isPrimary: true }));
+    drag("pointerdown", sx, sy);
+    drag("pointermove", lidBox.left - 400, sy);
+    drag("pointerup", lidBox.left - 400, sy);
+    const off = document.querySelector("#tt-lapLid .tt-sticker.on"), ob = off.getBoundingClientRect();
+    out.bleed = parseFloat(off.style.left) < 0 && ob.left < lidBox.left && ob.right > lidBox.left + 2;
+    out.bleedInfo = off.style.left;
     document.querySelector('#tt-laptopEdit [data-lid="teal"]').click();
     document.querySelector('#tt-laptopEdit [data-lap="save"]').click();
     out.stickers = localStorage.getItem("firetableTurntableLaptop") || "";
+    // opened again, the sticker off the edge is where it was left
+    firetable.tt.openLaptop();
+    const back = [...document.querySelectorAll("#tt-lapLid .tt-sticker")].map((el) => parseFloat(el.style.left));
+    out.bleedBack = back.length === 2 && back[1] < 0 && Math.abs(back[1] - parseFloat(out.bleedInfo)) < 1;
+    document.querySelector('#tt-laptopEdit [data-lap="cancel"]').click();
     // one sidebar or two
     document.getElementById("tt-layout").click();
     const lay1 = document.body.getAttribute("data-tt-layout");
@@ -1234,6 +1266,9 @@ try {
   check(tt.screen && tt.after, "going in and out never touches the room's player (the same frame, the same video)");
   check(tt.faces, "chat shows Turntable faces in the theme (" + tt.faceInfo + ")");
   check(tt.awesome && tt.storm && tt.never && !tt.join, "Awesome is Fire, Storm takes it back, and nothing counts below none");
+  check(tt.food, "the sticker builder has coffee and a burrito");
+  check(tt.bleed && tt.bleedBack && /;ttfm,9\d\d,/.test(tt.stickers), "a sticker can hang off the lid's edge, some of it kept on, and saves that way (" + tt.bleedInfo + ")");
+  check(tt.turn && /;ttfm,/.test(tt.stickers), "the turntable.fm logo is a sticker, and a sticker turns by dragging its corner (" + tt.turnInfo + ")");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
@@ -1831,8 +1866,11 @@ try {
   lib.dj.dj1.firstHere = Array.from({ length: 14 }, (_, i) => ({ cid: "fh" + String(i).padStart(9, "0"), type: 1, a: "Firsts", t: "First " + (i + 1), plays: 20 - i, first: now - (400 - i) * 86400000 }));
   // a year's playlist with one song three times (an old library build did that): the page lists it once
   lib.year[2026].top = [lib.year[2026].top[0], Object.assign({}, lib.year[2026].top[0]), Object.assign({}, lib.year[2026].top[0], { cid: "lib0000099" })];
-  // two sets on one night (a break between): one line, "12 songs in 2 sets" (2.7)
-  lib.dj.dj1.sets = [{ at: now - 86400000 + 3 * 3600000, n: 3 }, { at: now - 86400000, n: 9 }];
+  // two sets on one night (a break between): one line, "12 songs in 2 sets" (2.7). On a fixed
+  // evening, 8 and 11 pm two days ago: hours before now could straddle the night's 6 am cutoff
+  const evening = new Date(now - 2 * 86400000);
+  evening.setHours(20, 0, 0, 0);
+  lib.dj.dj1.sets = [{ at: evening.getTime() + 3 * 3600000, n: 3 }, { at: evening.getTime(), n: 9 }];
   // a year's covers on the Years list (2.7)
   lib.years[2026].covers = ["1_lib0000002"];
   await put("/discover/lib", lib);
