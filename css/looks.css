@@ -4528,6 +4528,85 @@ img.emoji,
     color: var(--color-text-muted);
 }
 
+/* :emoji suggestions while typing (CH-20) */
+#ch-emojiSuggest {
+    position: absolute;
+    z-index: 100;
+    bottom: calc(100% + 0.25rem);
+    left: var(--pad3);
+    right: var(--pad3);
+    max-width: 24rem;
+    padding: 0.25rem;
+    background-color: var(--color-bg-t2);
+    border: 1px solid var(--color-bg-t1);
+    border-radius: var(--radius-md);
+    box-shadow: 0 0.25rem 1rem black;
+}
+
+#ch-emojiSuggest[hidden] {
+    display: none;
+}
+
+#ch-emojiSuggest .ch-esHead {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem 0.375rem;
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+
+    > span:first-child { overflow: hidden; text-overflow: ellipsis; }
+    b { color: var(--color-text); font-weight: 600; }
+    kbd { font-family: inherit; padding: 0 0.25em; border: 1px solid currentColor; border-radius: 3px; }
+}
+
+@media (hover: none), (max-width: 480px) {
+    #ch-emojiSuggest .ch-esKeys { display: none; }
+}
+
+#ch-emojiSuggestList {
+    max-height: calc(6 * 2.25rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+#ch-emojiSuggestList .ch-esItem {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 2.25rem;
+    padding: 0 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#ch-emojiSuggestList .ch-esItem[aria-selected="true"] {
+    background-color: var(--color-bg-t1);
+    color: var(--color-accent);
+}
+
+#ch-emojiSuggestList .ch-esGlyph {
+    flex: none;
+    width: 1.5rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    text-align: center;
+
+    img.emoji, .rohnmoji { width: 1.375rem; height: 1.375rem; margin: 0; vertical-align: middle; }
+}
+
+#ch-emojiSuggestList .ch-esName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    mark { background: none; color: inherit; font-weight: 700; }
+}
+
 /* ============================================
    History
    ============================================ */

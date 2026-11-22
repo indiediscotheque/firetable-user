@@ -113,6 +113,23 @@ firetable.utilities.getEmojiMap = function () {
 };
 
 /**
+ * The picker's data (js/emoji-picker.json: groups of [emoji, shortname,
+ * search words]), fetched once and shared by the picker and the chat's
+ * :emoji suggestions. Only members chat, so nobody else downloads it.
+ * @returns {Promise<Array>}
+ */
+firetable.emojis.pickerData = function () {
+  if (firetable.emojis.pickerDataReady) return firetable.emojis.pickerDataReady;
+  firetable.emojis.pickerDataReady = fetch(emojiDataUrl("picker"), { credentials: "same-origin" })
+    .then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); })
+    .catch(function (err) {
+      firetable.emojis.pickerDataReady = null; // try again next time
+      throw err;
+    });
+  return firetable.emojis.pickerDataReady;
+};
+
+/**
  * Build the picker (category nav + emoji grid in #pickerNav / #pickerContents)
  * the first time it opens, from js/emoji-picker.json: only members chat, so
  * nobody else downloads it.
@@ -120,8 +137,7 @@ firetable.utilities.getEmojiMap = function () {
  */
 firetable.emojis.buildPicker = function () {
   if (firetable.emojis.pickerReady) return firetable.emojis.pickerReady;
-  firetable.emojis.pickerReady = fetch(emojiDataUrl("picker"), { credentials: "same-origin" })
-    .then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); })
+  firetable.emojis.pickerReady = firetable.emojis.pickerData()
     .then(function (groups) {
       // The app shell is detached on the login screen, so look there too
       var findEl = function (id) {
@@ -157,6 +173,105 @@ firetable.emojis.buildPicker = function () {
       return false;
     });
   return firetable.emojis.pickerReady;
+};
+
+// ─── :emoji suggestions while typing (CH-20) ────────────────────────────────
+
+/** The suggestions' index, rebuilt when the map or the search words change. */
+var emojiSuggestIndex = { map: null, words: null, names: [], keywords: [] };
+
+/**
+ * Keep the picker's search words (from firetable.emojis.pickerData) so
+ * suggestions also find an emoji by what it means (:happy finds 😀).
+ * @param {Array} groups - js/emoji-picker.json
+ */
+firetable.emojis.setSearchWords = function (groups) {
+  var words = [];
+  (groups || []).forEach(function (group) {
+    (group.emojis || []).forEach(function (item) {
+      if (item && item[0] && item[1]) words.push({ emoji: item[0], name: item[1], words: String(item[2] || "").toLowerCase().split(",") });
+    });
+  });
+  firetable.emojis.searchWords = words;
+};
+
+function emojiSuggestTable() {
+  var idx = emojiSuggestIndex, map = firetable.emojiMap || {}, words = firetable.emojis.searchWords || null;
+  if (idx.map === map && idx.words === words) return idx;
+  idx.map = map;
+  idx.words = words;
+  idx.names = Object.keys(map).map(function (name, i) {
+    return { name: name, emoji: map[name], parts: name.split(/[_-]/), order: i };
+  });
+  // the site's own :rohn:
+  idx.names.push({ name: "rohn", emoji: "", custom: "rohnmoji", parts: ["rohn"], order: idx.names.length });
+  // search words, by the name the chat will understand for each emoji
+  var byEmoji = {};
+  idx.names.forEach(function (e) {
+    var had = byEmoji[e.emoji];
+    if (!had || e.name.length < had.length) byEmoji[e.emoji] = e.name;
+  });
+  idx.keywords = (words || []).map(function (w, i) {
+    var name = map[w.name] === w.emoji ? w.name : byEmoji[w.emoji];
+    return name ? { name: name, emoji: w.emoji, words: w.words, order: idx.names.length + i } : null;
+  }).filter(Boolean);
+  return idx;
+}
+
+/**
+ * Emoji whose :shortname: (or search words, once loaded) match what's being
+ * typed, best first: the exact name, names that start with it, names with a
+ * word that starts with it, an exact search word, names that contain it, then
+ * search words that start with it. Each emoji once, under its best name.
+ * @param {string} query - What follows the colon (":cow" or "cow")
+ * @param {number} [limit=10]
+ * @returns {Array<{name: string, emoji: string, custom?: string}>}
+ */
+firetable.emojis.suggest = function (query, limit) {
+  var q = String(query || "").toLowerCase().replace(/^:/, "");
+  if (!q || !/^[a-z0-9_+-]+$/.test(q)) return [];
+  limit = limit || 10;
+  var idx = emojiSuggestTable(), best = {};
+  // by rank; then names by length, search-word matches in the picker's order
+  function cmp(a, b) {
+    return a.rank - b.rank || (a.rank === 3 || a.rank === 5 ? 0 : a.name.length - b.name.length) || a.order - b.order;
+  }
+  function offer(key, name, emoji, custom, rank, order) {
+    var e = { name: name, emoji: emoji, custom: custom, rank: rank, order: order };
+    if (!best[key] || cmp(e, best[key]) < 0) best[key] = e;
+  }
+  idx.names.forEach(function (e) {
+    var rank = e.name === q ? 0
+      : e.name.indexOf(q) === 0 ? 1
+      : e.parts.some(function (p) { return p.indexOf(q) === 0; }) ? 2
+      : q.length > 2 && e.name.indexOf(q) > 0 ? 4 : -1;
+    if (rank >= 0) offer(e.custom || e.emoji, e.name, e.emoji, e.custom, rank, e.order);
+  });
+  if (q.length > 1) idx.keywords.forEach(function (k) {
+    var rank = k.words.indexOf(q) >= 0 ? 3
+      : k.words.some(function (w) { return w.indexOf(q) === 0; }) ? 5 : -1;
+    if (rank >= 0) offer(k.emoji, k.name, k.emoji, undefined, rank, k.order);
+  });
+  return Object.keys(best).map(function (k) { return best[k]; })
+    .sort(cmp)
+    .slice(0, limit)
+    .map(function (e) { return e.custom ? { name: e.name, emoji: e.emoji, custom: e.custom } : { name: e.name, emoji: e.emoji }; });
+};
+
+/**
+ * The :shortname being typed just before the caret, if any: a colon at the
+ * start or after a space or bracket, then two or more name characters (so
+ * times, links and :) don't count). Covers the rest of a name the caret is in.
+ * @param {string} value - The chat box's text
+ * @param {number} caret - The caret's position
+ * @returns {?{start: number, end: number, query: string}}
+ */
+firetable.emojis.typedShortname = function (value, caret) {
+  var before = String(value).slice(0, caret);
+  var m = /(^|[\s(\[{"'])(:([a-z0-9_+-]{2,40}))$/i.exec(before);
+  if (!m) return null;
+  var after = /^[a-z0-9_+-]*:?/i.exec(String(value).slice(caret))[0];
+  return { start: caret - m[2].length, end: caret + after.length, query: m[3].toLowerCase() };
 };
 
 /**

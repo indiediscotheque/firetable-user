@@ -471,6 +471,62 @@ test("saveFailed: tells the person once per burst, and swallows the error", asyn
   assert.ok(r.back);
 });
 
+// ─── :emoji suggestions (CH-20) ─────────────────────────────────────────────
+
+test("typedShortname finds the :name being typed, and not times, links or :)", async () => {
+  const r = await run(() => {
+    const t = firetable.emojis.typedShortname;
+    return {
+      start: t(":cow", 4), mid: t("hi :cow", 7), inside: t("hi :co_face: x", 6), paren: t("(:fire", 6),
+      one: t("hi :c", 5), time: t("12:30", 5), link: t("https://x", 9), smiley: t("hi :)", 5), word: t("a:cow", 5)
+    };
+  });
+  assert.deepEqual(r.start, { start: 0, end: 4, query: "cow" });
+  assert.deepEqual(r.mid, { start: 3, end: 7, query: "cow" });
+  assert.deepEqual(r.inside, { start: 3, end: 12, query: "co" }); // the rest of the name, and its colon, is replaced too
+  assert.deepEqual(r.paren, { start: 1, end: 6, query: "fire" });
+  for (const k of ["one", "time", "link", "smiley", "word"]) assert.equal(r[k], null, k);
+});
+
+test("suggest ranks the exact name, then names that start with it, then words in names, each emoji once", async () => {
+  await page.waitForFunction(() => firetable.emojiMap && firetable.emojiMap.cow, null, { timeout: 30000 });
+  const r = await run(() => {
+    const words = firetable.emojis.searchWords;
+    firetable.emojis.searchWords = null; // names alone first
+    const s = (q, n) => firetable.emojis.suggest(q, n).map((e) => e.name);
+    const out = {
+      cow: s(":cow", 4), fire: s("fire", 3), plus: s("+1", 1), none: s("zzzzqx"), empty: s(""), bad: s("<b>"),
+      rohn: firetable.emojis.suggest("rohn")[0], happyNames: s("happy"), limit: firetable.emojis.suggest("a").length,
+      once: new Set(firetable.emojis.suggest("smile", 20).map((e) => e.emoji)).size === firetable.emojis.suggest("smile", 20).length
+    };
+    firetable.emojis.searchWords = words;
+    return out;
+  });
+  assert.deepEqual(r.cow.slice(0, 3), ["cow", "cow2", "cowboy_hat_face"]); // :cow_face: is 🐮 too: shown once, as :cow:
+  assert.deepEqual(r.fire.slice(0, 1), ["fire"]);
+  assert.deepEqual(r.plus, ["+1"]);
+  assert.deepEqual(r.none, []);
+  assert.deepEqual(r.empty, []);
+  assert.deepEqual(r.bad, []);
+  assert.deepEqual(r.rohn, { name: "rohn", emoji: "", custom: "rohnmoji" });
+  assert.deepEqual(r.happyNames, []);
+  assert.equal(r.limit, 10);
+  assert.ok(r.once);
+});
+
+test("suggest finds emoji by their search words once the picker's data is in", async () => {
+  const r = await run(async () => {
+    firetable.emojis.setSearchWords(await firetable.emojis.pickerData());
+    const s = (q) => firetable.emojis.suggest(q, 8);
+    return { happy: s("happy"), beef: s("beef").map((e) => e.name), cow: s("cow").map((e) => e.name), map: firetable.emojiMap };
+  });
+  assert.ok(r.happy.length >= 5 && r.happy.every((e) => r.map[e.name] === e.emoji), "every suggestion is a name the chat understands");
+  assert.equal(r.happy[0].emoji, "😀");
+  assert.ok(r.beef.includes("ox"));
+  assert.equal(r.cow[0], "cow");
+  assert.ok(r.cow.includes("cut_of_meat") || r.cow.includes("water_buffalo"), "related emoji follow the names: " + r.cow);
+});
+
 test("no page errors while the site loaded and ran these", () => {
   assert.deepEqual(errors, []);
 });

@@ -117,6 +117,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | CH-17 | Cards shared or gifted in chat, with a Grab button | M | `chat.js` `addGrabButton`, `claimGrab`, `watchGrab`, `.chat-grab-btn` | keep |
 | CH-18 | Private notices from the bot (your track can't play, swaps ready, "are you there?") | M | `notices/<uid>`, `watchNotices`, `showNextNotice` (toast) | keep |
 | CH-19 | Chat peek for visitors (read-only, Discover) | V | `discover/chat`, `#chatPeek` | ❌ retired in 2.3c (the owner's call, November 13, 2026: the chat is for members only); `#chatPeek` stays in the page, hidden |
+| CH-20 | `:emoji` suggestions while typing (a colon and two letters lists matching emoji by name and search word; arrows, Tab/Enter, Esc, click) | M | `#ch-emojiSuggest`, `#ch-emojiSuggestList`, `emoji.js` `suggest` / `typedShortname`, `chat.js` | new (November 22, 2026) |
 
 ## CR · Playlists, the crate (`#queuebox`)
 

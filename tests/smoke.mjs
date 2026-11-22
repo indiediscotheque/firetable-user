@@ -1334,6 +1334,49 @@ try {
   check(emo.before === 0 && emo.built && emo.sections === 9 && emo.picker > 1900 && /smile/.test(emo.words) && /\u{1FACD}/u.test(emo.chat) && /😡/.test(emo.chat),
     "the picker loads on its first open, with every group, " + emo.picker + " emoji and their search words (" + JSON.stringify({ before: emo.before, words: emo.words }) + ")");
 
+  console.log("-- :emoji suggestions while typing in the chat (CH-20)");
+  const sug = { };
+  try {
+    await page.evaluate(() => { const c = document.getElementById("newchat"); c.value = ""; c.dispatchEvent(new Event("input", { bubbles: true })); });
+    await page.focus("#newchat");
+    await page.keyboard.type("moo :co");
+    await page.waitForFunction(() => !document.getElementById("ch-emojiSuggest").hidden, null, { timeout: 5000 });
+    await page.keyboard.type("w");
+    await page.waitForTimeout(100);
+    const read = () => page.evaluate(() => ({
+      shown: !document.getElementById("ch-emojiSuggest").hidden,
+      names: [...document.querySelectorAll("#ch-emojiSuggestList [role=option]")].map((o) => o.dataset.name),
+      selected: (document.querySelector('#ch-emojiSuggestList [aria-selected="true"]') || {}).dataset?.name,
+      active: document.getElementById("newchat").getAttribute("aria-activedescendant"),
+      twemoji: !!document.querySelector("#ch-emojiSuggestList img.emoji, #ch-emojiSuggestList .ch-esGlyph"),
+      value: document.getElementById("newchat").value
+    }));
+    sug.list = await read();
+    await page.keyboard.press("ArrowDown");
+    sug.down = (await read()).selected;
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press("Enter"); // inserts, doesn't send
+    sug.entered = await read();
+    await page.keyboard.type("and :fir");
+    await page.waitForFunction(() => !document.getElementById("ch-emojiSuggest").hidden, null, { timeout: 5000 });
+    await page.keyboard.press("Escape");
+    sug.escaped = await read();
+    await page.keyboard.type("e");
+    sug.stayedClosed = !(await read()).shown;
+    await page.keyboard.type(" :sob");
+    await page.waitForFunction(() => !document.getElementById("ch-emojiSuggest").hidden, null, { timeout: 5000 });
+    await page.click("#ch-emojiSuggestList [role=option]");
+    sug.clicked = await read();
+    sug.focus = await page.evaluate(() => document.activeElement && document.activeElement.id);
+  } catch (e) { sug.error = e.message; }
+  await page.evaluate(() => { const c = document.getElementById("newchat"); c.value = ""; c.dispatchEvent(new Event("input", { bubbles: true })); c.blur(); });
+  check(!sug.error && sug.list.shown && sug.list.names[0] === "cow" && sug.list.names.includes("cowboy_hat_face") && sug.list.selected === "cow" && sug.list.active && sug.list.twemoji,
+    "typing :cow shows matching emoji above the chat box, the best one chosen (" + JSON.stringify(sug.list || sug.error) + ")");
+  check(sug.down && sug.down !== "cow" && sug.entered && sug.entered.value === "moo :cow: " && !sug.entered.shown,
+    "Up and Down choose, and Enter puts in the :shortname: instead of sending (" + JSON.stringify({ down: sug.down, entered: sug.entered }) + ")");
+  check(sug.escaped && !sug.escaped.shown && sug.stayedClosed && sug.clicked && sug.clicked.value === "moo :cow: and :fire :sob: " && sug.focus === "newchat",
+    "Escape closes them for that word, and a click picks one and keeps typing in the box (" + JSON.stringify({ clicked: sug.clicked && sug.clicked.value, focus: sug.focus }) + ")");
+
   console.log("-- a printed card: GRAB, then YOURS / GRABBED BY / GONE");
   await put("/cards", { cardA: { owner: false, cardnum: 1 }, cardB: { owner: false, cardnum: 2 }, cardC: { owner: false, cardnum: 3 } });
   await put("/users/bot", { username: "hostbot", hostbot: true });
