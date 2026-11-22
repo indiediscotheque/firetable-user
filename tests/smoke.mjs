@@ -2045,6 +2045,17 @@ try {
     // the room the song has: the bar's song area, less the cover and the buttons beside it
     const w = (sel) => bar.querySelector(sel).getBoundingClientRect().width;
     out.text = Math.round(w(".pb-now") - w(".pb-art") - w(".pb-keep"));
+    // Fire and Grab stay at the right whatever the title's length
+    const title = bar.querySelector("#pv-title");
+    const keepAt = () => Math.round(bar.querySelector(".pb-keep").getBoundingClientRect().right);
+    const keptHtml = title.innerHTML;
+    title.innerHTML = "<span>Hi</span>";
+    const shortAt = keepAt();
+    title.innerHTML = "<span>A very long song title that goes on and on (Extended Mix)</span>";
+    const longAt = keepAt();
+    title.innerHTML = keptHtml;
+    out.keepFixed = shortAt === longAt && shortAt > 250;
+    out.keepAt = shortAt + "/" + longAt;
     // the song in two lines: the title, then the room's mark beside the artist (the word Live only for screen readers)
     const tx = (sel) => bar.querySelector(sel).getBoundingClientRect();
     out.lines = Math.round(tx(".pb-src").top) > Math.round(tx(".pb-title").top) && Math.abs(tx(".pb-src").top - tx(".pb-artist").top) < 12 &&
@@ -2072,6 +2083,7 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 });
   check(phoneRow.inBar && phoneRow.fire === "44x44" && phoneRow.main === "44x44" && phoneRow.grab === "44x44" && phoneRow.pick === "hidden" && phoneRow.open === "hidden" && phoneRow.text >= 140,
     "phone: Fire, Grab and play are 44px, the ▾ and ⌃ are gone from the bar, and the song has more room (" + JSON.stringify(phoneRow) + ")");
+  check(phoneRow.keepFixed, "phone: Fire and Grab stay at the right, however long the title (" + phoneRow.keepAt + ")");
   check(phoneRow.lines && phoneRow.mainPlain === "rgba(0, 0, 0, 0)", "phone: the song in two lines with the room's mark beside the artist, and play/stop a plain icon (" + JSON.stringify(phoneRow) + ")");
   check(phoneRow.titleOpens && phoneRow.barOpens && phoneRow.fireStays, "phone: tapping the bar or its title opens the full-screen player; Fire does its own thing (" + JSON.stringify(phoneRow) + ")");
 

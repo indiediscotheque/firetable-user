@@ -1585,7 +1585,8 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
        artist; play and stop as a plain icon. Screen readers still hear Live. */
     .pb { cursor: pointer; }
     .pb .pb-expand { display: none; }
-    .pb-text { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "title title" "src artist"; align-items: center; column-gap: 0.375rem; row-gap: 0.125rem; }
+    /* the song fills the room, so Fire and Grab stay put at the right whatever its length */
+    .pb-text { flex: 1 1 0; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "title title" "src artist"; align-items: center; column-gap: 0.375rem; row-gap: 0.125rem; }
     .pb-text .pb-title { grid-area: title; font-size: var(--fs-body); }
     .pb-text .pb-artist { grid-area: artist; font-size: var(--fs-meta); }
     .pb-text .pb-src { grid-area: src; display: flex; min-width: 0; }
