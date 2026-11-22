@@ -1037,7 +1037,26 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
 
 .tt-lapBody { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.25rem; padding: 1.25rem; }
 .tt-lapStage { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
-.tt-lapBig { width: 100%; max-width: 26rem; height: auto; aspect-ratio: 96 / 66; pointer-events: auto; }
+.tt-lapBig { position: relative; width: 100%; max-width: 26rem; height: auto; aspect-ratio: 96 / 66; pointer-events: auto; }
+/* the picked sticker's turning handle, on its top-right corner */
+.tt-lapTurn {
+    position: absolute;
+    width: 1.6rem;
+    height: 1.6rem;
+    margin: -0.8rem 0 0 -0.8rem;
+    display: grid;
+    place-items: center;
+    border: 2px solid #1d1d1d;
+    border-radius: 50%;
+    background: var(--tt-gold);
+    color: #1d1d1d;
+    cursor: grab;
+    touch-action: none;
+    z-index: 2;
+}
+.tt-lapTurn[hidden] { display: none; }
+.tt-lapTurn.on { cursor: grabbing; }
+.tt-lapTurn i { font-size: 1rem; pointer-events: none; }
 .tt-lapBig .tt-lid { touch-action: none; }
 .tt-lapBig .tt-sticker { cursor: grab; }
 .tt-lapBig .tt-sticker:active { cursor: grabbing; }

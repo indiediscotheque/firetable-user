@@ -1195,6 +1195,21 @@ try {
     out.laptop = document.getElementById("tt-laptopEdit").open;
     document.querySelector('#tt-laptopEdit [data-add="heart"]').click();
     out.food = ["e2615", "e1f32f"].every((id) => document.querySelector('#tt-laptopEdit [data-add="' + id + '"]'));
+    // the turntable.fm logo, turned a quarter by dragging its corner round its middle (no turn buttons)
+    document.querySelector('#tt-laptopEdit [data-add="ttfm"]').click();
+    const handle = document.getElementById("tt-lapTurn"), picked = document.querySelector("#tt-lapLid .tt-sticker.on");
+    const pb = picked.getBoundingClientRect(), hb = handle.getBoundingClientRect();
+    const cx = pb.left + pb.width / 2, cy = pb.top + pb.height / 2, hx = hb.left + hb.width / 2, hy = hb.top + hb.height / 2;
+    const r0 = +getComputedStyle(picked).getPropertyValue("--r").replace("deg", "");
+    const ptr = (type, x, y) => handle.dispatchEvent(new PointerEvent(type, { pointerId: 7, clientX: x, clientY: y, bubbles: true, isPrimary: true }));
+    ptr("pointerdown", hx, hy);
+    ptr("pointermove", cx - (hy - cy), cy + (hx - cx)); // a quarter turn clockwise round the middle
+    ptr("pointerup", cx - (hy - cy), cy + (hx - cx));
+    const turned = document.querySelector("#tt-lapLid .tt-sticker.on");
+    const r1 = +turned.style.getPropertyValue("--r").replace("deg", "");
+    out.turn = !handle.hidden && !document.querySelector('#tt-laptopEdit [data-lap="left"], #tt-laptopEdit [data-lap="right"]') &&
+      Math.abs(((r1 - r0 - 90) % 360 + 540) % 360 - 180) <= 2;
+    out.turnInfo = r0 + "→" + r1;
     document.querySelector('#tt-laptopEdit [data-lid="teal"]').click();
     document.querySelector('#tt-laptopEdit [data-lap="save"]').click();
     out.stickers = localStorage.getItem("firetableTurntableLaptop") || "";
@@ -1236,6 +1251,7 @@ try {
   check(tt.faces, "chat shows Turntable faces in the theme (" + tt.faceInfo + ")");
   check(tt.awesome && tt.storm && tt.never && !tt.join, "Awesome is Fire, Storm takes it back, and nothing counts below none");
   check(tt.food, "the sticker builder has coffee and a burrito");
+  check(tt.turn && /;ttfm,/.test(tt.stickers), "the turntable.fm logo is a sticker, and a sticker turns by dragging its corner (" + tt.turnInfo + ")");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");

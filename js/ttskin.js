@@ -32,7 +32,7 @@ firetable.tt = (function () {
   // Laptop stickers: the room's own and Turntable's gold ones are one picture
   // (img/tt/stickers.webp, tools/tt-art.py: same names, same order); the rest
   // are the emoji the chat already shows (Twemoji, from the same place).
-  var STICKERS = ["id", "id9", "eight", "cake", "rohn", "heart", "happy", "wink", "laughing", "sad", "smh", "poop", "glowstick"];
+  var STICKERS = ["id", "id9", "eight", "cake", "rohn", "heart", "happy", "wink", "laughing", "sad", "smh", "poop", "glowstick", "ttfm"];
   var EMOJI = ["1faa9", "1f525", "1f3a7", "1f4bf", "1f308", "2b50", "1f680", "1f47e", "1f496", "1f984", "1f918", "1f3b8", "1f3b9", "1f941", "1f3a4", "1f3b6",
     "1f4fc", "1f4fb", "26a1", "1f319", "1f6f8", "1f47d", "1f419", "1f412", "1f63a", "1f355", "1f32e", "1f32f", "2615", "1f369", "1f366", "1f352", "1f335", "1f344", "1f338", "1f30a", "1f389", "1f60e"];
   var LIDS = ["black", "silver", "white", "gold", "pink", "teal", "purple"];
@@ -388,16 +388,16 @@ firetable.tt = (function () {
         '<button type="button" class="tt-pickClose" data-lap="cancel" aria-label="Close">' + ms("close") + "</button></div>" +
       '<div class="tt-lapBody">' +
         '<div class="tt-lapStage">' +
-          '<div class="tt-laptop tt-lapBig" id="tt-lapBig"><div class="tt-lid" id="tt-lapLid" role="group" aria-label="Your laptop\'s lid"></div></div>' +
+          '<div class="tt-laptop tt-lapBig" id="tt-lapBig"><div class="tt-lid" id="tt-lapLid" role="group" aria-label="Your laptop\'s lid"></div>' +
+            // the picked sticker's corner: drag it round to turn the sticker (outside the lid, so it's never cut off)
+            '<span class="tt-lapTurn" id="tt-lapTurn" title="Drag to turn (Shift: in steps)" aria-hidden="true" hidden>' + ms("rotate_right") + "</span></div>" +
           '<div class="tt-lapTools" id="tt-lapTools" role="toolbar" aria-label="The sticker you picked">' +
-            '<button type="button" data-lap="left" aria-label="Turn left" title="Turn left ([)">' + ms("rotate_left") + "</button>" +
-            '<button type="button" data-lap="right" aria-label="Turn right" title="Turn right (])">' + ms("rotate_right") + "</button>" +
             '<button type="button" data-lap="smaller" aria-label="Smaller" title="Smaller (-)">' + ms("remove") + "</button>" +
             '<button type="button" data-lap="bigger" aria-label="Bigger" title="Bigger (+)">' + ms("add") + "</button>" +
             '<button type="button" data-lap="front" aria-label="To the front" title="To the front">' + ms("flip_to_front") + "</button>" +
             '<button type="button" data-lap="remove" aria-label="Peel it off" title="Peel it off (Delete)">' + ms("delete") + "</button>" +
           "</div>" +
-          '<p class="tt-lapHint" id="tt-lapHint">Drag stickers around the lid. Arrow keys move the one you picked.</p>' +
+          '<p class="tt-lapHint" id="tt-lapHint">Drag stickers around the lid; drag the gold corner to turn one. Arrow keys move the one you picked, [ and ] turn it.</p>' +
         "</div>" +
         '<div class="tt-lapSide">' +
           '<h3>Lid</h3><div class="tt-lids" role="radiogroup" aria-label="Lid colour">' +
@@ -1011,21 +1011,38 @@ firetable.tt = (function () {
     $id("tt-lapTools").classList.toggle("tt-off", !sel);
     $id("tt-lapTools").querySelectorAll("button").forEach(function (b) { b.disabled = !sel; });
     $id("tt-lapCount").textContent = d.items.length + " of " + MAX_STICKERS;
+    placeTurn();
     if (sel && focusSel) sel.focus();
+  }
+
+  /** The turning handle, at the picked sticker's top-right corner as it's turned. */
+  function placeTurn() {
+    var h = $id("tt-lapTurn"), it = L.draft && L.draft.items[L.sel], lid = $id("tt-lapLid");
+    h.hidden = !it;
+    if (!it) return;
+    var w = lid.clientWidth, ht = lid.clientHeight;
+    var half = w * 0.3 * (it.s / 100) / 2 + 4; // the sticker is 30% of the lid wide, square; past its outline
+    var a = it.r * Math.PI / 180;
+    // (half, -half) turned by r
+    h.style.left = (lid.offsetLeft + it.x / 100 * w + half * Math.cos(a) + half * Math.sin(a)) + "px";
+    h.style.top = (lid.offsetTop + it.y / 100 * ht + half * Math.sin(a) - half * Math.cos(a)) + "px";
   }
 
   function lapAct(what) {
     var d = L.draft, i = d.items[L.sel];
     if (what === "clear") { d.items = []; L.sel = -1; return renderLaptop(); }
     if (!i) return;
-    if (what === "left") i.r = Math.max(-180, i.r - 15);
-    else if (what === "right") i.r = Math.min(180, i.r + 15);
+    if (what === "left") i.r = turnTo(i.r - 15);
+    else if (what === "right") i.r = turnTo(i.r + 15);
     else if (what === "smaller") i.s = Math.max(40, i.s - 15);
     else if (what === "bigger") i.s = Math.min(160, i.s + 15);
     else if (what === "front") { d.items.splice(L.sel, 1); d.items.push(i); L.sel = d.items.length - 1; }
     else if (what === "remove") { d.items.splice(L.sel, 1); L.sel = -1; }
     renderLaptop(true);
   }
+
+  /** An angle kept within -180..180 degrees (one turn either way). */
+  function turnTo(r) { r = ((r + 180) % 360 + 360) % 360 - 180; return r; }
 
   function saveLaptop() {
     var str = stringifyLaptop(L.draft);
@@ -1074,6 +1091,7 @@ firetable.tt = (function () {
       s.classList.add("on");
       $id("tt-lapTools").classList.remove("tt-off");
       $id("tt-lapTools").querySelectorAll("button").forEach(function (b) { b.disabled = false; });
+      placeTurn();
       e.preventDefault();
     });
     lid.addEventListener("pointermove", function (e) {
@@ -1083,10 +1101,35 @@ firetable.tt = (function () {
       it.y = Math.max(0, Math.min(100, (e.clientY - L.drag.dy - r.top) / r.height * 100));
       L.drag.el.style.left = it.x + "%";
       L.drag.el.style.top = it.y + "%";
+      placeTurn();
     });
     var drop = function () { if (L.drag) { L.drag = null; renderLaptop(true); } };
     lid.addEventListener("pointerup", drop);
     lid.addEventListener("pointercancel", drop);
+    // turn the picked sticker by its corner: the angle the pointer moves round its middle
+    var turn = $id("tt-lapTurn"), T = null;
+    var angle = function (e) { return Math.atan2(e.clientY - T.cy, e.clientX - T.cx) * 180 / Math.PI; };
+    turn.addEventListener("pointerdown", function (e) {
+      var it = L.draft.items[L.sel];
+      if (!it) return;
+      var r = lid.getBoundingClientRect();
+      T = { id: e.pointerId, cx: r.left + it.x / 100 * r.width, cy: r.top + it.y / 100 * r.height, r0: it.r };
+      T.a0 = angle(e);
+      try { turn.setPointerCapture(e.pointerId); } catch (err) { /* a pointer that's already gone: the moves still come here */ }
+      turn.classList.add("on");
+      e.preventDefault();
+    });
+    turn.addEventListener("pointermove", function (e) {
+      if (!T || e.pointerId !== T.id) return;
+      var it = L.draft.items[L.sel], r = T.r0 + angle(e) - T.a0;
+      it.r = turnTo(e.shiftKey ? Math.round(r / 15) * 15 : Math.round(r));
+      var el = lid.querySelector('[data-n="' + L.sel + '"]');
+      if (el) el.style.setProperty("--r", it.r + "deg");
+      placeTurn();
+    });
+    var stopTurn = function () { if (T) { T = null; turn.classList.remove("on"); renderLaptop(true); } };
+    turn.addEventListener("pointerup", stopTurn);
+    turn.addEventListener("pointercancel", stopTurn);
     lid.addEventListener("keydown", function (e) {
       if (!e.target.closest(".tt-sticker") || L.sel < 0) return;
       var it = L.draft.items[L.sel], step = e.shiftKey ? 8 : 2, k = e.key;
