@@ -689,20 +689,34 @@ firetable.tt = (function () {
     x.drawImage(img, 0, 0, w, h);
     var px = x.getImageData(0, 0, w, h).data;
     var lum = function (i) { return px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11; };
-    // a line is a bar when it's all one colour
-    var flat = function (from, to, step) {
-      var n = 0, s = 0, s2 = 0;
-      for (var i = from; i < to; i += step) { var l = lum(i); s += l; s2 += l * l; n++; }
+    // a line is a bar when it's all one colour, and the colour of the edge's outermost line
+    // (a cover's own flat background, say green inside black bars, isn't a bar)
+    var line = function (from, to, step) {
+      var n = 0, s = 0, s2 = 0, rgb = [0, 0, 0];
+      for (var i = from; i < to; i += step) {
+        var l = lum(i); s += l; s2 += l * l; n++;
+        rgb[0] += px[i]; rgb[1] += px[i + 1]; rgb[2] += px[i + 2];
+      }
       var mean = s / n;
-      return s2 / n - mean * mean < 60;
+      return { flat: s2 / n - mean * mean < 60, rgb: [rgb[0] / n, rgb[1] / n, rgb[2] / n] };
     };
-    var row = function (y, x0, x1) { return flat((y * w + x0) * 4, (y * w + x1) * 4, 4); };
-    var col = function (xx, y0, y1) { return flat((y0 * w + xx) * 4, (y1 * w + xx) * 4, w * 4); };
-    var top = 0, bottom = h - 1, left = 0, right = w - 1;
-    while (top < bottom && row(top, 0, w)) top++;
-    while (bottom > top && row(bottom, 0, w)) bottom--;
-    while (left < right && col(left, top, bottom + 1)) left++;
-    while (right > left && col(right, top, bottom + 1)) right--;
+    var strip = function (at, from, to, step) {
+      var edge = at(from);
+      if (!edge.flat) return from;
+      var i = from;
+      while (i !== to) {
+        var l = at(i);
+        if (!l.flat || l.rgb.some(function (v, c) { return Math.abs(v - edge.rgb[c]) > 24; })) break;
+        i += step;
+      }
+      return i;
+    };
+    var row = function (y) { return line(y * w * 4, (y + 1) * w * 4, 4); };
+    var top = strip(row, 0, h - 1, 1);
+    var bottom = strip(row, h - 1, top, -1);
+    var col = function (xx) { return line((top * w + xx) * 4, ((bottom + 1) * w + xx) * 4, w * 4); };
+    var left = strip(col, 0, w - 1, 1);
+    var right = strip(col, w - 1, left, -1);
     var cw = right - left + 1, ch = bottom - top + 1;
     // bars at the sides, each a good part of the width, round something about square: a cover
     if (left < w * 0.08 || w - 1 - right < w * 0.08 || ch < h * 0.3 || cw / ch < 0.75 || cw / ch > 1.35) return null;
