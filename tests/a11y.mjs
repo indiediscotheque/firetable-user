@@ -44,17 +44,6 @@ const ALLOW = {
     "#accountSettingsTabs": "4.5: the account dialog's close button sits inside its tablist",
   },
   "color-contrast": { // Text must stand out from what's behind it
-    "#createAccountFormShell > #createAccountBttn": "2.5 follow-up: Create account (dark text on gold)",
-    "#getAppCard > button.butt.small.showInstallGuide": "4.5: Settings' Get the app button",
-    "#pv-fsrc > span.pb-kind.pb-livekind.is-off": "2.x: the full-screen player's On air label",
-    "#pv-src > span.pb-kind.pb-livekind.is-off": "2.x: the player bar's On air label",
-    "b > span.d-tag.pl-broken": "2.x: the Playlists tab's Broken tag",
-    "b > span.d-tag.pl-next": "2.x: the Playlists tab's Next tag",
-    "button.butt.d-playall > span": "2.6: Play all",
-    "button.butt.d-radio > span": "2.7: a genre's radio",
-    "div.chatHead > div.chatName": "1.13: names in chat",
-    "li.pl-row.d-listrow > span.d-n": "2.x: row numbers in the side column's playlist",
-    "li.pl-row.d-listrow.d-flagged > span.d-n": "2.x: row numbers of flagged songs there",
   },
   "label-content-name-mismatch": { // Elements must have their visible text as part of their accessible name
     "button[aria-label]": "2.8: Discover's play buttons say \"Play <title>\" but show the title and artist",
