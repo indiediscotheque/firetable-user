@@ -118,12 +118,13 @@
     --color-text: #e3e3e3;
     --color-text-light: #fff;
     --color-text-soft: #999; /* tab labels, quiet controls */
-    --color-text-muted: #888;
+    --color-text-muted: #999; /* 4.5:1 or better on every panel up to --color-bg-t3 (#888 fell short on the raised ones) */
     --color-text-dim: #666;
     --color-text-subtle: #b3b3b3;
     --color-icon: #b8b8b8;
-    --color-on-accent: #fff;
+    --color-on-accent: var(--color-bg); /* dark on the gold: 6.9:1 (white was 2.6:1). On the stage the song's own colours set it (room-colors.css) */
     --color-danger: #c43;
+    --color-danger-text: #ec7767; /* the red as words on the dark panels: 4.5:1 or better (--color-danger is 3.8:1) */
     --color-success: #43b581;
 
     /* The redesign's tokens (docs/redesign/03-target-design.md, "Design
@@ -689,7 +690,7 @@ button.track-warning {
     margin: 0;
     min-width: 2rem;
     min-height: 2rem;
-    color: white;
+    color: var(--color-on-accent);
     font-size: 0.8125rem;
     font-weight: 600;
     letter-spacing: 0.01em;
@@ -750,6 +751,7 @@ button.track-warning {
 }
 
 .redbutt {
+    color: #fff;
     background: var(--color-danger);
 }
 
@@ -777,7 +779,7 @@ button.track-warning {
 }
 
 #stageActions #fire.on {
-    color: var(--color-on-accent);
+    color: #fff;
     background-color: var(--color-accent);
     border-top-color: rgba(255, 255, 255, 0.3);
     box-shadow: 0 0 0.75rem color-mix(in srgb, var(--color-accent) 55%, transparent), var(--shadow-drop);
@@ -4217,7 +4219,7 @@ a.importLinkCheck {
     flex: 0 0 auto;
     font-size: var(--fs-meta);
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-muted);
     cursor: pointer;
 }
 
