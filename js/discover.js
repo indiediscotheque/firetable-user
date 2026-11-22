@@ -2439,13 +2439,19 @@ firetable.discover = (function () {
     if (want === stageAt) return;
     var host = function (b) { return document.getElementById(want === "full" ? "pv-fstage" : b[2]); };
     if (!STAGE_BUTTONS.every(function (b) { return document.getElementById(b[0]) && host(b); })) return;
+    // Every tool is put in again, in this list's order, the ones that stay
+    // where they are too: screen and cast coming back from the full-screen
+    // player used to land after reload and full screen, so the bar's tools
+    // changed places from one state to the next.
     STAGE_TOOLS.forEach(function (b) {
       var el = document.getElementById(b[0]);
       var h = document.getElementById(want === "full" && b[3] ? b[3] : b[2]);
-      if (!el || !h || el.parentNode === h) return;
+      if (!el || !h) return;
+      var focused = document.activeElement === el;
       h.appendChild(el);
       var tip = document.getElementById(b[1]);
       if (tip) h.appendChild(tip);
+      if (focused) el.focus();
     });
     // a menu open on a button that moves would point at nothing
     ["npModMenu", "npAddDjMenu", "skipPopover", "flagPopover", "tagEditorPopover"].forEach(function (id) {
