@@ -2005,9 +2005,10 @@ try {
   const phoneRow = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const bar = document.getElementById("dMini");
-    // a member, hearing the room (as the bar is for a signed-in listener)
+    // a member, hearing the room (as the bar is for a signed-in listener); the
+    // buttons' 140ms colour change from the wider layout finishes first
     bar.classList.add("is-member", "is-room");
-    await wait(100);
+    await wait(400);
     const size = (el) => { const r = el.getBoundingClientRect(); return el.offsetParent ? Math.round(r.width) + "x" + Math.round(r.height) : "hidden"; };
     const out = { fire: size(document.getElementById("fire")), main: size(bar.querySelector(".pb-main")), open: size(bar.querySelector(".pb-expand")),
       pick: size(document.getElementById("st-grabPick")), inBar: !!document.getElementById("st-grabPick").closest("#dMini") };

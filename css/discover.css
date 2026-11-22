@@ -1596,7 +1596,7 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
     .pb-text .pb-livekind.is-off .d-dot { background: none; box-shadow: inset 0 0 0 1.5px var(--color-danger); }
     .pb.is-quiet .pb-text .pb-src { display: none; }
     .pb-face .ft-avatar { width: 1.35rem; height: 1.35rem; }
-    .pb .pb-main, .pb.is-discover:not(.is-paused) .pb-main, .pb.is-live .pb-main { color: var(--color-text-light); background: none; box-shadow: none; }
+    .pb .pb-main, .pb .pb-main:not(:disabled):hover, .pb.is-discover:not(.is-paused) .pb-main, .pb.is-live .pb-main { color: var(--color-text-light); background: none; box-shadow: none; }
     .pb .pb-main [class*="material-symbols-"] { font-size: 2rem; }
     /* Grab's ▾ is in the full-screen player: here the first grab, and the
        grab toast's Change, open the picker, and Fire and Grab keep their room */
