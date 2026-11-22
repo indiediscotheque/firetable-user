@@ -1163,6 +1163,23 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     body.tt-skin #tt-exit span { display: none; }
     .tt-lapBody { grid-template-columns: 1fr; }
     .tt-pickGrid { min-height: 0; }
+    /* Chatting with the keyboard up (body.kb-chat, ui.js keepFocusedFieldVisible),
+       as in Live: the room steps out of sight, still playing, and its row closes,
+       so the conversation has the screen instead of one line of it. Live's own
+       rule (css/discover.css) moves the stage but can't close this grid's row,
+       and loses its width to the theme's `width: auto`, which left the player
+       nothing wide. */
+    html body.tt-skin.kb-chat #mainGrid,
+    html body.tt-skin.kb-chat #mainGrid.login { grid-template-rows: 2.75rem 0 2.6rem minmax(0, 1fr); }
+    html body.tt-skin.kb-chat:not(.pv-full-on) #mainGrid > #stage {
+        position: fixed !important;
+        left: -10000px;
+        top: 0;
+        width: 640px;
+        height: 360px;
+        opacity: 0;
+        pointer-events: none;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
