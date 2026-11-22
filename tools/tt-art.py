@@ -7,6 +7,7 @@ and this site's own images. Never deployed (tools/).
     git clone --depth 1 https://github.com/ttdevelopers/image-assets.git /tmp/tt-image-assets
     pip install pillow
     python3 tools/tt-art.py /tmp/tt-image-assets
+    python3 tools/tt-art.py /tmp/tt-image-assets --stickers   # only the stickers
 
 Writes img/tt/<name>.webp for the stage, and img/tt/stickers.webp: every
 laptop sticker that isn't an emoji in one picture (STICKERS below; the order
@@ -34,23 +35,34 @@ STICKERS = [
     ("heart", "gold_heart.png"), ("happy", "gold_happy.png"), ("wink", "gold_wink.png"),
     ("laughing", "gold_laughing.png"), ("sad", "gold_sad.png"), ("smh", "gold_smh.png"),
     ("poop", "gold_poop.png"), ("glowstick", "gold_glowstick.png"),
+    ("ttfm", "turntable.png"),  # the turntable.fm logo, as a sticker (its own white edge)
 ]
 CELL = 160
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    if "--stickers" not in sys.argv:
+        art()
+    stickers()
+
+
+def art():
     for f in ART:
         im = Image.open(os.path.join(SRC, f))
         im = im.convert("RGB" if f.endswith(".jpg") else "RGBA")
         im.save(os.path.join(OUT, os.path.splitext(f)[0] + ".webp"), "WEBP", quality=82 if f.endswith(".jpg") else 88, method=6)
+    print(len(ART), "pictures")
+
+
+def stickers():
     sheet = Image.new("RGBA", (CELL * len(STICKERS), CELL), (0, 0, 0, 0))
     for k, (name, f) in enumerate(STICKERS):
         im = Image.open(f if os.path.isabs(f) else os.path.join(SRC, f)).convert("RGBA")
         im.thumbnail((CELL - 8, CELL - 8), Image.LANCZOS)
         sheet.paste(im, (k * CELL + (CELL - im.width) // 2, (CELL - im.height) // 2), im)
     sheet.save(os.path.join(OUT, "stickers.webp"), "WEBP", quality=88, method=6)
-    print(len(ART), "pictures and", len(STICKERS), "stickers")
+    print(len(STICKERS), "stickers")
 
 
 if __name__ == "__main__":

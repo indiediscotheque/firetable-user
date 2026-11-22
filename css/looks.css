@@ -1575,8 +1575,8 @@ button.waitlist-pos {
 
 /* ── Reusable avatar component ── */
 /* Each avatar style sits differently in its pictures, so each gets its own
-   framing in the circles (zoom, where the face is) and its own fill behind
-   it. html[data-avatars] is the room's style (helpers.js avatarKind), set
+   framing in the circles (zoom, where the face is); the circles are
+   transparent behind it, so the picture sits on whatever's under it. html[data-avatars] is the room's style (helpers.js avatarKind), set
    when the page starts and when a supermod changes it; a Bouletmaton gets
    its own (.bm-face, below). tests/avatars.mjs
    checks every style fills the circles and the stage. */
@@ -1585,26 +1585,23 @@ button.waitlist-pos {
     --av-x: 50%;
     --av-y: 66%;
     --av-list-y: 72%;     /* the people list sits the robots a little lower */
-    --av-fill: #000;
+    --av-fill: transparent;
 }
 html[data-avatars="notionists"] {
     --av-zoom: 118%;
     --av-x: 50%;
     --av-y: 30%;
     --av-list-y: 30%;
-    --av-fill: #e8e3d8;
 }
 html[data-avatars="pixel-art"] {
     --av-zoom: 100%;
     --av-x: 50%;
     --av-y: 50%;
     --av-list-y: 50%;
-    --av-fill: #d9d4c7;
 }
 /* A member's own Bouletmaton, whatever the room's style (js/bouletmaton.js
    marks it .bm-face): the picture is the whole drawing (head to waist), on
-   transparent, so the circles frame its whole head (hair, ears, hat), on
-   black like the robots. The framing is measured from each one's drawings
+   transparent, so the circles frame its whole head (hair, ears, hat). The framing is measured from each one's drawings
    (js/bouletmaton.js frame(): --bm-zoom/-x/-y on the element); these are a
    typical head's, until then. The stage shows it whole (.avtr: contain). */
 .bm-face {
@@ -1612,7 +1609,6 @@ html[data-avatars="pixel-art"] {
     --av-x: var(--bm-x, 60.6%);
     --av-y: var(--bm-y, 31.7%);
     --av-list-y: var(--bm-y, 31.7%);
-    --av-fill: #000;
 }
 .ft-avatar {
     --avatar-bg-x: var(--av-x);
@@ -7844,17 +7840,22 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
 }
 #st-grabPick [class*="material-symbols-"] { margin: 0; font-size: 1.25rem; }
 
-/* Shortcuts and commands (#helpBox, 1.18) */
-.helpBox { max-width: 34rem; }
-.helpBox h3 { margin: var(--space-4) 0 var(--space-2); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); }
-.helpBox h3:first-child { margin-top: 0; }
-.helpKeys { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-2) var(--space-4); margin: 0; }
-.helpKeys dt { white-space: nowrap; }
-.helpKeys dd { margin: 0; color: var(--color-text); }
+/* Shortcuts and commands (#helpBox, 1.18): one column of sections; each a two-column table (keys | what they do) */
+#helpBox .modalBox { width: min(40rem, calc(100vw - 2rem)); max-height: min(44rem, calc(100dvh - 2rem)); }
+#helpBox .modalContent { display: block; overflow-y: auto; padding: var(--space-4) var(--pad4) var(--pad4); }
+.helpBox h3 { margin: var(--space-6) 0 var(--space-2); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); }
+.helpBox h3:first-child, .helpMods > h3:first-child { margin-top: 0; }
+.helpMods { margin-top: var(--space-6); }
+.helpKeys { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr); margin: 0; border-top: 1px solid var(--color-bg-t1); }
+.helpKeys dt,
+.helpKeys dd { padding: var(--space-2) 0; border-bottom: 1px solid var(--color-bg-t1); line-height: 1.45; }
+.helpKeys dt { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: var(--space-1); padding-right: var(--space-4); font-size: 0; }
+.helpKeys dd { margin: 0; color: var(--color-text); font-size: var(--fs-body); }
 .helpBox kbd,
 .helpBox code {
     display: inline-block;
-    padding: 0.05rem 0.4rem;
+    min-width: 1.6rem;
+    padding: 0.1rem 0.45rem;
     border: 1px solid var(--color-border);
     border-bottom-width: 2px;
     border-radius: var(--radius-sm);
@@ -7862,14 +7863,20 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
     color: var(--color-text-light);
     font-family: var(--font-numbers);
     font-size: 0.8125rem;
+    line-height: 1.4;
+    text-align: center;
+    white-space: nowrap;
 }
+.helpBox dd kbd, .helpBox dd code { min-width: 0; padding: 0 0.35rem; font-size: 0.75rem; vertical-align: 0.05em; }
 .helpBox code { border-bottom-width: 1px; }
 .helpNote { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--fs-meta); }
 body:not(.is-mod) .helpMods { display: none; }
 @media only screen and (max-width: 639px) {
-    .helpKeys { grid-template-columns: minmax(0, 1fr); gap: 0 0; }
-    .helpKeys dd { margin-bottom: var(--space-2); }
-    .helpKeys dt { white-space: normal; }
+    #helpBox .modalBox { width: 100vw; max-height: 100dvh; border-radius: 0; }
+    #helpBox .modalContent { padding: var(--pad3); }
+    .helpKeys { grid-template-columns: minmax(0, 1fr); }
+    .helpKeys dt { padding: var(--space-2) 0 0; border-bottom: 0; }
+    .helpKeys dd { padding-top: var(--space-1); }
 }
 
 /* what a card's temp means (1.12), under the card case's stats */

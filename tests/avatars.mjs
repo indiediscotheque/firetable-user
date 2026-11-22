@@ -136,7 +136,7 @@ for (const style of STYLES) {
           : "#__avtest .__cell:nth-child(" + (i + 1) + ") " + (PLACES[i].kind === "stage" ? ".avtr" : ".ft-avatar"));
       handles.push(el);
     }
-    // empty, on the fill the picture will sit on (a Bouletmaton has its own: black)
+    // empty: the circle as it is with no picture in it (transparent, on the page)
     const empty = [];
     const wantFace = !!bm && style !== "october";
     for (const el of handles) {
@@ -221,7 +221,7 @@ for (const style of STYLES.filter((s) => s !== "october")) {
         : style.indexOf("dicebear:") === 0 ? "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + name)
           : "https://indiediscotheque.com/robots/" + encodeURIComponent(uid + name) + ".png?size=240x240&set=" + style.slice(9);
       box.querySelectorAll(".st-avtr, li").forEach((e) => {
-        // empty, on the fill the picture will sit on (a Bouletmaton has its own: black)
+        // empty: the circle as it is with no picture in it (transparent, on the page)
         e.style.backgroundColor = "";
         if (!withPic) { e.classList.toggle("bm-face", !!bm); if (bm) e.style.backgroundColor = getComputedStyle(e).backgroundColor; }
         e.style.backgroundImage = withPic ? 'url("' + url + '")' : "none";
