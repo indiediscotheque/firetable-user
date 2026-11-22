@@ -23,9 +23,7 @@ const appGlobals = {
   ytAPI: "readonly", setup: "readonly", ftLazy: "readonly",
   // third-party libraries
   firebase: "readonly", twemoji: "readonly", linkifyStr: "readonly", FloatingUIDOM: "readonly",
-  SC: "readonly", YT: "readonly",
-  PIXI: "readonly", TweenMax: "readonly", TimelineMax: "readonly",
-  Power0: "readonly", Power1: "readonly", Power2: "readonly", Bounce: "readonly"
+  SC: "readonly", YT: "readonly"
 };
 
 // p5.js "global mode" functions used by glitch.js
@@ -59,8 +57,5 @@ export default [
     files: ["sw.js"],
     languageOptions: { ecmaVersion: 2022, sourceType: "script", globals: { ...globals.serviceworker } },
     rules: { "no-undef": "error", "no-unused-vars": ["warn", { args: "none", caughtErrors: "none" }] }
-  },
-  // fire.js keeps its original animation (one tween lists `ease` twice; the
-  // second one is what runs). Left as is so the fire looks exactly the same.
-  { files: ["js/fire.js"], rules: { "no-dupe-keys": "off", "no-redeclare": "off" } }
+  }
 ];

@@ -1,24 +1,15 @@
 /**
  * lazy.js — load the stage effects' libraries only when an effect first shows.
  *
- * The fire (PixiJS + GSAP, ~550 KB) appears once someone sends a 🔥, and the
- * album-art glitch (p5.js, ~265 KB) only during SoundCloud songs with the
- * screen down. Most visits need neither, so they're loaded on first use, not
- * with the page. Each is pinned to an exact version and checked with
+ * The album-art glitch (p5.js, ~265 KB) shows only during SoundCloud songs
+ * with the screen down. Most visits never need it, so it's loaded on first
+ * use, not with the page. (The fire needs no library: js/flame.js.) Each is pinned to an exact version and checked with
  * Subresource Integrity, like the CDN scripts in index.html; when upgrading
  * one, update its integrity hash too (see the README).
  */
 
 var ftLazy = (function () {
   var LIBS = {
-    pixi: {
-      src: "https://cdn.jsdelivr.net/npm/pixi.js@4.8.9/dist/pixi.min.js",
-      integrity: "sha384-fxjo+jPUZU4vjfxyz9RXr7LgHy6G3mgwntjZP6+T4YWAxd8PVz/necyJjkUDjOKi"
-    },
-    gsap: {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js",
-      integrity: "sha384-yXOFkJyq6/vzPbuifPxEbwfurfDPO9+2O3UHh8QfQH8yZCdI/KoyHxxuOk2hwIVL"
-    },
     p5: {
       src: "https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js",
       integrity: "sha384-Nc6Wpwz02/84Nk70wNI+ylNG2C8ynXTyEv7mPrL017fNCyPIP/hiEI1FVXGPuxvQ"
