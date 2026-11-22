@@ -3457,9 +3457,20 @@ firetable.discover = (function () {
 
   // ─── Events ─────────────────────────────────────────────────────────────
 
+  // phones: the player bar opens the full-screen player wherever it's tapped,
+  // as YouTube Music's does (the owner, November 22, 2026); its buttons still
+  // do their own thing. The title and artist open it too: the song's page and
+  // the artist are a tap away there.
+  function barTapOpens(t) {
+    if (!t.closest || !t.closest("#dMini") || !matchMedia("(max-width: 639px)").matches) return false;
+    var hit = t.closest("button, a, input, select, label, [role='button']");
+    return !hit || hit.classList.contains("d-mini-open") || hit.classList.contains("d-sheetlink") || !!hit.closest(".pb-artist");
+  }
+
   function onClick(e) {
     var t = e.target;
     var b;
+    if (barTapOpens(t)) { e.preventDefault(); return openFull(document.getElementById("pv-art")); }
     if ((b = t.closest("#modeTabs [data-mode]"))) return setMode(b.getAttribute("data-mode"), { remember: true });
     if ((b = t.closest("#nav-tabs [data-tab]"))) return goTab(b.getAttribute("data-tab"));
     if ((b = t.closest("#dBrowse .d-mapg, #dBrowse .d-mapnext")) && !e.metaKey && !e.ctrlKey && !e.shiftKey) {

@@ -48,7 +48,7 @@ const listMenu = [...playlists, "#cr-listBtn"];
 const account = ["#loggedInUser"];
 const chatTab = ["?#mmchat", "?#sp-chat"];
 const peopleTab = ["?#mmusrs", "?#sp-people"];
-const full = [".pb-expand"]; // phones: the bar opens the full-screen player
+const full = ["#pv-title"]; // phones: tapping the bar opens the full-screen player
 const fullMore = [...full, '#pv-full [aria-label="More controls"]'];
 
 /**
@@ -97,12 +97,14 @@ const FEATURES = [
   { row: "ST-07", name: "Reload audio", who: ALL, widths: WIDE, target: "#reloadtrack" },
   { row: "ST-07", name: "Reload audio (phone: the full-screen player's More)", who: ALL, widths: PHONE, via: fullMore, target: '#pv-full [aria-label="Reload the room\'s audio"]' },
   { row: "ST-08", name: "Full screen", who: ALL, widths: WIDE, via: ["#fullscreenBtn"], target: "#pv-full" },
-  { row: "ST-08", name: "Full screen (phone: the bar's expand)", who: ALL, widths: PHONE, via: [".pb-expand"], target: "#pv-full" },
+  { row: "ST-08", name: "Full screen (phone: tap the bar)", who: ALL, widths: PHONE, via: full, target: "#pv-full" },
   { row: "ST-08b", name: "Play on a speaker or TV", who: ALL, widths: WIDE, via: ["#st-cast"], target: "#st-castWays" },
-  { row: "ST-08b", name: "Play on a speaker or TV (phone: from the full-screen player)", who: ALL, widths: PHONE, via: [".pb-expand", "#st-cast"], target: "#st-castWays" },
+  { row: "ST-08b", name: "Play on a speaker or TV (phone: from the full-screen player)", who: ALL, widths: PHONE, via: [...full, "#st-cast"], target: "#st-castWays" },
   { row: "ST-09", name: "Fire", who: IN, target: "#fire" },
   { row: "ST-11", name: "Grab to a playlist", who: IN, via: ["#grab"], target: "#stealpicker" },
-  { row: "ST-11", name: "Grab: choose the playlist (▾)", who: IN, via: ["#st-grabPick"], target: "#stealpicker" },
+  { row: "ST-11", name: "Grab: choose the playlist (▾)", who: IN, widths: WIDE, via: ["#st-grabPick"], target: "#stealpicker" },
+  // phones (4.2): the ▾ is in the full-screen player's More; the bar's Grab and its toast's Change open the picker too
+  { row: "ST-11", name: "Grab: choose the playlist (▾, phone: the full-screen player's More)", who: IN, widths: PHONE, via: [...fullMore, "#st-grabPick"], target: "#stealpicker" },
   { row: "ST-12", name: "Open the song on YouTube or SoundCloud", who: IN, widths: WIDE, target: "#songlink" },
   { row: "ST-12", name: "Open the song (phone: the full-screen player's More)", who: IN, widths: PHONE, via: fullMore, target: "#songlink" },
   { row: "ST-13", name: "Skip your own song (phone: the full-screen player's More)", who: ["dj"], widths: PHONE, via: [...fullMore, "#skipTrigger"], target: "#skipPopover .skipNowAction" },
@@ -116,7 +118,8 @@ const FEATURES = [
   { row: "NP-01", name: "The song's title and artist", who: ALL, target: "#track" },
   { row: "NP-02", name: "Plays here", who: ALL, widths: WIDE, target: "#playStats" },
   { row: "NP-02", name: "Plays here (phone: the full-screen player)", who: ALL, widths: PHONE, via: full, target: "#pv-fhist" },
-  { row: "NP-08", name: "The song sheet from the player", who: ALL, via: ["#pv-title .d-sheetlink"], target: ".d-sheet" },
+  { row: "NP-08", name: "The song sheet from the player", who: ALL, widths: WIDE, via: ["#pv-title .d-sheetlink"], target: ".d-sheet" },
+  { row: "NP-08", name: "The song sheet (phone: tap the bar, then the title)", who: ALL, widths: PHONE, via: [...full, "#pv-ftitle .d-sheetlink"], target: ".d-sheet" },
 
   // ── decks, people, chat (DJ, PE, CH) ──
   { row: "DJ-01", name: "Which playlist you DJ from", who: IN, target: "#djlistpicker" },
@@ -169,7 +172,7 @@ const FEATURES = [
   { row: "DI-13", name: "The player bar", who: ALL, mode: "discover", target: "#dMini .pb-main" },
   { row: "DI-14", name: "Listen in / stop the room", who: ALL, mode: "discover", target: "#dMini .pb-main" },
   { row: "DI-27", name: "The full-screen player", who: ALL, widths: WIDE, mode: "discover", via: ["#fullscreenBtn"], target: "#pv-full" },
-  { row: "DI-27", name: "The full-screen player (phone: the bar's expand)", who: ALL, widths: PHONE, mode: "discover", via: [".pb-expand"], target: "#pv-full" },
+  { row: "DI-27", name: "The full-screen player (phone: tap the bar)", who: ALL, widths: PHONE, mode: "discover", via: full, target: "#pv-full" },
   { row: "DI-19", name: "A song's ⋮ menu", who: ALL, mode: "discover", via: ["#dBrowse .pvbar .d-more"], target: "#dMenu" },
   { row: "DI-17", name: "Members' playlist beside the player", who: IN, widths: WIDE, mode: "discover", target: "#dSide" },
   { row: "DI-15", name: "Visitors' crate", who: ["visitor"], widths: WIDE, mode: "discover", target: "#dSide" }

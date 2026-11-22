@@ -1576,8 +1576,31 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
     .pb-art { width: 3rem; height: 3rem; }
     .pb-now { gap: var(--pad2); }
     .pb-src > span:last-child { display: none; }
-    .pb .pb-main { width: 2.75rem; height: 2.75rem; }
-    .pb .iconbutt { width: var(--tap-min); height: var(--tap-min); }
+    /* Live on a phone (4.2): the song row's buttons (Fire, Grab, play) are 44px */
+    .pb .iconbutt, .pb .iconbutt.pb-main { width: var(--tap-stage); height: var(--tap-stage); min-height: var(--tap-stage); }
+    /* The bar, as YouTube Music's (the owner, November 22, 2026): the whole bar
+       opens the full-screen player (js/discover.js barTapOpens), so no ⌃; the
+       song in two lines, the title, then where it's from as a mark (the room's
+       red dot, a ring when you aren't listening, Discover's compass) beside the
+       artist; play and stop as a plain icon. Screen readers still hear Live. */
+    .pb { cursor: pointer; }
+    .pb .pb-expand { display: none; }
+    .pb-text { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "title title" "src artist"; align-items: center; column-gap: 0.375rem; row-gap: 0.125rem; }
+    .pb-text .pb-title { grid-area: title; font-size: var(--fs-body); }
+    .pb-text .pb-artist { grid-area: artist; font-size: var(--fs-meta); }
+    .pb-text .pb-src { grid-area: src; display: flex; min-width: 0; }
+    .pb-text .pb-src:has(.pb-kind:empty), .pb-text .pb-src:empty { display: none; }
+    .pb-text .pb-kind { gap: 0; padding: 0; font-size: 0; letter-spacing: 0; background: none; box-shadow: none; }
+    .pb-text .pb-kind i.material-symbols-outlined { font-size: 0.875rem; color: var(--color-text-subtle); }
+    .pb-text .pb-livekind .d-dot { width: 0.5rem; height: 0.5rem; background: var(--color-danger); }
+    .pb-text .pb-livekind.is-off .d-dot { background: none; box-shadow: inset 0 0 0 1.5px var(--color-danger); }
+    .pb.is-quiet .pb-text .pb-src { display: none; }
+    .pb-face .ft-avatar { width: 1.35rem; height: 1.35rem; }
+    .pb .pb-main, .pb .pb-main:not(:disabled):hover, .pb.is-discover:not(.is-paused) .pb-main, .pb.is-live .pb-main { color: var(--color-text-light); background: none; box-shadow: none; }
+    .pb .pb-main [class*="material-symbols-"] { font-size: 2rem; }
+    /* Grab's ▾ is in the full-screen player: here the first grab, and the
+       grab toast's Change, open the picker, and Fire and Grab keep their room */
+    .pb #st-grabPick { display: none; }
     .pb-transport > :not(.pb-main), .pb-time, .pb-side > :not(.pb-expand) { display: none; }
     .pb-keep #pv-dkeep .pb-joinfire { display: none; }
 }

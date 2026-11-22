@@ -6044,6 +6044,84 @@ input.tagMachine,
     }
 }
 
+/* A list of songs (1.20): paste or a CSV, then what the bot found for each */
+#importContent[hidden],
+#im-listPane[hidden] {
+    display: none;
+}
+
+#im-listPane {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+#im-listText {
+    flex: 1;
+    min-height: 9rem;
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    font-size: var(--fs-row);
+    line-height: 1.5;
+    color: var(--color-text);
+    background-color: var(--color-bg-s1);
+    border: 1px solid var(--color-bg-t2);
+    border-radius: var(--radius-row);
+    resize: none;
+}
+
+.im-fileBtn {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+#im-listPane .im-actions {
+    margin: var(--space-1) 0 0;
+    padding: 0;
+}
+
+.im-found {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: var(--space-1);
+}
+
+.im-tag.is-looking {
+    color: var(--color-text-subtle);
+    background-color: transparent;
+}
+
+/* more than one version found: the tag is a small pick */
+select.im-tag.im-pick {
+    height: auto;
+    min-height: 0;
+    padding: 0.125rem 1.25rem 0.125rem var(--space-2);
+    font: inherit;
+    font-size: var(--fs-meta);
+    border: none;
+    background-color: var(--color-bg-t3);
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right 0.55rem center, right 0.3rem center;
+    background-size: 0.25rem 0.25rem, 0.25rem 0.25rem;
+    background-repeat: no-repeat;
+    appearance: none;
+    cursor: pointer;
+
+    &.is-out { color: var(--color-text-subtle); }
+}
+
+.im-findLink {
+    font-size: 1.1rem;
+    color: var(--color-text-subtle);
+    text-decoration: none;
+}
+
 .im-dest {
     display: flex;
     flex-direction: column;

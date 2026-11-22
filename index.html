@@ -1268,12 +1268,19 @@
 			<div class="modalContent">
 				<div id="im-step1">
 					<div id="importSources" class="tabs im-seg" role="group" aria-label="Import from">
-						<button type="button" class="tab on" id="ytimportchoice" aria-pressed="true">YouTube</button><button type="button" class="tab" id="scimportchoice" aria-pressed="false">SoundCloud</button>
+						<button type="button" class="tab on" id="ytimportchoice" aria-pressed="true">YouTube</button><button type="button" class="tab" id="scimportchoice" aria-pressed="false">SoundCloud</button><button type="button" class="tab" id="listimportchoice" aria-pressed="false">A list of songs</button>
 					</div>
 					<div id="importContent">
 						<input type="search" placeholder="Paste a playlist link or search by name" id="plMachine" enterkeyhint="search" aria-label="A playlist's link or name" autocomplete="off" />
 						<p class="im-hint">Then see its songs before anything is added.</p>
 						<div id="importResults" aria-live="polite"></div>
+					</div>
+					<!-- A list of songs (1.20): pasted or a CSV; the bot finds each one (js/import.js) -->
+					<div id="im-listPane" hidden>
+						<textarea id="im-listText" rows="9" spellcheck="false" placeholder="One song per line, like&#10;Khruangbin - Maria También&#10;Men I Trust - Show Me How" aria-label="Songs, one per line: Artist - Title"></textarea>
+						<p class="im-hint">Or a CSV with artist and title columns, as other music services export them. <label class="im-fileBtn" for="im-listFile">Choose a file</label><input type="file" id="im-listFile" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden /></p>
+						<p id="im-listCount" class="im-hint" aria-live="polite"></p>
+						<div class="im-actions"><button type="button" class="butt" id="im-listFind" disabled>Find the songs</button></div>
 					</div>
 				</div>
 				<div id="im-step2" hidden>
