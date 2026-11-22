@@ -3457,14 +3457,17 @@ firetable.discover = (function () {
 
   // ─── Events ─────────────────────────────────────────────────────────────
 
-  // phones: the player bar opens the full-screen player wherever it's tapped,
-  // as YouTube Music's does (the owner, November 22, 2026); its buttons still
-  // do their own thing. The title and artist open it too: the song's page and
-  // the artist are a tap away there.
+  // The player bar opens the full-screen player wherever it's clicked or
+  // tapped, as YouTube Music's does (the owner, November 22, 2026); its buttons
+  // still do their own thing. On a phone the title and artist open it too
+  // (the song's page and the artist are a tap away there); with a mouse
+  // they're links of their own.
   function barTapOpens(t) {
-    if (!t.closest || !t.closest("#dMini") || !matchMedia("(max-width: 639px)").matches) return false;
+    if (!t.closest || !t.closest("#dMini")) return false;
     var hit = t.closest("button, a, input, select, label, [role='button']");
-    return !hit || hit.classList.contains("d-mini-open") || hit.classList.contains("d-sheetlink") || !!hit.closest(".pb-artist");
+    if (!hit || hit.classList.contains("d-mini-open")) return true;
+    var phone = matchMedia("(max-width: 639px)").matches;
+    return phone && (hit.classList.contains("d-sheetlink") || !!hit.closest(".pb-artist"));
   }
 
   function onClick(e) {

@@ -2087,6 +2087,36 @@ try {
   check(phoneRow.lines && phoneRow.mainPlain === "rgba(0, 0, 0, 0)", "phone: the song in two lines with the room's mark beside the artist, and play/stop a plain icon (" + JSON.stringify(phoneRow) + ")");
   check(phoneRow.titleOpens && phoneRow.barOpens && phoneRow.fireStays, "phone: tapping the bar or its title opens the full-screen player; Fire does its own thing (" + JSON.stringify(phoneRow) + ")");
 
+  console.log("-- the player bar on a computer: the song in two lines, a click on the bar opens the full-screen player, the title its page");
+  const wideBar = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const bar = document.getElementById("dMini");
+    const isOpen = () => document.body.classList.contains("pv-full-on");
+    const close = async () => { if (isOpen()) { document.getElementById("pv-fclose").click(); await wait(500); } };
+    const out = {};
+    out.expand = getComputedStyle(bar.querySelector(".pb-expand")).display;
+    out.pill = parseFloat(getComputedStyle(bar.querySelector(".pb-kind")).fontSize);
+    const status = bar.querySelector(".pb-src > span:last-child");
+    out.status = status ? Math.round(status.getBoundingClientRect().width) + ":" + (status.textContent.length > 0) : "none";
+    // a click on the bar's own space
+    bar.querySelector(".pb-now").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await wait(300);
+    out.spaceOpens = isOpen();
+    await close();
+    // the title is still the song's page
+    const link = bar.querySelector("#pv-title .d-sheetlink");
+    if (link) link.click();
+    await wait(400);
+    const sheet = document.getElementById("dSheetBox");
+    out.titleSheet = !!(sheet && sheet.open) && !isOpen();
+    if (sheet && sheet.open) sheet.close();
+    await close();
+    return out;
+  });
+  check(wideBar.expand === "none" && wideBar.pill === 0 && /^1:true$/.test(wideBar.status),
+    "computer: no ⌃ and no LIVE pill on the bar; who's on deck stays for screen readers (" + JSON.stringify(wideBar) + ")");
+  check(wideBar.spaceOpens && wideBar.titleSheet, "computer: a click on the bar opens the full-screen player; the title still opens the song's page (" + JSON.stringify(wideBar) + ")");
+
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
     url: "https://soundcloud.com/forss/flickermood", image: SITE + "icons/icon-512.png" }));
