@@ -34,7 +34,7 @@ firetable.tt = (function () {
   // are the emoji the chat already shows (Twemoji, from the same place).
   var STICKERS = ["id", "id9", "eight", "cake", "rohn", "heart", "happy", "wink", "laughing", "sad", "smh", "poop", "glowstick"];
   var EMOJI = ["1faa9", "1f525", "1f3a7", "1f4bf", "1f308", "2b50", "1f680", "1f47e", "1f496", "1f984", "1f918", "1f3b8", "1f3b9", "1f941", "1f3a4", "1f3b6",
-    "1f4fc", "1f4fb", "26a1", "1f319", "1f6f8", "1f47d", "1f419", "1f412", "1f63a", "1f355", "1f32e", "1f369", "1f366", "1f352", "1f335", "1f344", "1f338", "1f30a", "1f389", "1f60e"];
+    "1f4fc", "1f4fb", "26a1", "1f319", "1f6f8", "1f47d", "1f419", "1f412", "1f63a", "1f355", "1f32e", "1f32f", "2615", "1f369", "1f366", "1f352", "1f335", "1f344", "1f338", "1f30a", "1f389", "1f60e"];
   var LIDS = ["black", "silver", "white", "gold", "pink", "teal", "purple"];
   var MAX_STICKERS = 10;
 

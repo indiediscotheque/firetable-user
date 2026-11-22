@@ -1194,6 +1194,7 @@ try {
     document.getElementById("nav-ttLaptop").click();
     out.laptop = document.getElementById("tt-laptopEdit").open;
     document.querySelector('#tt-laptopEdit [data-add="heart"]').click();
+    out.food = ["e2615", "e1f32f"].every((id) => document.querySelector('#tt-laptopEdit [data-add="' + id + '"]'));
     document.querySelector('#tt-laptopEdit [data-lid="teal"]').click();
     document.querySelector('#tt-laptopEdit [data-lap="save"]').click();
     out.stickers = localStorage.getItem("firetableTurntableLaptop") || "";
@@ -1234,6 +1235,7 @@ try {
   check(tt.screen && tt.after, "going in and out never touches the room's player (the same frame, the same video)");
   check(tt.faces, "chat shows Turntable faces in the theme (" + tt.faceInfo + ")");
   check(tt.awesome && tt.storm && tt.never && !tt.join, "Awesome is Fire, Storm takes it back, and nothing counts below none");
+  check(tt.food, "the sticker builder has coffee and a burrito");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
