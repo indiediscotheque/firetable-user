@@ -391,7 +391,7 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
 html[data-avatars="notionists"] { --av-zoom: 118%; --av-x: 50%; --av-y: 30%; --av-fill: #e8e3d8; }
 html[data-avatars="pixel-art"] { --av-zoom: 100%; --av-x: 50%; --av-y: 50%; --av-fill: #d9d4c7; }
 /* a member's own Bouletmaton (js/bouletmaton.js marks it .bm-face) */
-.bm-face { --av-zoom: 170%; --av-x: 57%; --av-y: 40%; --av-fill: #e8e3d8; }
+.bm-face { --av-zoom: var(--bm-zoom, 160%); --av-x: var(--bm-x, 60.6%); --av-y: var(--bm-y, 31.7%); --av-fill: #000; }
 .st-ondeck li {
   width: 3em;
   height: 3em;

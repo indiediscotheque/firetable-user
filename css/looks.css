@@ -1603,14 +1603,16 @@ html[data-avatars="pixel-art"] {
 }
 /* A member's own Bouletmaton, whatever the room's style (js/bouletmaton.js
    marks it .bm-face): the picture is the whole drawing (head to waist), on
-   transparent, so the circles zoom to the head and shoulders, on a light
-   fill so its black lines show. The stage shows it whole (.avtr: contain). */
+   transparent, so the circles frame its whole head (hair, ears, hat), on
+   black like the robots. The framing is measured from each one's drawings
+   (js/bouletmaton.js frame(): --bm-zoom/-x/-y on the element); these are a
+   typical head's, until then. The stage shows it whole (.avtr: contain). */
 .bm-face {
-    --av-zoom: 170%;
-    --av-x: 57%;
-    --av-y: 40%;
-    --av-list-y: 40%;
-    --av-fill: #e8e3d8;
+    --av-zoom: var(--bm-zoom, 160%);
+    --av-x: var(--bm-x, 60.6%);
+    --av-y: var(--bm-y, 31.7%);
+    --av-list-y: var(--bm-y, 31.7%);
+    --av-fill: #000;
 }
 .ft-avatar {
     --avatar-bg-x: var(--av-x);
@@ -7904,9 +7906,6 @@ body:not(.is-mod) .helpMods { display: none; }
 .bm-mini.ft-avatar {
     width: 2.5rem;
     height: 2.5rem;
-    background-color: #e8e3d8;
-    background-size: auto 170%;
-    background-position: 57% 40%;
 }
 .bm-miniStage {
     width: 4.5rem;
