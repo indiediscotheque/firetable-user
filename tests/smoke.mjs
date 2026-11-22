@@ -1875,7 +1875,10 @@ try {
   // a year's playlist with one song three times (an old library build did that): the page lists it once
   lib.year[2026].top = [lib.year[2026].top[0], Object.assign({}, lib.year[2026].top[0]), Object.assign({}, lib.year[2026].top[0], { cid: "lib0000099" })];
   // two sets on one night (a break between): one line, "12 songs in 2 sets" (2.7)
-  lib.dj.dj1.sets = [{ at: now - 86400000 + 3 * 3600000, n: 3 }, { at: now - 86400000, n: 9 }];
+  // at 8 and 11pm yesterday: a night runs 6am to 6am, so sets placed relative to
+  // the clock (now - 24h and - 21h) split across two nights when run 3 to 6am
+  const eve = new Date(now - 86400000); eve.setHours(20, 0, 0, 0);
+  lib.dj.dj1.sets = [{ at: eve.getTime() + 3 * 3600000, n: 3 }, { at: eve.getTime(), n: 9 }];
   // a year's covers on the Years list (2.7)
   lib.years[2026].covers = ["1_lib0000002"];
   await put("/discover/lib", lib);
