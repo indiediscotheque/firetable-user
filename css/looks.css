@@ -888,9 +888,27 @@ button.track-warning {
 
 @media (pointer: coarse) {
     .row-icon {
+        position: relative;
         width: var(--tap-min);
         height: 2.25rem;
         margin: 0;
+    }
+    /* The invisible tap area the icon buttons have (above), for what had none:
+       a row's icons reach 44px tall, the play button on a row's small cover
+       takes the whole cover, and All Playlists' star, headphones, open and
+       more get the same margin. Nothing looks any bigger. */
+    .row-icon::before,
+    .plx-icon::before {
+        content: "";
+        position: absolute;
+        inset: -0.25rem 0;
+    }
+    .plx-icon { position: relative; }
+    .plx-icon::before { inset: -0.25rem; }
+    :is(#thehistory, .ft-rows, #mainqueue) .previewicon::before {
+        content: "";
+        position: absolute;
+        inset: -0.5rem;
     }
 }
 

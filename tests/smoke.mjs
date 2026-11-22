@@ -3305,6 +3305,23 @@ try {
   });
   check(phoneChart.shown && /play/.test(phoneChart.plays) && phoneChart.lines <= 2 && phoneChart.words >= 120 && phoneChart.under && phoneChart.row <= 110 && phoneChart.oneRow && /Share/.test(phoneChart.share) && phoneChart.wide <= 0,
     "a chart row on a phone: plays shown under the artist, a long title in two lines, Play / Save / Share on one row (" + JSON.stringify(phoneChart) + ")");
+  // touch screens: a row's icons and the play button on its small cover have the invisible tap area
+  const tContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const tPage = await tContext.newPage();
+  await openPage(tPage, SITE + "#discover/charts");
+  const taps = await tPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    for (let i = 0; i < 80 && !document.querySelector("#dBrowse .d-rowlist .pvbar"); i++) await wait(100);
+    const area = (sel) => {
+      const el = document.querySelector(sel), b = getComputedStyle(el, "::before"), r = el.getBoundingClientRect();
+      if (b.content === "none" || b.position !== "absolute") return null;
+      return [Math.round(r.width - parseFloat(b.left) - parseFloat(b.right)), Math.round(r.height - parseFloat(b.top) - parseFloat(b.bottom))];
+    };
+    return { coarse: matchMedia("(pointer: coarse)").matches, more: area("#dBrowse .d-rowlist .row-icon.d-more"), play: area("#dBrowse .d-rowlist .previewicon") };
+  });
+  check(taps.coarse && taps.more && taps.more[0] >= 40 && taps.more[1] >= 44 && taps.play && taps.play[0] >= 40 && taps.play[1] >= 40,
+    "on a touch screen a row's ⋮ can be tapped over 40×44px and its play button over the whole cover, at the size they were (" + JSON.stringify(taps) + ")");
+  await tContext.close();
   await cPage.close();
 
   // chatting on a phone with the keyboard up: the stage and the bottom tabs step aside, and come back
