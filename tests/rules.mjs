@@ -180,6 +180,23 @@ try {
     if (job) throw new Error("the import job wasn't taken back");
     document.getElementById("ytimportchoice").click();
   });
+  await step(fan, "import a Spotify playlist: ask the room's bot, then take the job back (1.21)", async () => {
+    const I = firetable.importer;
+    I.open();
+    I.showSpotify("6rqhFgbbKwnb9MLmUQDhG6");
+    let job = null;
+    for (let i = 0; i < 50 && !job; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      job = (await ftapi.db().ref("importJobs/" + ftapi.uid).once("value")).val();
+    }
+    if (!job) throw new Error("the Spotify job wasn't written");
+    document.getElementById("importPromptBox").close();
+    for (let i = 0; i < 50 && job; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      job = (await ftapi.db().ref("importJobs/" + ftapi.uid).once("value")).val();
+    }
+    if (job) throw new Error("the Spotify job wasn't taken back");
+  });
   await step(fan, "playlists: delete the list", () => firetable.actions.deleteLists([window.__list]));
 
   await step(fan, "profile: avatar style, your Bouletmaton (saved in the builder), public name, featured card", async () => {

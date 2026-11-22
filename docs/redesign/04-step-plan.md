@@ -287,7 +287,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** hostbot unit tests for the matcher (like `test/unit.test.mjs`'s swap tests); rules tests; site smoke with a fake job result.
 - **Undo:** revert both; the job queue is inert without the bot.
 
-### 1.21 Import from Spotify (after the owner adds a key)
+### 1.21 Import from Spotify ✅ shipped (the owner's ask, November 22, 2026; the bot's part is firetable-hostbot#73)
+- **Shipped:** Import has a **Spotify** source (`#spimportchoice`), shown only while the bot publishes `discover/caps/spotify` (its `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` work). Paste a playlist's link (`open.spotify.com/playlist/…`, with `/intl-xx/` or `?si=…`, or a `spotify:playlist:` URI; an album's or a song's link says it isn't a playlist). The job carries `spotify: <id>`; the bot reads the playlist (public ones; at most 500 songs; local files and episodes left out), writes its songs, name and owner into the job, and the review is the list import's (1.20): Played here, Song, Video, Not found, a pick and Leave out, a new playlist named for the Spotify one. A playlist Spotify won't share (private, or one of Spotify's own mixes) shows the bot's note, suggesting a CSV for A list of songs. Smoke covers the tab following the bot, the link reading, the job, the songs arriving, the import and the note; reach finds both list sources.
 - **Goal:** paste a Spotify playlist link.
 - **Rows:** IM-05.
 - **Bot:** `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` in `.env` (and `.env.example`, README); client-credentials token; read the playlist's tracks (name, artists, duration) and feed them into the 1.20 job. Spotify's own editorial and algorithmic playlists may not be readable by new apps; say so when a link fails.

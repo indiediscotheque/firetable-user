@@ -53,7 +53,7 @@ Phase 2's player work is in, plus a stream of owner requests. What isn't in is t
 6. ~~**2.8 One song menu everywhere.**~~ ✅ `firetable.songMenu`: one list of items for every song's ⋮.
 7. **2.7 Library pages and the sound map.** The trail on the map waits for the hostbot to put the genre on recent plays.
 8. **Phase 4, phones**, starting with 4.0 (measure), then 4.1, 4.5, 4.3, 4.4; ~~4.2~~ ✅ (the song row at 44px, November 22, 2026) and 4.6 are done.
-9. **Phase 1's Live steps**, one at a time with the owner's yes: 1.6 Grab, 1.19 Import, 1.5 Fire's count, ~~1.11 Your turn~~ (dropped: the bar stays as it was), 1.10 states, 1.18 shortcuts, ~~1.7~~ ✅, 1.12, 1.13, 1.2, ~~1.3~~ (dropped: the button already shows each setting's glyph), 1.4 (on hold: the owner, November 22, 2026). ~~1.20~~ ✅ (with firetable-hostbot#71), 1.21 waits for a Spotify key.
+9. **Phase 1's Live steps**, one at a time with the owner's yes: 1.6 Grab, 1.19 Import, 1.5 Fire's count, ~~1.11 Your turn~~ (dropped: the bar stays as it was), 1.10 states, 1.18 shortcuts, ~~1.7~~ ✅, 1.12, 1.13, 1.2, ~~1.3~~ (dropped: the button already shows each setting's glyph), 1.4 (on hold: the owner, November 22, 2026). ~~1.20~~ ✅ (with firetable-hostbot#71), ~~1.21~~ ✅ (Spotify, with firetable-hostbot#73; on once the bot has its keys).
 10. **Phase 5:** 5.2 after Phase 4 has been live a few weeks.
 
 ### Decided (the owner, November 15, 2026)
