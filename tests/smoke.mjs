@@ -3305,6 +3305,25 @@ try {
   });
   check(phoneChart.shown && /play/.test(phoneChart.plays) && phoneChart.lines <= 2 && phoneChart.words >= 120 && phoneChart.under && phoneChart.row <= 110 && phoneChart.oneRow && /Share/.test(phoneChart.share) && phoneChart.wide <= 0,
     "a chart row on a phone: plays shown under the artist, a long title in two lines, Play / Save / Share on one row (" + JSON.stringify(phoneChart) + ")");
+  // a phone on its side (844×390): the switch sits in the header's row, and the visitor's stage clears the bar under it
+  const lPage = await context.newPage();
+  await lPage.setViewportSize({ width: 844, height: 390 });
+  await openPage(lPage, SITE + "#live");
+  await lPage.waitForFunction(() => document.querySelector("#deck .djplaque, #deck .djname") && document.getElementById("modeTabs"), null, { timeout: 30000 }).catch(() => {});
+  await sleep(1200);
+  const side = await lPage.evaluate(() => {
+    const r = (sel) => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; };
+    const head = r("#topbar"), mode = r("#modeTabs"), stage = r("#djStage"), bar = r("#themebox"), player = r("#dMini");
+    const out = { head: Math.round(head.height), inRow: mode.top >= head.top && mode.bottom <= head.bottom && mode.height < head.height, clear: Math.round(bar.top - stage.bottom), player: Math.round(player.height), wide: document.documentElement.scrollWidth - innerWidth };
+    location.hash = "#discover";
+    return out;
+  });
+  await sleep(800);
+  side.page = await lPage.evaluate(() => Math.round(document.getElementById("dBrowse").getBoundingClientRect().height));
+  check(side.head <= 64 && side.inRow && side.clear >= 0 && side.player <= 56 && side.page >= 150 && side.wide <= 0,
+    "a phone on its side: the Discover | Live switch is in the header's row, the stage ends above the bar under it, the player bar is slim, Discover's page has 150px or more (" + JSON.stringify(side) + ")");
+  await lPage.close();
+
   // touch screens: a row's icons and the play button on its small cover have the invisible tap area
   const tContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const tPage = await tContext.newPage();
