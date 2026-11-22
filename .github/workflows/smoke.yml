@@ -1,5 +1,5 @@
 # Browser tests in Chromium, under the real Content-Security-Policy from
-# .htaccess, on every push and pull request:
+# .htaccess, on every pull request (a newer push to it stops the older run):
 # - unit: the site's own functions (escaping, the chat formatter, keys, ...)
 # - smoke: the site against a local database emulator. Fails on page errors
 #   or anything the policy blocks, and checks the stage effects load on first use
@@ -15,18 +15,23 @@
 # Run the same locally (Java 21 needed):
 #   cd tests && npm ci && npx playwright install chromium && npm run unit && npm run smoke && npm run reach && npm run a11y && npm run avatars
 #   HOSTBOT_RULES=../../firetable-hostbot/firebase-rules.json npm run rules
-# Each suite runs as its own job, side by side. They load the CDN libraries
-# and YouTube's player API, so each suite gets a second try before it fails.
+# Each suite runs as its own job, side by side, and reach (the slowest by far)
+# as one job per role, so a run takes about as long as one role's reach. They
+# load the CDN libraries and YouTube's player API, so each job gets a second
+# try before it fails.
 # On master they run as part of the deploy
 # (.github/workflows/deploy.yml), which only publishes if they pass.
 
 name: Browser tests
 
 on:
-  push:
-    branches-ignore: [master] # master: the deploy runs these first
-  pull_request:
-  workflow_call:
+  pull_request: # not on push too: every branch gets a pull request, and the same commit ran twice
+  workflow_call: # master: the deploy runs these first
+
+# a newer push to the pull request stops the older run (the deploy's runs are never stopped)
+concurrency:
+  group: browser-tests-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -35,15 +40,28 @@ jobs:
   # Each suite on its own runner, at the same time: one slow suite (or a retry)
   # can't push the others past the time limit, and the whole run is quicker.
   browser:
-    name: ${{ matrix.suite }}
+    name: ${{ matrix.suite }}${{ matrix.roles && format(' ({0})', matrix.roles) || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        suite: [smoke, reach, a11y, rules, avatars]
+        include:
+          - suite: smoke
+          - suite: reach
+            roles: visitor
+          - suite: reach
+            roles: member
+          - suite: reach
+            roles: dj
+          - suite: reach
+            roles: mod
+          - suite: a11y
+          - suite: rules
+          - suite: avatars
     env:
       SUITE: ${{ matrix.suite }}
+      ROLES: ${{ matrix.roles }} # reach only: the roles this job checks (all when empty)
     steps:
       - uses: actions/checkout@v7
         with:
