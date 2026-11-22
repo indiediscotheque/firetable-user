@@ -1199,6 +1199,14 @@ try {
     const lay1 = document.body.getAttribute("data-tt-layout");
     document.getElementById("tt-layout").click();
     out.layout = lay1 !== document.body.getAttribute("data-tt-layout");
+    // People here: a short list, and the panel's grey still runs to the bottom (no black underneath)
+    document.getElementById("tt-tab-room").click();
+    document.querySelector('#tt-pane [data-tt-sub="people"]').click();
+    await wait(200);
+    const paneBox = document.getElementById("tt-pane").getBoundingClientRect(), stageBox = document.getElementById("stage").getBoundingClientRect();
+    out.peopleFull = getComputedStyle(document.getElementById("tt-pane")).display !== "none" && Math.abs(paneBox.bottom - stageBox.bottom) < 2;
+    out.peopleInfo = Math.round(paneBox.bottom) + "/" + Math.round(stageBox.bottom) + " " + window.innerWidth;
+    document.querySelector('#tt-pane .tt-back').click();
     // and back
     document.getElementById("tt-exit").click();
     await wait(300);
@@ -1225,6 +1233,7 @@ try {
   check(tt.awesome && tt.storm && tt.never && !tt.join, "Awesome is Fire, Storm takes it back, and nothing counts below none");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
+  check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
   check(tt.turnBefore && tt.held && tt.turn && tt.turnBack, "a song change moves the spotlight and the nodding head to the DJ now playing (" + [tt.turnBefore, tt.held, tt.turn, tt.turnBack] + ")");
   check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
   check(tt.artTrack, "an art track's cover fills the right screen; a video's frame is left as it is");

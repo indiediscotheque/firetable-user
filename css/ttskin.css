@@ -64,7 +64,9 @@ html body.tt-skin #mainGrid > #topbar { grid-column: 1; grid-row: 1; }
 html body.tt-skin #mainGrid > #tt-tabs { grid-column: 2; grid-row: 1; }
 html body.tt-skin #mainGrid > #stage { grid-column: 1; grid-row: 2 / 4; }
 html body.tt-skin #mainGrid > #tt-pane { grid-column: 2; grid-row: 2 / 4; }
-html body.tt-skin[data-tt-tab="room"]:not([data-tt-sub="front"]) #mainGrid > #tt-pane { grid-row: 2; }
+/* a page of the Room tab that's another panel (Recently played, Fresh, Cards): the pane is only its header;
+   the others (People here) are the pane, down to the bottom */
+html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { grid-row: 2; }
 
 /* the panel's pages: one at a time, by the tab (and the Room tab's page) */
 html body.tt-skin #mainGrid #minimodeoptions,
@@ -1101,11 +1103,11 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     html body.tt-skin #mainGrid > #stage { grid-column: 1; grid-row: 2; }
     html body.tt-skin #mainGrid > #tt-tabs { grid-column: 1; grid-row: 3; }
     html body.tt-skin #mainGrid > #tt-pane,
-    html body.tt-skin[data-tt-tab="room"]:not([data-tt-sub="front"]) #mainGrid > #tt-pane { grid-column: 1; grid-row: 4; }
+    html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { grid-column: 1; grid-row: 4; }
     html body.tt-skin #mainGrid :is(#queuebox, #actualChat, #thehistoryWrap, #cardsWrap, #discover, .tt-guestNote) { grid-column: 1; grid-row: 4; }
     body.tt-skin #tt-layout { display: none; }
-    html body.tt-skin[data-tt-tab="room"]:not([data-tt-sub="front"]) #mainGrid > #tt-pane { align-self: start; z-index: 1; }
-    html body.tt-skin[data-tt-tab="room"]:not([data-tt-sub="front"]) #mainGrid :is(#thehistoryWrap, #cardsWrap, #discover) { margin-top: 2.6rem; }
+    html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { align-self: start; z-index: 1; }
+    html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid :is(#thehistoryWrap, #cardsWrap, #discover) { margin-top: 2.6rem; }
     body.tt-skin #tt-brand .tt-socials,
     body.tt-skin #modeTabs { display: none; }
     body.tt-skin #tt-exit span { display: none; }
