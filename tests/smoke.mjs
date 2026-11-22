@@ -1778,6 +1778,134 @@ try {
   await put("/waitlist", null);
   await put("/table", [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }]);
 
+  console.log("-- the Your turn bar (1.11) and the decks in the mod menu (1.7)");
+  // smokeMod's DJ playlist: a broken song first (the bot skips it), then what they'll play
+  await put("/queues/smokeMod", { "1": { type: 1, cid: "turnbroken1", name: "Broken - Song", flagged: { date: 5 } },
+    "2": { type: 1, cid: "turnnext001", name: "Khruangbin - Maria También" }, "3": { type: 1, cid: "turnlater01", name: "X - Y" } });
+  const turn = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const realUid = ftapi.uid, realSend = ftapi.actions.sendBotCommand, sent = [];
+    const realTable = firetable.tableData, realShown = firetable.displayedDjId;
+    ftapi.actions.sendBotCommand = (t) => { sent.push(t); return Promise.resolve(); };
+    const vis = (id) => { const el = document.getElementById(id); return !!el && !el.hidden && !!el.offsetParent; };
+    const text = (id) => document.getElementById(id).textContent.trim();
+    const out = {};
+    // a member off the decks: one button on, and what they'd start with
+    ftapi.uid = "smokeMod";
+    firetable.ui.watchDjNext("0");
+    for (let i = 0; i < 40 && !firetable.turnNext.track; i++) await wait(50);
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    out.off = { next: text("st-next"), hop: vis("st-hopon") && text("st-hoponText"), bus: vis("st-bus"), down: vis("st-stepdown") };
+    document.getElementById("st-hopon").click();
+    out.hopSent = sent.splice(0).join();
+    // on the decks, after the playing DJ: up next, the bus and stepping down
+    firetable.tableData = [{ name: "dj1", id: "dj1", plays: 1 }, { name: "smokeMod", id: "smokeMod", plays: 0 }, { name: "dj2", id: "dj2", plays: 0 }];
+    firetable.displayedDjId = "dj1";
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    out.deck = { next: text("st-next"), hop: vis("st-hopon"), bus: vis("st-bus"), down: vis("st-stepdown") };
+    document.getElementById("st-bus").click();
+    out.busSent = sent.splice(0).join();
+    out.busOn = document.getElementById("st-bus").classList.contains("on") && document.getElementById("st-bus").getAttribute("aria-pressed") === "true";
+    // the bot confirms; the user card shows the same state, and its button goes through the same command
+    firetable.tableData[1].removeAfter = true;
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    out.busKept = document.getElementById("st-bus").classList.contains("on");
+    document.querySelector('#ondeck .ondeck-slot[data-djid="smokeMod"]').click();
+    await wait(100);
+    const tip = document.getElementById("ft-user-tip");
+    out.cardDeparture = tip.classList.contains("departure-on");
+    tip.querySelector('[data-action="toggle-bus"]').click();
+    out.cardSent = sent.splice(0).join();
+    // stepping down takes two taps
+    const down = document.getElementById("st-stepdown");
+    down.click();
+    out.armed = down.classList.contains("armed") && /Tap again to step down/.test(down.textContent);
+    out.afterOne = sent.slice().join();
+    down.click();
+    out.afterTwo = sent.splice(0).join();
+    // the playlist changes: the bar follows (the bot played the song, it went to the bottom)
+    await ftapi.db().ref("queues/smokeMod/2").remove();
+    for (let i = 0; i < 40 && !/X/.test(text("st-next")); i++) await wait(50);
+    out.followed = text("st-next");
+    // the playing DJ's own bar
+    firetable.displayedDjId = "smokeMod";
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    out.playing = text("st-next");
+    // in line
+    firetable.tableData = [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }, { name: "a", id: "a", plays: 0 }, { name: "b", id: "b", plays: 0 }];
+    firetable.waitlistData = [{ name: "wl1", id: "wl1", plays: 0 }, { name: "smokeMod", id: "smokeMod", plays: 0 }];
+    firetable.displayedDjId = "dj1";
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    out.line = { next: text("st-next"), down: document.getElementById("st-stepdown").title };
+    firetable.waitlistData = [];
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    out.full = text("st-hoponText");
+
+    // the mod menu on the playing song: remove dj1, add someone here who isn't DJing
+    firetable.tableData = [{ name: "dj1", id: "dj1", plays: 1 }, { name: "dj2", id: "dj2", plays: 0 }];
+    firetable.displayedDjId = "dj1";
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    document.body.classList.add("is-mod");
+    const modMenu = document.getElementById("npModMenu");
+    modMenu.showPopover();
+    await wait(100);
+    out.remove = vis("npRemoveDj") && text("npRemoveDjText");
+    document.getElementById("npRemoveDj").click();
+    out.removeSent = sent.splice(0).join();
+    modMenu.showPopover();
+    await wait(50);
+    document.getElementById("npAddDj").click();
+    await wait(200);
+    const addMenu = document.getElementById("npAddDjMenu");
+    out.addOpen = addMenu.matches(":popover-open") && document.activeElement === document.getElementById("npAddDjFind");
+    // everyone here but the DJs (dj1, dj2), the bot and you (the test's own signed-in user may be here too)
+    out.addable = [...document.querySelectorAll("#npAddDjList .np-adddj")].map((b) => b.dataset.name).filter((n) => n !== "smoke").join();
+    const find = document.getElementById("npAddDjFind");
+    find.value = "WL";
+    find.dispatchEvent(new Event("input"));
+    out.filtered = [...document.querySelectorAll("#npAddDjList .np-adddj")].map((b) => b.dataset.name).join();
+    find.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    out.addSent = sent.splice(0).join();
+    out.addClosed = !addMenu.matches(":popover-open");
+    // the playing DJ outranks you, or is you: no Remove
+    firetable.displayedDjId = "boss";
+    firetable.tableData = [{ name: "boss", id: "boss", plays: 1 }];
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    modMenu.showPopover();
+    await wait(50);
+    out.noRemoveBoss = !vis("npRemoveDj");
+    modMenu.hidePopover();
+    // a member has no mod menu at all
+    document.body.classList.remove("is-mod");
+    out.memberBtn = getComputedStyle(document.getElementById("npModBtn")).display;
+
+    ftapi.actions.sendBotCommand = realSend;
+    ftapi.uid = realUid;
+    firetable.waitlistData = null;
+    firetable.tableData = realTable;
+    firetable.displayedDjId = realShown;
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    firetable.ui.watchDjNext(null);
+    return out;
+  });
+  check(turn.off.next === "You'd start with Maria También Khruangbin" && turn.off.hop === "Hop on the decks" && !turn.off.bus && !turn.off.down && turn.hopSent === "!addme",
+    "off the decks the bar shows the first song that can play and Hop on the decks, which sends !addme (" + JSON.stringify([turn.off, turn.hopSent]) + ")");
+  check(turn.deck.next === "You're up next with Maria También Khruangbin" && !turn.deck.hop && turn.deck.bus && turn.deck.down,
+    "after the playing DJ, the bar says you're up next, with the bus and Step down (" + JSON.stringify(turn.deck) + ")");
+  check(turn.busSent === "!removeafter" && turn.busOn && turn.busKept && turn.cardDeparture && turn.cardSent === "!dontremoveme",
+    "the bar's bus sends !removeafter and stays on; the user card shows the same and cancels through the same command (" + JSON.stringify(turn) + ")");
+  check(turn.armed && turn.afterOne === "" && turn.afterTwo === "!removeme", "Step down asks on the first tap and steps down on the second (" + turn.afterOne + " / " + turn.afterTwo + ")");
+  check(turn.followed === "You're up next with Y X", "the next song follows the DJ playlist as it changes (" + turn.followed + ")");
+  check(/^Playing now\. Next from you: Y X$/.test(turn.playing), "the playing DJ sees what they'll play after this (" + turn.playing + ")");
+  check(turn.line.next === "In line, 2 of 2. You'll start with Y X" && turn.line.down === "Leave the waitlist" && turn.full === "Join the waitlist",
+    "in line the bar gives your place, Step down leaves the waitlist, and with the decks full you join the waitlist (" + JSON.stringify([turn.line, turn.full]) + ")");
+  check(turn.remove === "Remove dj1 from the decks" && turn.removeSent === "!remove dj1" && turn.noRemoveBoss,
+    "the mod menu removes the playing DJ, not someone who outranks you (" + JSON.stringify([turn.remove, turn.removeSent, turn.noRemoveBoss]) + ")");
+  check(turn.addOpen && turn.addable === "boss,wl1" && turn.filtered === "wl1" && turn.addSent === "!add wl1" && turn.addClosed,
+    "Add someone lists who's here and not DJing, filters by name, and adds with !add (" + JSON.stringify([turn.addable, turn.filtered, turn.addSent]) + ")");
+  check(turn.memberBtn === "none", "a member has no mod menu button (" + turn.memberBtn + ")");
+  await put("/queues/smokeMod", null);
+
   console.log("-- on a phone: time left reads −m:ss, Chat comes first, the DJ playlist shows its name, removing a DJ takes two taps");
   await page.setViewportSize({ width: 390, height: 740 });
   const phoneFix = await page.evaluate(async () => {

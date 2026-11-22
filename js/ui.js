@@ -16,6 +16,28 @@
 
 // ─── Player Controls Visibility ──────────────────────────────────────────────
 
+// ─── The decks: one place for each bot command ───────────────────────────────
+// The bot owns table/ and waitlist/ (the rules refuse direct writes), so every
+// deck change is a bot command. The user card, the Your turn bar (1.11) and
+// the mod menu on the playing song (1.7) all call these.
+
+/** Hop on the decks, or into line when they're full. */
+firetable.actions.hopOn = function () { return ftapi.actions.sendBotCommand("!addme"); };
+/**
+ * Take the bus (step down after the next play), or cancel it.
+ * @param {boolean} on
+ * @param {string} [otherName] - a mod sending someone else home
+ */
+firetable.actions.toggleBus = function (on, otherName) {
+  return ftapi.actions.sendBotCommand((on ? "!removeafter" : "!dontremoveme") + (otherName ? " " + otherName : ""));
+};
+/** Step down from the decks, or leave the waitlist. */
+firetable.actions.stepDown = function () { return ftapi.actions.sendBotCommand("!removeme"); };
+/** Mods: take someone off the decks or the waitlist (the bot checks rank). */
+firetable.actions.removeDj = function (name) { return ftapi.actions.sendBotCommand("!remove " + name); };
+/** Mods: put someone on the decks, or in line when they're full. */
+firetable.actions.addDj = function (name) { return ftapi.actions.sendBotCommand("!add " + name); };
+
 // ─── Floating UI Popover Positioning ─────────────────────────────────────────
 firetable.ui.positionPopover = function (anchorEl, floatingEl, arrowEl, preferredPlacement) {
   var ARROW_SIZE = 8; // px — must match .ft-arrow width/height in CSS
@@ -1365,22 +1387,7 @@ firetable.ui.tooltip = (function () {
 
     // Where a user is DJing: on the deck, on the waitlist (with their place
     // in line), or neither.
-    function djStatus(userid) {
-      var k;
-      for (k in firetable.tableData || {}) {
-        if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k] && firetable.tableData[k].id === userid) {
-          return { where: 'deck', entry: firetable.tableData[k] };
-        }
-      }
-      var pos = 0, found = null;
-      for (k in firetable.waitlistData || {}) {
-        if (!firetable.waitlistData.hasOwnProperty(k) || !firetable.waitlistData[k]) continue;
-        pos++;
-        if (!found && firetable.waitlistData[k].id === userid) found = { where: 'waitlist', entry: firetable.waitlistData[k], pos: pos };
-      }
-      if (found) { found.count = pos; return found; }
-      return { where: null, entry: null };
-    }
+    function djStatus(userid) { return firetable.ui.djStatus(userid); }
 
     // The deck and waitlist are redrawn whenever they change, which takes the
     // card's anchor away. Keep an open card on the same person: re-anchor it
@@ -1567,7 +1574,7 @@ firetable.ui.tooltip = (function () {
         var uid = $userTip.attr('data-for');
         var userData = uid && ftapi.users && ftapi.users[uid];
         if (userData && userData.username) {
-          ftapi.actions.sendBotCommand('!add ' + userData.username);
+          firetable.actions.addDj(userData.username);
           userTipEl.hidePopover();
         }
       })
@@ -1575,7 +1582,7 @@ firetable.ui.tooltip = (function () {
         var uid = $userTip.attr('data-for');
         var userData = uid && ftapi.users && ftapi.users[uid];
         if (userData && userData.username) {
-          ftapi.actions.sendBotCommand('!remove ' + userData.username);
+          firetable.actions.removeDj(userData.username);
           userTipEl.hidePopover();
         }
       })
@@ -1583,12 +1590,12 @@ firetable.ui.tooltip = (function () {
         var isDepartureOn = $userTip.hasClass('departure-on');
         var uid = $userTip.attr('data-for');
         var other = uid && uid !== ftapi.uid && ftapi.users[uid] && ftapi.users[uid].username;
-        ftapi.actions.sendBotCommand((isDepartureOn ? '!dontremoveme' : '!removeafter') + (other ? ' ' + other : ''));
+        firetable.actions.toggleBus(!isDepartureOn, other);
         $userTip.toggleClass('departure-on', !isDepartureOn);
         userTipEl.hidePopover();
       })
       .on('click', '[data-action="step-down"]', function () {
-        ftapi.actions.sendBotCommand('!removeme');
+        firetable.actions.stepDown();
         userTipEl.hidePopover();
       })
       .on('click', '[data-action="toggle-block"]', function () {
@@ -2234,6 +2241,7 @@ firetable.ui.init = function () {
   firetable.ui.setupAvatarBuilder();
   firetable.ui.setupUserEvents();
   firetable.ui.setupRoomEvents();
+  firetable.ui.setupTurnBar();
   firetable.ui.setupMiscEvents();
 
   // Restore nav state from URL / localStorage and apply to DOM

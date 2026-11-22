@@ -3827,7 +3827,7 @@ a.importLinkCheck {
     position: absolute;
     left: 1em;
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.62); /* readable on the bar's darkest room colour (1.11) */
     pointer-events: none;
     white-space: nowrap;
     z-index: 1;
@@ -3845,6 +3845,84 @@ a.importLinkCheck {
     border-top-color: rgba(255,255,255,0.1);
     border-radius: var(--radius-md);
     color: rgba(255, 255, 255, 0.7);
+}
+
+/* ─── Your turn (1.11): the picker, what you'll play next, your deck buttons ─── */
+.themeCenter {
+    display: flex;
+    flex-wrap: wrap; /* narrow: the next song and the buttons go on a second row */
+    align-items: center;
+    gap: var(--space-2) var(--pad2);
+    min-width: 0;
+}
+/* the picker as wide as the playlist's name (where the browser can), the next song takes the rest */
+.themeCenter > #djlistpickerWrap { flex: 0 1 auto; }
+.themeCenter #djlistpicker { field-sizing: content; max-width: 22rem; }
+#st-turn {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    flex: 1 1 16rem;
+    min-width: 0;
+    justify-content: flex-end;
+    &[hidden] { display: none; }
+    & [hidden] { display: none; }
+}
+#st-next {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--fs-meta);
+    line-height: 1.3;
+    text-align: start;
+    color: rgba(255, 255, 255, 0.72);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    & b { font-weight: 600; color: #fff; }
+    & .st-artist { color: rgba(255, 255, 255, 0.62); }
+}
+#st-hopon { flex-shrink: 0; white-space: nowrap; }
+#st-bus,
+#st-stepdown { flex-shrink: 0; }
+#st-bus [class*="material-symbols-"],
+#st-stepdown [class*="material-symbols-"] { font-size: 1.15rem; }
+/* armed (first tap): Step down says so and asks for a second tap, like the plate's */
+#st-stepdown.armed {
+    width: auto;
+    padding-inline: var(--space-3);
+    gap: var(--space-1);
+    color: #fff;
+    background: var(--color-danger);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    white-space: nowrap;
+}
+#st-stepdown .st-ask:empty { display: none; }
+
+/* Mods: who to add to the decks (1.7) */
+#npAddDjMenu .ft-menu { width: min(18rem, calc(100vw - 2rem)); }
+#npAddDjFind {
+    margin: 0 var(--space-1) var(--space-2);
+    font-size: var(--fs-row);
+}
+#npAddDjList {
+    display: flex;
+    flex-direction: column;
+    max-height: min(18rem, 50vh);
+    overflow-y: auto;
+}
+#npAddDjList .np-adddj .ft-avatar {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+}
+.np-adddj-name { overflow: hidden; text-overflow: ellipsis; }
+.np-adddj-none {
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--fs-meta);
+    color: var(--color-text-muted);
 }
 
 #deckQueue {

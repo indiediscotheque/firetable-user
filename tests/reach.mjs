@@ -109,6 +109,9 @@ const FEATURES = [
   { row: "ST-13", name: "Skip your own song", who: ["dj"], widths: WIDE, via: ["#skipTrigger"], target: "#skipPopover .skipNowAction", notFor: ["member"], notTarget: "#skipTrigger" },
   { row: "ST-14", name: "Mod tools on the song (phone: the full-screen player's More)", who: ["mod"], widths: PHONE, via: [...fullMore, "#npModBtn"], target: "#npFixTags" },
   { row: "ST-14", name: "Mod tools on the song: skip, fix tags, flag", who: ["mod"], widths: WIDE, via: ["#npModBtn"], target: "#npFixTags", notFor: ["member", "dj"], notTarget: "#npModBtn" },
+  { row: "DJ-06", name: "Mod tools on the song: remove the playing DJ (1.7)", who: ["mod"], widths: WIDE, via: ["#npModBtn"], target: "#npRemoveDj" },
+  { row: "DJ-06", name: "Mod tools on the song: add someone to the decks (1.7)", who: ["mod"], widths: WIDE, via: ["#npModBtn", "#npAddDj"], target: "#npAddDjFind" },
+  { row: "DJ-06", name: "Mod tools on the song: add someone (phone: the full-screen player's More)", who: ["mod"], widths: PHONE, via: [...fullMore, "#npModBtn", "#npAddDj"], target: "#npAddDjFind" },
   { row: "ST-24", name: "A DJ's user card (from the DJs up next)", who: IN, via: [...peopleTab, "#ondeck .ondeck-slot:not(.empty)"], target: "#ft-user-tip" },
   { row: "NP-01", name: "The song's title and artist", who: ALL, target: "#track" },
   { row: "NP-02", name: "Plays here", who: ALL, widths: WIDE, target: "#playStats" },
@@ -117,6 +120,11 @@ const FEATURES = [
 
   // ── decks, people, chat (DJ, PE, CH) ──
   { row: "DJ-01", name: "Which playlist you DJ from", who: IN, target: "#djlistpicker" },
+  // the Your turn bar (1.11): on the decks, what you'll play, the bus and Step down; off them, Hop on
+  { row: "DJ-02", name: "Your next song (the Your turn bar)", who: ["dj"], target: "#st-next" },
+  { row: "DJ-04", name: "Take the bus (the Your turn bar)", who: ["dj"], target: "#st-bus", notFor: ["member", "mod"], notTarget: "#st-bus" },
+  { row: "DJ-05", name: "Step down (the Your turn bar)", who: ["dj"], target: "#st-stepdown", notFor: ["member", "mod"], notTarget: "#st-stepdown" },
+  { row: "ST-03", name: "Hop on the decks (the Your turn bar)", who: ["member", "mod"], target: "#st-hopon", notFor: ["visitor", "dj"], notTarget: "#st-hopon" },
   { row: "DJ-03", name: "The waitlist", who: IN, via: peopleTab, target: "#usersWaitlist" },
   { row: "PE-01", name: "The people in the room", who: IN, via: peopleTab, target: "#allUsers" },
   { row: "CH-01", name: "Chat", who: IN, via: chatTab, target: "#chats" },

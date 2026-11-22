@@ -45,7 +45,6 @@ const ALLOW = {
   },
   "color-contrast": { // Text must stand out from what's behind it
     "#createAccountFormShell > #createAccountBttn": "2.5 follow-up: Create account (dark text on gold)",
-    "#djlistpickerWrap > #djlistpickerLabel": "1.11: the stage's \"DJ Playlist:\" label",
     "#getAppCard > button.butt.small.showInstallGuide": "4.5: Settings' Get the app button",
     "#pv-fsrc > span.pb-kind.pb-livekind.is-off": "2.x: the full-screen player's On air label",
     "#pv-src > span.pb-kind.pb-livekind.is-off": "2.x: the player bar's On air label",
