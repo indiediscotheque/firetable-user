@@ -1713,8 +1713,71 @@ firetable.ui.keepFocusedFieldVisible = function () {
   keyboard();
 };
 
+/**
+ * Skip links (#nav-skip): the page's first Tab stops, for the keyboard and
+ * screen readers. Between the header and the player bar sit the stage, every
+ * chat message (two stops each), the people and every playlist row (seven
+ * each), so the chat box, the playlist and the player were a long way in.
+ * Each button shows only while what it goes to is on screen.
+ */
+firetable.ui.setupSkipLinks = function () {
+  var nav = document.getElementById("nav-skip");
+  if (!nav) return;
+  var seen = function (el) {
+    if (!el || !el.getClientRects().length || el.closest("[inert]")) return false;
+    var r = el.getBoundingClientRect();
+    return r.right > 0 && r.bottom > 0 && getComputedStyle(el).visibility !== "hidden";
+  };
+  var first = function (sel) {
+    var all = document.querySelectorAll(sel);
+    for (var i = 0; i < all.length; i++) if (seen(all[i])) return all[i];
+    return null;
+  };
+  var targets = {
+    // Discover's page (Live starts at the stage, straight after the header)
+    page: function () { return document.body.classList.contains("ft-discover") ? first("#dBrowse") : null; },
+    chat: function () { return first("#newchat"); },
+    playlist: function () { return first("#listpicker"); },
+    player: function () { return first("#pv-transport button, #dMini .pb-acts button, #pv-art"); }
+  };
+  var update = function () {
+    nav.querySelectorAll("[data-skip]").forEach(function (b) {
+      // never hide the one that has focus: it would drop focus back to the top
+      if (b !== document.activeElement) b.hidden = !targets[b.getAttribute("data-skip")]();
+    });
+  };
+  nav.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-skip]");
+    var to = b && targets[b.getAttribute("data-skip")]();
+    if (!to) return;
+    if (to.tabIndex < 0) to.setAttribute("tabindex", "-1"); // a region, not a control: focus it, never a Tab stop
+    to.focus();
+    if (to.scrollIntoView) to.scrollIntoView({ block: "nearest" });
+    update();
+  });
+  // before Tab moves focus (so a button that just became useful is there to land on),
+  // and whenever the page changes for readers that don't Tab
+  document.addEventListener("keydown", function (e) { if (e.key === "Tab") update(); }, true);
+  // Discover Home's address, #discover, is also the id of Live's Fresh panel
+  // (ids here are fixed), so the browser takes that panel, half-way down the
+  // page, as where Tab starts from: the header and these buttons were never
+  // reached. With nothing in focus, start from the top again.
+  var fromTop = function () {
+    if (location.hash !== "#discover" || (document.activeElement && document.activeElement !== document.body)) return;
+    nav.setAttribute("tabindex", "-1");
+    nav.focus({ preventScroll: true });
+    nav.blur();
+    nav.removeAttribute("tabindex");
+  };
+  window.addEventListener("hashchange", function () { fromTop(); setTimeout(update, 300); });
+  window.addEventListener("resize", update);
+  ["loggedIn", "loggedOut"].forEach(function (ev) { ftapi.events.on(ev, function () { setTimeout(update, 300); }); });
+  setTimeout(function () { update(); fromTop(); }, 1000);
+};
+
 firetable.ui.setupMiscEvents = function () {
   firetable.ui.keepFocusedFieldVisible();
+  firetable.ui.setupSkipLinks();
 
   // ── Floating UI tooltips ──
   firetable.ui.tooltip.bind();

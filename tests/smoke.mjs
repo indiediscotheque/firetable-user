@@ -3328,6 +3328,33 @@ try {
     "a phone's keyboard up while chatting: the stage and the tab bar step aside and the chat keeps its room; back with the keyboard down or the box left (" + JSON.stringify(typing) + ")");
   await kPage.close();
 
+  // skip links: the first Tab stop, even on Discover Home, whose address is also the Fresh panel's id
+  const sPage = await context.newPage();
+  const skipState = () => sPage.evaluate(() => {
+    const nav = document.getElementById("nav-skip"), a = document.activeElement;
+    return { at: a && a.closest("#nav-skip") ? a.getAttribute("data-skip") : (a && a.id) || "", inView: nav.getBoundingClientRect().top >= 0,
+      shown: [...nav.querySelectorAll("[data-skip]")].filter((b) => b.offsetParent !== null).map((b) => b.getAttribute("data-skip")).join() };
+  });
+  // a visitor on Discover Home, whose address (#discover) is also the Fresh panel's id
+  await openPage(sPage, SITE + "#discover");
+  await sPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 30000 });
+  await sleep(1300);
+  const skip = { rest: await skipState() };
+  await sPage.keyboard.press("Tab");
+  await sleep(250);
+  skip.tab1 = await skipState();
+  await sPage.keyboard.press("Enter");
+  await sleep(200);
+  skip.page = await sPage.evaluate(() => document.activeElement.id);
+  await sPage.evaluate(() => document.querySelector('#nav-skip [data-skip="player"]').focus());
+  await sPage.keyboard.press("Enter");
+  await sleep(200);
+  skip.player = await sPage.evaluate(() => !!document.activeElement.closest("#dMini"));
+  skip.after = await skipState();
+  check(!skip.rest.inView && skip.tab1.at === "page" && skip.tab1.inView && skip.tab1.shown === "page,player" && skip.page === "dBrowse" && skip.player && !skip.after.inView,
+    "the first Tab on Discover Home is Skip to the page (the chat box and the playlist aren't offered to a visitor); it and Skip to the player go there, and the links hide again (" + JSON.stringify(skip) + ")");
+  await sPage.close();
+
   console.log("-- Discover: members chat with the room from Discover");
   const chatHere = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

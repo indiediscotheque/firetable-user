@@ -46,6 +46,15 @@
 </head>
 
 <body>
+	<!-- Keyboard: the first Tab stops, out of sight until one has focus. Each shows only while
+	     what it goes to is on screen (js/ui.js setupSkipLinks). Buttons, not links: the
+	     address after # is the page you're on. -->
+	<nav id="nav-skip" aria-label="Skip to">
+		<button type="button" class="butt graybutt small nav-skipBtn" data-skip="page" hidden>Skip to the page</button>
+		<button type="button" class="butt graybutt small nav-skipBtn" data-skip="chat" hidden>Skip to the chat box</button>
+		<button type="button" class="butt graybutt small nav-skipBtn" data-skip="playlist" hidden>Skip to your playlist</button>
+		<button type="button" class="butt graybutt small nav-skipBtn" data-skip="player" hidden>Skip to the player</button>
+	</nav>
 	<div id="mainGrid" class="pre-auth">
 		<header id="topbar">
 			<h1 id="roomlogo" title="Indie Discotheque"><span class="sr-only">Indie Discotheque</span></h1>

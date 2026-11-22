@@ -185,6 +185,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | NV-02 | Tablet side tabs: Chat, People | All | `#sidepanel-tabs` (`#sp-chat`, `#sp-people`), `STORAGE.navSide` | keep |
 | NV-03 | View under the stage (Playlists, Recent, Fresh, Cards) | All | `firetable.ui.showView`, `syncNavState`, `STORAGE.navView`, `#mainGrid.view-*` | keep |
 | NV-04 | Addresses (`#live`, `#discover/...`) and back button | All | `discover.js` `route`, `writeAddress` | keep; 2.2 adds nothing new |
+| NV-05 | (new) Skip links: the first Tab stops, out of sight until one has focus. Skip to the page (Discover), the chat box, your playlist, the player; each offered only while what it goes to is on screen. Tab starts from the top on Discover Home too, whose address `#discover` is also the Fresh panel's id | All | `#nav-skip`, `firetable.ui.setupSkipLinks` (`ui.js`) | ✅ added November 22, 2026 (the UX audit, H1); keep |
 
 ## AU · Joining, logging in, account
 
