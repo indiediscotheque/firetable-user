@@ -1575,8 +1575,8 @@ button.waitlist-pos {
 
 /* ── Reusable avatar component ── */
 /* Each avatar style sits differently in its pictures, so each gets its own
-   framing in the circles (zoom, where the face is) and its own fill behind
-   it. html[data-avatars] is the room's style (helpers.js avatarKind), set
+   framing in the circles (zoom, where the face is); the circles are
+   transparent behind it, so the picture sits on whatever's under it. html[data-avatars] is the room's style (helpers.js avatarKind), set
    when the page starts and when a supermod changes it; a Bouletmaton gets
    its own (.bm-face, below). tests/avatars.mjs
    checks every style fills the circles and the stage. */
@@ -1585,26 +1585,23 @@ button.waitlist-pos {
     --av-x: 50%;
     --av-y: 66%;
     --av-list-y: 72%;     /* the people list sits the robots a little lower */
-    --av-fill: #000;
+    --av-fill: transparent;
 }
 html[data-avatars="notionists"] {
     --av-zoom: 118%;
     --av-x: 50%;
     --av-y: 30%;
     --av-list-y: 30%;
-    --av-fill: #e8e3d8;
 }
 html[data-avatars="pixel-art"] {
     --av-zoom: 100%;
     --av-x: 50%;
     --av-y: 50%;
     --av-list-y: 50%;
-    --av-fill: #d9d4c7;
 }
 /* A member's own Bouletmaton, whatever the room's style (js/bouletmaton.js
    marks it .bm-face): the picture is the whole drawing (head to waist), on
-   transparent, so the circles frame its whole head (hair, ears, hat), on
-   black like the robots. The framing is measured from each one's drawings
+   transparent, so the circles frame its whole head (hair, ears, hat). The framing is measured from each one's drawings
    (js/bouletmaton.js frame(): --bm-zoom/-x/-y on the element); these are a
    typical head's, until then. The stage shows it whole (.avtr: contain). */
 .bm-face {
@@ -1612,7 +1609,6 @@ html[data-avatars="pixel-art"] {
     --av-x: var(--bm-x, 60.6%);
     --av-y: var(--bm-y, 31.7%);
     --av-list-y: var(--bm-y, 31.7%);
-    --av-fill: #000;
 }
 .ft-avatar {
     --avatar-bg-x: var(--av-x);
