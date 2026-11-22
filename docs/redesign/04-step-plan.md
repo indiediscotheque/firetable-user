@@ -77,7 +77,7 @@ Nothing moves region. Regulars find everything where it was.
 - New buttons follow the round 4 rule: no big filled gold.
 
 **Realigned November 15, 2026 (what 2.3c and later work already did):**
-- **1.3 narrowed:** with Discover on, the screen control, reload, full screen and cast are in the player bar and `#stageTopRight` is hidden. Left: a clearer glyph than `microwave` for `#screenControl`. No avatars toggle (the owner, November 15, 2026: the DJs always stand on the stage; the full-screen player is the view without them).
+- **1.3 narrowed:** with Discover on, the screen control, reload, full screen and cast are in the player bar and `#stageTopRight` is hidden. The placeholder glyph is fixed and the step is dropped (November 22, 2026). No avatars toggle (the owner, November 15, 2026: the DJs always stand on the stage; the full-screen player is the view without them).
 - **1.5 narrowed:** Fire's count only, on `#fire` wherever it is (the player bar with Discover on).
 - **1.6:** unchanged, but the split button lives in the player bar (and the full-screen player), since `#grab` moves there.
 - **1.8 ✗ superseded:** time left reads −m:ss with "Time played" / "Time left" tooltips, and the player bar leaves time out on the room's song (both November 15, 2026). Nothing left unless the owner asks for the progress line on the stage's bottom edge.
@@ -104,7 +104,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** no computed font-size under 11px (add a smoke check that walks visible text nodes at 1024 and 390 and reports any smaller).
 - **Undo:** revert.
 
-### 1.3 Stage controls, top-right, and player view (narrowed: the screen icon only)
+### 1.3 Stage controls, top-right, and player view ✗ dropped (the owner, November 22, 2026)
+- **Dropped:** the screen control is already one button that cycles synced → always on → off and shows each setting's own glyph (`live_tv`, `tv`, `tv_off`) and tooltip (`updateScreenBtn`), lit while the screen is down. The `microwave` was only the placeholder in `index.html` before scripts ran; it now starts on `live_tv`, so the button never shows the wrong glyph. Three separate icons or a menu would add nothing. The rest below is kept for reference.
 - **The owner, November 15, 2026:** no player view and no `#st-avatarsBtn` / `#st-djChip`. What's left is the `#screenControl` glyph below; the rest is kept for reference.
 - **Goal:** clear, labelled screen controls; a way to hide avatars.
 - **Rows:** ST-05 to ST-08, new player view.
