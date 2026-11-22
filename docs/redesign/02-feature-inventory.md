@@ -75,8 +75,8 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| DJ-01 | Which playlist you DJ from | M | `#djlistpicker` in `#themebox` / `#djlistpickerWrap` ("You DJ from"), `#djlistOpen` (open it in Playlists), `ftapi.actions.switchDjList`, `users/<uid>/selectedList` | ✅ 1.11 the Your turn bar keeps this exact select (★ marks the default, as everywhere), as wide as the list's name |
-| DJ-02 | Your next tracks on deck | D | `#st-next` in the Your turn bar (`firetable.ui.watchDjNext`, `renderTurnBar`), on the decks or in line; `#deckQueue` stays, empty | ✅ 1.11 the song you'll play next, one quiet line |
+| DJ-01 | Which playlist you DJ from | M | `#djlistpicker` in `#themebox` / `#djlistpickerWrap` ("You DJ from"), `#djlistOpen` (open it in Playlists), `ftapi.actions.switchDjList`, `users/<uid>/selectedList` | keep; labelled "You DJ from" (1.11, the rest of it dropped) |
+| DJ-02 | Your next tracks on deck | D | `#deckQueue` (empty); the DJ playlist's first song is marked Next in Playlists | 1.11 dropped (the owner, November 22, 2026): the playlist shows what's next |
 | DJ-03 | Waitlist (with 4+ DJs) | All | `#usersWaitlist`, `waitlistChanged`, `room.js`, `!wait` | keep in the people column; 1.10 also a chip on the stage |
 | DJ-04 | Take the bus (step down after next play) | D | user card `utt-bus-btn`, `deckDepartureBtn`, `firetable.actions.toggleBus`, `!removeafter` / `!dontremoveme` (`!gottacatchmybus`) | keep; 1.11 not repeated in the bar (the owner, November 22, 2026) |
 | DJ-05 | Step down | D | user card `utt-stepdown-btn`, the plate's own (two taps), `firetable.actions.stepDown`, `!removeme` | keep; 1.11 not repeated in the bar (the owner, November 22, 2026) |

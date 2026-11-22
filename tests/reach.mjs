@@ -120,8 +120,6 @@ const FEATURES = [
 
   // ── decks, people, chat (DJ, PE, CH) ──
   { row: "DJ-01", name: "Which playlist you DJ from", who: IN, target: "#djlistpicker" },
-  // the Your turn bar (1.11): on the decks, the song you'll play next
-  { row: "DJ-02", name: "Your next song (the Your turn bar)", who: ["dj"], target: "#st-next", notFor: ["visitor", "member", "mod"], notTarget: "#st-next" },
   { row: "DJ-03", name: "The waitlist", who: IN, via: peopleTab, target: "#usersWaitlist" },
   { row: "PE-01", name: "The people in the room", who: IN, via: peopleTab, target: "#allUsers" },
   { row: "CH-01", name: "Chat", who: IN, via: chatTab, target: "#chats" },

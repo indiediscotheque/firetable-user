@@ -18,8 +18,8 @@
 
 // ─── The decks: one place for each bot command ───────────────────────────────
 // The bot owns table/ and waitlist/ (the rules refuse direct writes), so every
-// deck change is a bot command. The user card, the Your turn bar (1.11) and
-// the mod menu on the playing song (1.7) all call these.
+// deck change is a bot command. The user card, the name plates' open spots
+// and the mod menu on the playing song (1.7) all call these.
 
 /** Hop on the decks, or into line when they're full. */
 firetable.actions.hopOn = function () { return ftapi.actions.sendBotCommand("!addme"); };
@@ -2251,7 +2251,6 @@ firetable.ui.init = function () {
   firetable.ui.setupAvatarBuilder();
   firetable.ui.setupUserEvents();
   firetable.ui.setupRoomEvents();
-  firetable.ui.setupTurnBar();
   firetable.ui.setupMiscEvents();
 
   // Restore nav state from URL / localStorage and apply to DOM
