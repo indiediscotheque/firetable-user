@@ -10,6 +10,13 @@
  * The import is one write; its toast offers Undo (removes exactly what was
  * added, or the new playlist) and Open.
  *
+ * A list of songs (1.20, #im-listPane): pasted "Artist - Title" lines or a
+ * CSV. Step 2 asks the room's bot to find each one (importJobs/<uid>/<job>,
+ * firetable-hostbot lib/imports.js): the room's own upload first, then free
+ * lookups, of the kind the destination playlist takes. Each song shows what
+ * was found (Played here, Song, Video, SoundCloud), with a pick where there's
+ * more than one, or Not found. Importing then works as for a playlist.
+ *
  * Also: firetable.importer.parseLink / peek for "That's a playlist: … Import it"
  * in Find tracks and Discover search.
  */
@@ -290,6 +297,226 @@ firetable.importer = (function () {
     });
   };
 
+  // ─── A list of songs (1.20) ───────────────────────────────────────────────
+
+  var MAX_LIST = 500;
+  var SEPARATORS = [" - ", " \u2013 ", " \u2014 ", " -- "];
+  var clip = function (v) { return String(v || "").trim().slice(0, 300); };
+  var clock = function (secs) {
+    secs = Math.round(Number(secs) || 0);
+    return Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0");
+  };
+
+  /**
+   * One pasted line as a song: {a, t, d?}, or null for a line that isn't one.
+   * "Artist - Title" (or – or —), "Artist<tab>Title", with numbering, bullets
+   * and a trailing length ("3:45" or "(3:45)") taken off.
+   * @param {string} line
+   * @returns {{a:string, t:string, d?:number}|null}
+   */
+  I.parseLine = function (line) {
+    var text = String(line || "").replace(/\s+$/, "");
+    if (!text.trim() || /^\s*(#|\/\/)/.test(text)) return null;
+    text = text.replace(/^\s*(?:\d{1,4}[.):\]]?\s+|[-*\u2022\u00b7]\s+)/, "");
+    var d = 0;
+    var len = text.match(/\s*[([]?(\d{1,2}):([0-5]\d)[)\]]?\s*$/);
+    if (len && len.index > 0) {
+      d = Number(len[1]) * 60 + Number(len[2]);
+      text = text.slice(0, len.index);
+    }
+    var a = "", t = text.trim();
+    if (t.indexOf("\t") !== -1) {
+      var cols = t.split("\t").map(function (c) { return c.trim(); }).filter(Boolean);
+      a = cols[0] || "";
+      t = cols.slice(1).join(" ") || "";
+    } else {
+      for (var i = 0; i < SEPARATORS.length; i++) {
+        var at = t.indexOf(SEPARATORS[i]);
+        if (at > 0) { a = t.slice(0, at); t = t.slice(at + SEPARATORS[i].length); break; }
+      }
+    }
+    a = clip(a);
+    t = clip(t);
+    if (!t) return null;
+    var song = { a: a, t: t };
+    if (d > 0) song.d = d;
+    return song;
+  };
+
+  /** CSV (or TSV) rows: [[field, ...], ...], quotes and all. */
+  var csvRows = function (text) {
+    var first = text.split(/\r?\n/, 1)[0];
+    var delim = first.indexOf("\t") !== -1 ? "\t" : (first.split(";").length > first.split(",").length ? ";" : ",");
+    var rows = [], row = [], field = "", quoted = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (quoted) {
+        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (c === '"') quoted = false;
+        else field += c;
+      } else if (c === '"' && field === "") quoted = true;
+      else if (c === delim) { row.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(field); rows.push(row); row = []; field = "";
+      } else field += c;
+    }
+    if (field || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (f) { return String(f).trim(); }); });
+  };
+
+  /**
+   * A CSV export's songs, or null when the text isn't a CSV with artist and
+   * title columns. Column names other services use: Artist / Artist Name(s) /
+   * Artists, Title / Track / Track Name / Name / Song, Duration (ms) / Duration / Time.
+   * @param {string} text
+   * @returns {Array<{a, t, d?}>|null}
+   */
+  I.parseCsv = function (text) {
+    var rows = csvRows(String(text || ""));
+    if (rows.length < 2) return null;
+    var head = rows[0].map(function (h) { return String(h).trim().toLowerCase().replace(/[^a-z()]+/g, " ").trim(); });
+    var find = function (names) {
+      for (var i = 0; i < head.length; i++) if (names.indexOf(head[i]) !== -1) return i;
+      return -1;
+    };
+    var ai = find(["artist", "artists", "artist name", "artist name(s)", "artist names", "artist s", "artist name s", "album artist"]);
+    var ti = find(["title", "track", "track name", "track title", "name", "song", "song name", "song title"]);
+    if (ti === -1 || ai === -1) return null;
+    var ms = find(["duration (ms)", "duration ms", "track duration (ms)", "time (ms)"]);
+    var di = ms !== -1 ? ms : find(["duration", "time", "length"]);
+    return rows.slice(1).map(function (r) {
+      var t = clip(r[ti]);
+      if (!t) return null;
+      var song = { a: clip(String(r[ai] || "").replace(/\s*;\s*/g, ", ")), t: t };
+      var raw = di !== -1 ? String(r[di] || "").trim() : "";
+      var d = ms !== -1 ? Math.round(Number(raw) / 1000)
+        : /^\d{1,2}:\d{2}$/.test(raw) ? Number(raw.split(":")[0]) * 60 + Number(raw.split(":")[1]) : Number(raw);
+      if (d > 0 && d <= 86400) song.d = d;
+      return song;
+    }).filter(Boolean);
+  };
+
+  /** What someone pasted or picked: a CSV export, or one song per line. */
+  I.readSongs = function (text) {
+    return I.parseCsv(text) || String(text || "").split(/\r?\n/).map(I.parseLine).filter(Boolean);
+  };
+
+  // the bot's answer for the list on show: {id, ref, fn, format, status, n, timer}
+  var L = { job: null };
+  var stopJob = function () {
+    var job = L.job;
+    if (!job) return;
+    L.job = null;
+    clearTimeout(job.timer);
+    if (job.fn) job.ref.off("value", job.fn);
+    job.ref.remove().catch(function () { /* already gone */ });
+  };
+  // what the destination takes: a new playlist is YouTube Music
+  var jobFormat = function () {
+    var dest = destVal();
+    return dest === "new" ? "ytm" : (firetable.utilities.listFormat(dest) || "ytm");
+  };
+  var pickLabel = function (p, all) {
+    var label = p.src === "room" ? "Played here" : Number(p.type) === MEDIA_SOUNDCLOUD ? "SoundCloud" : p.kind === "a" ? "Song" : "Video";
+    var same = all.filter(function (q) { return q !== p && (q.src === "room") === (p.src === "room") && q.kind === p.kind; }).length;
+    return same && p.dur ? label + " \u00b7 " + clock(p.dur) : label;
+  };
+  /** Use a song's pick k (or none: -1), as the playlist importer takes it. */
+  var choose = function (s, k) {
+    s.pick = k;
+    var p = k >= 0 && s.picks ? s.picks[k] : null;
+    delete s.img;
+    delete s.url;
+    if (!p) {
+      s.type = S.meta.type;
+      s.cid = "";
+      s.name = s.orig;
+      s.why = s.state === "look" ? "Looking\u2026" : s.found === "later" ? "Try later" : s.picks && s.picks.length ? "Left out" : "Not found";
+      return;
+    }
+    delete s.why;
+    s.type = Number(p.type) || MEDIA_YOUTUBE;
+    s.cid = String(p.cid);
+    s.name = (p.artist ? p.artist + " - " : "") + (p.title || s.orig);
+    if (p.img) s.img = p.img;
+    if (p.url) s.url = p.url;
+  };
+  var askBot = function () {
+    stopJob();
+    if (!S.meta || !S.meta.list || !window.ftapi || !ftapi.uid) return;
+    var format = jobFormat();
+    S.meta.format = format;
+    S.meta.type = format === "sc" ? MEDIA_SOUNDCLOUD : MEDIA_YOUTUBE;
+    S.songs.forEach(function (s) { s.state = "look"; s.picks = null; s.found = ""; choose(s, -1); });
+    var ref = ftapi.db().ref("importJobs/" + ftapi.uid).push();
+    var job = { id: ref.key, ref: ref, fn: null, format: format, status: "new", n: 0, timer: null };
+    L.job = job;
+    var items = S.list.map(function (it) { return it.d ? { a: it.a, t: it.t, d: it.d } : { a: it.a, t: it.t }; });
+    ref.set({ items: items, format: format, status: "new", at: firebase.database.ServerValue.TIMESTAMP }).then(function () {
+      if (L.job !== job) return;
+      job.fn = ref.on("value", function (snap) { if (L.job === job) answered(job, snap.val()); });
+      job.timer = setTimeout(function () {
+        if (L.job === job && job.status === "new") setStatus("The room's bot hasn't started on these yet. It may be busy or away; leave this open, or try again later.");
+      }, 20000);
+    }, function () {
+      if (L.job !== job) return;
+      L.job = null;
+      setStatus("The room's bot can't look songs up yet. Try again later.", "error");
+    });
+    refresh();
+  };
+  var answered = function (job, val) {
+    if (!val) return;
+    job.status = val.status;
+    job.n = Number(val.n) || 0;
+    var results = val.results || {};
+    S.songs.forEach(function (s, i) {
+      var r = results[i];
+      if (!r || s.state === "done") return;
+      s.state = "done";
+      s.found = r.s;
+      s.picks = Array.isArray(r.picks) ? r.picks.filter(function (p) { return p && p.cid; }) : [];
+      choose(s, s.picks.length ? 0 : -1);
+    });
+    if (job.status === "failed") {
+      S.songs.forEach(function (s) { if (s.state === "look") { s.state = "done"; s.found = "later"; choose(s, -1); } });
+    }
+    refresh();
+    if (job.status === "failed") setStatus(val.note || "The room's bot couldn't look these up. Try again later.", "error");
+  };
+
+  /** Step 2 for a list of songs: what the bot finds for each, where they go. */
+  I.showList = function (list, name) {
+    S.token++;
+    S.list = list.slice(0, MAX_LIST);
+    S.meta = { list: true, name: name || "Imported songs", by: "", count: S.list.length, type: MEDIA_YOUTUBE };
+    S.songs = S.list.map(function (it) {
+      var orig = (it.a ? it.a + " - " : "") + it.t;
+      return { orig: orig, name: orig, type: MEDIA_YOUTUBE, cid: "", state: "look", why: "Looking\u2026" };
+    });
+    el("im-step1").hidden = true;
+    el("im-step2").hidden = false;
+    el("im-back").hidden = false;
+    el("importTitle").textContent = "Import your list";
+    el("im-name").textContent = S.meta.name;
+    el("im-link").hidden = true;
+    el("im-meta").textContent = plural(S.list.length, "song") + " \u00b7 found by the room's bot";
+    el("im-newName").value = S.meta.name;
+    fillDest();
+    askBot();
+  };
+
+  var listInput = function () {
+    var songs = I.readSongs(el("im-listText").value);
+    var n = songs.length;
+    el("im-listCount").textContent = !n ? "" : plural(n, "song") + (n > MAX_LIST ? " (the first " + MAX_LIST + " will be looked up)" : "");
+    var btn = el("im-listFind");
+    btn.disabled = !n;
+    btn.textContent = n ? "Find " + plural(Math.min(n, MAX_LIST), "song") : "Find the songs";
+    return songs;
+  };
+
   // ─── The dialog ───────────────────────────────────────────────────────────
 
   var el = function (id) { return document.getElementById(id); };
@@ -304,6 +531,7 @@ firetable.importer = (function () {
   };
 
   I.back = function () {
+    stopJob();
     S.token++;
     S.meta = null;
     S.songs = null;
@@ -384,7 +612,10 @@ firetable.importer = (function () {
     var named = el("im-newName");
     named.disabled = dest !== "new";
     el("im-destList").disabled = el("im-pos").disabled = dest === "new";
-    var refusal = dest !== "new" ? firetable.utilities.formatRefusal(dest, S.meta.type) : "";
+    // a list of songs asks again when the destination takes another kind
+    if (S.meta.list && L.job && jobFormat() !== L.job.format) return askBot();
+    var looking = S.meta.list && (!L.job || L.job.status !== "done");
+    var refusal = dest !== "new" && !S.meta.list ? firetable.utilities.formatRefusal(dest, S.meta.type) : "";
     var haveP = dest === "new" ? Promise.resolve(null)
       : haveCache.id === dest ? Promise.resolve(haveCache.have)
       : contents(dest).then(function (h) { haveCache = { id: dest, have: h }; return h; });
@@ -396,14 +627,22 @@ firetable.importer = (function () {
       var skipped = S.songs.filter(function (s) { return s.skip === "Already there"; }).length;
       var repeats = S.songs.filter(function (s) { return s.skip === "Twice in this playlist"; }).length;
       var bits = [plural(go.length, "song") + " to import"];
+      if (S.meta.list) {
+        var missing = S.songs.filter(function (s) { return s.why === "Not found" || s.why === "Try later"; }).length;
+        if (missing) bits.push(missing + " not found");
+        var out = S.songs.filter(function (s) { return s.why === "Left out"; }).length;
+        if (out) bits.push(out + " left out");
+        gone = 0;
+      }
       if (gone) bits.push(gone + " not available");
       if (skipped) bits.push(skipped + " already there");
       if (repeats) bits.push(plural(repeats, "repeat"));
       if (refusal) setStatus(refusal + " Choose another playlist or a new one.", "error");
-      else setStatus(bits.join(" · "));
+      else if (looking && L.job) setStatus("Looking for the songs\u2026 " + L.job.n + " of " + S.songs.length);
+      else if (!looking || go.length) setStatus(bits.join(" · "));
       var btn = el("im-go");
-      btn.textContent = "Import " + plural(go.length, "song");
-      btn.disabled = !!refusal || !go.length || (dest === "new" && !named.value.trim());
+      btn.textContent = looking ? "Finding the songs\u2026" : "Import " + plural(go.length, "song");
+      btn.disabled = looking || !!refusal || !go.length || (dest === "new" && !named.value.trim());
     });
   };
   I.refresh = function () { haveCache = { id: null, have: null }; refresh(); };
@@ -432,7 +671,9 @@ firetable.importer = (function () {
       }
       li.appendChild(num);
       li.appendChild(name);
-      if (s.why || s.skip) {
+      if (S.meta && S.meta.list && !s.skip) {
+        li.appendChild(listTag(s, i));
+      } else if (s.why || s.skip) {
         var tag = document.createElement("span");
         tag.className = "im-tag" + (s.why ? " is-gone" : "");
         tag.textContent = s.why ? "Not available" : s.skip;
@@ -443,6 +684,53 @@ firetable.importer = (function () {
     });
     ol.innerHTML = "";
     ol.appendChild(frag);
+  };
+
+  // a list song's tag: what was found (a pick when there's more than one), or Not found
+  var listTag = function (s, i) {
+    var wrap = document.createElement("span");
+    wrap.className = "im-found";
+    if (s.state === "look") {
+      wrap.innerHTML = '<span class="im-tag is-looking">Looking\u2026</span>';
+      return wrap;
+    }
+    var picks = s.picks || [];
+    if (!picks.length) {
+      var tag = document.createElement("span");
+      tag.className = "im-tag is-gone";
+      tag.textContent = s.found === "later" ? "Try later" : "Not found";
+      if (s.found === "later") tag.title = "The room's bot ran out of searches for today";
+      wrap.appendChild(tag);
+      var find = document.createElement("a");
+      find.className = "im-findLink row-icon material-symbols-outlined";
+      find.href = "https://music.youtube.com/search?q=" + encodeURIComponent(s.orig);
+      find.target = "_blank";
+      find.rel = "noopener";
+      find.title = "Search for it on YouTube Music";
+      find.setAttribute("aria-label", "Search for " + s.orig + " on YouTube Music");
+      find.textContent = "search";
+      wrap.appendChild(find);
+      return wrap;
+    }
+    var sel = document.createElement("select");
+    sel.className = "im-tag im-pick" + (s.pick < 0 ? " is-out" : "");
+    sel.setAttribute("data-i", i);
+    sel.setAttribute("aria-label", "Which version of " + s.orig);
+    picks.forEach(function (p, k) {
+      var o = document.createElement("option");
+      o.value = k;
+      o.textContent = pickLabel(p, picks);
+      sel.appendChild(o);
+    });
+    var none = document.createElement("option");
+    none.value = -1;
+    none.textContent = "Leave out";
+    sel.appendChild(none);
+    sel.value = String(s.pick);
+    var p0 = picks[s.pick];
+    if (p0) sel.title = (p0.artist ? p0.artist + " - " : "") + p0.title + (p0.plays ? " \u00b7 played here " + plural(p0.plays, "time") : "");
+    wrap.appendChild(sel);
+    return wrap;
   };
 
   var run = function () {
@@ -464,7 +752,7 @@ firetable.importer = (function () {
       var extra = [];
       if (r.skipped) extra.push(r.skipped + " already there");
       if (r.repeats) extra.push(plural(r.repeats, "repeat"));
-      if (r.unavailable) extra.push(r.unavailable + " not available");
+      if (r.unavailable) extra.push(r.unavailable + (meta.list ? " not found" : " not available"));
       firetable.ui.toast("Imported " + plural(r.added, "song") + " into “" + listName + "”" +
         (extra.length ? " (" + extra.join(", ") + " left out)" : "") + ".", "success", { actions: [
         { label: "Undo", fn: function () {
@@ -485,6 +773,41 @@ firetable.importer = (function () {
 
   I.init = function () {
     if (!box()) return;
+    // the source tabs: a playlist (YouTube, SoundCloud) or a list of songs
+    $("#importSources .tab").on("click", function () {
+      var list = this.id === "listimportchoice";
+      el("importContent").hidden = list;
+      el("im-listPane").hidden = !list;
+      el("importTitle").textContent = list ? "Import a list of songs" : "Import a playlist";
+      if (list) setTimeout(function () { el("im-listText").focus(); }, 0);
+    });
+    $("#im-listText").on("input", listInput);
+    $("#im-listFile").on("change", function () {
+      var file = this.files && this.files[0];
+      this.value = "";
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { el("im-listCount").textContent = "That file is too big for a list of songs."; return; }
+      var reader = new FileReader();
+      reader.onload = function () {
+        var songs = I.readSongs(String(reader.result || ""));
+        el("im-listText").value = songs.map(function (s) { return (s.a ? s.a + " - " : "") + s.t + (s.d ? " (" + clock(s.d) + ")" : ""); }).join("\n");
+        S.fileName = file.name.replace(/\.[^.]+$/, "").slice(0, 100);
+        listInput();
+      };
+      reader.readAsText(file);
+    });
+    $("#im-listFind").on("click", function () {
+      var songs = listInput();
+      if (!songs.length) return;
+      I.showList(songs, S.fileName || "Imported songs");
+    });
+    $("#im-songs").on("change", ".im-pick", function () {
+      var s = S.songs && S.songs[Number(this.getAttribute("data-i"))];
+      if (!s) return;
+      choose(s, Number(this.value));
+      refresh();
+    });
+    box().addEventListener("close", stopJob);
     $("#im-back").on("click", I.back);
     $("#im-go").on("click", run);
     $('input[name="im-dest"]').on("change", function () {

@@ -102,7 +102,9 @@ const FEATURES = [
   { row: "ST-08b", name: "Play on a speaker or TV (phone: from the full-screen player)", who: ALL, widths: PHONE, via: [".pb-expand", "#st-cast"], target: "#st-castWays" },
   { row: "ST-09", name: "Fire", who: IN, target: "#fire" },
   { row: "ST-11", name: "Grab to a playlist", who: IN, via: ["#grab"], target: "#stealpicker" },
-  { row: "ST-11", name: "Grab: choose the playlist (▾)", who: IN, via: ["#st-grabPick"], target: "#stealpicker" },
+  { row: "ST-11", name: "Grab: choose the playlist (▾)", who: IN, widths: WIDE, via: ["#st-grabPick"], target: "#stealpicker" },
+  // phones (4.2): the ▾ is in the full-screen player; the bar's Grab and its toast's Change open the picker too
+  { row: "ST-11", name: "Grab: choose the playlist (▾, phone: the full-screen player)", who: IN, widths: PHONE, via: [...full, "#st-grabPick"], target: "#stealpicker" },
   { row: "ST-12", name: "Open the song on YouTube or SoundCloud", who: IN, widths: WIDE, target: "#songlink" },
   { row: "ST-12", name: "Open the song (phone: the full-screen player's More)", who: IN, widths: PHONE, via: fullMore, target: "#songlink" },
   { row: "ST-13", name: "Skip your own song (phone: the full-screen player's More)", who: ["dj"], widths: PHONE, via: [...fullMore, "#skipTrigger"], target: "#skipPopover .skipNowAction" },

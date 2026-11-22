@@ -940,6 +940,97 @@ try {
     "Import: into a playlist you have, at the top, skipping the one already there; Undo takes exactly those back (" + JSON.stringify(imp) + ")");
   check(imp.newList === "true|Bb,Aa,Cc|1" && imp.newGone, "Import: the old call still makes a new playlist of what can play, and Undo deletes it (" + JSON.stringify(imp) + ")");
   check(imp.offer === "That's a playlist: Smoke Mix · 4 songs. Import it" && imp.offerOpens, "Import: a playlist link in Find tracks says what it is and opens its songs (" + JSON.stringify(imp) + ")");
+  console.log("-- Import a list of songs (1.20): pasted or a CSV, found by the room's bot, picked, imported");
+  await put("/queues/smoke", { i1: { type: 1, cid: "impvideo00a", name: "Aa - Old" } });
+  await put("/importJobs", null);
+  const lst = await page.evaluate(async () => {
+    const realUid = ftapi.uid;
+    ftapi.uid = "smoke";
+    const wait = async (fn) => { for (let i = 0; i < 60; i++) { const v = await fn(); if (v) return v; await new Promise((r) => setTimeout(r, 100)); } return null; };
+    const I = firetable.importer;
+    const out = {};
+    out.lines = ["1. Khruangbin - Maria También (4:05)", "Men I Trust – Show Me How", "• Poolside\tHarvest Moon\t3:58", "Just A Title", "# a comment", "   "]
+      .map((l) => JSON.stringify(I.parseLine(l))).join("|");
+    out.csv = JSON.stringify(I.parseCsv('Track URI,Track Name,"Artist Name(s)",Duration (ms)\nspotify:1,"Show Me How","Men I Trust",215000\nspotify:2,"Harvest Moon, Pt. 2","Poolside;Panama",240500\n'));
+    out.notCsv = I.parseCsv("Khruangbin - Maria También\nMen I Trust - Show Me How") === null;
+    const names = async (id) => Object.entries((await ftapi.lookup.listRef(id).once("value")).val() || {}).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map((e) => e[1].name).join("|");
+    const jobs = async () => (await ftapi.db().ref("importJobs/smoke").once("value")).val() || {};
+    I.open();
+    document.getElementById("listimportchoice").click();
+    out.pane = !document.getElementById("im-listPane").hidden && document.getElementById("importContent").hidden && document.getElementById("importTitle").textContent;
+    const text = document.getElementById("im-listText");
+    text.value = "Khruangbin - Maria Tambien\nPoolside - Harvest Moon\nNobody - Knows This\nBusy - Song";
+    text.dispatchEvent(new Event("input"));
+    out.count = document.getElementById("im-listCount").textContent + "|" + document.getElementById("im-listFind").textContent;
+    document.getElementById("im-listFind").click();
+    out.looking = await wait(() => document.querySelectorAll("#im-songs .im-tag.is-looking").length === 4 && document.getElementById("im-go").disabled && document.getElementById("im-go").textContent);
+    const asked = await wait(async () => { const j = await jobs(); const ids = Object.keys(j); return ids.length === 1 && Object.assign({ id: ids[0] }, j[ids[0]]); });
+    out.job = asked && asked.format + "|" + asked.status + "|" + asked.items.map((it) => it.a + "/" + it.t).join(",");
+    // the bot answers
+    const pick = (cid, extra) => Object.assign({ type: 1, cid, artist: "", title: "", src: "ytm", kind: "a" }, extra);
+    await ftapi.db().ref("importJobs/smoke/" + asked.id).update({ status: "done", n: 4, results: {
+      0: { s: "room", picks: [pick("khaudio0001", { artist: "Khruangbin", title: "María También", src: "room", plays: 12 })] },
+      1: { s: "song", picks: [pick("poolaudio01", { artist: "Poolside", title: "Harvest Moon" }), pick("poolvideo01", { artist: "Poolside", title: "Harvest Moon", src: "room", kind: "v" })] },
+      2: { s: "none" }, 3: { s: "later" } } });
+    out.found = await wait(() => !document.getElementById("im-go").disabled && [...document.querySelectorAll("#im-songs li")].map((li) =>
+      li.querySelector(".im-title").textContent + "(" + (li.querySelector("select") ? [...li.querySelector("select").options].map((o) => o.textContent).join("/") : li.querySelector(".im-tag").textContent) + ")").join("|"));
+    out.go = document.getElementById("im-go").textContent + "|" + document.getElementById("im-status").textContent;
+    out.search = document.querySelector("#im-songs li:nth-child(3) .im-findLink").href;
+    // leave one out, then put it back with the room's video instead
+    const sel = document.querySelector("#im-songs li:nth-child(2) select");
+    sel.value = "-1";
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+    out.left = await wait(() => /Import 1 song$/.test(document.getElementById("im-go").textContent) && document.getElementById("im-status").textContent);
+    const sel2 = document.querySelector("#im-songs li:nth-child(2) select");
+    sel2.value = "1";
+    sel2.dispatchEvent(new Event("change", { bubbles: true }));
+    // a destination kept to SoundCloud asks the bot again, for SoundCloud
+    firetable.plPrefs.format = Object.assign({}, firetable.plPrefs.format, { "0": "sc" });
+    document.querySelector('input[name="im-dest"][value="have"]').checked = true;
+    $("#im-destList").val("0").trigger("change");
+    const again = await wait(async () => { const j = await jobs(); const ids = Object.keys(j); return ids.length === 1 && ids[0] !== asked.id && j[ids[0]]; });
+    out.again = again && again.format + "|" + document.querySelectorAll("#im-songs .im-tag.is-looking").length;
+    delete firetable.plPrefs.format["0"];
+    $("#im-destList").trigger("change");
+    const third = await wait(async () => { const j = await jobs(); const ids = Object.keys(j); return ids.length === 1 && j[ids[0]].format === "ytm" && Object.assign({ id: ids[0] }, j[ids[0]]); });
+    await ftapi.db().ref("importJobs/smoke/" + third.id).update({ status: "done", n: 4, results: {
+      0: { s: "room", picks: [pick("khaudio0001", { artist: "Khruangbin", title: "María También", src: "room" })] },
+      1: { s: "song", picks: [pick("poolaudio01", { artist: "Poolside", title: "Harvest Moon" })] }, 2: { s: "none" }, 3: { s: "none" } } });
+    await wait(() => /Import 2 songs/.test(document.getElementById("im-go").textContent));
+    $("#im-pos").val("bottom");
+    document.getElementById("im-go").click();
+    out.added = await wait(async () => { const n = await names("0"); return n.split("|").length === 3 && n; }) || await names("0");
+    out.toast = document.getElementById("ft-toast").textContent;
+    out.cleared = await wait(async () => Object.keys(await jobs()).length === 0);
+    [...document.querySelectorAll("#ft-toast button")].find((b) => b.textContent === "Undo").click();
+    out.undone = await wait(async () => { const n = await names("0"); return n === "Aa - Old" && n; }) || await names("0");
+    // closing the dialog while the bot looks takes the job back
+    I.open();
+    document.getElementById("listimportchoice").click();
+    text.value = "Aa - Bb";
+    text.dispatchEvent(new Event("input"));
+    document.getElementById("im-listFind").click();
+    await wait(async () => Object.keys(await jobs()).length === 1);
+    document.getElementById("importPromptBox").close();
+    out.closedGone = await wait(async () => Object.keys(await jobs()).length === 0);
+    document.getElementById("ytimportchoice").click();
+    ftapi.uid = realUid;
+    return out;
+  });
+  check(lst.lines === '{"a":"Khruangbin","t":"Maria También","d":245}|{"a":"Men I Trust","t":"Show Me How"}|{"a":"Poolside","t":"Harvest Moon","d":238}|{"a":"","t":"Just A Title"}|null|null',
+    "a list of songs: numbering, bullets, dashes, tabs and lengths are read; comments and blank lines skipped (" + lst.lines + ")");
+  check(lst.csv === '[{"a":"Men I Trust","t":"Show Me How","d":215},{"a":"Poolside, Panama","t":"Harvest Moon, Pt. 2","d":241}]' && lst.notCsv,
+    "a CSV export's artist, title and length columns are found; plain lines aren't a CSV (" + lst.csv + ")");
+  check(lst.pane === "Import a list of songs" && lst.count === "4 songs|Find 4 songs" && lst.looking === "Finding the songs…" && lst.job === "ytm|new|Khruangbin/Maria Tambien,Poolside/Harvest Moon,Nobody/Knows This,Busy/Song",
+    "the list asks the room's bot for each song, for a YouTube Music playlist, while the rows say Looking… (" + JSON.stringify(lst) + ")");
+  check(lst.found === "María También(Played here/Leave out)|Harvest Moon(Song/Played here/Leave out)|Knows This(Not found)|Song(Try later)" &&
+    /^Import 2 songs\|2 songs to import · 2 not found$/.test(lst.go) && /music\.youtube\.com\/search\?q=Nobody/.test(lst.search),
+    "what the bot found shows per song: Played here, a pick where there are two, Not found with a search, Try later (" + JSON.stringify([lst.found, lst.go]) + ")");
+  check(/1 left out/.test(lst.left || "") && lst.again === "sc|4", "Leave out takes a song out; a playlist kept to SoundCloud asks the bot again for SoundCloud (" + JSON.stringify([lst.left, lst.again]) + ")");
+  check(lst.added.split("|").sort().join("|") === "Aa - Old|Khruangbin - María También|Poolside - Harvest Moon" && /^Imported 2 songs into .+ \(2 not found left out\)\./.test(lst.toast) && lst.cleared && lst.undone === "Aa - Old" && lst.closedGone,
+    "Import adds the found songs to the playlist; the job is cleared after, and when the dialog closes; Undo takes them back (" + JSON.stringify(lst) + ")");
+  await put("/queues/smoke", beforeImport);
+
   // an empty playlist says so, with Import a playlist and Find tracks
   await put("/queues/smoke", null);
   const emptyList = await page.evaluate(async () => {
@@ -1908,6 +1999,26 @@ try {
   check(phoneFix.labelHidden && phoneFix.labelledBy === "djlistpickerLabel", "on a phone the DJ playlist's label is for screen readers only, and still names the picker");
   check(phoneFix.btn && phoneFix.armed && phoneFix.afterOne.length === 0 && phoneFix.afterTwo.join() === "!remove dj1",
     "a mod's first tap on the plate's remove asks again; the second removes (" + JSON.stringify(phoneFix) + ")");
+
+  console.log("-- Live on a phone (4.2): the song row's buttons are 44px; Grab's ▾ is in the full-screen player");
+  await page.setViewportSize({ width: 390, height: 740 });
+  const phoneRow = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const bar = document.getElementById("dMini");
+    // a member, hearing the room (as the bar is for a signed-in listener)
+    bar.classList.add("is-member", "is-room");
+    await wait(100);
+    const size = (el) => { const r = el.getBoundingClientRect(); return el.offsetParent ? Math.round(r.width) + "x" + Math.round(r.height) : "hidden"; };
+    const out = { fire: size(document.getElementById("fire")), main: size(bar.querySelector(".pb-main")), open: size(bar.querySelector(".pb-expand")),
+      pick: size(document.getElementById("st-grabPick")), inBar: !!document.getElementById("st-grabPick").closest("#dMini") };
+    const grab = document.getElementById("grab");
+    out.grab = grab.closest("#dMini") ? (getComputedStyle(grab).display === "none" ? "44x44" : size(grab)) : "moved";
+    out.text = Math.round(bar.querySelector(".pb-text").getBoundingClientRect().width);
+    return out;
+  });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  check(phoneRow.inBar && phoneRow.fire === "44x44" && phoneRow.main === "44x44" && phoneRow.open === "44x44" && phoneRow.grab === "44x44" && phoneRow.pick === "hidden" && phoneRow.text >= 80,
+    "phone: Fire, Grab, play and open are 44px, the ▾ is left to the full-screen player, and the song keeps its room (" + JSON.stringify(phoneRow) + ")");
 
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),

@@ -1576,8 +1576,11 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
     .pb-art { width: 3rem; height: 3rem; }
     .pb-now { gap: var(--pad2); }
     .pb-src > span:last-child { display: none; }
-    .pb .pb-main { width: 2.75rem; height: 2.75rem; }
-    .pb .iconbutt { width: var(--tap-min); height: var(--tap-min); }
+    /* Live on a phone (4.2): the song row's buttons (Fire, Grab, play, open) are 44px */
+    .pb .iconbutt, .pb .iconbutt.pb-main { width: var(--tap-stage); height: var(--tap-stage); min-height: var(--tap-stage); }
+    /* Grab's ▾ is in the full-screen player: here the first grab, and the
+       grab toast's Change, open the picker, and Fire and Grab keep their room */
+    .pb #st-grabPick { display: none; }
     .pb-transport > :not(.pb-main), .pb-time, .pb-side > :not(.pb-expand) { display: none; }
     .pb-keep #pv-dkeep .pb-joinfire { display: none; }
 }

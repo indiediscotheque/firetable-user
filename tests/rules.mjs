@@ -158,6 +158,28 @@ try {
     await ftapi.actions.dismissSwap(ref, key, "aaaaaaaaaaa");
     ftapi.actions.unflagTrack(key);
   });
+  await step(fan, "import a list of songs: ask the room's bot, then take the job back (1.20)", async () => {
+    const I = firetable.importer;
+    I.open();
+    document.getElementById("listimportchoice").click();
+    const text = document.getElementById("im-listText");
+    text.value = "Khruangbin - Maria Tambien (4:05)\nMen I Trust - Show Me How";
+    text.dispatchEvent(new Event("input"));
+    document.getElementById("im-listFind").click();
+    let job = null;
+    for (let i = 0; i < 50 && !job; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      job = (await ftapi.db().ref("importJobs/" + ftapi.uid).once("value")).val();
+    }
+    if (!job) throw new Error("the import job wasn't written");
+    document.getElementById("importPromptBox").close();
+    for (let i = 0; i < 50 && job; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      job = (await ftapi.db().ref("importJobs/" + ftapi.uid).once("value")).val();
+    }
+    if (job) throw new Error("the import job wasn't taken back");
+    document.getElementById("ytimportchoice").click();
+  });
   await step(fan, "playlists: delete the list", () => firetable.actions.deleteLists([window.__list]));
 
   await step(fan, "profile: avatar style, your Bouletmaton (saved in the builder), public name, featured card", async () => {
