@@ -87,7 +87,8 @@ Nothing moves region. Regulars find everything where it was.
 - **1.15, 1.16:** shipped in part; finish them before 1.17 (see each step).
 - **1.18:** F opens the full-screen player and V switches its view (2.3b), so Fire is **H**, for "h0t tracks" (the owner, November 15, 2026).
 
-### 1.1 Apply the tokens
+### 1.1 Apply the tokens ✅ shipped, with today's colours (the owner's ask, November 22, 2026)
+- **Shipped:** the round-4 decision stands (colours stay today's; 03-target-design.md's colour table isn't applied), so 1.1 made today's colours one palette: every grey in `looks.css` and `discover.css` now comes from the variables on `:root`. Two steps were added for greys that had none (`--color-bg-t4` #383838, the hover on raised surfaces; `--color-text-soft` #999, tab labels and quiet controls); the rest snapped to the nearest existing step (`#333` → `--color-border`, `#c8c8c8` → `--color-icon`, `#ddd` → `--color-text`, `#444` → `--color-bg-t4`). Toasts and tooltips were already on `--color-bg-t3`. A grey that's its own says so (`/* own colour: … */`: the name plate and the festive light string, Live's look; Google's button; the white play button). `tools/check-colours.mjs` fails the lint on any other grey written out, and leaves white, black and see-through overlays alone.
 - **Goal:** the new colours and surfaces everywhere: darker page, clearer panels, consistent borders.
 - **Rows:** all visually; OT-01, OT-05.
 - **Files and change:** switch the old tokens' values to the new ones (`--color-bg` → `--surface-0`, panels to `--surface-1`, etc.). Replace hard-coded greys in `looks.css` and `discover.css` with tokens (search `#1`, `#2`, `#3`, `rgb(`, `rgba(`). Toasts and tooltips (`#ft-toast`, `#ft-tooltip`) to `--surface-3`. About, privacy and terms pages load `looks.css`, so check them too.
