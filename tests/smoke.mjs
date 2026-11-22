@@ -3249,6 +3249,21 @@ try {
   check(locked.cards > 0 && locked.cards <= 3, "Cards shows the latest cards (" + locked.cards + ")");
   check(locked.back.form && locked.back.pane, "Join brings the welcome back (" + JSON.stringify(locked.back) + ")");
 
+  // the bar's tools keep one order: screen and cast go into the full-screen player and come back
+  const toolOrder = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const ids = () => [...document.querySelectorAll("#pv-tools > [id]:not(.ft-tip)")].map((b) => b.id).join();
+    const out = [ids()];
+    for (let i = 0; i < 2; i++) {
+      firetable.discover.openFull(); await wait(300);
+      firetable.discover.closeFull(); await wait(300);
+      out.push(ids());
+    }
+    return out;
+  });
+  check(toolOrder.every((o) => o === "screenControl,reloadtrack,st-cast,fullscreenBtn"),
+    "the bar's tools stay in one order through the full-screen player and back: screen, reload, cast, full screen (" + JSON.stringify(toolOrder) + ")");
+
   // Fresh beside the welcome (640px and up): a visitor has no Fresh tab to choose, so it loads when it's on screen
   const fPage = await context.newPage();
   await fPage.setViewportSize({ width: 1280, height: 800 });
