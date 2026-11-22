@@ -407,6 +407,35 @@ body.tt-skin #djStage > #stageSnow,
 body.tt-skin #djStage > #stageActions,
 body.tt-skin #djStage > #stageTopRight,
 body.tt-skin #djStage > #ft-eq { display: none; }
+/* the browser holding the room's sound back: Live's "Listen to the room" as a plain Turntable button
+   on the stage's base, between the front speakers (x 523 to 945, y 530 to 590), sized with the stage
+   (never smaller than reads); no pill, no shadow, no who's-playing line: the stage shows that */
+body.tt-skin.media-blocked #djStage > #tapToPlay { display: inline-flex; }
+/* (#mainGrid: over the phones' Discover layout, which puts it beside the song) */
+html body.tt-skin #mainGrid #djStage > #tapToPlay {
+    --u: var(--tt-s, 1);
+    top: calc(var(--tt-y, 0px) + 560px * var(--u));
+    bottom: auto;
+    left: calc(var(--tt-x, 0px) + 734px * var(--u));
+    transform: translate(-50%, -50%);
+    z-index: 6;
+    max-width: calc(410px * var(--u));
+    align-items: center;
+    gap: max(2px, 6px * var(--u));
+    min-height: 0;
+    height: auto;
+    padding: max(2px, 7px * var(--u)) max(6px, 18px * var(--u)) max(2px, 7px * var(--u)) max(4px, 12px * var(--u));
+    border: 1px solid #b08a12;
+    border-radius: max(3px, 6px * var(--u));
+    background: linear-gradient(#f1cf3a, var(--tt-gold-2));
+    color: #2a2000;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+    backdrop-filter: none;
+}
+body.tt-skin #djStage > #tapToPlay:hover, body.tt-skin #djStage > #tapToPlay:focus-visible { background: linear-gradient(#ffe066, #e5b522); }
+body.tt-skin #djStage > #tapToPlay [class*="material-symbols-"] { font-size: max(11px, 24px * var(--u)); }
+body.tt-skin #djStage > #tapToPlay .ttp-text b { font: 800 max(9px, 20px * var(--u))/1.1 var(--tt-font); white-space: nowrap; }
+body.tt-skin #djStage > #tapToPlay #tapToPlaySub { display: none; }
 /* the room's fire is placed and shown inline by js/room.js: out of sight here (the meter and lights stand in for it) */
 body.tt-skin #djStage > #fyre { visibility: hidden; }
 
