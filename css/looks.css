@@ -1219,6 +1219,10 @@ a.sociallogo[href] {
             "stage";
     }
     #mainGrid.login #login { display: none; }
+    /* ...and the stage has the height the form left: capped at 40vh it was
+       shorter than the DJ and the bar under it together, and they overlapped */
+    #mainGrid.login #stage { max-height: none; }
+    #mainGrid.login #djStage { --stage-max-height: calc(100vh - 10.5rem); }
 }
 
 /* ============================================

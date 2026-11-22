@@ -2260,6 +2260,20 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 }
 @keyframes pvf-more { from { opacity: 0; transform: translateY(0.4rem); } }
 /* short screens (a phone on its side): the cover gives way to the words */
+/* A phone on its side (640px or more across, under 400px tall) gets the
+   two-column layout at a third of its height. It has the room across, not
+   down: the Discover | Live switch sits in the header's row and the player
+   bar is slimmer, so the page gets about 70px back. */
+@media only screen and (max-height: 400px) and (min-width: 640px) and (max-width: 1023px) {
+    #modeTabs {
+        flex: 0 1 15rem;
+        margin: 0 var(--pad2);
+        border-bottom: 0;
+    }
+    #topbarUtils { order: 11; }
+    .pb { min-height: 3.25rem; padding-block: var(--pad1); gap: var(--pad2); }
+    .pb .pb-art { width: 2.5rem; height: 2.5rem; }
+}
 @media only screen and (max-height: 400px) {
     .pvf-visual { display: none; }
     .pvf-now { grid-template-columns: minmax(0, 1fr); align-items: end; }
