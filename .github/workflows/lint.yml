@@ -1,4 +1,4 @@
-# Checks every push and pull request: ESLint on the site's scripts, that the
+# Checks every pull request (and master, before each deploy): ESLint on the site's scripts, that the
 # stylesheets flatten for older Safari (what the deploy serves), a PHP syntax
 # check on the API proxies, and that the CSP in .htaccess covers every
 # published path. Run the same locally with:
@@ -7,9 +7,13 @@
 name: Lint
 
 on:
-  push:
-  pull_request:
-  workflow_call: # the deploy runs these checks first
+  pull_request: # not on push too: every branch gets a pull request, and the same commit ran twice
+  workflow_call: # master: the deploy runs these checks first
+
+# a newer push to the pull request stops the older run (the deploy's runs are never stopped)
+concurrency:
+  group: lint-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
