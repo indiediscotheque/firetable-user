@@ -1173,8 +1173,11 @@ try {
     const spots = (x, x0, y0, w, h, n) => { for (let k = 0; k < n; k++) { x.fillStyle = "hsl(" + (k * 37 % 360) + ",70%," + (25 + k % 45) + "%)"; x.fillRect(x0 + (k * 53 % (w - 12)), y0 + (k * 29 % (h - 12)), 12, 12); } };
     const artPic = await pic((x) => { x.fillStyle = "#000"; x.fillRect(0, 0, 480, 360); x.fillStyle = "#6b3a1e"; x.fillRect(0, 45, 480, 270); spots(x, 105, 45, 270, 270, 400); });
     const videoPic = await pic((x) => { x.fillStyle = "#000"; x.fillRect(0, 0, 480, 360); spots(x, 0, 45, 480, 270, 900); });
-    const cover = firetable.tt._coverBox(artPic);
-    out.artTrack = !!cover && Math.abs(cover.cw - 270) <= 10 && Math.abs(cover.ch - 270) <= 10 && !firetable.tt._coverBox(videoPic);
+    // a cover with a flat background of its own (green round a sculpture): its background isn't a bar
+    const flatPic = await pic((x) => { x.fillStyle = "#000"; x.fillRect(0, 0, 480, 360); x.fillStyle = "#3aa83a"; x.fillRect(105, 45, 270, 270); x.fillStyle = "#8a8a84"; x.beginPath(); x.ellipse(240, 180, 70, 95, 0, 0, 7); x.fill(); spots(x, 190, 110, 100, 140, 60); });
+    const cover = firetable.tt._coverBox(artPic), flatCover = firetable.tt._coverBox(flatPic);
+    out.artTrack = !!cover && Math.abs(cover.cw - 270) <= 10 && Math.abs(cover.ch - 270) <= 10 && !firetable.tt._coverBox(videoPic) &&
+      !!flatCover && Math.abs(flatCover.cw - 270) <= 10 && Math.abs(flatCover.ch - 270) <= 10;
     // the songboard: a line too long to fit scrolls a dot column at a time; a short one stays put
     const artistEl = document.getElementById("artist"), wasArtist = artistEl.textContent;
     artistEl.textContent = "Ezra Collective featuring Yazmin Lacey and Friends";
@@ -1236,7 +1239,7 @@ try {
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
   check(tt.turnBefore && tt.held && tt.turn && tt.turnBack, "a song change moves the spotlight and the nodding head to the DJ now playing (" + [tt.turnBefore, tt.held, tt.turn, tt.turnBack] + ")");
   check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
-  check(tt.artTrack, "an art track's cover fills the right screen; a video's frame is left as it is");
+  check(tt.artTrack, "an art track's cover fills the right screen (one with a flat background of its own too); a video's frame is left as it is");
   check(tt.ledScroll && tt.ledStill, "the songboard scrolls a line too long to fit, a dot column at a time; a short one stays put");
   check(tt.off && tt.liveFace && tt.noTtFaceInLive, "Back to Live: Live as it was, with Live's avatars");
 
