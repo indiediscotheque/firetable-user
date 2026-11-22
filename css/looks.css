@@ -6048,11 +6048,14 @@ input.tagMachine,
 
 /* A list of songs (1.20): paste or a CSV, then what the bot found for each */
 #importContent[hidden],
-#im-listPane[hidden] {
+#im-listPane[hidden],
+#im-spPane[hidden],
+#importSources .tab[hidden] {
     display: none;
 }
 
-#im-listPane {
+#im-listPane,
+#im-spPane {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -6082,7 +6085,13 @@ input.tagMachine,
     cursor: pointer;
 }
 
-#im-listPane .im-actions {
+#im-spLink {
+    font-size: var(--fs-body);
+    border-radius: var(--radius-row);
+}
+
+#im-listPane .im-actions,
+#im-spPane .im-actions {
     margin: var(--space-1) 0 0;
     padding: 0;
 }

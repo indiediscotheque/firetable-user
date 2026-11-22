@@ -162,7 +162,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | IM-02 | Import a SoundCloud set | M | `#scimportchoice`, `scPlaylist` | ✅ 1.19 |
 | IM-03 | (new) Preview what's inside, choose new or existing playlist, top or bottom, skip what you have, see what's missing | M | `#im-step2` | ✅ 1.19 step 2 (`firetable.importer.show`, Undo in the toast) |
 | IM-04 | A list of songs or a CSV | M | `#listimportchoice`, `#im-listPane` (`#im-listText`, `#im-listFile`, `#im-listFind`), `firetable.importer.parseLine` / `parseCsv` / `showList`, `importJobs/<uid>` answered by the bot (firetable-hostbot `lib/imports.js`) | ✅ 1.20 |
-| IM-05 | (new) Spotify link | M | — | 1.21, after the owner adds a Spotify key to the bot |
+| IM-05 | A Spotify playlist | M | `#spimportchoice` (shown while `discover/caps/spotify`), `#im-spPane` (`#im-spLink`, `#im-spFind`), `firetable.importer.parseSpotify` / `showSpotify`; `importJobs/<uid>` with `spotify: <id>`, read by the bot (firetable-hostbot `lib/spotify.js`, `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`) | ✅ 1.21 |
 | IM-06 | (new) Paste a playlist link in any search box | M | today: "That's a SoundCloud playlist. Use Import…" | ✅ 1.19 `firetable.ui.offerImport` in Find tracks; `.d-importOffer` in Discover search |
 
 ## RE · Recent, Fresh, Cards (the tabs under the stage)

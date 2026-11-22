@@ -141,6 +141,8 @@ const FEATURES = [
   { row: "CR-11", name: "Merge playlists", who: IN, via: [...listMenu, '#cr-listMenu [data-act="merge"]'], target: "#mergepicker", close: ['#cr-listBtn', '#cr-listMenu [data-act="merge"]'] },
   { row: "CR-12", name: "New playlist", who: IN, via: [...listMenu, '#cr-listMenu [data-act="new"]'], target: "#plmaker", close: ["#plAddLauncher"] },
   { row: "CR-12", name: "Import a playlist", who: IN, via: [...listMenu, '#cr-listMenu [data-act="import"]'], target: "#importPromptBox #importSources" },
+  { row: "IM-04", name: "Import a list of songs", who: IN, via: [...listMenu, '#cr-listMenu [data-act="import"]', "#listimportchoice"], target: "#im-listText" },
+  { row: "IM-05", name: "Import a Spotify playlist (when the bot's Spotify keys work)", who: IN, via: [...listMenu, '#cr-listMenu [data-act="import"]', "#spimportchoice"], target: "#im-spLink" },
   // (off for the built-in list, which the test views)
   { row: "CR-13", name: "Delete this playlist", who: IN, via: listMenu, target: '#cr-listMenu [data-act="delete"]' },
   { row: "CR-14", name: "All playlists", who: IN, via: [...listMenu, '#cr-listMenu [data-act="all"]'], target: "#plIndexList" },

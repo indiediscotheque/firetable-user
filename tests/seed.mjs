@@ -152,7 +152,8 @@ export function livedIn(now, people) {
     queues: Object.fromEntries(Object.values(people).map((p) => [p.uid, queue()])),
     playlists: Object.fromEntries(Object.values(people).map((p) => [p.uid, playlists])),
     tagUpdate: { cid: song.cid, adamData: { track_name: song.title, artist: song.artist, playcount: 67 } },
-    discover: withArt(Object.assign(discover(now), { new: thisWeek(discover(now).new), lib: library(now) }))
+    // caps: what the bot can do (its Spotify keys work: the import offers Spotify)
+    discover: withArt(Object.assign(discover(now), { new: thisWeek(discover(now).new), lib: library(now), caps: { spotify: true } }))
   });
     /** A full week of new releases from the last few days (Home leads with them from six), before the seed's own. */
   function thisWeek(feed) {

@@ -1031,6 +1031,82 @@ try {
     "Import adds the found songs to the playlist; the job is cleared after, and when the dialog closes; Undo takes them back (" + JSON.stringify(lst) + ")");
   await put("/queues/smoke", beforeImport);
 
+  console.log("-- Import a Spotify playlist (1.21): offered when the bot can, read by the bot, then found like a list");
+  await put("/queues/smoke", { i1: { type: 1, cid: "impvideo00a", name: "Aa - Old" } });
+  await put("/importJobs", null);
+  await put("/discover/caps/spotify", null);
+  const spo = await page.evaluate(async () => {
+    const realUid = ftapi.uid;
+    ftapi.uid = "smoke";
+    const wait = async (fn) => { for (let i = 0; i < 60; i++) { const v = await fn(); if (v) return v; await new Promise((r) => setTimeout(r, 100)); } return null; };
+    const I = firetable.importer;
+    const tab = document.getElementById("spimportchoice");
+    const out = {};
+    out.hiddenFirst = tab.hidden;
+    await ftapi.db().ref("discover/caps/spotify").set(true);
+    out.shown = await wait(() => !tab.hidden);
+    const P = "6rqhFgbbKwnb9MLmUQDhG6";
+    out.ids = ["https://open.spotify.com/playlist/" + P + "?si=abc", "https://open.spotify.com/intl-de/playlist/" + P, "spotify:playlist:" + P,
+      "https://open.spotify.com/album/" + P, "night drive"].map((t) => I.parseSpotify(t) || "-").join(",");
+    const jobs = async () => (await ftapi.db().ref("importJobs/smoke").once("value")).val() || {};
+    I.open();
+    tab.click();
+    out.pane = !document.getElementById("im-spPane").hidden && document.getElementById("importTitle").textContent;
+    const link = document.getElementById("im-spLink");
+    link.value = "https://open.spotify.com/album/" + P;
+    link.dispatchEvent(new Event("input"));
+    out.album = document.getElementById("im-spMsg").textContent + "|" + document.getElementById("im-spFind").disabled;
+    link.value = "https://open.spotify.com/playlist/" + P + "?si=x1";
+    link.dispatchEvent(new Event("input"));
+    document.getElementById("im-spFind").click();
+    const asked = await wait(async () => { const j = await jobs(); const ids = Object.keys(j); return ids.length === 1 && Object.assign({ id: ids[0] }, j[ids[0]]); });
+    out.job = asked && asked.spotify + "|" + asked.format + "|" + (asked.items === undefined);
+    out.reading = await wait(() => /Reading the playlist on Spotify/.test(document.getElementById("im-status").textContent) && document.getElementById("im-go").disabled);
+    // the bot reads the playlist, then answers
+    const ref = ftapi.db().ref("importJobs/smoke/" + asked.id);
+    await ref.update({ status: "working", n: 0, name: "Night Drive", by: "Chris", skipped: 1,
+      items: [{ a: "Khruangbin", t: "Maria Tambien", d: 245 }, { a: "Nobody", t: "Knows This" }] });
+    out.listed = await wait(() => document.querySelectorAll("#im-songs li").length === 2 && document.getElementById("im-name").textContent + "|" +
+      document.getElementById("im-meta").textContent + "|" + document.getElementById("im-newName").value);
+    await ref.update({ status: "done", n: 2, results: { 0: { s: "room", picks: [{ type: 1, cid: "khaudio0001", artist: "Khruangbin", title: "María También", src: "room", kind: "a" }] }, 1: { s: "none" } } });
+    // into a new playlist, named for the Spotify one
+    document.querySelector('input[name="im-dest"][value="new"]').checked = true;
+    $('input[name="im-dest"][value="new"]').trigger("change");
+    out.found = await wait(() => /Import 1 song/.test(document.getElementById("im-go").textContent) &&
+      [...document.querySelectorAll("#im-songs li")].map((li) => li.querySelector(".im-title").textContent + "(" + (li.querySelector("select") ? li.querySelector("select").options[0].textContent : li.querySelector(".im-tag").textContent) + ")").join("|"));
+    document.getElementById("im-go").click();
+    out.added = await wait(async () => { const v = (await ftapi.lookup.listRef(Object.keys(firetable.allPlaylists).find((k) => firetable.allPlaylists[k].name === "Night Drive") || "none").once("value")).val(); return v && Object.values(v).map((t) => t.name).join("|"); });
+    out.cleared = await wait(async () => Object.keys(await jobs()).length === 0);
+    const undo = [...document.querySelectorAll("#ft-toast button")].find((b) => b.textContent === "Undo");
+    if (undo) undo.click();
+    // one Spotify won't share: the bot's note
+    I.open();
+    tab.click();
+    link.value = "spotify:playlist:" + P;
+    link.dispatchEvent(new Event("input"));
+    document.getElementById("im-spFind").click();
+    const second = await wait(async () => { const j = await jobs(); const ids = Object.keys(j); return ids.length === 1 && ids[0]; });
+    await ftapi.db().ref("importJobs/smoke/" + second).update({ status: "failed", note: "Spotify won't share that playlist: it's private, or one of Spotify's own mixes." });
+    out.failed = await wait(() => /won't share that playlist/.test(document.getElementById("im-status").textContent) && document.getElementById("im-status").className);
+    document.getElementById("importPromptBox").close();
+    // the bot's keys stop working: Spotify is no longer offered
+    await ftapi.db().ref("discover/caps/spotify").remove();
+    out.hiddenAfter = await wait(() => tab.hidden);
+    document.getElementById("ytimportchoice").click();
+    ftapi.uid = realUid;
+    return out;
+  });
+  check(spo.hiddenFirst && spo.shown && spo.hiddenAfter, "the Spotify source shows only while the bot says Spotify works (" + JSON.stringify([spo.hiddenFirst, spo.shown, spo.hiddenAfter]) + ")");
+  check(spo.ids === "6rqhFgbbKwnb9MLmUQDhG6,6rqhFgbbKwnb9MLmUQDhG6,6rqhFgbbKwnb9MLmUQDhG6,-,-" && spo.pane === "Import a Spotify playlist" && /not a playlist.*\|true$/.test(spo.album),
+    "a Spotify playlist's link is read (with ?si=, /intl-xx/, a spotify: URI); an album's link says it isn't a playlist (" + JSON.stringify(spo) + ")");
+  check(spo.job === "6rqhFgbbKwnb9MLmUQDhG6|ytm|true" && spo.reading && spo.listed === "Night Drive|2 songs · by Chris · Spotify · 1 local file or episode left out|Night Drive",
+    "the job asks the bot to read the playlist; its name, owner and songs show when the bot has (" + JSON.stringify([spo.job, spo.listed]) + ")");
+  check(spo.found === "María También(Played here)|Knows This(Not found)" && spo.added === "Khruangbin - María También" && spo.cleared,
+    "then each song is found as for a list, and Import makes the playlist under its Spotify name (" + JSON.stringify([spo.found, spo.added]) + ")");
+  check(/is-error/.test(spo.failed || ""), "a playlist Spotify won't share says why (" + spo.failed + ")");
+  await put("/queues/smoke", beforeImport);
+  await put("/importJobs", null);
+
   // an empty playlist says so, with Import a playlist and Find tracks
   await put("/queues/smoke", null);
   const emptyList = await page.evaluate(async () => {

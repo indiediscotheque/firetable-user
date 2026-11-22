@@ -17,6 +17,12 @@
  * was found (Played here, Song, Video, SoundCloud), with a pick where there's
  * more than one, or Not found. Importing then works as for a playlist.
  *
+ * A Spotify playlist (1.21, #im-spPane): its link; the bot reads the
+ * playlist (importJobs/<uid>/<job> with spotify: <id>), writes its songs,
+ * name and owner into the job, and then it goes as for a list of songs. The
+ * Spotify tab shows only while the bot says its Spotify keys work
+ * (discover/caps/spotify).
+ *
  * Also: firetable.importer.parseLink / peek for "That's a playlist: … Import it"
  * in Find tracks and Discover search.
  */
@@ -453,7 +459,9 @@ firetable.importer = (function () {
     var job = { id: ref.key, ref: ref, fn: null, format: format, status: "new", n: 0, timer: null };
     L.job = job;
     var items = S.list.map(function (it) { return it.d ? { a: it.a, t: it.t, d: it.d } : { a: it.a, t: it.t }; });
-    ref.set({ items: items, format: format, status: "new", at: firebase.database.ServerValue.TIMESTAMP }).then(function () {
+    // a Spotify playlist until the bot has read its songs; then the songs
+    var ask = items.length ? { items: items } : { spotify: S.meta.spotify };
+    ref.set(Object.assign(ask, { format: format, status: "new", at: firebase.database.ServerValue.TIMESTAMP })).then(function () {
       if (L.job !== job) return;
       job.fn = ref.on("value", function (snap) { if (L.job === job) answered(job, snap.val()); });
       job.timer = setTimeout(function () {
@@ -470,6 +478,8 @@ firetable.importer = (function () {
     if (!val) return;
     job.status = val.status;
     job.n = Number(val.n) || 0;
+    job.note = val.status === "failed" ? (val.note || "The room's bot couldn't look these up. Try again later.") : "";
+    if (S.meta.spotify && !S.list.length && val.items) gotPlaylist(val);
     var results = val.results || {};
     S.songs.forEach(function (s, i) {
       var r = results[i];
@@ -483,7 +493,73 @@ firetable.importer = (function () {
       S.songs.forEach(function (s) { if (s.state === "look") { s.state = "done"; s.found = "later"; choose(s, -1); } });
     }
     refresh();
-    if (job.status === "failed") setStatus(val.note || "The room's bot couldn't look these up. Try again later.", "error");
+  };
+
+  // the bot read the Spotify playlist: its songs become the list
+  var gotPlaylist = function (val) {
+    var raw = val.items, list = [];
+    Object.keys(raw).sort(function (a, b) { return Number(a) - Number(b); }).forEach(function (k) {
+      var it = raw[k];
+      if (it && it.t) list.push(it.d ? { a: String(it.a || ""), t: String(it.t), d: Number(it.d) } : { a: String(it.a || ""), t: String(it.t) });
+    });
+    S.list = list.slice(0, MAX_LIST);
+    S.songs = S.list.map(function (it) {
+      var orig = (it.a ? it.a + " - " : "") + it.t;
+      return { orig: orig, name: orig, type: S.meta.type, cid: "", state: "look", why: "Looking\u2026" };
+    });
+    if (val.name) {
+      if (el("im-newName").value === S.meta.name) el("im-newName").value = String(val.name).slice(0, 100);
+      S.meta.name = String(val.name).slice(0, 100);
+      el("im-name").textContent = S.meta.name;
+      el("importTitle").textContent = "Import \u201c" + S.meta.name + "\u201d";
+    }
+    el("im-meta").textContent = [plural(S.list.length, "song"), val.by ? "by " + val.by : "", "Spotify",
+      Number(val.skipped) ? plural(Number(val.skipped), "local file or episode", "local files or episodes") + " left out" : ""].filter(Boolean).join(" \u00b7 ");
+  };
+
+  /** Step 2 for a Spotify playlist: the bot reads it, then finds each song. */
+  I.showSpotify = function (id) {
+    S.token++;
+    S.list = [];
+    S.songs = [];
+    S.meta = { list: true, spotify: id, name: "Spotify playlist", by: "", count: null, type: MEDIA_YOUTUBE };
+    el("im-step1").hidden = true;
+    el("im-step2").hidden = false;
+    el("im-back").hidden = false;
+    el("importTitle").textContent = "Import a Spotify playlist";
+    el("im-name").textContent = S.meta.name;
+    var link = el("im-link");
+    link.href = "https://open.spotify.com/playlist/" + encodeURIComponent(id);
+    link.hidden = false;
+    link.title = "Open on Spotify";
+    link.setAttribute("aria-label", link.title);
+    el("im-meta").textContent = "Spotify \u00b7 read by the room's bot";
+    el("im-newName").value = S.meta.name;
+    fillDest();
+    askBot();
+  };
+
+  /**
+   * A Spotify playlist's id from its link (open.spotify.com/playlist/…, with
+   * /intl-xx/ or ?si=…) or a spotify:playlist: URI, or null.
+   * @param {string} text
+   * @returns {string|null}
+   */
+  I.parseSpotify = function (text) {
+    text = String(text || "").trim();
+    var m = text.match(/^https?:\/\/(?:open|play)\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:user\/[^/]+\/)?playlist\/([A-Za-z0-9]{22})(?:[/?#]|$)/i) ||
+      text.match(/^spotify:(?:user:[^:]+:)?playlist:([A-Za-z0-9]{22})$/i);
+    return m ? m[1] : null;
+  };
+
+  var spInput = function () {
+    var text = el("im-spLink").value.trim();
+    var id = I.parseSpotify(text);
+    el("im-spFind").disabled = !id;
+    el("im-spMsg").textContent = text && !id
+      ? (/spotify\.com\/(album|track|artist|show|episode)\//i.test(text) ? "That's not a playlist. Paste a playlist's link." : "That doesn't look like a Spotify playlist's link.")
+      : "";
+    return id;
   };
 
   /** Step 2 for a list of songs: what the bot finds for each, where they go. */
@@ -637,7 +713,10 @@ firetable.importer = (function () {
       if (gone) bits.push(gone + " not available");
       if (skipped) bits.push(skipped + " already there");
       if (repeats) bits.push(plural(repeats, "repeat"));
-      if (refusal) setStatus(refusal + " Choose another playlist or a new one.", "error");
+      // the bot couldn't: its note stays (a refresh comes after it)
+      if (S.meta.list && L.job && L.job.note) setStatus(L.job.note, "error");
+      else if (refusal) setStatus(refusal + " Choose another playlist or a new one.", "error");
+      else if (looking && L.job && S.meta.spotify && !S.songs.length) setStatus("Reading the playlist on Spotify\u2026");
       else if (looking && L.job) setStatus("Looking for the songs\u2026 " + L.job.n + " of " + S.songs.length);
       else if (!looking || go.length) setStatus(bits.join(" · "));
       var btn = el("im-go");
@@ -775,12 +854,25 @@ firetable.importer = (function () {
     if (!box()) return;
     // the source tabs: a playlist (YouTube, SoundCloud) or a list of songs
     $("#importSources .tab").on("click", function () {
-      var list = this.id === "listimportchoice";
-      el("importContent").hidden = list;
+      var list = this.id === "listimportchoice", sp = this.id === "spimportchoice";
+      el("importContent").hidden = list || sp;
       el("im-listPane").hidden = !list;
-      el("importTitle").textContent = list ? "Import a list of songs" : "Import a playlist";
-      if (list) setTimeout(function () { el("im-listText").focus(); }, 0);
+      el("im-spPane").hidden = !sp;
+      el("importTitle").textContent = list ? "Import a list of songs" : sp ? "Import a Spotify playlist" : "Import a playlist";
+      if (list || sp) setTimeout(function () { el(list ? "im-listText" : "im-spLink").focus(); }, 0);
     });
+    // Spotify, while the room's bot can read it
+    try {
+      ftapi.db().ref("discover/caps/spotify").on("value", function (snap) {
+        var on = snap.val() === true;
+        el("spimportchoice").hidden = !on;
+        if (!on && !el("im-spPane").hidden) $("#ytimportchoice").trigger("click");
+      }, function () { /* rules without it: no Spotify */ });
+    } catch (e) { /* no database yet: no Spotify */ }
+    $("#im-spLink").on("input", spInput).on("keydown", function (e) {
+      if (e.key === "Enter" && spInput()) { e.preventDefault(); I.showSpotify(spInput()); }
+    });
+    $("#im-spFind").on("click", function () { var id = spInput(); if (id) I.showSpotify(id); });
     $("#im-listText").on("input", listInput);
     $("#im-listFile").on("change", function () {
       var file = this.files && this.files[0];
