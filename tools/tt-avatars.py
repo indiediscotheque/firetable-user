@@ -17,7 +17,7 @@ it goes in the whole figure. And the avatar picker's pages, img/tt/pick/<tier>-<
 one picture of PAGE fronts each, so a page of the picker is one request.
 
     python3 tools/tt-avatars.py /tmp/tt-avatars --pages   # only the picker's pages
-    python3 tools/tt-avatars.py /tmp/tt-avatars --chins   # only each front's chin and face (img/tt/avatars.json)
+    python3 tools/tt-avatars.py /tmp/tt-avatars --chins   # measure each front's chin and face again (img/tt/avatars.json)
     python3 tools/tt-avatars.py /tmp/tt-avatars --repack  # only re-pack the sprites, from the parts' places already found
 
 Each front also gets `chin`: how far down the figure (in %) its chin is, where
@@ -313,9 +313,19 @@ def main():
         rec["sw"], rec["sh"] = sheet.width, sheet.height
         sheet.save(os.path.join(OUT, av + ".webp"), "WEBP", quality=88, method=6)
         manifest.append(rec)
-    with open(os.path.join(ROOT, "img", "tt", "avatars.json"), "w") as f:
+    # chins and faces were checked by eye (a DJ's head at their laptop, a whole head in a circle):
+    # kept from the manifest there is; measured only for new avatars (--chins measures them all again)
+    path = os.path.join(ROOT, "img", "tt", "avatars.json")
+    kept = {}
+    if os.path.exists(path):
+        with open(path) as f:
+            kept = {r["id"]: r["f"] for r in json.load(f)}
+    for rec in manifest:
+        k = kept.get(rec["id"], {})
+        rec["f"]["chin"] = k["chin"] if "chin" in k else chin(rec["id"], rec["f"])
+        rec["f"]["face"] = k["face"] if "face" in k else face(rec["id"], rec["f"])
+    with open(path, "w") as f:
         json.dump(manifest, f, separators=(",", ":"))
-    chins()
     split = sum(1 for r in manifest if "head" in r["f"])
     print(len(manifest), "avatars,", split, "with a head that rocks")
 

@@ -1472,7 +1472,7 @@ firetable.tt = (function () {
     // Discover and Live: the theme is Live's, and comes back with it
     new MutationObserver(function () { apply(); }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
-    var again = firetable.utilities.oncePerFrame(function () {
+    again = firetable.utilities.oncePerFrame(function () {
       if (!S.active) return;
       render();
       if ($id("tt-picker") && $id("tt-picker").open) renderPicker();
@@ -1483,6 +1483,8 @@ firetable.tt = (function () {
     apply();
   }
 
+  var again = null; // a redraw, once a frame (made in init)
+
   return {
     init: init,
     enter: enter,
@@ -1490,6 +1492,8 @@ firetable.tt = (function () {
     toggle: toggle,
     /** the room's fire changed (js/chat.js) */
     fires: function () { if (S.active && S.list) { renderVotes(); renderPeople(); } },
+    /** Live switched the DJ shown as playing (js/room.js): the spotlight and the nodding head move to them */
+    stage: function () { if (S.active && S.list && again) again(); },
     openPicker: function () { if (S.active) openPicker(false); },
     openLaptop: function () { if (S.active) openLaptop(); },
     isOn: function () { return S.active; },

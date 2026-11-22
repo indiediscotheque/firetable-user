@@ -357,6 +357,9 @@ firetable.ui.setupRoomEvents = function () {
       if (!(activeIdx >= 0 && activeIdx < allDjs.length)) activeIdx = 0;
       firetable.displayedDjId = allDjs.length ? allDjs[activeIdx].id : null;
       firetable.displayedPlaydex = activeIdx;
+      // the Turntable theme's stage follows the DJ shown as playing (its spotlight, the nodding head):
+      // this switch can come late (with the song's colours), after every event it listens to
+      if (firetable.tt) firetable.tt.stage();
 
       if (activeIdx < allDjs.length) {
         var activeEntry = allDjs[activeIdx];
