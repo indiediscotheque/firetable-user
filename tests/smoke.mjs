@@ -1577,6 +1577,27 @@ try {
   });
   check(fromDiscover.from === "discover" && fromDiscover.label === "Discover" && fromDiscover.others === 1,
     "a song saved from Discover says so in the playlist (" + JSON.stringify(fromDiscover) + ")");
+  // a song the room has tags for (a mod's fix) is added under them, however it's added
+  await put("/globalTracks/1roomtag0001", { artist: "Poolside", title: "Harvest Moon", type: 1 });
+  await put("/globalTracks/1roomtag0002", { artist: "Unknown", title: "Something", type: 1 });
+  const roomTags = await page.evaluate(async () => {
+    ftapi.roomTagCache = {};
+    const ref = ftapi.queueRef;
+    const nameOf = (k) => ref.child(k).once("value").then((s) => (s.val() || {}).name);
+    const out = {};
+    const top = await new Promise((r) => ftapi.actions.addTrackToTop(ref, { type: 1, cid: "roomtag0001", name: "POOLSIDE - Harvest Moon (Official Video)" }, null, null, (err, k) => r(k)));
+    out.top = await nameOf(top);
+    const bottom = ftapi.actions.addToList(1, "POOLSIDE - Harvest Moon (Official Video)", "roomtag0001", false);
+    for (let i = 0; i < 40 && (await nameOf(bottom)) !== "Poolside - Harvest Moon"; i++) await new Promise((r) => setTimeout(r, 50));
+    out.bottom = await nameOf(bottom);
+    await new Promise((r) => ftapi.actions.addTracksToTop(ref, [{ type: 1, cid: "roomtag0001", name: "poolside harvest moon" }, { type: 1, cid: "roomtag0002", name: "Real - Name" }, { type: 1, cid: "roomtag0003", name: "New - Song" }], null, null, r));
+    const all = await ref.once("value").then((s) => s.val() || {});
+    out.many = Object.keys(all).sort(ftapi.utilities.compareKeys).slice(0, 3).map((k) => all[k].name).join("|");
+    await ref.update(Object.fromEntries(Object.keys(all).filter((k) => /^roomtag/.test(all[k].cid)).map((k) => [k, null])));
+    return out;
+  });
+  check(roomTags.top === "Poolside - Harvest Moon" && roomTags.bottom === "Poolside - Harvest Moon" && roomTags.many === "Poolside - Harvest Moon|Real - Name|New - Song",
+    "a song the room has tags for is added under them; an \"Unknown\" artist or a song new to the room keeps its name (" + JSON.stringify(roomTags) + ")");
   const noticeText = await page.evaluate(async () => {
     firetable.notices.queue.push({ txt: ":white_check_mark: matt gave you a card! It's in your card case.", card: "cardA", kind: "card" });
     firetable.ui.showNextNotice();

@@ -25,7 +25,8 @@ var ftapi = {
   queueRef: null,
   queue: null,
   users: {},
-  blockedUsers: {}
+  blockedUsers: {},
+  roomTagCache: {} // "<type><cid>" -> {name, at}: roomTags' answers
 };
 
 /*
@@ -694,9 +695,15 @@ ftapi.actions = {
     };
     if (img) info.img = img;
     if (url) info.url = url;
+    var asAdded = info.name;
     var newTrack = destref.push(ftapi.utilities.leanTrack(info), function(err) {
       if (err) ftapi.saveFailed("that track")(err);
       if (callback) callback(err || undefined);
+      // saved at once (it can be taken back right away), then written the
+      // room's way if the room has its tags
+      if (!err) ftapi.utilities.roomTags([info]).then(function() {
+        if (info.name !== asAdded) ftapi.utilities.renameIfStill(newTrack, cid, asAdded, info.name);
+      });
     });
     return newTrack.key;
   },
@@ -719,6 +726,13 @@ ftapi.actions = {
    */
   addTracksToTop: function(ref, infos, preview, pvChangeCallback, callback) {
     if (!infos.length) { if (callback) callback(null); return; }
+    infos = infos.map(function(info) { return Object.assign({}, info); });
+    ftapi.utilities.roomTags(infos).then(function() {
+      ftapi.actions.addTracksToTopNamed(ref, infos, preview, pvChangeCallback, callback);
+    });
+  },
+  /** addTracksToTop, once the tracks have the room's tags. */
+  addTracksToTopNamed: function(ref, infos, preview, pvChangeCallback, callback) {
     var fresh = infos.map(function(info) {
       var track = { type: info.type, name: info.name, cid: info.cid };
       if (info.img) track.img = info.img;
@@ -796,15 +810,18 @@ ftapi.actions = {
     if (info.img) track.img = info.img;
     if (info.url) track.url = info.url;
     if (info.from) track.from = String(info.from).slice(0, 16); // where it was saved from ("discover")
-    track = ftapi.utilities.leanTrack(track);
     var finalKey = newKey;
-    ftapi.utilities.rearrangeList(ref, function(items) {
-      return [{ key: newKey, track: track }].concat(items);
-    }, function(err, moves) {
-      if (moves && moves[newKey]) finalKey = moves[newKey];
-      ftapi.utilities.previewMover(preview, pvChangeCallback)(err, moves);
-      if (callback) callback(err, finalKey);
-    }, newKey);
+    // written the room's way when the room has this upload's tags
+    ftapi.utilities.roomTags([track]).then(function() {
+      track = ftapi.utilities.leanTrack(track);
+      ftapi.utilities.rearrangeList(ref, function(items) {
+        return [{ key: newKey, track: track }].concat(items);
+      }, function(err, moves) {
+        if (moves && moves[newKey]) finalKey = moves[newKey];
+        ftapi.utilities.previewMover(preview, pvChangeCallback)(err, moves);
+        if (callback) callback(err, finalKey);
+      }, newKey);
+    });
     return newKey;
   },
   /**
@@ -1297,6 +1314,7 @@ ftapi.actions = {
         return ftapi.db().ref().update(updates);
       });
     }).then(function() {
+      ftapi.roomTagCache[String(type) + cid] = { name: ftapi.utilities.tagName({ artist: theartist, title: thetitle }), at: Date.now() };
       ftapi.events.emit("editedHistory", { histID: histID, artist: theartist, title: thetitle, list: list || "songHistory" });
       if (callback) callback(null);
     }, function(error) {
@@ -1526,6 +1544,81 @@ ftapi.utilities = {
    * @param {Object} track
    * @returns {Object} a copy
    */
+  /**
+   * "Artist - Title" from an upload's saved tags (globalTracks), by the
+   * hostbot's rule: none without a title, or with an "Unknown" artist.
+   * @param {Object|null} up
+   * @returns {string|null}
+   */
+  tagName: function(up) {
+    if (!up || typeof up.artist !== "string" || typeof up.title !== "string") return null;
+    var artist = up.artist.trim(), title = up.title.trim();
+    if (!artist || !title || artist === "Unknown") return null;
+    return (artist + " - " + title).slice(0, 1000);
+  },
+  /**
+   * Give tracks the room's tags for their uploads: "Artist - Title" as the
+   * room saved them (globalTracks: a mod's fix, or what its plays saved),
+   * as the hostbot writes them into a DJ's list when the song plays. A track
+   * the room has no tags for keeps its name. Answers are remembered for a
+   * few minutes; lookups that don't answer in time (offline) leave the
+   * names as they are.
+   * @param {Object[]} tracks - [{type, cid, name}]; names are replaced in place
+   * @returns {Promise<Object[]>} the same tracks (never rejects)
+   */
+  roomTags: function(tracks) {
+    var cache = ftapi.roomTagCache;
+    var keyOf = function(t) {
+      var k = t && t.cid != null ? String(t.type) + t.cid : "";
+      return /^[12][A-Za-z0-9_-]{1,64}$/.test(k) ? k : null;
+    };
+    var now = Date.now(), want = [], seen = {};
+    (tracks || []).forEach(function(t) {
+      var k = keyOf(t);
+      if (!k || seen[k]) return;
+      seen[k] = true;
+      var c = cache[k];
+      if (!c || now - c.at > ftapi.utilities.ROOM_TAGS_MS) want.push(k);
+    });
+    var batches = [];
+    for (var i = 0; i < want.length; i += 200) batches.push(want.slice(i, i + 200));
+    var gaveUp = false;
+    var read = function(batch) {
+      if (gaveUp) return Promise.resolve();
+      return new Promise(function(resolve) {
+        var timer = setTimeout(function() { gaveUp = true; resolve(); }, ftapi.utilities.ROOM_TAGS_WAIT);
+        Promise.all(batch.map(function(k) {
+          return ftapi.db().ref("globalTracks/" + k).once("value").then(function(snap) {
+            cache[k] = { name: ftapi.utilities.tagName(snap.val()), at: Date.now() };
+          }, function() { /* unreadable: the name stays */ });
+        })).then(function() { clearTimeout(timer); resolve(); });
+      });
+    };
+    return batches.reduce(function(chain, batch) {
+      return chain.then(function() { return read(batch); });
+    }, Promise.resolve()).then(function() {
+      (tracks || []).forEach(function(t) {
+        var c = cache[keyOf(t)];
+        if (c && c.name) t.name = c.name;
+      });
+      return tracks;
+    }, function() { return tracks; });
+  },
+  ROOM_TAGS_MS: 5 * 60 * 1000, // how long roomTags trusts an answer
+  ROOM_TAGS_WAIT: 2500, // how long it waits for one
+  /**
+   * Rename a saved track, only if its slot still holds that track under the
+   * name it was saved with (it may have been taken back, moved or renamed).
+   * @returns {Promise}
+   */
+  renameIfStill: function(ref, cid, was, name) {
+    return ref.transaction(function(t) {
+      if (t === null) return null; // not cached yet (asked again with what's saved), or gone
+      if (String(t.cid) !== String(cid) || t.name !== was) return; // changed meanwhile: leave it
+      t.name = name;
+      return t;
+    }).catch(function() { /* the name it was saved with stays */ });
+  },
   leanTrack: function(track) {
     if (!track || typeof track !== "object") return track;
     var out = Object.assign({}, track);

@@ -224,6 +224,11 @@ firetable.importer = (function () {
     return songs.then(function (all) {
       return (dest ? contents(dest) : Promise.resolve(null)).then(function (have) {
         var go = I.plan(all, have, skipExisting);
+        // songs the room has tags for go in written the room's way
+        return ftapi.utilities.roomTags(go.map(function (s) { return { type: s.type, cid: s.cid, name: s.name }; })).then(function (named) {
+          return go.map(function (s, i) { return Object.assign({}, s, { name: named[i].name }); });
+        });
+      }).then(function (go) {
         var result = {
           listID: dest, keys: [], created: !dest, added: go.length,
           skipped: all.filter(function (s) { return s.skip === "Already there"; }).length,
