@@ -117,7 +117,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke: `#st-avatarsBtn` toggles the class and the chip has the playing DJ's name; reload keeps it.
 - **Undo:** revert.
 
-### 1.4 The song facts on stage
+### 1.4 The song facts on stage (on hold: the owner, November 22, 2026)
+- **On hold:** the owner saw the mockup (a bold, tappable title, the artist as a link, tempo and genre as two small tags, the plays in smaller muted type) and skipped it for now. Kept for reference.
 - **Goal:** the song is easy to read; facts in a clear order.
 - **Rows:** NP-01 to NP-05, NP-08.
 - **Files and change:** `#npText` CSS: `#track` 18px bold, `#artist` 14px link, `#plays` lines at 12px `--text-3`; `#npBpm` and genre as small tags. Clicking `#track` opens the song sheet (`discover.js` `openSheet`, available when Discover is on; otherwise nothing).
@@ -427,6 +428,7 @@ Runs after Phase 2 (round 4). The owner chose the bottom tab bar: it's what peop
 
 ### 4.2 Live on a phone ✅ shipped (the owner's ask, November 22, 2026)
 - **Shipped:** on phones the player bar is the song row: Fire, Grab, play/stop and open are 44px (`--tap-stage`; play/stop was meant to be and a later rule kept it at 40). Grab's narrow ▾ moved off the phone bar (it overlapped Grab's tap area): the first grab and the grab toast's **Change** open the picker, and the full-screen player keeps the ▾. The song's title keeps the room it had. The "You're next" row went with 1.11. Smoke measures the row; reach finds the ▾ through the full-screen player on phones.
+- **Then, the bar as YouTube Music's (the owner, November 22, 2026):** on phones a tap anywhere on the bar but its buttons opens the full-screen player (`barTapOpens` in `js/discover.js`), so the ⌃ is gone; the song is two lines, the title and then where it's from as a mark (the room's red dot, a ring when you aren't listening, Discover's compass; the words stay for screen readers) beside the artist; play/stop is a plain icon. The song's page and the artist's are a tap away in the full-screen player. Smoke checks the two lines, the plain icon, that the bar and its title open the player and Fire doesn't; reach opens the full-screen player by tapping the bar.
 - **Rows:** ST-*, NP-*, CH-*.
 - **Change:** the stage full width at 16:9; the song row with Fire, Grab and ⋯ (44px); the You're next row; the tabs; about 320px of chat; a ⋮ on the stage for screen, avatars, full screen and reload.
 - **Realigned:** the stage's tools are in the player bar since 2.3c, so there's no ⋮ on the stage to add, and Chat is already the first tab and the default (November 15, 2026). The tab bar (4.1) gives Live the screen above it. Left: the song row's size and the You're next row.

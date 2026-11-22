@@ -2000,7 +2000,7 @@ try {
   check(phoneFix.btn && phoneFix.armed && phoneFix.afterOne.length === 0 && phoneFix.afterTwo.join() === "!remove dj1",
     "a mod's first tap on the plate's remove asks again; the second removes (" + JSON.stringify(phoneFix) + ")");
 
-  console.log("-- Live on a phone (4.2): the song row's buttons are 44px; Grab's ▾ is in the full-screen player");
+  console.log("-- Live on a phone (4.2): the song row's buttons are 44px, Grab's ▾ is in the full-screen player; tap the bar to open it");
   await page.setViewportSize({ width: 390, height: 740 });
   const phoneRow = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -2013,12 +2013,38 @@ try {
       pick: size(document.getElementById("st-grabPick")), inBar: !!document.getElementById("st-grabPick").closest("#dMini") };
     const grab = document.getElementById("grab");
     out.grab = grab.closest("#dMini") ? (getComputedStyle(grab).display === "none" ? "44x44" : size(grab)) : "moved";
-    out.text = Math.round(bar.querySelector(".pb-text").getBoundingClientRect().width);
+    // the room the song has: the bar's song area, less the cover and the buttons beside it
+    const w = (sel) => bar.querySelector(sel).getBoundingClientRect().width;
+    out.text = Math.round(w(".pb-now") - w(".pb-art") - w(".pb-keep"));
+    // the song in two lines: the title, then the room's mark beside the artist (the word Live only for screen readers)
+    const tx = (sel) => bar.querySelector(sel).getBoundingClientRect();
+    out.lines = Math.round(tx(".pb-src").top) > Math.round(tx(".pb-title").top) && Math.abs(tx(".pb-src").top - tx(".pb-artist").top) < 12 &&
+      parseFloat(getComputedStyle(bar.querySelector(".pb-kind")).fontSize) === 0 && /Live|On air/.test(bar.querySelector(".pb-kind").textContent);
+    out.mainPlain = getComputedStyle(bar.querySelector(".pb-main")).backgroundColor;
+    // tapping the bar (its title, its blank space) opens the full-screen player; Fire doesn't
+    const isOpen = () => document.body.classList.contains("pv-full-on");
+    const close = async () => { if (isOpen()) { document.getElementById("pv-fclose").click(); await wait(500); } };
+    (bar.querySelector(".pb-title .d-sheetlink") || bar.querySelector(".pb-title")).click();
+    await wait(300);
+    const sheet = document.getElementById("dSheetBox");
+    out.titleOpens = isOpen() && !(sheet && sheet.open);
+    await close();
+    bar.querySelector(".pb-text").click();
+    await wait(300);
+    out.barOpens = isOpen();
+    await close();
+    document.getElementById("fire").click();
+    await wait(300);
+    out.fireStays = !isOpen();
+    if (document.getElementById("fire").classList.contains("on")) document.getElementById("fire").click();
+    await close();
     return out;
   });
   await page.setViewportSize({ width: 1280, height: 720 });
-  check(phoneRow.inBar && phoneRow.fire === "44x44" && phoneRow.main === "44x44" && phoneRow.open === "44x44" && phoneRow.grab === "44x44" && phoneRow.pick === "hidden" && phoneRow.text >= 80,
-    "phone: Fire, Grab, play and open are 44px, the ▾ is left to the full-screen player, and the song keeps its room (" + JSON.stringify(phoneRow) + ")");
+  check(phoneRow.inBar && phoneRow.fire === "44x44" && phoneRow.main === "44x44" && phoneRow.grab === "44x44" && phoneRow.pick === "hidden" && phoneRow.open === "hidden" && phoneRow.text >= 140,
+    "phone: Fire, Grab and play are 44px, the ▾ and ⌃ are gone from the bar, and the song has more room (" + JSON.stringify(phoneRow) + ")");
+  check(phoneRow.lines && phoneRow.mainPlain === "rgba(0, 0, 0, 0)", "phone: the song in two lines with the room's mark beside the artist, and play/stop a plain icon (" + JSON.stringify(phoneRow) + ")");
+  check(phoneRow.titleOpens && phoneRow.barOpens && phoneRow.fireStays, "phone: tapping the bar or its title opens the full-screen player; Fire does its own thing (" + JSON.stringify(phoneRow) + ")");
 
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
