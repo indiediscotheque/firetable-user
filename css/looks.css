@@ -7078,6 +7078,12 @@ body.media-off .q-art.no-art {
     margin-bottom: var(--pad2);
 }
 
+/* Signed out there's no playlist to DJ from: the picker read "You DJ from
+   Default Playlist" to visitors, the first control under the stage, and did
+   nothing. It keeps its place (the clocks stay at the bar's ends) out of sight. */
+#mainGrid.login #djlistpickerWrap,
+#mainGrid.pre-auth #djlistpickerWrap { visibility: hidden; }
+
 /* Open the DJ playlist in Playlists (#162) */
 #djlistOpen {
     flex-shrink: 0;

@@ -75,7 +75,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| DJ-01 | Which playlist you DJ from | M | `#djlistpicker` in `#themebox` / `#djlistpickerWrap` ("You DJ from"), `#djlistOpen` (open it in Playlists), `ftapi.actions.switchDjList`, `users/<uid>/selectedList` | keep; labelled "You DJ from" (1.11, the rest of it dropped) |
+| DJ-01 | Which playlist you DJ from | M | `#djlistpicker` in `#themebox` / `#djlistpickerWrap` ("You DJ from"), `#djlistOpen` (open it in Playlists), `ftapi.actions.switchDjList`, `users/<uid>/selectedList` | keep; labelled "You DJ from" (1.11, the rest of it dropped); out of sight while signed out (November 22, 2026: visitors were offered "You DJ from Default Playlist") |
 | DJ-02 | Your next tracks on deck | D | `#deckQueue` (empty); the DJ playlist's first song is marked Next in Playlists | 1.11 dropped (the owner, November 22, 2026): the playlist shows what's next |
 | DJ-03 | Waitlist (with 4+ DJs) | All | `#usersWaitlist`, `waitlistChanged`, `room.js`, `!wait` | keep in the people column; 1.10 also a chip on the stage |
 | DJ-04 | Take the bus (step down after next play) | D | user card `utt-bus-btn`, `deckDepartureBtn`, `firetable.actions.toggleBus`, `!removeafter` / `!dontremoveme` (`!gottacatchmybus`) | keep; 1.11 not repeated in the bar (the owner, November 22, 2026) |
