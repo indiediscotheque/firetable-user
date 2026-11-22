@@ -667,7 +667,7 @@ firetable.media = {
     var scActive = !firetable.preview && !!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD);
     if (scActive && m.scBlocked && !firetable.disableMediaPlayback) blocked = true;
     document.body.classList.toggle('yt-stalled', stalled);
-    // Video fades in once it plays (or when the user must tap YouTube's own button)
+    // Video shows once it plays (or when the user must tap YouTube's own button)
     document.body.classList.toggle('yt-revealed', !!(m.revealed || m.directTap));
     document.body.classList.toggle('media-blocked', blocked);
   },

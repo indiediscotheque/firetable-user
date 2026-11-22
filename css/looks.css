@@ -2360,14 +2360,13 @@ body.dance-mode .dance-start-right {
    whenever a video starts or resumes. The player (sized exactly like the
    screen, so videos and cover art scale as they always have) stays hidden
    until the video has been playing long enough for those to go away, then
-   fades in. player.js sets body.yt-revealed. */
+   appears at once (no fade). player.js sets body.yt-revealed. */
 #playerArea {
     opacity: 0;
 }
 
 body.yt-revealed #playerArea {
     opacity: 1;
-    transition: opacity 0.8s ease;
 }
 
 #screenover {
