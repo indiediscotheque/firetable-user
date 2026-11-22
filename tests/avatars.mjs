@@ -136,13 +136,20 @@ for (const style of STYLES) {
           : "#__avtest .__cell:nth-child(" + (i + 1) + ") " + (PLACES[i].kind === "stage" ? ".avtr" : ".ft-avatar"));
       handles.push(el);
     }
+    // empty, on the fill the picture will sit on (a Bouletmaton has its own: black)
     const empty = [];
+    const wantFace = !!bm && style !== "october";
     for (const el of handles) {
-      await el.evaluate((e) => { e.classList.remove("skel", "animate"); e.style.backgroundImage = "none"; e.style.animation = "none"; });
+      await el.evaluate((e, face) => {
+        e.classList.remove("skel", "animate"); e.style.backgroundImage = "none"; e.style.animation = "none"; e.style.backgroundColor = "";
+        e.classList.toggle("bm-face", face);
+        if (face) e.style.backgroundColor = getComputedStyle(e).backgroundColor;
+      }, wantFace);
     }
     await page.waitForTimeout(50);
     for (const el of handles) empty.push(await el.screenshot());
     await page.evaluate(([uid, name]) => {
+      document.querySelectorAll("#__avtest .__cell .ft-avatar, #__avtest .__cell .avtr").forEach((e) => { e.style.backgroundColor = ""; });
       const sizes = { circle: firetable.utilities.sharpAvatarSize(64), stage: firetable.utilities.sharpAvatarSize(224) };
       document.querySelectorAll("#__avtest .__cell .ft-avatar, #__avtest .__cell .avtr").forEach((e) => {
         e.style.backgroundImage = "url(" + JSON.stringify(firetable.utilities.avatarURL(uid, name, e.classList.contains("avtr") ? sizes.stage : sizes.circle, null, true)) + ")";
@@ -168,7 +175,6 @@ for (const style of STYLES) {
     }));
     await page.waitForTimeout(150);
     const faces = await page.evaluate(() => [...document.querySelectorAll("#__avtest .__cell .ft-avatar, #__avtest .__cell .avtr")].map((e) => e.classList.contains("bm-face")));
-    const wantFace = !!bm && style !== "october";
     if (faces.some((f) => f !== wantFace)) failures.push(style + " · " + name + ": " + (wantFace ? "not every place shows their Bouletmaton" : "a Bouletmaton where there shouldn't be one"));
     for (let i = 0; i < PLACES.length; i++) {
       const place = PLACES[i];
@@ -214,7 +220,12 @@ for (const style of STYLES.filter((s) => s !== "october")) {
       const url = bm ? Bouletmaton.url(bm, 512)
         : style.indexOf("dicebear:") === 0 ? "https://api.dicebear.com/9.x/" + style.slice(9) + "/svg?seed=" + encodeURIComponent(uid + name)
           : "https://indiediscotheque.com/robots/" + encodeURIComponent(uid + name) + ".png?size=240x240&set=" + style.slice(9);
-      box.querySelectorAll(".st-avtr, li").forEach((e) => { e.style.backgroundImage = withPic ? 'url("' + url + '")' : "none"; });
+      box.querySelectorAll(".st-avtr, li").forEach((e) => {
+        // empty, on the fill the picture will sit on (a Bouletmaton has its own: black)
+        e.style.backgroundColor = "";
+        if (!withPic) { e.classList.toggle("bm-face", !!bm); if (bm) e.style.backgroundColor = getComputedStyle(e).backgroundColor; }
+        e.style.backgroundImage = withPic ? 'url("' + url + '")' : "none";
+      });
     }, [kind, style, uid, name, bm, withPic]);
     await prep(false);
     await embed.waitForTimeout(50);

@@ -22,7 +22,8 @@
  * when there is one, else with a stand-in (blank.svg#bm=<key>) that's swapped
  * for the real one wherever it was put (inline styles, <img>) as soon as it's
  * ready. Every element showing a Bouletmaton is marked .bm-face, so it gets a
- * Bouletmaton's framing whatever the room's style is.
+ * Bouletmaton's framing whatever the room's style is: its whole head in the
+ * circles, measured from its own drawings (frame(), --bm-zoom/-x/-y).
  *
  * Plain script with no dependencies, so the embedded stage uses it too.
  * Defines window.Bouletmaton.
@@ -177,12 +178,59 @@
     });
   }
 
+  /** The parts that make up the head (everything but body, neckwear and what's in hand). */
+  var HEAD_PARTS = ["head", "chin", "mouth", "eyes", "beard", "brows", "detail", "glasses", "nose", "hair", "ears", "acc", "hat"];
+  /** Below this (the picture's px) is chest: long hair and beards don't stretch the head's box. */
+  var HEAD_FLOOR = 480;
+  /** A typical head's framing, until a Bouletmaton's own is measured (and in css/looks.css). */
+  var FRAME = { zoom: 160, x: 60.6, y: 31.7 };
+
+  /**
+   * Where the whole head is in a Bouletmaton's picture, as the circles'
+   * framing: {zoom, x, y} (background-size height and background-position,
+   * in %), a square around the head, hair, ears and hat with a little room.
+   * Measured from the drawings themselves, so a tall hat or big hair fits.
+   * @returns {Promise<{zoom:number, x:number, y:number}>}
+   */
+  function frame(code) {
+    var parts = layers(code), b = decode(code);
+    if (!b) return Promise.resolve(FRAME);
+    var heads = {};
+    HEAD_PARTS.forEach(function (key) {
+      var part = PARTS.filter(function (p) { return p.key === key; })[0];
+      var u = drawingOf(part, b.parts[key], b);
+      if (u) heads[u] = true;
+    });
+    return Promise.all(parts.map(function (l) { return load(l.url); })).then(function (imgs) {
+      var k = 4, n = Math.ceil(SIDE / k), c = document.createElement("canvas");
+      c.width = c.height = n;
+      var g = c.getContext("2d"), x0 = (SIDE - W) / 2 / k;
+      imgs.forEach(function (img, i) {
+        if (img && heads[parts[i].url]) g.drawImage(img, x0, (SIDE - H + parts[i].dy) / k, (img.naturalWidth || W) / k, (img.naturalHeight || H) / k);
+      });
+      var data;
+      try { data = g.getImageData(0, 0, n, n).data; } catch (e) { return FRAME; }
+      var minX = n, minY = n, maxX = -1, maxY = -1, floor = Math.min(n, Math.ceil(HEAD_FLOOR / k));
+      for (var y = 0; y < floor; y++) for (var x = 0; x < n; x++) {
+        if (data[(y * n + x) * 4 + 3] < 40) continue;
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+      if (maxX < 0) return FRAME;
+      minX *= k; maxX = (maxX + 1) * k; minY *= k; maxY = (maxY + 1) * k;
+      var side = Math.min(600, Math.max(360, Math.max(maxX - minX, maxY - minY) * 1.16));
+      var round = function (v) { return Math.round(v * 100) / 100; };
+      var at = function (mid) { return round((mid - side / 2) / (SIDE - side) * 100); };
+      return { zoom: round(SIDE / side * 100), x: at((minX + maxX) / 2), y: at((minY + maxY) / 2) };
+    });
+  }
+
   /** The picture sizes made: small (lists, chat) and big (the stage, big faces, cards). */
   function bucket(px) { return px > 256 ? 512 : 256; }
 
   var pictures = {}; // code@px -> Promise<blob URL>
   var ready = {};    // code@px -> blob URL, once drawn
-  var faces = {};    // blob URL -> true: the pictures that are Bouletmatons (for .bm-face)
+  var faces = {};    // blob URL -> its framing in the circles: the pictures that are Bouletmatons (for .bm-face)
   /**
    * The finished picture of a code, as a blob: URL (made once per code and size).
    * @returns {Promise<string>}
@@ -191,12 +239,13 @@
     px = bucket(px || 256);
     var key = code + "@" + px;
     if (!pictures[key]) {
-      pictures[key] = draw(code, px).then(function (c) {
+      pictures[key] = Promise.all([draw(code, px), frame(code).catch(function () { return FRAME; })]).then(function (both) {
+        var c = both[0];
         return new Promise(function (ok) {
           var done = function (blob) {
             var url = blob ? URL.createObjectURL(blob) : c.toDataURL("image/png");
             ready[key] = url;
-            faces[url] = true;
+            faces[url] = both[1];
             ok(url);
           };
           if (c.toBlob) c.toBlob(done, "image/webp", 0.92); else done(null);
@@ -216,8 +265,19 @@
   var STAND_IN_RE = /url\((["']?)([^"')]*#bm=([^"')]+))\1\)/g;
   var URL_RE = /url\((["']?)([^"')]+)\1\)/;
 
+  /** This inline background's Bouletmaton framing, or null when it isn't one. */
+  function faceOf(bg) { var m = URL_RE.exec(bg || ""); return (m && faces[m[2]]) || null; }
   /** Is this inline background a Bouletmaton? */
-  function isFace(bg) { var m = URL_RE.exec(bg || ""); return !!(m && faces[m[2]]); }
+  function isFace(bg) { return !!faceOf(bg); }
+  var FRAME_VARS = { zoom: "--bm-zoom", x: "--bm-x", y: "--bm-y" };
+  /** Put a Bouletmaton's own framing on its element (css/looks.css .bm-face reads it), or take it off. */
+  function setFrame(el, f) {
+    Object.keys(FRAME_VARS).forEach(function (k) {
+      var v = f ? f[k] + "%" : "";
+      if (el.style.getPropertyValue(FRAME_VARS[k]) === v) return;
+      if (v) el.style.setProperty(FRAME_VARS[k], v); else el.style.removeProperty(FRAME_VARS[k]);
+    });
+  }
 
   /** Put the finished pictures in place of their stand-ins, and mark every Bouletmaton (.bm-face). */
   function sweep() {
@@ -239,8 +299,9 @@
     // a Bouletmaton's framing wherever one is shown, and only there
     var marked = document.querySelectorAll('[style*="blob:"], .bm-face');
     for (var k = 0; k < marked.length; k++) {
-      var face = isFace(marked[k].style.backgroundImage);
+      var f = faceOf(marked[k].style.backgroundImage), face = !!f;
       if (face !== marked[k].classList.contains("bm-face")) marked[k].classList.toggle("bm-face", face);
+      setFrame(marked[k], f);
     }
   }
   function soon() { if (!sweepTimer) sweepTimer = setTimeout(sweep, 30); }
@@ -306,6 +367,6 @@
     PARTS: PARTS, SKINS: SKINS, COLOURS: COLOURS, SIDE: SIDE, BASE: BASE, FIRST: FIRST,
     SKIN_SWATCHES: SKIN_SWATCHES, HAIR_SWATCHES: HAIR_SWATCHES, HAIR_UNLIFTED: HAIR_UNLIFTED,
     decode: decode, encode: encode, isCode: isCode, layers: layers, drawingOf: drawingOf,
-    draw: draw, picture: picture, url: url, later: later, forget: forget, sweep: sweep, hash: hash, isFace: isFace
+    draw: draw, frame: frame, FRAME: FRAME, picture: picture, url: url, later: later, forget: forget, sweep: sweep, hash: hash, isFace: isFace
   };
 })(window);
