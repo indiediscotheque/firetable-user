@@ -1833,8 +1833,11 @@ try {
   lib.dj.dj1.firstHere = Array.from({ length: 14 }, (_, i) => ({ cid: "fh" + String(i).padStart(9, "0"), type: 1, a: "Firsts", t: "First " + (i + 1), plays: 20 - i, first: now - (400 - i) * 86400000 }));
   // a year's playlist with one song three times (an old library build did that): the page lists it once
   lib.year[2026].top = [lib.year[2026].top[0], Object.assign({}, lib.year[2026].top[0]), Object.assign({}, lib.year[2026].top[0], { cid: "lib0000099" })];
-  // two sets on one night (a break between): one line, "12 songs in 2 sets" (2.7)
-  lib.dj.dj1.sets = [{ at: now - 86400000 + 3 * 3600000, n: 3 }, { at: now - 86400000, n: 9 }];
+  // two sets on one night (a break between): one line, "12 songs in 2 sets" (2.7). On a fixed
+  // evening, 8 and 11 pm two days ago: hours before now could straddle the night's 6 am cutoff
+  const evening = new Date(now - 2 * 86400000);
+  evening.setHours(20, 0, 0, 0);
+  lib.dj.dj1.sets = [{ at: evening.getTime() + 3 * 3600000, n: 3 }, { at: evening.getTime(), n: 9 }];
   // a year's covers on the Years list (2.7)
   lib.years[2026].covers = ["1_lib0000002"];
   await put("/discover/lib", lib);
