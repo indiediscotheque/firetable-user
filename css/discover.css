@@ -381,6 +381,56 @@ body.ft-discover #discoverPage {
     /* phones: the song's name needs the room */
     .d-right .d-g,
     .d-right .d-num { display: none; }
+    /* In a list of songs (a chart, Rising, a genre's or a DJ's songs) the name
+       gets the row's width: what stood beside it (genre, movement, weeks,
+       fires, plays) goes on a line of its own under the artist, plays and all.
+       Beside it, a long title was left a word a line and the plays were hidden. */
+    #dBrowse .d-rowlist .pvbar {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-auto-columns: auto;
+        column-gap: var(--pad2);
+        align-items: center;
+        padding-left: var(--space-4); /* clear of the face on the line */
+    }
+    #dBrowse .d-rowlist .pvbar > .pv-art { grid-column: 1; grid-row: 1 / span 2; }
+    #dBrowse .d-rowlist .pvbar > .listwords { grid-column: 2; grid-row: 1; min-width: 0; }
+    #dBrowse .d-rowlist .pvbar > .d-right {
+        grid-column: 2;
+        grid-row: 2;
+        flex-wrap: wrap;
+        gap: 0 0.375rem;
+        min-width: 0;
+        margin: 0;
+    }
+    #dBrowse .d-rowlist .pvbar > .row-icon { grid-row: 1 / span 2; }
+    #dBrowse .d-rowlist .d-right :is(.d-g, .d-num) { display: inline; }
+    #dBrowse .d-rowlist .d-right .d-mv { min-width: 0; text-align: left; }
+    #dBrowse .d-rowlist .histlink { text-wrap: wrap; hyphens: manual; }
+    #dBrowse .d-rowlist .hist-track-title {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+    }
+    #dBrowse .d-rowlist .hist-track-artist {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    /* a rank needs less room than a time or a date */
+    #dBrowse .d-rowlist:has(.d-rank) { --hist-time-w: 2.5rem; }
+    /* the chart's controls: Share as its icon, so the three sit on one row */
+    #dBrowse .d-chartacts { margin-left: 0; flex-wrap: nowrap; }
+    #dBrowse .d-chartacts .d-share { padding-inline: var(--pad2); }
+    #dBrowse .d-chartacts .d-share span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
 }
 a.d-tag { mix-blend-mode: normal; }
 @media (hover: hover) {

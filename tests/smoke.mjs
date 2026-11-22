@@ -3279,6 +3279,26 @@ try {
     "a visitor's Fresh, beside the welcome, loads without its tab being chosen (" + JSON.stringify(freshBeside) + ")");
   await fPage.close();
 
+  // a chart on a phone: the name keeps the row's width, the numbers sit under the artist, plays and all
+  const cPage = await context.newPage();
+  await cPage.setViewportSize({ width: 390, height: 844 });
+  await openPage(cPage, SITE + "#discover/charts");
+  const phoneChart = await cPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    for (let i = 0; i < 80 && !document.querySelector("#dBrowse .d-rowlist .pvbar"); i++) await wait(100);
+    const row = document.querySelector("#dBrowse .d-rowlist .pvbar");
+    const title = row.querySelector(".hist-track-title"), right = row.querySelector(".d-right"), plays = right.querySelector(".d-num:last-child");
+    title.textContent = "Together feat. Nikki Nair, Jessy Lanza, Prentiss and a great many more besides";
+    const t = title.getBoundingClientRect(), a = row.querySelector(".hist-track-artist").getBoundingClientRect(), r = right.getBoundingClientRect();
+    const acts = [...document.querySelectorAll("#dBrowse .d-chartacts > button")].map((b) => Math.round(b.getBoundingClientRect().top));
+    return { plays: plays.textContent, shown: plays.offsetParent !== null && plays.getBoundingClientRect().width > 0, lines: Math.round(t.height / parseFloat(getComputedStyle(title).lineHeight)),
+      words: Math.round(t.width), under: r.top >= a.bottom - 1, row: Math.round(row.getBoundingClientRect().height), oneRow: new Set(acts).size === 1 && acts.length === 3,
+      share: document.querySelector("#dBrowse .d-share").getAttribute("aria-label"), wide: document.documentElement.scrollWidth - innerWidth };
+  });
+  check(phoneChart.shown && /play/.test(phoneChart.plays) && phoneChart.lines <= 2 && phoneChart.words >= 120 && phoneChart.under && phoneChart.row <= 110 && phoneChart.oneRow && /Share/.test(phoneChart.share) && phoneChart.wide <= 0,
+    "a chart row on a phone: plays shown under the artist, a long title in two lines, Play / Save / Share on one row (" + JSON.stringify(phoneChart) + ")");
+  await cPage.close();
+
   console.log("-- Discover: members chat with the room from Discover");
   const chatHere = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
