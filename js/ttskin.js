@@ -27,7 +27,7 @@ firetable.tt = (function () {
   var W = 1468; // the stage art's width: everything on it is placed in its units
   var FLOOR = 715; // where the floor's first row stands; the rest spread down to the bottom of the room
   var SEATS = 4; // the bot's deck
-  var BOT_AVATAR = "58", PAGE = 16;
+  var PAGE = 16;
   var TIERS = [{ id: "classic", label: "Classic" }, { id: "gold", label: "Gold" }, { id: "special", label: "Specials" }];
   // Laptop stickers: the room's own and Turntable's gold ones are one picture
   // (img/tt/stickers.webp, tools/tt-art.py: same names, same order); the rest
@@ -93,14 +93,34 @@ firetable.tt = (function () {
   function validId(id) { return typeof id === "string" && /^[0-9a-f]{1,24}$/.test(id) && !!S.byId[id]; }
 
   /** Someone's avatar: what they picked, else one of the classics that stays theirs. */
-  function avatarOf(uid) {
+  /**
+   * In this theme the room's bot (the hostbot, jarvis) presents as a character
+   * of its own: #EVE, avatar 3, the redhead girl, whatever its name or pick.
+   * Live never shows it. Known by the hostbot flag, or by name while the bot is
+   * on deck but has dropped out of the room for a moment.
+   */
+  var EVE = { name: "#EVE", av: "3" };
+  var BOT_NAMES = { jarvis: true };
+  function personaOf(uid, name) {
+    var u = ftapi.users && ftapi.users[uid];
+    if (u ? u.hostbot : BOT_NAMES[String(name || "").toLowerCase()]) return EVE;
+    return null;
+  }
+  /** Who someone is in this theme: their persona's name, else their own. */
+  function nameOf(uid, name) {
+    var p = personaOf(uid, name), u = ftapi.users && ftapi.users[uid];
+    return p ? p.name : (name || (u && u.username) || "someone");
+  }
+
+  function avatarOf(uid, name) {
+    var persona = personaOf(uid, name);
+    if (persona && validId(persona.av)) return persona.av;
     var u = ftapi.users && ftapi.users[uid];
     if (uid && uid === ftapi.uid) {
       var mine = myAvatar();
       if (mine) return mine;
     }
     if (u && validId(u.ttAvatar)) return u.ttAvatar;
-    if (u && u.hostbot && S.byId[BOT_AVATAR]) return BOT_AVATAR;
     var classic = S.tiers.classic || [];
     return classic.length ? classic[hash(String(uid || "guest")) % classic.length] : (S.list && S.list[0].id);
   }
@@ -209,20 +229,20 @@ firetable.tt = (function () {
   }
 
   /**
-   * A face for lists, chat and the bar: the front's head (or the top of the
-   * whole figure), centred in whatever circle it's drawn in (percentages, so
-   * one style fits every size).
+   * A face for lists, chat and the bar: the square round the front's whole
+   * head (f.face, measured by tools/tt-avatars.py), as a circle of any size
+   * (percentages). The sprite keeps clear space after the front, so a square
+   * that reaches past the picture's edge shows nothing else.
    */
   function faceStyle(id) {
     var a = S.byId[id];
     if (!a) return "";
-    var f = a.f, x, w, h;
-    if (f.head) { x = f.head[0]; w = f.head[1]; h = Math.min(f.head[2], f.head[1] * 1.1); }
-    else { x = f.x; w = f.w; h = Math.min(f.h, f.w); }
-    var m = Math.max(w, h), bw = a.sw / m, bh = a.sh / m;
-    var px = (-x / m + (1 - w / m) / 2) / (1 - bw), py = ((1 - h / m) / 2) / (1 - bh);
+    var f = a.f, box = f.face || [0, 0, Math.min(f.w, f.h)];
+    var x = f.x + box[0], y = box[1], m = box[2];
+    var bw = a.sw / m, bh = a.sh / m;
+    var px = (-x / m) / (1 - bw), py = (-y / m) / (1 - bh);
     return "--tt-face:url(" + src(id) + ");--tt-fsize:" + (bw * 100).toFixed(2) + "% " + (bh * 100).toFixed(2) + "%;--tt-fpos:" +
-      (px * 100).toFixed(2) + "% " + (isFinite(py) ? (py * 100).toFixed(2) : 0) + "%";
+      (isFinite(px) ? (px * 100).toFixed(2) : 0) + "% " + (isFinite(py) ? (py * 100).toFixed(2) : 0) + "%";
   }
 
   // ─── Building the room ────────────────────────────────────────────────────
@@ -448,34 +468,39 @@ firetable.tt = (function () {
         table.appendChild(seat);
       }
       if (!d) {
-        var offer = !offered && !mine && !!ftapi.uid;
+        // Play Music on the first open seat for anyone not already DJing: it takes the seat,
+        // or asks a visitor to sign in
+        var offer = !offered && !mine;
         offered = offered || offer;
-        var want = "empty" + (offer ? "+offer" : "");
+        var does = ftapi.uid ? "data-tt-addme" : "data-tt-signin";
+        var want = "empty" + (offer ? "+" + does : "");
         if (seat.dataset.who !== want) {
           seat.dataset.who = want;
           seat.className = "tt-seat tt-empty";
           seat.innerHTML = offer
-            ? '<button type="button" class="tt-play tt-yellow" data-tt-addme>Play<br>Music</button><span class="tt-vinyl" aria-hidden="true"></span>'
+            ? '<button type="button" class="tt-play tt-yellow" ' + does + '>Play<br>Music</button><span class="tt-vinyl" aria-hidden="true"></span>'
             : '<span class="tt-vinyl" aria-hidden="true"></span>';
         }
         continue;
       }
       keep[d.id] = true;
       var lapKey = stringifyLaptop(laptopOf(d.id));
-      if (seat.dataset.who !== d.id || seat.dataset.av !== avatarOf(d.id) || seat.dataset.lap !== lapKey) {
+      if (seat.dataset.who !== d.id || seat.dataset.av !== avatarOf(d.id, d.name) || seat.dataset.lap !== lapKey) {
         seat.dataset.who = d.id;
-        seat.dataset.av = avatarOf(d.id);
+        seat.dataset.av = avatarOf(d.id, d.name);
         seat.dataset.lap = lapKey;
         seat.className = "tt-seat";
         var chin = (S.byId[seat.dataset.av] && S.byId[seat.dataset.av].f.chin) || 62;
-        seat.innerHTML = '<button type="button" class="tt-person tt-dj" data-uid="' + esc(d.id) + '" aria-label="' + esc(d.name) + ', DJ" style="--chin:' + chin + '%">' +
+        seat.innerHTML = '<button type="button" class="tt-person tt-dj" data-uid="' + esc(d.id) + '" aria-label="' + esc(nameOf(d.id, d.name)) + ', DJ" style="--chin:' + chin + '%">' +
           '<span class="tt-figwrap"></span></button>' + laptopHtml(d.id) +
-          '<span class="tt-plate"><b>' + esc(d.name) + '</b><span class="tt-plays"></span></span>';
+          '<span class="tt-plate"><b>' + esc(nameOf(d.id, d.name)) + '</b><span class="tt-plays"></span></span>';
         seat.querySelector(".tt-figwrap").appendChild(figure(seat.dataset.av, "f"));
       }
       seat.classList.toggle("tt-on", d.id === active);
       seat.classList.toggle("tt-fired", !!fired[d.id]);
       seat.classList.toggle("tt-self", d.id === ftapi.uid);
+      // on deck but gone from the room (Live's "ghost"): dimmed, as Live dims them
+      seat.classList.toggle("tt-ghost", !!(ftapi.users && typeof ftapi.users === "object" && !ftapi.users[d.id]));
       seat.querySelector(".tt-plays").textContent = d.plays + "/" + (firetable.playlimit || "∞");
     }
     // a DJ who left takes their menu with them
@@ -532,7 +557,7 @@ firetable.tt = (function () {
     Object.keys(placed).forEach(function (u) {
       var spot = SPOTS[placed[u]], av = avatarOf(u), el = existing[u];
       delete existing[u];
-      var name = (users[u] && users[u].username) || "someone";
+      var name = nameOf(u);
       if (!el) {
         el = document.createElement("button");
         el.type = "button";
@@ -551,7 +576,6 @@ firetable.tt = (function () {
       el.dataset.name = name;
       el.classList.toggle("tt-fired", !!fired[u]);
       el.classList.toggle("tt-self", u === ftapi.uid);
-      el.classList.toggle("tt-idle", !!(users[u].idle && users[u].idle.isIdle));
     });
     Object.keys(existing).forEach(function (u) {
       var el = existing[u];
@@ -823,19 +847,23 @@ firetable.tt = (function () {
       else if (d.mod || d.supermod) groups.mods.push(u);
       else groups.audience.push(u);
     });
-    var name = function (u) { return String((users[u] && users[u].username) || "").toLowerCase(); };
+    // a DJ on deck but gone from the room is still listed with the DJs, dimmed (as Live's list)
+    var gone = {};
+    djs().forEach(function (d) { if (!users[d.id]) { gone[d.id] = { username: d.name }; groups.djs.push(d.id); } });
+    var who = function (u) { return users[u] || gone[u] || {}; };
+    var name = function (u) { return nameOf(u, who(u).username).toLowerCase(); };
     var html = [["djs", "DJs"], ["mods", "Moderators"], ["bots", "Bots"], ["audience", "Audience"]].map(function (g) {
       var list = groups[g[0]];
       if (!list.length) return "";
       if (g[0] !== "djs") list.sort(function (a, b) { return name(a) < name(b) ? -1 : 1; });
       else list.sort(function (a, b) { return seats.indexOf(a) - seats.indexOf(b); });
       return '<h2 class="tt-group">' + g[1] + " <span>" + list.length + "</span></h2><ul>" + list.map(function (u) {
-        var d = users[u];
+        var d = who(u);
         var badges = (d.supermod ? ms("verified_user", "material-symbols-filled tt-b tt-bmod") : d.mod ? ms("shield", "material-symbols-filled tt-b tt-bmod") : "") +
           (d.hostbot ? ms("smart_toy", "material-symbols-filled tt-b") : "") +
           (firetable.fireReactors && firetable.fireReactors[u] ? ms("thumb_up", "material-symbols-filled tt-b tt-bawe") : "");
-        return '<li><button type="button" class="tt-guest' + (d.idle && d.idle.isIdle ? " tt-idle" : "") + '" data-uid="' + esc(u) + '">' +
-          '<span class="tt-face" style="' + faceStyle(avatarOf(u)) + '"></span><span class="tt-gname">' + esc(d.username || "someone") + "</span>" + badges + "</button></li>";
+        return '<li><button type="button" class="tt-guest' + (gone[u] ? " tt-gone" : "") + '" data-uid="' + esc(u) + '">' +
+          '<span class="tt-face" style="' + faceStyle(avatarOf(u, d.username)) + '"></span><span class="tt-gname">' + esc(nameOf(u, d.username)) + "</span>" + badges + "</button></li>";
       }).join("") + "</ul>";
     }).join("");
     if (box.innerHTML !== html) box.innerHTML = html;
@@ -857,12 +885,19 @@ firetable.tt = (function () {
   }
   function faceAll() {
     if (!S.active || !S.list) return;
+    document.querySelectorAll("#chats .newChat").forEach(function (line) {
+      var face = line.querySelector(".ft-avatar[data-avatar-uid]"), nm = line.querySelector(".chatName");
+      if (!face || !nm) return;
+      var p = personaOf(face.getAttribute("data-avatar-uid"), nm.textContent);
+      if (p) nm.setAttribute("data-tt-name", p.name); else nm.removeAttribute("data-tt-name");
+    });
     FACE_ROOTS.forEach(function (id) {
       var root = $id(id);
       if (!root) return;
       root.querySelectorAll(".ft-avatar:not(.skel)").forEach(function (el) {
         var uid = whoseFace(el);
-        var av = uid ? avatarOf(uid) : "";
+        var line = el.closest(".newChat"), hint = line && line.querySelector(".chatName");
+        var av = uid ? avatarOf(uid, hint ? hint.textContent : el.getAttribute("aria-label")) : "";
         if (el.dataset.tt === av) return;
         el.dataset.tt = av;
         ["--tt-face", "--tt-fsize", "--tt-fpos"].forEach(function (p) { el.style.removeProperty(p); });
@@ -1320,13 +1355,13 @@ firetable.tt = (function () {
     var menu = $id("tt-djmenu"), them = (ftapi.users || {})[d.id] || {};
     var role = them.hostbot ? "Bot" : them.supermod ? "Supermod" : them.mod ? "Moderator" : "";
     var fires = firetable.fireReactors && firetable.fireReactors[d.id] ? " · gave it an Awesome" : "";
-    menu.innerHTML = '<div class="tt-djhead"><b>' + esc(d.name) + "</b><span>" + d.plays + "/" + esc(firetable.playlimit || "∞") + " plays" +
+    menu.innerHTML = '<div class="tt-djhead"><b>' + esc(nameOf(d.id, d.name)) + "</b><span>" + d.plays + "/" + esc(firetable.playlimit || "∞") + " plays" +
       (role ? " · " + role : "") + fires + "</span></div>" +
       djMenuItems(d).map(function (it) {
         var attrs = ' role="menuitem" class="tt-djitem' + (it[4] ? " tt-danger" : "") + '" data-act="' + it[0] + '"' + (it[2] ? ' data-ask="' + esc(it[2]) + '"' : "");
         return it[3] ? "<a" + attrs + ' href="' + esc(it[3]) + '">' + esc(it[1]) + "</a>" : '<button type="button"' + attrs + ">" + esc(it[1]) + "</button>";
       }).join("");
-    menu.setAttribute("aria-label", d.name);
+    menu.setAttribute("aria-label", nameOf(d.id, d.name));
     menu.style.setProperty("--i", seat.style.getPropertyValue("--i"));
     menu.hidden = false;
     M.uid = d.id;

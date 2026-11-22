@@ -16,11 +16,15 @@ it goes in the whole figure. And the avatar picker's pages, img/tt/pick/<tier>-<
 one picture of PAGE fronts each, so a page of the picker is one request.
 
     python3 tools/tt-avatars.py /tmp/tt-avatars --pages   # only the picker's pages
-    python3 tools/tt-avatars.py /tmp/tt-avatars --chins   # only each front's chin (img/tt/avatars.json)
+    python3 tools/tt-avatars.py /tmp/tt-avatars --chins   # only each front's chin and face (img/tt/avatars.json)
+    python3 tools/tt-avatars.py /tmp/tt-avatars --repack  # only re-pack the sprites, from the parts' places already found
 
 Each front also gets `chin`: how far down the figure (in %) its chin is, where
 a DJ's laptop lid lines up. From the head's own picture when there is one,
 else from the figure's outline: the narrowest row under the head (the neck).
+And `face`: [x, y, size] in the front's own pixels, the square a circle avatar
+shows (chat, lists, the bar): the head down to the chin, leaving out thin
+bits (antennae, antlers, ear tips) so the face fills the circle.
 """
 import json
 import os
@@ -33,6 +37,7 @@ SRC = sys.argv[1] if len(sys.argv) > 1 else "/tmp/tt-avatars"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "img", "tt", "av")
 PAGE, CELL_W, CELL_H = 16, 100, 128  # the picker: 4 x 4 a page, at twice its size on screen
+FRONT_GAP = 36  # clear space after the front: a circle avatar's frame can reach past its edge
 GAP = 2  # transparent pixels between parts, so scaling never bleeds one into the next
 
 
@@ -110,15 +115,84 @@ def chin(av, entry):
     return round(min(85, max(40, neck / len(rows) * 100)))
 
 
+# id: [x, y, size], for the few whose outline has no neck to find (a whole-body photo, a
+# gorilla, a mosquito, Frankenstein, the turkeys), checked by eye on the review sheet
+FACE_OVERRIDES = {
+    "23": [108, -6, 78], "25": [62, -6, 76], "129": [-6, -8, 120], "272": [94, 11, 70],
+    "330": [44, -6, 100], "352": [40, 2, 88], "353": [32, -6, 100],
+}
+
+
+def face(av, entry):
+    """The square a circle avatar shows, in the front's pixels."""
+    if av in FACE_OVERRIDES:
+        return FACE_OVERRIDES[av]
+    im = load(av, "FullFront")
+    a = np.asarray(im)[:, :, 3] > 60
+    h, w = a.shape
+    chin_row = int(round(entry["chin"] / 100 * h))
+    widths = a.sum(axis=1)
+    filled = [i for i in range(h) if widths[i]]
+    if not filled:
+        return [0, 0, min(w, h)]
+    top = filled[0]
+    band = a[top:max(top + 1, chin_row)]
+    maxw = band.sum(axis=1).max()
+    # only truly thin bits up top (antennae, a feather) don't count: hair, ears and hats do
+    rows = [i for i in range(band.shape[0]) if band[i].sum() >= maxw * 0.18]
+    t, b = top + rows[0], top + rows[-1]
+    body = a[t:b + 1]
+    colsum = body.sum(axis=0)
+    cols = [j for j in range(w) if colsum[j] >= (b - t + 1) * 0.06]
+    l, r = cols[0], cols[-1]
+    fw, fh = r - l + 1, b - t + 1
+    # the whole head inside the circle, with a little room: a round head's box needs about
+    # 1.15 of its larger side across to clear the circle's edge
+    size = max(fw, fh) * 1.16
+    cx, cy = l + fw / 2, t + fh / 2
+    return [round(cx - size / 2), round(cy - size / 2), round(size)]
+
+
+def repack():
+    """Re-pack every sprite from the places already in img/tt/avatars.json (no matching again)."""
+    path = os.path.join(ROOT, "img", "tt", "avatars.json")
+    with open(path) as f:
+        manifest = json.load(f)
+    for rec in manifest:
+        av, x, parts = rec["id"], 0, []
+        for side, S in (("f", "Front"), ("b", "Back")):
+            e = rec[side]
+            full = load(av, "Full" + S) or load(av, "Full" + ("Back" if S == "Front" else "Front"))
+            e["x"] = x
+            parts.append((full, x))
+            x += full.width + (FRONT_GAP if side == "f" else GAP)
+            if e.get("head"):
+                for key, name in (("body", "Body" + S), ("head", "Head" + S)):
+                    im = load(av, name)
+                    e[key][0] = x
+                    parts.append((im, x))
+                    x += im.width + GAP
+        h = max(p.height for p, _ in parts)
+        sheet = Image.new("RGBA", (x - GAP, h), (0, 0, 0, 0))
+        for p_, px in parts:
+            sheet.paste(p_, (px, 0))
+        rec["sw"], rec["sh"] = sheet.width, sheet.height
+        sheet.save(os.path.join(OUT, av + ".webp"), "WEBP", quality=88, method=6)
+    with open(path, "w") as f:
+        json.dump(manifest, f, separators=(",", ":"))
+    print(len(manifest), "sprites re-packed")
+
+
 def chins():
     path = os.path.join(ROOT, "img", "tt", "avatars.json")
     with open(path) as f:
         manifest = json.load(f)
     for rec in manifest:
         rec["f"]["chin"] = chin(rec["id"], rec["f"])
+        rec["f"]["face"] = face(rec["id"], rec["f"])
     with open(path, "w") as f:
         json.dump(manifest, f, separators=(",", ":"))
-    print(len(manifest), "chins")
+    print(len(manifest), "chins and faces")
 
 
 def pages(ids):
@@ -145,6 +219,8 @@ def main():
     ids = sorted({f[: -len("_FullFront.png")] for f in os.listdir(SRC) if f.endswith("_FullFront.png")}, key=order)
     if "--chins" in sys.argv:
         return chins()
+    if "--repack" in sys.argv:
+        return repack()
     pages(ids)
     if "--pages" in sys.argv:
         return
@@ -174,7 +250,7 @@ def main():
             entry, full, split = sides[side]
             entry["x"] = x
             sheet_parts.append((full, x))
-            x += full.width + GAP
+            x += full.width + (FRONT_GAP if side == "f" else GAP)
             if split:
                 head, hp, body, bp = split
                 entry["body"] = [x, body.width, body.height, bp[0], bp[1]]
