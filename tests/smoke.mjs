@@ -3249,6 +3249,21 @@ try {
   check(locked.cards > 0 && locked.cards <= 3, "Cards shows the latest cards (" + locked.cards + ")");
   check(locked.back.form && locked.back.pane, "Join brings the welcome back (" + JSON.stringify(locked.back) + ")");
 
+  // Fresh beside the welcome (640px and up): a visitor has no Fresh tab to choose, so it loads when it's on screen
+  const fPage = await context.newPage();
+  await fPage.setViewportSize({ width: 1280, height: 800 });
+  await openPage(fPage, SITE + "#live");
+  const freshBeside = await fPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    for (let i = 0; i < 80 && !document.querySelector("#thediscovers .pvbar"); i++) await wait(100);
+    const box = document.getElementById("discover");
+    return { shown: box.offsetParent !== null, login: document.getElementById("mainGrid").classList.contains("login"), view: firetable.nav.view,
+      rows: document.querySelectorAll("#thediscovers .pvbar").length, loading: document.querySelectorAll("#thediscovers .ft-skeleton").length };
+  });
+  check(freshBeside.shown && freshBeside.login && freshBeside.view !== "discover" && freshBeside.rows >= 1 && !freshBeside.loading,
+    "a visitor's Fresh, beside the welcome, loads without its tab being chosen (" + JSON.stringify(freshBeside) + ")");
+  await fPage.close();
+
   console.log("-- Discover: members chat with the room from Discover");
   const chatHere = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
