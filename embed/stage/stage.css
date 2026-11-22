@@ -353,7 +353,7 @@ svg { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
   transition: background 1s ease;
 }
 
-/* The site's fire (flame.js draws it in #fyre, as js/fire.js) behind the DJ, as the
+/* The site's fire (js/flame.js draws it in #fyre) behind the DJ, as the
    room's stage places it (js/room.js positionFyreAtActiveDJ): the same box
    and the same place, so the flames rise from the same spot behind the DJ */
 #fyre {

@@ -199,7 +199,7 @@ try {
   check(over.skipped || (over.during.preview === false && over.during.active && over.during.roomVol === 12 && over.during.host),
     "a preview plays over the room: the room keeps its player, at a fifth of the volume (" + JSON.stringify(over) + ")");
   check(over.skipped || (!over.after.active && over.after.roomVol === 60 && over.saved === "0"), "stopping it brings the room back up; the setting is remembered");
-  check(!loaded("pixi.min.js") && !loaded("p5.min.js") && !loaded("TweenMax.min.js"), "the stage effects' libraries aren't loaded with the page");
+  check(!loaded("p5.min.js"), "the album-art glitch's p5.js isn't loaded with the page");
 
   console.log("-- the song's tempo leads the plays line");
   await put("/tagUpdate", { cid: youtubeSong.cid, adamData: { track_name: "Smoke Song", artist: "Smoke Artist", playcount: 67 } });
@@ -1742,13 +1742,33 @@ try {
   check(sc.widget && /^https:\/\/w\.soundcloud\.com\/player\/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F13158665&/.test(sc.src) && /auto_play=true/.test(sc.src),
     "the first SoundCloud song makes SoundCloud's player, pointed straight at that track (" + sc.src.slice(0, 120) + ")");
 
-  console.log("-- someone sends a 🔥: the fire loads PixiJS and GSAP");
+  console.log("-- someone sends a 🔥: the fire burns behind the DJ, sized to them, with no library to load");
   await page.evaluate(() => window.firetableIgniteFyre(3));
   await page.waitForFunction(() => document.querySelector("#fyre canvas"), null, { timeout: 30000 }).catch(() => {});
-  check(loaded("pixi.min.js") && loaded("TweenMax.min.js"), "PixiJS and GSAP loaded with the first fire");
-  check(!!(await page.$("#fyre canvas")), "the fire is drawn");
+  await sleep(1200);
+  const alpha = () => page.evaluate(() => {
+    const c = document.querySelector("#fyre canvas");
+    if (!c || !c.width) return 0;
+    const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i]) n++;
+    return n;
+  });
+  const lit = await page.evaluate(() => {
+    const f = document.getElementById("fyre"), c = f.querySelector("canvas"), a = document.querySelector("#deck .avtr");
+    const fr = f.getBoundingClientRect(), ar = a ? a.getBoundingClientRect() : { width: 0, height: 0 };
+    const k = Number(f.getAttribute("data-fire-scale"));
+    return { libs: typeof PIXI === "undefined" && typeof TweenMax === "undefined" && typeof ftLazy.LIBS.pixi === "undefined",
+      sized: !!c && c.width === Math.round(fr.width * Math.min(2, devicePixelRatio)),
+      scale: k, avatar: Math.round(ar.height), wider: Math.round(fr.width) >= Math.round(ar.width),
+      grows: Math.abs(k - Math.max(1, Math.min(3, ar.height / 110))) < 0.01 };
+  });
+  check(lit.libs && !loaded("pixi.min.js") && !loaded("TweenMax.min.js"), "the fire draws without PixiJS or GSAP (js/flame.js)");
+  check((await alpha()) > 500, "the fire is drawn");
+  check(lit.sized && lit.grows && lit.wider, "the fire grows with the DJ: its scale is their drawn height over 110px, its box wider than them (" + JSON.stringify(lit) + ")");
   await page.evaluate(() => window.firetableSetFyreIntensity(0));
-  await sleep(1500);
+  await sleep(300);
+  check((await alpha()) === 0, "a fire going out clears its canvas and stops drawing");
 
 } catch (e) {
   check(false, "smoke test threw: " + e.message);
@@ -3295,14 +3315,14 @@ console.log("-- the live stage for other sites (embed/stage/)");
     await sp.waitForTimeout(800);
     const stale = await sp.evaluate(() => document.getElementById("st").classList.contains("has-fire"));
     await put2("/songFires", { started: t0 - 30000, count: 3 });
-    // the site's fire (flame.js: js/fire.js on a plain canvas), drawn behind the DJ
+    // the site's fire (js/flame.js, a plain canvas), drawn behind the DJ
     await sp.waitForFunction(() => document.getElementById("st").classList.contains("has-fire") && !!document.querySelector("#fyre canvas"), null, { timeout: 10000 }).catch(() => {});
     await sp.waitForTimeout(1200);
     const lit = await sp.evaluate(() => {
       const c = document.querySelector("#fyre canvas");
       let drawn = 0;
       if (c) { const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; for (let i = 3; i < d.length; i += 4) if (d[i]) drawn++; }
-      return { on: document.getElementById("st").classList.contains("has-fire"), drawn: drawn > 500, sized: !!c && c.width === Math.round(document.getElementById("fyre").clientWidth * devicePixelRatio),
+      return { on: document.getElementById("st").classList.contains("has-fire"), drawn: drawn > 500, sized: !!c && c.width === Math.round(document.getElementById("fyre").clientWidth * Math.min(2, devicePixelRatio)),
         kicker: document.getElementById("st-kicker").textContent, libs: typeof PIXI === "undefined" && typeof TweenMax === "undefined",
         behind: Number(getComputedStyle(document.getElementById("fyre")).zIndex) < Number(getComputedStyle(document.getElementById("st-deck")).zIndex) };
     });

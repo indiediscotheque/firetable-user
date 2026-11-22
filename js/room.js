@@ -299,18 +299,22 @@ firetable.ui.setupRoomEvents = function () {
     var stageRect = $stage[0].getBoundingClientRect();
     var spotRect = $activeSpot[0].getBoundingClientRect();
     var centerX = spotRect.left - stageRect.left + (spotRect.width / 2);
-    var width = Math.max(96, Math.min(spotRect.width * 1.35, stageRect.width * 0.45));
-    var height = Math.max(120, Math.min(spotRect.width * 2.1, stageRect.height * 0.9));
+    // the fire grows with the DJ: its flames were drawn for a 110px avatar
+    // (216px box), so a bigger avatar gets bigger flames, never hidden behind it
+    var avtr = $activeSpot.find(".avtr")[0];
+    var avtrHeight = avtr ? avtr.getBoundingClientRect().height : 0;
+    var scale = Math.max(1, Math.min(3, (avtrHeight || 110) / 110));
+    var width = Math.max(96, Math.min(216 * scale, stageRect.width * 0.7));
+    var height = Math.max(120, Math.min(Math.max(spotRect.width * 2.1, 270 * scale), stageRect.height * 0.95));
 
-    $fyre.css({
+    $fyre.attr("data-fire-scale", scale.toFixed(3)).css({
       left: centerX + "px",
       width: width + "px",
       height: height + "px"
     }).show();
 
-    if (firetable.fyreStage && typeof firetable.fyreStage.onResize === "function") {
-      firetable.fyreStage.onResize();
-    }
+    // the box follows itself (flame.js watches its size); the flames take the DJ's scale
+    if (firetable.fyreStage) firetable.fyreStage.setScale(scale);
   }
 
   // useAnchor: keep the DJ already shown as playing in the spotlight, wherever

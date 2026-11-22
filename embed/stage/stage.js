@@ -24,7 +24,7 @@
  * song's looks read every minute.
  *
  * Fire: when people call the song hot (🔥 in the room's chat, which only
- * members can read), the site's fire burns behind the DJ (flame.js: js/fire.js
+ * members can read), the site's fire burns behind the DJ (js/flame.js, as on the site
  * drawn with a plain canvas), bigger with every fire. The hostbot publishes the count for the playing song
  * at songFires ({ started, count }, readable by anyone); until it does, no fire.
  *
@@ -446,14 +446,14 @@
     var changed = n !== S.fires;
     S.fires = n;
     root.classList.toggle("has-fire", n > 0);
-    if (changed && (n || flame) && typeof window.stageFlame === "function") {
-      flame = flame || window.stageFlame(el("fyre"));
+    if (changed && (n || flame) && typeof window.ftFlame === "function") {
+      flame = flame || window.ftFlame(el("fyre"));
       fyreScale();
       if (n) flame.ignite(n); else flame.setIntensity(0);
     }
     renderKicker();
   }
-  /** The fire is drawn for a stage the site's size: scale it with the box (the site's #fyre is 216px wide, for its 160px deck spot). */
+  /** The fire's size follows its box: scale 1 is the site's fire in a 216px-wide box (js/flame.js setScale). */
   function fyreScale() { if (flame) flame.setScale(el("fyre").clientWidth / 216); }
   window.addEventListener("resize", fyreScale);
 

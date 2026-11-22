@@ -155,7 +155,7 @@ Inter, Roboto Mono and Open Sans are self-hosted variable fonts, each split in t
 ## third-party libraries
 Loaded only when needed: SoundCloud's player (`#sc-widget`) gets its address the first time a SoundCloud track plays (`firetable.media.scLoad` in `js/player.js`), so visits that never play one don't load it. There's no jQuery UI: dragging rows to reorder them is `firetable.utilities.dragSort` (`js/helpers.js`; mouse, touch and pen, plus Alt+arrow keys in the room's playlist), and the stage's volume is a native range input. The idle timer is `idleTracker` in `js/state.js`.
 
-CDN scripts are pinned to exact versions and checked with Subresource Integrity: most in `index.html`, and the stage effects' libraries (PixiJS and GSAP for the fire, p5.js for the SoundCloud album-art glitch) in `js/lazy.js`, which loads them the first time the effect shows instead of with every page. The Content-Security-Policy in `.htaccess` allows each of these exact files, not whole CDNs. When upgrading one, update its URL in the policy and its `integrity` hash:
+CDN scripts are pinned to exact versions and checked with Subresource Integrity: most in `index.html`, and the album-art glitch's p5.js (SoundCloud songs) in `js/lazy.js`, which loads it the first time the effect shows instead of with every page. The fire needs no library: `js/flame.js` draws it on a plain canvas, for the site and the live stage alike. The Content-Security-Policy in `.htaccess` allows each of these exact files, not whole CDNs. When upgrading one, update its URL in the policy and its `integrity` hash:
 `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`
 
 ## icons

@@ -40,7 +40,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | ST-07 | Reload audio | All | `#reloadtrack`, `player.js` `reloadtrack` | ✅ 2.3c: `#reloadtrack` in the player bar while it plays the room |
 | ST-08 | Full screen | All | `#fullscreenBtn` (hidden where unsupported) | ✅ 2.3c: with Discover on, `#fullscreenBtn` is in the player bar and opens the full-screen player (`#pv-full`, DI-27), which has the video and fills the screen itself; the stage's own full screen (#155) went with 5.3, Discover always on |
 | ST-08b | Play on a speaker or TV (cast guide) | All | `#st-cast`, `#tip-st-cast`, `#st-castBox`, `cast.js` (`firetable.cast`) | ✅ added November 15, 2026: on the stage without Discover; with Discover in the player bar and, while it's open, the full-screen player's top tools (phones' way to it). Opens a guide to Google Cast (Chrome or Edge, Cast tab), AirPlay, Android's Google Home "Cast my audio" and Bluetooth, this device's way first and open. The songs play in YouTube's and SoundCloud's own players, so no web API can hand them to a speaker directly |
-| ST-09 | Fire (🔥) | M | `#fire` → chat reaction `:fire:`; `chat.js` `sendReaction`, `processFireReactionMessage`, fire effect `fire.js` (PixiJS, lazy), `!hot` | ✅ 2.3c: in the player bar with Discover on; 1.5 shows the count there |
+| ST-09 | Fire (🔥) | M | `#fire` → chat reaction `:fire:`; `chat.js` `sendReaction`, `processFireReactionMessage`, fire effect `fire.js` + `flame.js` (plain canvas), `!hot` | ✅ 2.3c: in the player bar with Discover on; 1.5 shows the count there |
 | ST-10 | Rain (🌧) reaction | M | `#cloud_with_rain` state, `:cloud_with_rain:`, `!storm` | keep wherever it is reachable today; 1.5 keep the state |
 | ST-11 | Grab (add the playing song to a playlist) | M | `#grab` → `#stealContain` / `#stealpicker` (`openStealPicker`, `fillStealPicker`), `recordGrab` (`grabs/<djid>`), `savedToast` with Undo | ✅ 2.3c: in the player bar with Discover on; 1.6 split button there: tap = last used playlist (Undo), ▾ = picker |
 | ST-12 | Song link (open on YouTube or SoundCloud) | All | `#songlink` | ✅ 2.3c: in the player bar with Discover on |
@@ -49,7 +49,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | ST-15 | "Tap to start audio" | All | `#tapToPlay` (autoplay blocked) | the bar says **On air** while the browser holds audio back (`body.media-blocked`, 2.3); 1.10 the overlay's words and one line of context |
 | ST-16 | String lights (December, or `!lights`) | All | `ul.lightrope`, `room.js` `lightsChanged`, `applyLights`, `seasons.js` `LIGHTS_MONTHS` | keep exactly |
 | ST-17 | Snow (Jan, Feb) | All | `snow.js`, `SNOW_MONTHS` | keep exactly |
-| ST-18 | Fire embers effect | All | `#fyre`, `fire.js` (PixiJS + GSAP via `lazy.js`) | keep exactly |
+| ST-18 | Fire embers effect | All | `#fyre`, `fire.js` + `flame.js` (plain canvas, no libraries; sized to the DJ by `room.js`) | keep exactly |
 | ST-19 | Dance mode | All | `danceStateChanged` (`dance`), `!dance` | keep |
 | ST-20 | Beat-synced bobbing (BPM) | All | `room.js` `applyBeat` (`--beat`, `--bop`, `--beat-phase`), `songBpm`, `bpm/` | keep |
 | ST-21 | Seasonal avatars (monsters in October, etc.) | All | `seasons.js` `AVATAR_SEASONS`, `ftconfigs.avatarset` | keep; check every stage state with non-robot sets (`tests/avatars.mjs`) |
