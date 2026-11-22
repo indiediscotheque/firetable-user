@@ -71,9 +71,24 @@ firetable.tt = (function () {
 
   // ─── The avatars ──────────────────────────────────────────────────────────
 
+  /**
+   * The theme's files linked from the page (index.html's tt-* metas), so the
+   * deploy's ?v= versions them (.github/scripts/cache-bust.py): a changed file
+   * gets a new link, an unchanged one stays cached.
+   */
+  function linked(name, path) {
+    var meta = document.querySelector('meta[name="' + name + '"]');
+    return (meta && meta.content) || path;
+  }
+  /** the version on the avatars' list: the picker's pages change only with it */
+  function listVersion() {
+    var m = /\?v=[^&]*/.exec(linked("tt-avatars", ""));
+    return m ? m[0] : "";
+  }
+
   function loadAvatars() {
     if (S.ready) return S.ready;
-    S.ready = fetch("img/tt/avatars.json").then(function (r) {
+    S.ready = fetch(linked("tt-avatars", "img/tt/avatars.json")).then(function (r) {
       if (!r.ok) throw new Error("avatars " + r.status);
       return r.json();
     }).then(function (list) {
@@ -147,7 +162,8 @@ firetable.tt = (function () {
 
   // absolute: a url() in a CSS variable is read against the stylesheet that uses it
   function abs(path) { return new URL(path, document.baseURI).href; }
-  function src(id) { return abs("img/tt/av/" + id + ".webp"); }
+  // each sprite with its own version (its hash, from tools/tt-avatars.py): a rebuilt one is fetched again
+  function src(id) { var a = S.byId[id]; return abs("img/tt/av/" + id + ".webp" + (a && a.v ? "?v=" + a.v : "")); }
 
   // ─── Laptops ──────────────────────────────────────────────────────────────
 
@@ -188,7 +204,7 @@ firetable.tt = (function () {
   /** A sticker's picture, as CSS for its element. */
   function stickerStyle(id) {
     var k = STICKERS.indexOf(id);
-    if (k !== -1) return "background-image:url(" + abs("img/tt/stickers.webp") + ");background-size:" + (STICKERS.length * 100) + "% 100%;background-position:" + (k * 100 / (STICKERS.length - 1)).toFixed(3) + "% 0";
+    if (k !== -1) return "background-image:url(" + abs(linked("tt-stickers", "img/tt/stickers.webp")) + ");background-size:" + (STICKERS.length * 100) + "% 100%;background-position:" + (k * 100 / (STICKERS.length - 1)).toFixed(3) + "% 0";
     return "background-image:url(" + (typeof twemoji !== "undefined" ? twemoji.base : "https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/") + "svg/" + id.slice(1) + ".svg);background-size:contain;background-position:center";
   }
 
@@ -930,13 +946,13 @@ firetable.tt = (function () {
     S.pick.page = Math.max(0, Math.min(pages - 1, S.pick.page));
     var mine = myAvatar();
     var start = S.pick.page * PAGE;
-    var atlas = "img/tt/pick/" + S.pick.tier + "-" + S.pick.page + ".webp";
+    var atlas = "img/tt/pick/" + S.pick.tier + "-" + S.pick.page + ".webp" + listVersion();
     $id("tt-pickGrid").innerHTML = ids.slice(start, start + PAGE).map(function (id, k) {
       return '<button type="button" role="option" class="tt-pickCell" data-av="' + id + '" aria-selected="' + (id === mine) + '" aria-label="Avatar ' + (start + k + 1) + '" tabindex="' + (id === mine || (!mine && k === 0) ? 0 : -1) + '">' +
         '<span class="tt-pickFig" style="background-image:url(' + atlas + ");background-position:" + (k * 100 / (PAGE - 1)).toFixed(4) + '% 0"></span></button>';
     }).join("");
     // the next page is ready before it's asked for
-    if (S.pick.page + 1 < pages) new Image().src = "img/tt/pick/" + S.pick.tier + "-" + (S.pick.page + 1) + ".webp";
+    if (S.pick.page + 1 < pages) new Image().src = "img/tt/pick/" + S.pick.tier + "-" + (S.pick.page + 1) + ".webp" + listVersion();
     document.querySelectorAll("#tt-picker .tt-pickTier").forEach(function (b) {
       var on = b.dataset.tier === S.pick.tier;
       b.classList.toggle("on", on);

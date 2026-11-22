@@ -13,7 +13,8 @@ back (as the archive draws them whole), then the head and body of each side
 apart, so the room can rock a head on its body the way Turntable did (only
 when the two put back together make the whole figure: else it's drawn whole). And
 img/tt/avatars.json: per avatar, where each part sits in the sprite and where
-it goes in the whole figure. And the avatar picker's pages, img/tt/pick/<tier>-<n>.webp:
+it goes in the whole figure, and the sprite's version (`v`, its hash, for its
+link). And the avatar picker's pages, img/tt/pick/<tier>-<n>.webp:
 one picture of PAGE fronts each, so a page of the picker is one request.
 
     python3 tools/tt-avatars.py /tmp/tt-avatars --pages   # only the picker's pages
@@ -27,6 +28,7 @@ And `face`: [x, y, size] in the front's own pixels, the square a circle avatar
 shows (chat, lists, the bar): the head down to the chin, leaving out thin
 bits (antennae, antlers, ear tips) so the face fills the circle.
 """
+import hashlib
 import json
 import os
 import sys
@@ -40,6 +42,12 @@ OUT = os.path.join(ROOT, "img", "tt", "av")
 PAGE, CELL_W, CELL_H = 16, 100, 128  # the picker: 4 x 4 a page, at twice its size on screen
 FRONT_GAP = 36  # clear space after the front: a circle avatar's frame can reach past its edge
 GAP = 2  # transparent pixels between parts, so scaling never bleeds one into the next
+
+
+def version(av):
+    """The sprite's version for its link (?v=): the first 10 of its SHA-256, as the deploy's cache-bust.py does."""
+    with open(os.path.join(OUT, av + ".webp"), "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()[:10]
 
 
 def load(av, part):
@@ -219,6 +227,7 @@ def repack():
             sheet.paste(p_, (px, 0))
         rec["sw"], rec["sh"] = sheet.width, sheet.height
         sheet.save(os.path.join(OUT, av + ".webp"), "WEBP", quality=88, method=6)
+        rec["v"] = version(av)
     with open(path, "w") as f:
         json.dump(manifest, f, separators=(",", ":"))
     print(len(manifest), "sprites re-packed")
@@ -312,6 +321,7 @@ def main():
             sheet.paste(p, (px, 0))
         rec["sw"], rec["sh"] = sheet.width, sheet.height
         sheet.save(os.path.join(OUT, av + ".webp"), "WEBP", quality=88, method=6)
+        rec["v"] = version(av)
         manifest.append(rec)
     # chins and faces were checked by eye (a DJ's head at their laptop, a whole head in a circle):
     # kept from the manifest there is; measured only for new avatars (--chins measures them all again)

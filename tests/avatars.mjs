@@ -15,7 +15,8 @@
 // No emulator needed. Robohash and DiceBear pictures come from their servers
 // once, then from the disk cache (harness.mjs cachePictures).
 import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, readFileSync, writeFileSync } from "fs";
+import { createHash } from "crypto";
 import { join } from "path";
 import { policy, config, serveSite, launchOptions, openPage, cachePictures, ROOT } from "./harness.mjs";
 
@@ -273,6 +274,10 @@ const tt = await page.evaluate(async () => {
   }
   return { count: list.length, sides, parts, bad };
 });
+// each sprite's version (its link's ?v=, js/ttskin.js src) is its file's hash, so a rebuilt one is fetched again
+const stale = JSON.parse(readFileSync(join(ROOT, "img/tt/avatars.json"), "utf8"))
+  .filter((a) => a.v !== createHash("sha256").update(readFileSync(join(ROOT, "img/tt/av", a.id + ".webp"))).digest("hex").slice(0, 10)).map((a) => a.id);
+check(stale.length === 0, "Turntable avatars: every sprite's version is its file's hash (tools/tt-avatars.py)" + (stale.length ? ": " + stale.slice(0, 20).join(", ") : ""));
 check(tt.count > 600 && tt.bad.length === 0, "Turntable avatars: " + tt.count + " avatars, " + tt.sides + " sides (" + tt.parts + " drawn as a head on a body) all whole" + (tt.bad.length ? ": " + tt.bad.slice(0, 20).join(", ") : ""));
 
 // The contact sheet: one row per style, each place, two members
