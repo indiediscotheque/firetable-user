@@ -452,10 +452,6 @@ firetable.ui.setupRoomEvents = function () {
     $ondeck.html(ondeckHtml);
     firetable.ui.sharpenStage();
     $("#deckQueue").empty();
-    // the playing DJ, then the order after them (the Your turn bar says when you're next)
-    firetable.ui.deckRotation = (allDjs && allDjs.length && activeIdx < allDjs.length)
-      ? [allDjs[activeIdx].id].concat(onDeckDjs.map(function (o) { return o.id; })) : [];
-    firetable.ui.renderTurnBar();
     if (firetable.ui.tooltip) firetable.ui.tooltip.refreshUserTip();
 
     firetable.ui.applyDeckPlacement && firetable.ui.applyDeckPlacement();
@@ -1624,11 +1620,11 @@ firetable.ui.sharpenStage = function () {
   else watch();
 })();
 
-// ─── Your turn (1.11) ─────────────────────────────────────────────────────────
+// ─── Who is DJing where ───────────────────────────────────────────────────────
 
 /**
  * Where someone is DJing: on the decks, on the waitlist (with their place in
- * line out of how many), or neither. The user card and the Your turn bar ask.
+ * line out of how many), or neither. The user card and the mod menu ask.
  * @param {string} userid
  * @returns {{where: (string|null), entry: (Object|null), pos?: number, count?: number}}
  */
@@ -1647,79 +1643,4 @@ firetable.ui.djStatus = function (userid) {
   }
   if (found) { found.count = pos; return found; }
   return { where: null, entry: null };
-};
-
-/**
- * The song you'll play next: the first track of your DJ playlist that isn't
- * flagged, in play order, as the bot picks it (its firstPlayable). One small
- * live query on the flagged/date index, so it follows reorders, grabs, and
- * the bot moving the song you just played to the bottom.
- * track: undefined until known, null for an empty list, false when the first
- * tracks are all old flags (the bot looks further; the bar just says nothing).
- */
-firetable.turnNext = { query: null, fn: null, list: null, uid: null, track: undefined };
-firetable.ui.watchDjNext = function (listID) {
-  var t = firetable.turnNext;
-  var uid = window.ftapi ? ftapi.uid : null;
-  listID = String(listID == null ? "0" : listID);
-  if (t.query && t.list === listID && t.uid === uid) return;
-  if (t.query) t.query.off("value", t.fn);
-  firetable.turnNext = t = { query: null, fn: null, list: listID, uid: uid, track: undefined };
-  if (uid) {
-    t.query = ftapi.lookup.listRef(listID).orderByChild("flagged/date").endAt(null).limitToFirst(20);
-    t.fn = t.query.on("value", function (snap) {
-      var found = null, any = false;
-      snap.forEach(function (child) {
-        var track = child.val();
-        any = true;
-        if (!found && track && !track.flagged) found = track;
-      });
-      if (firetable.turnNext === t) t.track = found || (any ? false : null);
-      firetable.ui.renderTurnBar();
-    }, function () {
-      if (firetable.turnNext === t) t.track = undefined;
-      firetable.ui.renderTurnBar();
-    });
-  }
-  firetable.ui.renderTurnBar();
-};
-
-/**
- * Your turn (1.11): one quiet line beside the DJ playlist picker with the song
- * you'll play next, only while you're on the decks or in line (and a warning
- * when your DJ playlist is empty). Taking the bus, stepping down and hopping
- * on stay where they are: the name plate, the user card, the stage's open spot.
- */
-firetable.ui.renderTurnBar = function () {
-  var box = document.getElementById("st-turn");
-  if (!box) return;
-  var uid = window.ftapi && ftapi.uid;
-  var st = uid ? firetable.ui.djStatus(uid) : { where: null };
-  var track = uid ? firetable.turnNext.track : undefined;
-  var line = "", full = "";
-  if (track === null) {
-    line = full = "Your DJ playlist is empty";
-  } else if (track && st.where) {
-    var parts = firetable.utilities.decodeEntities(String(track.name || "")).split(" - ");
-    var artist = parts.length > 1 ? parts.shift() : "";
-    var title = parts.join(" - ");
-    var order = firetable.ui.deckRotation || [];
-    var lead = st.where === "waitlist" ? "In line " + st.pos + " of " + st.count + " · "
-      : order[0] === uid ? "Next from you: "
-      : order[1] === uid ? "You're up next: "
-      : "Your next: ";
-    line = firetable.utilities.htmlEscape(lead) + "<b>" + firetable.utilities.htmlEscape(title) + "</b>";
-    full = lead + title + (artist ? " by " + artist : "");
-  }
-  box.hidden = !line;
-  var next = document.getElementById("st-next");
-  next.innerHTML = line;
-  next.title = full;
-};
-
-firetable.ui.setupTurnBar = function () {
-  ftapi.events.on("djListChanged", function (listID) { firetable.ui.watchDjNext(listID); });
-  ftapi.events.on("loggedOut", function () { firetable.ui.watchDjNext(null); });
-  ftapi.events.on("waitlistChanged", function () { firetable.ui.renderTurnBar(); });
-  ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () { firetable.ui.renderTurnBar(); }));
 };
