@@ -313,7 +313,7 @@
 				<span id="tip-pickEmoji" role="tooltip" class="ft-tip" style="position-anchor: --tip-pickEmoji">Emoji</span>
 				<form id="newchatForm" autocomplete="off">
 					<textarea maxlength="240" autocomplete="off" name="newchat" placeholder="Chat a thing"
-						id="newchat" tabindex="0" rows="1" enterkeyhint="send"></textarea>
+						id="newchat" tabindex="0" rows="1" enterkeyhint="send" aria-autocomplete="list" aria-controls="ch-emojiSuggestList"></textarea>
 				</form>
 				<div id="emojiPicker">
 					<div id="pickerNav"></div>
@@ -329,6 +329,11 @@
 					</button>
 				</div>
 				<div id="atPicker" role="listbox" aria-label="Mention someone"></div>
+				<div id="ch-emojiSuggest" hidden>
+					<div class="ch-esHead" aria-hidden="true"><span>Emoji matching <b id="ch-emojiSuggestQuery"></b></span><span class="ch-esKeys"><kbd>Tab</kbd> insert · <kbd>Esc</kbd> close</span></div>
+					<div id="ch-emojiSuggestList" role="listbox" aria-label="Emoji suggestions"></div>
+				</div>
+				<span id="ch-emojiSuggestStatus" class="sr-only" aria-live="polite"></span>
 			</div>
 		</div>
 
@@ -1228,6 +1233,7 @@
 					<dt><code>/hot</code></dt><dd>Fire the song playing</dd>
 					<dt><code>/block name</code>, <code>/unblock name</code></dt><dd>Stop or start seeing someone's chat</dd>
 					<dt><code>/shrug</code>, <code>/tableflip</code>, <code>/unflip</code>, <code>/storm</code></dt><dd>Say it with feeling</dd>
+					<dt><code>:co</code></dt><dd>Type a colon and two letters for matching emoji: <kbd>↑</kbd> <kbd>↓</kbd> choose, <kbd>Tab</kbd> or <kbd>Enter</kbd> put it in, <kbd>Esc</kbd> closes</dd>
 				</dl>
 				<h3>The bot</h3>
 				<dl class="helpKeys">

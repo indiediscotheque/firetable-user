@@ -1212,6 +1212,162 @@ firetable.ui.setupChatEvents = function () {
     }
   });
 
+  // ── :emoji suggestions while typing (CH-20) ──
+  // Type a colon and two letters (":co") and the emoji whose names (or, once
+  // the picker's data loads, search words) match show above the box. Up/Down
+  // choose, Tab or Enter put in its :shortname:, Escape closes; click or tap
+  // works too. The keys are caught on #chatbottom before the box's own Enter
+  // (send) handler sees them.
+  (function () {
+    var box = document.getElementById("newchat");
+    var wrap = document.getElementById("ch-emojiSuggest");
+    var list = document.getElementById("ch-emojiSuggestList");
+    var bottom = document.getElementById("chatbottom");
+    if (!box || !wrap || !list || !bottom) return;
+    var es = firetable.emojiSuggest = { open: false, items: [], sel: 0, at: null, dismissedAt: -1 };
+    var statusTimer;
+
+    function say(text) {
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(function () { $("#ch-emojiSuggestStatus").text(text); }, 400);
+    }
+
+    function close() {
+      if (!es.open) return;
+      es.open = false;
+      es.items = [];
+      wrap.hidden = true;
+      list.textContent = "";
+      box.removeAttribute("aria-activedescendant");
+      say("");
+    }
+
+    function select(i) {
+      if (!es.items.length) return;
+      es.sel = (i + es.items.length) % es.items.length;
+      $(list).children().attr("aria-selected", "false");
+      var el = list.children[es.sel];
+      el.setAttribute("aria-selected", "true");
+      box.setAttribute("aria-activedescendant", el.id);
+      if (el.scrollIntoView) el.scrollIntoView({ block: "nearest" });
+    }
+
+    function render(q) {
+      var frag = document.createDocumentFragment();
+      es.items.forEach(function (item, i) {
+        var opt = document.createElement("div");
+        opt.id = "ch-es-" + i;
+        opt.className = "ch-esItem";
+        opt.setAttribute("role", "option");
+        opt.setAttribute("aria-selected", "false");
+        opt.setAttribute("aria-label", ":" + item.name + ":");
+        opt.setAttribute("data-name", item.name);
+        var glyph = document.createElement("span");
+        glyph.className = "ch-esGlyph";
+        glyph.setAttribute("aria-hidden", "true");
+        if (item.custom) glyph.innerHTML = '<span class="' + item.custom + '"></span>';
+        else glyph.textContent = item.emoji;
+        var name = document.createElement("span");
+        name.className = "ch-esName";
+        var hit = item.name.indexOf(q);
+        if (hit < 0) {
+          name.textContent = ":" + item.name + ":";
+        } else {
+          var mark = document.createElement("mark");
+          mark.textContent = item.name.slice(hit, hit + q.length);
+          name.append(":" + item.name.slice(0, hit), mark, item.name.slice(hit + q.length) + ":");
+        }
+        opt.append(glyph, name);
+        frag.appendChild(opt);
+      });
+      list.textContent = "";
+      list.appendChild(frag);
+      if (typeof twemoji !== "undefined") twemoji.parse(list);
+      $("#ch-emojiSuggestQuery").text(":" + q);
+    }
+
+    function update() {
+      var at = firetable.atLand || box.selectionStart !== box.selectionEnd ? null
+        : firetable.emojis.typedShortname(box.value, box.selectionStart);
+      if (!at || at.start === es.dismissedAt) {
+        if (!at) es.dismissedAt = -1;
+        es.at = null;
+        close();
+        return;
+      }
+      // the search words come with the picker's data: fetch it the first time
+      if (!firetable.emojis.searchWords && !es.loading) {
+        es.loading = true;
+        firetable.emojis.pickerData().then(function (groups) {
+          firetable.emojis.setSearchWords(groups);
+          if (document.activeElement === box) update();
+        }).catch(function () { /* names alone still work */ }).then(function () { es.loading = false; });
+      }
+      var prev = es.open && es.items[es.sel] && es.items[es.sel].name;
+      es.at = at;
+      es.items = firetable.emojis.suggest(at.query, 20);
+      if (!es.items.length) { es.at = null; close(); return; }
+      render(at.query);
+      es.open = true;
+      wrap.hidden = false;
+      // keep the same emoji chosen while more letters narrow the list
+      var keep = prev ? es.items.findIndex(function (e) { return e.name === prev; }) : -1;
+      select(keep > 0 ? keep : 0);
+      say(es.items.length + " emoji " + (es.items.length === 1 ? "matches" : "match") + " :" + at.query + ". Up and down to choose, Tab or Enter to insert.");
+    }
+
+    function accept(i) {
+      var item = es.items[i], at = es.at;
+      if (!item || !at) return;
+      var v = box.value;
+      var rest = v.slice(at.end);
+      var ins = ":" + item.name + ":" + (/^\s/.test(rest) ? "" : " ");
+      var caret = at.start + ins.length + (/^\s/.test(rest) ? 1 : 0);
+      box.value = v.slice(0, at.start) + ins + rest;
+      box.setSelectionRange(caret, caret);
+      close();
+      es.at = null;
+      box.dispatchEvent(new Event("input", { bubbles: true })); // auto-grow, typing indicator
+      say(":" + item.name + ": inserted");
+    }
+
+    // Keys first, before #newchat's own handlers (Enter sends, Tab moves on)
+    bottom.addEventListener("keydown", function (e) {
+      if (!es.open || e.target !== box || e.isComposing || e.altKey || e.ctrlKey || e.metaKey) return;
+      var handled = true;
+      if (e.key === "ArrowDown") select(es.sel + 1);
+      else if (e.key === "ArrowUp") select(es.sel - 1);
+      else if (e.key === "PageDown") select(Math.min(es.sel + 5, es.items.length - 1));
+      else if (e.key === "PageUp") select(Math.max(es.sel - 5, 0));
+      else if ((e.key === "Enter" && !e.shiftKey) || (e.key === "Tab" && !e.shiftKey)) accept(es.sel);
+      else if (e.key === "Escape") { es.dismissedAt = es.at ? es.at.start : -1; close(); }
+      else handled = false;
+      if (handled) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+
+    box.addEventListener("input", update);
+    box.addEventListener("click", update);
+    box.addEventListener("keyup", function (e) {
+      if (/^(ArrowLeft|ArrowRight|Home|End)$/.test(e.key)) update();
+    });
+    box.addEventListener("blur", close);
+    // Pointer: keep the caret in the box, pick on click, follow the mouse
+    list.addEventListener("mousedown", function (e) { e.preventDefault(); });
+    list.addEventListener("click", function (e) {
+      var opt = e.target.closest(".ch-esItem");
+      if (opt) accept(Array.prototype.indexOf.call(list.children, opt));
+      box.focus();
+    });
+    list.addEventListener("mousemove", function (e) {
+      var opt = e.target.closest(".ch-esItem");
+      var i = opt ? Array.prototype.indexOf.call(list.children, opt) : -1;
+      if (i >= 0 && i !== es.sel) select(i);
+    });
+  })();
+
   // ── Reactions: picker + chips ──
   var reactPop = document.getElementById('reactPickerPopover');
   var $picker = $(reactPop).find('.reactPicker');
