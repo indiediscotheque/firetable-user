@@ -1883,6 +1883,30 @@ html[data-avatars="pixel-art"] {
     white-space: nowrap;
 }
 
+/* ─── The popover attribute in older Safari (iPads before iPadOS 17) ─────────
+   js/popover-polyfill.js gives them popover; it marks an open one with the
+   class ":popover-open". These are the styles the browser would have (the
+   polyfill's own <style> is blocked by the security policy before Safari 16.4).
+   Kept free of nesting and newer syntax: it's for old browsers. */
+@supports not selector(:popover-open) {
+    :where([popover]) {
+        position: fixed;
+        z-index: 2147483647;
+        inset: 0;
+        padding: 0.25em;
+        width: fit-content;
+        height: fit-content;
+        border: initial;
+        border-style: solid;
+        background-color: canvas;
+        color: canvastext;
+        overflow: auto;
+        margin: auto;
+    }
+    :where([popover]:not(.\:popover-open)) { display: none; }
+    :where(dialog[popover].\:popover-open) { display: block; }
+}
+
 /* ─── Reusable Popover Component ─────────────────────────────────────────────
    Usage: <div popover="auto" class="ft-popover"><div class="ft-popover-box">...
    Position is set via JS in the toggle event handler.

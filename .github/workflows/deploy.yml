@@ -121,6 +121,19 @@ jobs:
           fetch-depth: 0 # full history, to give files their last-commit times
           persist-credentials: false
 
+      # Older iPads (Safari before 16.5, iPadOS 15) can't read CSS nesting: the
+      # site is served with its stylesheets flattened (tools/flatten-css.mjs).
+      # The source keeps its nesting; the browser tests check it with nesting.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Flatten the stylesheets for older Safari
+        run: |
+          npm ci --no-audit --no-fund --ignore-scripts
+          node tools/flatten-css.mjs
+
       - name: Check secrets
         run: |
           missing=""

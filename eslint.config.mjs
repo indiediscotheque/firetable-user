@@ -33,7 +33,7 @@ const p5Globals = Object.fromEntries([
 ].map((n) => [n, "readonly"]));
 
 export default [
-  { ignores: ["**/*.min.js", "js/twemoji.js", "tools/**", "node_modules/**"] },
+  { ignores: ["**/*.min.js", "js/twemoji.js", "js/popover-polyfill.js", "tools/**", "node_modules/**"] },
   {
     files: ["js/**/*.js", "embed/**/*.js"],
     languageOptions: {

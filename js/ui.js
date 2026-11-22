@@ -950,9 +950,14 @@ firetable.nav = {
   _withFade: function (selectors, mutator) {
     var n = firetable.nav;
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion || n._isFading) {
-      mutator();
+    // The switch always lands, whatever fails on the way (a refused write in
+    // mutator's save, #64): the view still changes and the fade never sticks.
+    var change = function () {
+      try { mutator(); } catch (e) { console.warn('[firetable] switching views:', e); }
       n.apply();
+    };
+    if (reduceMotion || n._isFading) {
+      change();
       n._clearFadeStyles(selectors);
       return;
     }
@@ -965,8 +970,13 @@ firetable.nav = {
     });
 
     setTimeout(function () {
-      mutator();
-      n.apply();
+      try {
+        change();
+      } catch (e) {
+        n._clearFadeStyles(selectors);
+        n._isFading = false;
+        throw e;
+      }
 
       var fadeInPanels = n._collectVisiblePanels(selectors);
       fadeInPanels.forEach(function ($el) {
