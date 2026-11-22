@@ -158,6 +158,14 @@ Loaded only when needed: SoundCloud's player (`#sc-widget`) gets its address the
 CDN scripts are pinned to exact versions and checked with Subresource Integrity: most in `index.html`, and the album-art glitch's p5.js (SoundCloud songs) in `js/lazy.js`, which loads it the first time the effect shows instead of with every page. The fire needs no library: `js/flame.js` draws it on a plain canvas, for the site and the live stage alike. The Content-Security-Policy in `.htaccess` allows each of these exact files, not whole CDNs. When upgrading one, update its URL in the policy and its `integrity` hash:
 `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`
 
+## older iPads (Safari 15.4 and up)
+iPads that stop at iPadOS 15 or 16 (iPad Air 2, iPad mini 4, iPad 5th and 6th generation, the first iPad Pros) run Safari 15 or 16. The site works there because:
+- **Popover:** Safari added the `popover` attribute in 17, and without it every menu shows in the page and the first tap on one throws. `js/popover-polyfill.js` (a copy of [@oddbird/popover-polyfill](https://github.com/oddbird/popover-polyfill) 0.7.3, BSD-3-Clause) adds it where it's missing and does nothing elsewhere; it also makes `matches(":popover-open")` and `querySelector(":popover-open")` work. Its styles are in `css/looks.css` (`@supports not selector(:popover-open)`), because the security policy blocks the `<style>` it would inject before Safari 16.4. An open polyfilled popover has the class `:popover-open`, so CSS that styles open popovers needs `.\:popover-open` beside `:popover-open`, in a separate rule.
+- **CSS nesting:** Safari reads it from 16.5. The deploy serves the stylesheets flattened (`tools/flatten-css.mjs`, postcss-nesting), so the source keeps its nesting; CI checks they flatten (`node tools/flatten-css.mjs --check`).
+- **Storage:** `js/storage.js` keeps the app going when `localStorage` is blocked or full (Safari gives a site about 5 MB): a write that doesn't fit lasts the visit instead of throwing.
+
+`tests/smoke.mjs` loads the site with popover taken away and `:popover-open` refused as a selector, as on those iPads, and with every storage write refused. Colours made with `color-mix()` and container units need Safari 16; on iPadOS 15 those few touches fall back to plainer colours and sizes.
+
 ## icons
 `fonts/material-symbols-outlined.woff2` holds only the icons the site uses, with its weight, grade and optical size fixed at the one setting the CSS draws them at (outlined / filled stays): about 42 KB instead of ~4 MB. After using an icon the site hasn't used before, rebuild it:
 `pip install "fonttools[woff]" && python3 tools/subset-icons.py`

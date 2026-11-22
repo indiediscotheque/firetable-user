@@ -3449,6 +3449,81 @@ try {
   rmSync(join(ROOT, "music"), { recursive: true, force: true });
 }
 
+// An older iPad (#164): Safari before 17 has no popover. The page loads with
+// it taken away; js/popover-polyfill.js must step in, and the site start as usual.
+// And a full localStorage (#64): writes refused, the app carries on.
+const oldContext = await browser.newContext();
+const oldPage = await oldContext.newPage();
+const oldErrors = [];
+oldPage.on("pageerror", (e) => { if (!theirs(e)) oldErrors.push(e.message); });
+await oldPage.addInitScript(() => {
+  ["showPopover", "hidePopover", "togglePopover", "popover"].forEach((k) => { delete HTMLElement.prototype[k]; });
+  window.__nativePopover = "showPopover" in HTMLElement.prototype;
+  // and, as there, :popover-open is no selector at all: using it throws
+  const unknown = /(^|[^\\]):popover-open/;
+  const refuse = (proto, name) => {
+    const real = proto[name];
+    Object.defineProperty(proto, name, { configurable: true, writable: true, value: function (sel) {
+      if (unknown.test(String(sel))) throw new DOMException("'" + sel + "' is not a valid selector.", "SyntaxError");
+      return real.apply(this, arguments);
+    } });
+  };
+  [[Element.prototype, "matches"], [Element.prototype, "closest"], [Element.prototype, "querySelector"], [Element.prototype, "querySelectorAll"],
+    [Document.prototype, "querySelector"], [Document.prototype, "querySelectorAll"]].forEach(([o, n]) => refuse(o, n));
+});
+try {
+  console.log("-- an older iPad: no popover in the browser (the polyfill), and a full localStorage");
+  await openPage(oldPage, SITE + "#live");
+  // started: the room's song is drawn (whichever one the tests above left playing)
+  await oldPage.waitForFunction(() => window.firetable && firetable.song && !document.getElementById("track").classList.contains("skel"), null, { timeout: 30000 })
+    .catch(async () => { throw new Error("the site didn't start: " + oldErrors.join("; ") + " / " + await oldPage.evaluate(() => document.getElementById("track").textContent)); });
+  const old = await oldPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const out = { removed: window.__nativePopover === false };
+    out.polyfilled = typeof HTMLElement.prototype.showPopover === "function" && !/\[native code\]/.test(HTMLElement.prototype.showPopover.toString());
+    // a menu the site opens itself, with its toggle event and :popover-open in a selector
+    const pop = document.getElementById("socialPopover");
+    let toggled = "";
+    pop.addEventListener("toggle", (e) => { toggled = e.newState; }, { once: true });
+    pop.showPopover();
+    await wait(50);
+    out.open = pop.classList.contains(":popover-open") && pop.matches(":popover-open") && document.querySelector(":popover-open") === pop && toggled === "open";
+    pop.hidePopover();
+    out.closed = !pop.matches(":popover-open");
+    // the style the polyfill can't inject under the security policy is in looks.css (checked by its rule, as Chromium has popover natively)
+    out.rule = [...document.styleSheets].some((sh) => { try { return [...sh.cssRules].some((r) => r.cssText && r.cssText.includes("not selector(:popover-open)")); } catch (e) { return false; } });
+    // localStorage full: every write refused, and switching views still works
+    const realSet = Storage.prototype.setItem;
+    Storage.prototype.setItem = function () { throw new DOMException("The quota has been exceeded.", "QuotaExceededError"); };
+    try {
+      localStorage.setItem("ft-smoke-full", "kept");
+      localStorage["ft-smoke-full2"] = "kept too";
+      out.kept = localStorage.getItem("ft-smoke-full") === "kept" && localStorage["ft-smoke-full2"] === "kept too" && "ft-smoke-full" in localStorage;
+      if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+      firetable.nav.setView("history");
+      await wait(600);
+      out.history = document.getElementById("mainGrid").classList.contains("view-history") && localStorage[STORAGE.navView] === "history";
+      firetable.nav.setView("playlists");
+      await wait(600);
+      out.back = document.getElementById("mainGrid").classList.contains("view-playlists") && !firetable.nav._isFading;
+    } finally {
+      Storage.prototype.setItem = realSet;
+      localStorage.removeItem("ft-smoke-full");
+      localStorage.removeItem("ft-smoke-full2");
+    }
+    out.gone = localStorage.getItem("ft-smoke-full") === null;
+    return out;
+  });
+  check(old.removed && old.polyfilled, "without popover in the browser, the polyfill provides it (" + JSON.stringify(old) + ")");
+  check(old.open && old.closed && old.rule, "a polyfilled menu opens and closes, with its toggle event and :popover-open, and looks.css has its styles");
+  check(old.kept && old.history && old.back && old.gone, "with localStorage full, settings last the visit and switching views still works (" + JSON.stringify(old) + ")");
+  check(oldErrors.length === 0, "no page errors on an older iPad" + (oldErrors.length ? ": " + oldErrors.join("; ") : ""));
+} catch (e) {
+  check(false, "older iPad test threw: " + e.message);
+} finally {
+  await oldContext.close();
+}
+
 // The live stage for QueUp's screen (embed/stage/): its own page under its own
 // policy, reading a room of its own (a namespace apart, so the pages above
 // don't hear its songs change)
