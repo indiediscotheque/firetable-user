@@ -46,7 +46,7 @@ Also shipped outside the plan's steps (November 13 to 15, 2026): Play on a speak
 Phase 2's player work is in, plus a stream of owner requests. What isn't in is the safety net Phase 0 promised: controls now move between the stage, the player bar and the full-screen player, or hide in the DOM behind a menu, and only the smoke test's hand-written checks guard them. So:
 
 1. ~~0.2 Screenshot harness~~ ✅ and ~~0.4 "Nothing lost"~~ ✅ (`tests/reach.mjs`: where every control lives, checked in CI).
-2. ~~0.6 Accessibility check~~ ✅ (`tests/a11y.mjs`) and ~~0.1 tokens~~ ✅ (type, space, radius, targets and motion on `:root`; colours stay).
+2. ~~0.6 Accessibility check~~ ✅ (`tests/a11y.mjs`) and ~~0.1 tokens~~ ✅ (type, space, radius, targets and motion on `:root`; colours stay). ~~1.1~~ ✅ (November 22, 2026): today's colours as one palette, every grey from `:root`, checked by `tools/check-colours.mjs`.
 3. ~~2.4 Home leads with new releases~~ ✅ and ~~2.6 New and Charts, with 1.9's tied ranks~~ ✅. New and Charts matter most (the owner, November 15, 2026).
 4. **The crate:** ~~finish 1.16~~ ✅, ~~1.15's rows~~ ✅ and ~~1.17 Select several~~ ✅. The owner started these; each stays in today's skin.
 5. ~~**5.3 Discover always on.**~~ ✅ Every later step now has one way to work instead of two.

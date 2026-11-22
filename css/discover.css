@@ -939,7 +939,7 @@ section .d-chips a.d-chip {
     justify-content: center;
     gap: var(--pad2);
     background: #fff;  /* Google's own button colours, as on the sign-in screen */
-    color: #1f1f1f;
+    color: #1f1f1f; /* own colour: Google's own button */
 }
 .d-join .oauthLogo { width: 1.1rem; height: 1.1rem; flex: none; }
 .d-center { text-align: center; }
@@ -1219,12 +1219,12 @@ body.ft-discover #dSide #actualChat {
     height: 2.6rem;
     border-radius: 50%;
     background: var(--color-text-light); /* play/pause is the one light button */
-    color: #111;
+    color: #111; /* own colour: dark icon on the white play button */
     border-top-color: rgba(255, 255, 255, 0.6);
 }
 .pb .pb-main [class*="material-symbols-"] { font-size: 1.7rem; }
 @media (hover: hover) {
-    .pb .pb-main:not(:disabled):hover { background: #e6e6e6; transform: scale(1.04); }
+    .pb .pb-main:not(:disabled):hover { background: #e6e6e6; transform: scale(1.04); } /* own colour: the white play button's hover */
 }
 .pb.is-discover:not(.is-paused) .pb-main, .pb.is-live .pb-main { background: color-mix(in oklab, var(--pb-tone) 14%, white); }
 .pb .pb-small { width: 2rem; height: 2rem; min-height: 2rem; }
@@ -1563,7 +1563,7 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
         font-weight: 700;
         letter-spacing: 0.05em;
         text-transform: uppercase;
-        color: #999;
+        color: var(--color-text-soft);
         border-bottom: 2px solid transparent;
     }
     .d-nav i { display: none; }
@@ -1751,7 +1751,7 @@ body.pv-full-on { overflow: hidden; }
     inset: 0;
     z-index: 48;
     overflow: hidden;
-    background-color: color-mix(in oklab, var(--pb-tone) 46%, #040404);
+    background-color: color-mix(in oklab, var(--pb-tone) 46%, #040404); /* own colour: the song's colour into near-black, behind the full-screen player */
     transition: background-color 1.8s ease;
     pointer-events: none;
 }
@@ -2042,12 +2042,12 @@ button.pvf-line:focus-visible { outline: 2px solid var(--pb-tone); outline-offse
     height: clamp(3.5rem, 4.4vw, 4.75rem);
     border-radius: 50%;
     background: var(--color-text-light); /* play/pause is the one light button */
-    color: #111;
+    color: #111; /* own colour: dark icon on the white play button */
 }
 .pvf .pvf-main [class*="material-symbols-"] { font-size: clamp(2rem, 2.6vw, 2.75rem); }
 .pvf.is-sounding .pvf-main { background: color-mix(in oklab, var(--pb-tone) 14%, white); }
 @media (hover: hover) {
-    .pvf .pvf-main:not(:disabled):hover { background: #e6e6e6; transform: scale(1.04); }
+    .pvf .pvf-main:not(:disabled):hover { background: #e6e6e6; transform: scale(1.04); } /* own colour: the white play button's hover */
 }
 .pvf .pb-small { width: 2.5rem; height: 2.5rem; min-height: 2.5rem; }
 .pvf .is-saved, .pvf .d-toroom.is-done { color: var(--color-accent); }
@@ -2449,7 +2449,7 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 .d-sw-2 { background: #5b9bd5; }
 .d-sw-3 { background: #6cbf8b; }
 .d-sw-4 { background: #a685cf; }
-.d-sw-rest { background: var(--color-bg-t3, #444); }
+.d-sw-rest { background: var(--color-bg-t3); }
 
 /* ── Menus on phones (4.4): every ⋮ and ⋯ opens as a short sheet from the
    bottom, the same items as on a computer at 48px rows, over a dimmed page.

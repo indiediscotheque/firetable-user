@@ -2,7 +2,7 @@
 # stylesheets flatten for older Safari (what the deploy serves), a PHP syntax
 # check on the API proxies, and that the CSP in .htaccess covers every
 # published path. Run the same locally with:
-#   npm ci && npm run lint && node tools/flatten-css.mjs --check && php -l api/*.php && python3 .github/scripts/check-htaccess-scope.py
+#   npm ci && npm run lint && node tools/flatten-css.mjs --check && node tools/check-colours.mjs && php -l api/*.php && python3 .github/scripts/check-htaccess-scope.py
 
 name: Lint
 
@@ -39,6 +39,9 @@ jobs:
 
       - name: Stylesheets flatten for older Safari
         run: node tools/flatten-css.mjs --check
+
+      - name: Greys come from the palette
+        run: node tools/check-colours.mjs
 
       - name: PHP syntax
         run: |
