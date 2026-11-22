@@ -1238,9 +1238,13 @@ try {
     firetable.media.tapToPlay = () => { tapped = true; };
     ttp.click();
     firetable.media.tapToPlay = realTap;
-    out.listen = tb.width > 0 && Math.abs(tb.left + tb.width / 2 - (sb.left + sb.width / 2)) < 3 && tcs.boxShadow.indexOf("rgba(0, 0, 0") === -1 &&
+    // on the stage's base, between the front speakers (stage art x 523 to 945, y 530 to 590), at the stage's scale
+    const cv = document.querySelector("#tt-room .tt-canvas").getBoundingClientRect(), k = cv.width / 1468;
+    const bx = (tb.left + tb.width / 2 - cv.left) / k, by = (tb.top + tb.height / 2 - cv.top) / k;
+    out.listenBase = Math.abs(bx - 734) < 4 && Math.abs(by - 560) < 4 && tb.width / k < 422;
+    out.listen = tb.width > 0 && out.listenBase && tcs.boxShadow.indexOf("rgba(0, 0, 0") === -1 &&
       getComputedStyle(document.getElementById("tapToPlaySub")).display === "none" && /^rgb\(2(2[0-9]|[3-5][0-9])/.test(tcs.backgroundImage.replace(/^linear-gradient\(/, "")) && tapped;
-    out.listenInfo = [Math.round(tb.left + tb.width / 2), Math.round(sb.left + sb.width / 2), tcs.boxShadow, tcs.backgroundImage.slice(0, 40), tapped].join(" | ");
+    out.listenInfo = [Math.round(bx), Math.round(by), Math.round(tb.width / k), tcs.boxShadow, tcs.backgroundImage.slice(0, 40), tapped].join(" | ");
     document.body.classList.remove("media-blocked");
     // one sidebar or two
     document.getElementById("tt-layout").click();
@@ -1261,6 +1265,15 @@ try {
     out.off = !document.body.classList.contains("tt-skin") && getComputedStyle(document.getElementById("tt-room")).display === "none" &&
       document.getElementById("djlistpickerWrap").closest("#themebox") !== null && localStorage.getItem("firetableTurntable") === null;
     out.after = document.getElementById("playerArea") === player && player.getAttribute("src") === src;
+    // and Live's own Listen to the room again: its pill and its second line, none of the theme's
+    document.body.classList.add("media-blocked");
+    document.getElementById("tapToPlaySub").textContent = "someone is playing something";
+    const live = getComputedStyle(document.getElementById("tapToPlay"));
+    out.liveListen = live.display !== "none" && !/241, 207, 58/.test(live.backgroundImage) && parseFloat(live.borderRadius) > 20 &&
+      getComputedStyle(document.getElementById("tapToPlaySub")).display !== "none";
+    out.liveListenInfo = [live.backgroundImage.slice(0, 30), live.borderRadius].join(" | ");
+    document.getElementById("tapToPlaySub").textContent = "";
+    document.body.classList.remove("media-blocked");
     out.liveFace = !chatFace || chatFace.style.backgroundImage === liveFace;
     out.noTtFaceInLive = !chatFace || getComputedStyle(chatFace, "::after").content === "none" || getComputedStyle(chatFace, "::after").backgroundImage === "none";
     out.join = document.getElementById("joinBox").open; // nothing asked a member to sign in
@@ -1284,12 +1297,13 @@ try {
   check(tt.turn && /;ttfm,/.test(tt.stickers), "the turntable.fm logo is a sticker, and a sticker turns by dragging its corner (" + tt.turnInfo + ")");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
-  check(tt.listen, "the sound held back: a plain Turntable Listen button, centred on the floor, that starts the sound (" + tt.listenInfo + ")");
+  check(tt.listen, "the sound held back: a plain Turntable Listen button, on the stage's base between the front speakers at the stage's scale, that starts the sound (" + tt.listenInfo + ")");
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
   check(tt.turnBefore && tt.held && tt.turn && tt.turnBack, "a song change moves the spotlight and the nodding head to the DJ now playing (" + [tt.turnBefore, tt.held, tt.turn, tt.turnBack] + ")");
   check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
   check(tt.artTrack, "an art track's cover fills the right screen (one with a flat background of its own too); a video's frame is left as it is");
   check(tt.ledScroll && tt.ledStill, "the songboard scrolls a line too long to fit, a dot column at a time; a short one stays put");
+  check(tt.liveListen, "Back in Live, Listen to the room is Live's own (its pill and its second line) (" + tt.liveListenInfo + ")");
   check(tt.off && tt.liveFace && tt.noTtFaceInLive, "Back to Live: Live as it was, with Live's avatars");
 
   console.log("-- the stage's volume slider (a native range input)");
