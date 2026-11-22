@@ -690,11 +690,11 @@ body.tt-skin #screenover { display: none; }
 .tt-djlight[hidden] { display: none; }
 /* no z-index: the table top goes between the DJs and their laptops */
 .tt-table { left: 0; top: 0; width: 1468px; height: 600px; pointer-events: none; }
-.tt-tabletop { left: 475px; top: 486px; width: 518px; height: 58px; background: url(../img/tt/dj-table.webp?v=01.12.08); z-index: 3; pointer-events: none; }
+.tt-tabletop { left: 475px; top: 472px; /* as deepcut: the speakers under it show */ width: 518px; height: 58px; background: url(../img/tt/dj-table.webp?v=01.12.08); z-index: 3; pointer-events: none; }
 .tt-seat {
     position: absolute;
     left: calc(587px + var(--i) * 98px); /* laptops side by side, 98 apart, as deepcut */
-    top: 436px; /* the laptops' top edge */
+    top: 422px; /* the laptops' top edge: on the table, as deepcut's */
     width: 0;
     height: 0;
 }
@@ -734,7 +734,7 @@ body.tt-skin #screenover { display: none; }
 /* a DJ's menu, under their laptop (deepcut's: a dark list, their name in gold) */
 .tt-djmenu {
     left: calc(587px + var(--i, 0) * 98px - 82px);
-    top: 500px;
+    top: 486px;
     width: 164px;
     padding: 0;
     border: 1px solid #000;
