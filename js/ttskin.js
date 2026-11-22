@@ -170,8 +170,25 @@ firetable.tt = (function () {
   /**
    * A laptop, as kept at users/<uid>/ttLaptop: "lid;sticker,x,y,turn,size;…"
    * (x and y in % of the lid, turn in degrees, size in %), short enough for
-   * the database rules to check in one pattern.
+   * the database rules to check in one pattern. A sticker can hang off the
+   * lid's edge (the lid cuts it off): its middle as far as -40..140%. The
+   * rules take x and y as 0..999, so one off the left or top is kept as
+   * 1000 less it (-12 is 988); 0..100 are as they always were.
    */
+  var POS_MIN = -40, POS_MAX = 140;
+  function decodePos(n) { n = +n; return Math.max(POS_MIN, Math.min(POS_MAX, n >= 900 ? n - 1000 : n)); }
+  function encodePos(v) { v = Math.round(v); return v < 0 ? 1000 + v : v; }
+  /**
+   * Where a sticker's middle can go: off the lid's edge as far as leaves a
+   * fifth of it on (the lid is 96 by 66; a sticker is 30% of it wide, square).
+   */
+  var BLEED = 0.6;
+  function keepOn(it) {
+    var hx = 15 * it.s / 100, hy = hx * 96 / 66;
+    it.x = Math.max(-hx * BLEED, Math.min(100 + hx * BLEED, it.x));
+    it.y = Math.max(-hy * BLEED, Math.min(100 + hy * BLEED, it.y));
+    return it;
+  }
   function parseLaptop(str) {
     var out = { lid: "black", items: [] }; // Turntable's laptops were dark
     if (typeof str !== "string" || !/^[a-z]{3,6}(;[a-z0-9]{1,10},[0-9]{1,3},[0-9]{1,3},-?[0-9]{1,3},[0-9]{2,3}){0,10}$/.test(str)) return out;
@@ -180,13 +197,13 @@ firetable.tt = (function () {
     parts.slice(1).forEach(function (p) {
       var f = p.split(",");
       if (!stickerOk(f[0])) return;
-      out.items.push({ id: f[0], x: Math.min(100, +f[1]), y: Math.min(100, +f[2]), r: Math.max(-180, Math.min(180, +f[3])), s: Math.max(40, Math.min(160, +f[4])) });
+      out.items.push(keepOn({ id: f[0], x: decodePos(f[1]), y: decodePos(f[2]), r: Math.max(-180, Math.min(180, +f[3])), s: Math.max(40, Math.min(160, +f[4])) }));
     });
     return out;
   }
   function stringifyLaptop(l) {
     return [l.lid].concat(l.items.slice(0, MAX_STICKERS).map(function (i) {
-      return [i.id, Math.round(i.x), Math.round(i.y), Math.round(i.r), Math.round(i.s)].join(",");
+      return [i.id, encodePos(i.x), encodePos(i.y), Math.round(i.r), Math.round(i.s)].join(",");
     })).join(";");
   }
   function stickerOk(id) { return STICKERS.indexOf(id) !== -1 || (id.charAt(0) === "e" && EMOJI.indexOf(id.slice(1)) !== -1); }
@@ -388,7 +405,8 @@ firetable.tt = (function () {
         '<button type="button" class="tt-pickClose" data-lap="cancel" aria-label="Close">' + ms("close") + "</button></div>" +
       '<div class="tt-lapBody">' +
         '<div class="tt-lapStage">' +
-          '<div class="tt-laptop tt-lapBig" id="tt-lapBig"><div class="tt-lid" id="tt-lapLid" role="group" aria-label="Your laptop\'s lid"></div>' +
+          // the stickers faintly past the lid's edge too (here only: the room sees them cut off), behind the lid
+          '<div class="tt-laptop tt-lapBig" id="tt-lapBig"><div class="tt-lapGhost" id="tt-lapGhost" aria-hidden="true"></div><div class="tt-lid" id="tt-lapLid" role="group" aria-label="Your laptop\'s lid"></div>' +
             // the picked sticker's corner: drag it round to turn the sticker (outside the lid, so it's never cut off)
             '<span class="tt-lapTurn" id="tt-lapTurn" title="Drag to turn (Shift: in steps)" aria-hidden="true" hidden>' + ms("rotate_right") + "</span></div>" +
           '<div class="tt-lapTools" id="tt-lapTools" role="toolbar" aria-label="The sticker you picked">' +
@@ -1003,6 +1021,7 @@ firetable.tt = (function () {
     var d = L.draft;
     $id("tt-lapBig").setAttribute("data-lid", d.lid);
     $id("tt-lapLid").innerHTML = stickersHtml(d, true);
+    $id("tt-lapGhost").innerHTML = stickersHtml(d, false);
     document.querySelectorAll("#tt-laptopEdit .tt-lidPick").forEach(function (b) {
       b.setAttribute("aria-checked", b.dataset.lid === d.lid ? "true" : "false");
     });
@@ -1034,8 +1053,8 @@ firetable.tt = (function () {
     if (!i) return;
     if (what === "left") i.r = turnTo(i.r - 15);
     else if (what === "right") i.r = turnTo(i.r + 15);
-    else if (what === "smaller") i.s = Math.max(40, i.s - 15);
-    else if (what === "bigger") i.s = Math.min(160, i.s + 15);
+    else if (what === "smaller") keepOn(Object.assign(i, { s: Math.max(40, i.s - 15) }));
+    else if (what === "bigger") keepOn(Object.assign(i, { s: Math.min(160, i.s + 15) }));
     else if (what === "front") { d.items.splice(L.sel, 1); d.items.push(i); L.sel = d.items.length - 1; }
     else if (what === "remove") { d.items.splice(L.sel, 1); L.sel = -1; }
     renderLaptop(true);
@@ -1086,7 +1105,7 @@ firetable.tt = (function () {
       L.sel = +s.dataset.n;
       var r = lid.getBoundingClientRect(), it = L.draft.items[L.sel];
       L.drag = { id: e.pointerId, r: r, dx: e.clientX - (r.left + it.x / 100 * r.width), dy: e.clientY - (r.top + it.y / 100 * r.height), el: s };
-      s.setPointerCapture(e.pointerId);
+      try { s.setPointerCapture(e.pointerId); } catch (err) { /* a pointer that's already gone: the lid still gets the moves */ }
       lid.querySelectorAll(".tt-sticker.on").forEach(function (o) { o.classList.remove("on"); });
       s.classList.add("on");
       $id("tt-lapTools").classList.remove("tt-off");
@@ -1097,10 +1116,12 @@ firetable.tt = (function () {
     lid.addEventListener("pointermove", function (e) {
       if (!L.drag || e.pointerId !== L.drag.id) return;
       var r = L.drag.r, it = L.draft.items[L.sel];
-      it.x = Math.max(0, Math.min(100, (e.clientX - L.drag.dx - r.left) / r.width * 100));
-      it.y = Math.max(0, Math.min(100, (e.clientY - L.drag.dy - r.top) / r.height * 100));
-      L.drag.el.style.left = it.x + "%";
-      L.drag.el.style.top = it.y + "%";
+      it.x = (e.clientX - L.drag.dx - r.left) / r.width * 100;
+      it.y = (e.clientY - L.drag.dy - r.top) / r.height * 100;
+      keepOn(it); // off the edge if you like, so long as some of it stays on
+      [L.drag.el, $id("tt-lapGhost").children[L.sel]].forEach(function (el) {
+        if (el) { el.style.left = it.x + "%"; el.style.top = it.y + "%"; }
+      });
       placeTurn();
     });
     var drop = function () { if (L.drag) { L.drag = null; renderLaptop(true); } };
@@ -1123,8 +1144,9 @@ firetable.tt = (function () {
       if (!T || e.pointerId !== T.id) return;
       var it = L.draft.items[L.sel], r = T.r0 + angle(e) - T.a0;
       it.r = turnTo(e.shiftKey ? Math.round(r / 15) * 15 : Math.round(r));
-      var el = lid.querySelector('[data-n="' + L.sel + '"]');
-      if (el) el.style.setProperty("--r", it.r + "deg");
+      [lid.querySelector('[data-n="' + L.sel + '"]'), $id("tt-lapGhost").children[L.sel]].forEach(function (el) {
+        if (el) el.style.setProperty("--r", it.r + "deg");
+      });
       placeTurn();
     });
     var stopTurn = function () { if (T) { T = null; turn.classList.remove("on"); renderLaptop(true); } };
@@ -1133,10 +1155,10 @@ firetable.tt = (function () {
     lid.addEventListener("keydown", function (e) {
       if (!e.target.closest(".tt-sticker") || L.sel < 0) return;
       var it = L.draft.items[L.sel], step = e.shiftKey ? 8 : 2, k = e.key;
-      if (k === "ArrowLeft") it.x = Math.max(0, it.x - step);
-      else if (k === "ArrowRight") it.x = Math.min(100, it.x + step);
-      else if (k === "ArrowUp") it.y = Math.max(0, it.y - step);
-      else if (k === "ArrowDown") it.y = Math.min(100, it.y + step);
+      if (k === "ArrowLeft") keepOn(Object.assign(it, { x: it.x - step }));
+      else if (k === "ArrowRight") keepOn(Object.assign(it, { x: it.x + step }));
+      else if (k === "ArrowUp") keepOn(Object.assign(it, { y: it.y - step }));
+      else if (k === "ArrowDown") keepOn(Object.assign(it, { y: it.y + step }));
       else if (k === "[") return lapAct("left");
       else if (k === "]") return lapAct("right");
       else if (k === "-" || k === "_") return lapAct("smaller");

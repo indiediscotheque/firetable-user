@@ -1057,7 +1057,9 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
 .tt-lapTurn[hidden] { display: none; }
 .tt-lapTurn.on { cursor: grabbing; }
 .tt-lapTurn i { font-size: 1rem; pointer-events: none; }
-.tt-lapBig .tt-lid { touch-action: none; }
+.tt-lapBig .tt-lid { touch-action: none; z-index: 1; }
+/* behind the lid: what hangs off its edge, faint (the lid covers the rest) */
+.tt-lapGhost { position: absolute; inset: 0; opacity: 0.3; pointer-events: none; }
 .tt-lapBig .tt-sticker { cursor: grab; }
 .tt-lapBig .tt-sticker:active { cursor: grabbing; }
 .tt-lapBig .tt-sticker.on, .tt-lapBig .tt-sticker:focus-visible { outline: 2px dashed var(--tt-gold); outline-offset: 2px; }

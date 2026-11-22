@@ -1210,9 +1210,25 @@ try {
     out.turn = !handle.hidden && !document.querySelector('#tt-laptopEdit [data-lap="left"], #tt-laptopEdit [data-lap="right"]') &&
       Math.abs(((r1 - r0 - 90) % 360 + 540) % 360 - 180) <= 2;
     out.turnInfo = r0 + "→" + r1;
+    // and off the lid's edge: dragged far left, it hangs off (the lid cuts it), some of it still on
+    const lidBox = document.getElementById("tt-lapLid").getBoundingClientRect();
+    const logo = document.querySelector("#tt-lapLid .tt-sticker.on"), lb = logo.getBoundingClientRect();
+    const sx = lb.left + lb.width / 2, sy = lb.top + lb.height / 2;
+    const drag = (type, x, y) => (type === "pointerdown" ? logo : document.getElementById("tt-lapLid")).dispatchEvent(new PointerEvent(type, { pointerId: 8, clientX: x, clientY: y, bubbles: true, isPrimary: true }));
+    drag("pointerdown", sx, sy);
+    drag("pointermove", lidBox.left - 400, sy);
+    drag("pointerup", lidBox.left - 400, sy);
+    const off = document.querySelector("#tt-lapLid .tt-sticker.on"), ob = off.getBoundingClientRect();
+    out.bleed = parseFloat(off.style.left) < 0 && ob.left < lidBox.left && ob.right > lidBox.left + 2;
+    out.bleedInfo = off.style.left;
     document.querySelector('#tt-laptopEdit [data-lid="teal"]').click();
     document.querySelector('#tt-laptopEdit [data-lap="save"]').click();
     out.stickers = localStorage.getItem("firetableTurntableLaptop") || "";
+    // opened again, the sticker off the edge is where it was left
+    firetable.tt.openLaptop();
+    const back = [...document.querySelectorAll("#tt-lapLid .tt-sticker")].map((el) => parseFloat(el.style.left));
+    out.bleedBack = back.length === 2 && back[1] < 0 && Math.abs(back[1] - parseFloat(out.bleedInfo)) < 1;
+    document.querySelector('#tt-laptopEdit [data-lap="cancel"]').click();
     // one sidebar or two
     document.getElementById("tt-layout").click();
     const lay1 = document.body.getAttribute("data-tt-layout");
@@ -1251,6 +1267,7 @@ try {
   check(tt.faces, "chat shows Turntable faces in the theme (" + tt.faceInfo + ")");
   check(tt.awesome && tt.storm && tt.never && !tt.join, "Awesome is Fire, Storm takes it back, and nothing counts below none");
   check(tt.food, "the sticker builder has coffee and a burrito");
+  check(tt.bleed && tt.bleedBack && /;ttfm,9\d\d,/.test(tt.stickers), "a sticker can hang off the lid's edge, some of it kept on, and saves that way (" + tt.bleedInfo + ")");
   check(tt.turn && /;ttfm,/.test(tt.stickers), "the turntable.fm logo is a sticker, and a sticker turns by dragging its corner (" + tt.turnInfo + ")");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
