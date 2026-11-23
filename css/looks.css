@@ -3290,6 +3290,29 @@ input.ft-filter {
 /* Find tracks: the panel's main action, a dark circle with a gold + */
 #addToQueueBttn { border-radius: 50%; color: var(--color-accent); }
 #addToQueueBttn [class*="material-symbols-"] { font-size: 1.6rem; font-weight: 600; }
+/* Show only, Sort and Select were three buttons of stacked lines. Each has
+   its own glyph now (sliders, two arrows, ticks), and its name beside it
+   where the row has the room: from 1200px, where the middle column (46vw)
+   is wide enough to keep the filter box its placeholder. Narrower, the
+   glyphs and their tooltips do the work. */
+.cr-toolLabel { display: none; }
+@media only screen and (min-width: 1200px) {
+    body:not(.tt-skin) #queueFilterForm :is(#cr-showOnly, #cr-sort, #cr-select) {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        width: auto;
+        padding: 0 0.75rem 0 0.5rem;
+    }
+    body:not(.tt-skin) #queueFilterForm .cr-toolLabel {
+        display: inline;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    /* the name is on the button, so the tooltip would say it twice */
+    body:not(.tt-skin) #queueFilterForm :is(#tip-cr-showOnly, #tip-cr-sort, #tip-cr-select) { display: none; }
+}
 #cr-showOnly { position: relative; flex: none; }
 #cr-showOnly.is-on { color: var(--color-accent); }
 .cr-badge {
@@ -4024,9 +4047,10 @@ a.importLinkCheck {
     color: var(--color-text-light);
 }
 .cr-djtag[hidden] { display: none; }
-/* a phone keeps the row for the playlist's name: the glyph alone (its title and
-   the words, for screen readers, stay) */
-@media only screen and (max-width: 639px) {
+/* a phone keeps the row for the playlist's name, and so does a small computer
+   (three columns: the middle one is narrower than a tablet's): the glyph
+   alone (its title and the words, for screen readers, stay) */
+@media only screen and (max-width: 639px), (min-width: 1024px) and (max-width: 1199px) {
     .cr-djtag { padding: 0.15rem; border-color: transparent; }
     .cr-djtag > span {
         position: absolute;

@@ -476,6 +476,12 @@ try {
     const mid = (r) => r.top + r.height / 2;
     out.rows = { oneRow: Math.abs(mid(sw) - mid(more)) < 3 && Math.abs(mid(more) - mid(find)) < 3, filterRow: Math.abs(mid(filt) - mid(show)) < 3 && filt.top > sw.bottom,
       height: Math.round(top.height), oldGone: ["plIndexBtn", "mergeLists", "plDeleteLauncher", "plAddLauncher"].every((id) => document.getElementById(id).offsetParent === null) };
+    // Show only, Sort and Select: a glyph each (all in the icon font: a missing one would spill its name),
+    // and at this width (1280px) their names beside them
+    const three = ["cr-showOnly", "cr-sort", "cr-select"].map((id) => document.getElementById(id));
+    out.three = { glyphs: three.map((b) => b.querySelector("i").textContent.trim()).join(), drawn: three.every((b) => { const i = b.querySelector("i"); return i.scrollWidth <= i.clientWidth + 1; }),
+      names: three.map((b) => { const l = b.querySelector(".cr-toolLabel"); return l.getClientRects().length ? l.textContent : ""; }).join(),
+      oneLine: three.every((b) => Math.abs(mid(b.getBoundingClientRect()) - mid(filt)) < 3), filter: Math.round(filt.width), wide: innerWidth };
     // each item does what its old button did
     const calls = [];
     const keep = { idx: firetable.actions.openPlaylistIndex, shuf: firetable.actions.shuffleQueuePrompt, check: firetable.actions.checkBrokenTracks };
@@ -511,6 +517,9 @@ try {
     document.getElementById("cr-showOnlyMenu").hidePopover();
     return out;
   });
+  check(tools.three.glyphs === "tune,swap_vert,checklist" && tools.three.drawn && tools.three.oneLine && tools.three.filter >= 180 &&
+    tools.three.names === (tools.three.wide >= 1200 ? "Show only,Sort,Select" : ",,"),
+    "the crate's three tools each have their own glyph, and on a computer their names, with the filter box left its room (" + JSON.stringify(tools.three) + ")");
   check(tools.rows.oneRow && tools.rows.filterRow && tools.rows.height < 112 && tools.rows.oldGone,
     "the playlist, ⋮ and Find tracks share one row; the filter and Show only the next (" + JSON.stringify(tools.rows) + ")");
   check(tools.opened === 6 && tools.calls === "all,shuffle:cr-listBtn,check:" + (await page.evaluate(() => $("#listpicker").val())) && tools.import && tools.create && tools.createEnds && tools.merge && tools.mergeCloses && tools.deleteOff,
