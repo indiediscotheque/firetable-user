@@ -45,7 +45,7 @@ Options -Indexes
   #              elements, so injected markup can't restyle the page); inline
   #              style attributes are still used, so 'unsafe-inline' for those
   #              (browsers without style-src-elem fall back to style-src)
-  # If config.js sets soundcloudProxyURL or lastfmProxyURL to another host, add it to connect-src.
+  # If config.js sets soundcloudProxyURL, lastfmProxyURL or audienceURL to another host, add it to connect-src.
   #
   # Only firetable's own paths get this policy. Apache applies this file to
   # every folder below it, and other sites live there (e.g. /basement, an

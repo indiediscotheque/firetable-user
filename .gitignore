@@ -3,6 +3,7 @@ api/soundcloud-config.php
 .DS_Store
 node_modules/
 api/lastfm-config.php
+api/audience-config.php
 *-debug.log
 music/
 tests/screens/

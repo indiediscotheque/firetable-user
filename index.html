@@ -360,10 +360,13 @@
 			<div id="usersStats">
 				<h2><span id="numListeners"></span> People</h2>
 				<div class="listenerType">
-					<i class="material-symbols-outlined">room</i> <span id="numRoomListeners"></span>
+					<i class="material-symbols-outlined" aria-hidden="true">room</i> <span id="numRoomListeners"></span>
 				</div>
 				<div class="listenerType">
-					<i class="material-symbols-outlined">radio</i> <span id="numStreamListeners"></span>
+					<i class="material-symbols-outlined" aria-hidden="true">person</i> <span id="pe-numGuests"></span>
+				</div>
+				<div class="listenerType">
+					<i class="material-symbols-outlined" aria-hidden="true">radio</i> <span id="numStreamListeners"></span>
 				</div>
 			</div>
 			<div id="allUsersWrap" class="scroll-view">
@@ -397,6 +400,8 @@
 						</div>
 					</div>
 				</div>
+				<!-- the radio's listeners by country and the guests (js/audience.js) -->
+				<div id="pe-audience" class="pe-audience" role="region" aria-label="Listening elsewhere" hidden></div>
 			</div>
 		</div>
 
@@ -1591,6 +1596,7 @@
 	<script type="text/javascript" src="js/playlists.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/import.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/users.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/audience.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/avatar-builder.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/room.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/ui.js?v=01.12.08"></script>

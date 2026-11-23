@@ -42,5 +42,8 @@ var ftconfigs = {
   //                                                                  (then also add that host to connect-src in .htaccess)
   // Last.fm scrobbling runs through api/lastfm.php, which keeps the Last.fm
   // secret on the server. See api/lastfm-config.php.example.
-  // lastfmProxyURL: "https://example.com/api/lastfm.php" // optional, only if the proxy lives on another host
+  // lastfmProxyURL: "https://example.com/api/lastfm.php", // optional, only if the proxy lives on another host
+  // The people list's guests and radio listeners come from api/audience.php.
+  // See api/audience-config.php.example.
+  // audienceURL: "https://example.com/api/audience.php" // optional, only if it lives on another host
 };

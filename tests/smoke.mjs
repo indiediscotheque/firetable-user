@@ -3422,6 +3422,72 @@ try {
     "a visitor's Fresh, beside the welcome, loads without its tab being chosen (" + JSON.stringify(freshBeside) + ")");
   await fPage.close();
 
+  console.log("-- guests and the radio's listeners by country, in the people lists (api/audience.php)");
+  // api/audience.php answered here: a visitor's page sends heartbeats (Playwright's
+  // navigator.webdriver is hidden, as it is for people), a member's only asks
+  const AUDIENCE = { updated: "2026-11-23T12:00:00Z", guests: 3, guestsLive: 1,
+    stream: { listeners: 6, unplaced: 1, countries: [{ code: "US", name: "United States", n: 3 }, { code: "DE", name: "Germany", n: 2 }] } };
+  const audCalls = [];
+  // (a person's browser: headless Chromium says "HeadlessChrome", which isn't counted)
+  const aContext = await browser.newContext({ viewport: { width: 1280, height: 800 },
+    userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" });
+  await aContext.addInitScript(() => { Object.defineProperty(Navigator.prototype, "webdriver", { get: () => false }); });
+  await aContext.route("**/api/audience.php*", (route) => {
+    const r = route.request();
+    audCalls.push({ method: r.method(), body: r.postData() || "" });
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(AUDIENCE) });
+  });
+  const aPage = await aContext.newPage();
+  aPage.on("pageerror", (e) => pageErrors.push("Audience: " + e.message));
+  await openPage(aPage, SITE + "#live");
+  await aPage.waitForFunction(() => document.querySelectorAll("#pe-here .pe-audRow").length >= 3, null, { timeout: 20000 }).catch(() => {});
+  const visitorAud = await aPage.evaluate(() => {
+    const box = document.getElementById("pe-here");
+    return {
+      rows: [...box.querySelectorAll(".pe-audRow")].map((r) => r.querySelector(".pe-audName").textContent + "=" + r.querySelector(".pe-audN").textContent),
+      flags: [...box.querySelectorAll(".pe-audRow .pe-flag")].map((f) => f.querySelector("img.emoji") ? f.querySelector("img").alt : f.textContent),
+      heads: [...box.querySelectorAll(".pe-audHead")].map((h) => h.textContent.replace(/^(radio|person)/, "")),
+      note: (box.querySelector(".pe-audNote") || {}).textContent || "",
+      pressable: box.querySelectorAll("button, a, [tabindex], [role=button]").length,
+      pulse: document.getElementById("roomPulse").textContent
+    };
+  });
+  const beat = audCalls.find((c) => c.method === "POST");
+  const beatBody = new URLSearchParams(beat ? beat.body : "");
+  check(!!beat && /^[0-9a-f]{32}$/.test(beatBody.get("id") || "") && /^[01]$/.test(beatBody.get("live") || "") && !audCalls.some((c) => c.method === "GET"),
+    "a visitor's page sends a heartbeat (its browser's random id, and whether the room is sounding) and asks nothing else (" + JSON.stringify(audCalls) + ")");
+  check(visitorAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1" && visitorAud.flags.slice(0, 2).join("") === "\u{1F1FA}\u{1F1F8}\u{1F1E9}\u{1F1EA}" &&
+    visitorAud.heads.join("|") === "On the radio 6|Guests 3" && /3 visitors on the site without an account · .*1 listening live/.test(visitorAud.note) &&
+    visitorAud.pressable === 0 && / · 6 on the radio/.test(visitorAud.pulse),
+    "a visitor's list shows the radio's listeners merged by country with flags (and those it can't place), then the guests, and the room pulse counts the radio (" + JSON.stringify(visitorAud) + ")");
+  // the page closing (or its visitor signing in) says goodbye at once, rather than after two minutes
+  const goodbye = await aPage.evaluate(() => {
+    let sent = null;
+    navigator.sendBeacon = (url, body) => { sent = { url: String(url), body: String(body) }; return true; };
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }));
+    return sent;
+  });
+  check(!!goodbye && /api\/audience\.php$/.test(goodbye.url) && new URLSearchParams(goodbye.body).get("leave") === "1" && new URLSearchParams(goodbye.body).get("id") === beatBody.get("id"),
+    "leaving the page sends a goodbye for the same id (" + JSON.stringify(goodbye) + ")");
+  // a member's people list: the header counts everyone, then members, guests and the radio; the countries sit under the members
+  // (the header and section a member sees, kept up to date while a visitor's page sets them aside)
+  const memberAud = await aPage.evaluate((data) => {
+    firetable.audience.take(JSON.parse(JSON.stringify(data)));
+    const byId = (id) => document.getElementById(id) || (firetable.$appShell && firetable.$appShell.find("#" + id)[0]);
+    const stats = byId("usersStats"), box = byId("pe-audience");
+    const members = Object.keys(ftapi.users || {}).filter((u) => ftapi.users[u] && !ftapi.users[u].hostbot).length;
+    const tip = (id) => byId(id).closest(".listenerType").getAttribute("aria-label");
+    return { on: stats.classList.contains("is-on"), members, total: byId("numListeners").textContent,
+      room: byId("numRoomListeners").textContent, guests: byId("pe-numGuests").textContent,
+      radio: byId("numStreamListeners").textContent, tips: [tip("numRoomListeners"), tip("pe-numGuests"), tip("numStreamListeners")],
+      hidden: box.hidden, rows: [...box.querySelectorAll(".pe-audRow")].map((r) => r.querySelector(".pe-audName").textContent + "=" + r.querySelector(".pe-audN").textContent) };
+  }, AUDIENCE);
+  check(memberAud.on && memberAud.total === String(memberAud.members + 3 + 6) && memberAud.room === String(memberAud.members) && memberAud.guests === "3" && memberAud.radio === "6" &&
+    /in the room$/.test(memberAud.tips[0]) && memberAud.tips[1] === "3 guests on the site without an account, 1 listening live" && memberAud.tips[2] === "6 people listening on the radio" &&
+    !memberAud.hidden && memberAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1",
+    "a member's people list counts everyone with the room (members, guests, radio, each named for screen readers) and lists the radio by country under the members (" + JSON.stringify(memberAud) + ")");
+  await aContext.close();
+
   // a chart on a phone: the name keeps the row's width, the numbers sit under the artist, plays and all
   const cPage = await context.newPage();
   await cPage.setViewportSize({ width: 390, height: 844 });
