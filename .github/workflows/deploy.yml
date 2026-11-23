@@ -61,7 +61,8 @@
 # no longer built are removed, so a DJ who hides their name drops out), and
 # robots.txt on the server gets a line pointing at music/sitemap.xml. The same
 # build fills the home page (index.html) with what's new, this week's chart
-# and links into the library, and writes two feeds. They're rebuilt on every
+# and links into the library, writes two feeds, and draws each page's share
+# image (card.jpg, what a pasted link shows). They're rebuilt on every
 # publish and once a day (new releases and the chart change daily; on Mondays
 # that's after firetable-hostbot's weekly Play history job, which is when new
 # artists, DJs and genres get their pages). The addresses whose pages changed
@@ -229,8 +230,9 @@ jobs:
             echo "::warning::No SITE_URL, so the plain pages weren't built."
             exit 0
           fi
-          # --home: the home page with this week's songs in it; --sounds: what the room plays, in the words people search with
-          if node tools/plain-pages.mjs --site "$site" --out music --home index.html --sounds "alternative dance, synthpop, nu-disco"; then
+          # --home: the home page with this week's songs in it; --sounds: what the room plays, in the words people search with;
+          # --cards: a share image beside each page (tools/share-cards.mjs; sharp comes with the npm ci above)
+          if node tools/plain-pages.mjs --site "$site" --out music --home index.html --cards --sounds "alternative dance, synthpop, nu-disco"; then
             # version their stylesheet links like every other page
             [ -f music/.built ] && python3 .github/scripts/cache-bust.py .
           else

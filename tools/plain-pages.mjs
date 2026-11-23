@@ -17,6 +17,10 @@
 //                           and <out>/.changed, the addresses that changed
 //   --home <file>           the home page: index.html with what's new and this
 //                           week's chart already in it, linking into the library
+//   --cards                 a share image beside each page (card.jpg, 1200 x 630:
+//                           tools/share-cards.mjs), for link previews. Every
+//                           page but the artists past the --card-artists most
+//                           played (500), which keep their top song's cover.
 //
 // It reads what Discover reads, from the public parts of the database:
 // discover/lib/ (the weekly Play history job in firetable-hostbot) and
@@ -25,7 +29,7 @@
 // my name on public pages" are already left out of that data.
 //
 //   node tools/plain-pages.mjs --site https://indiediscotheque.com/ [--out music]
-//     [--template index.html] [--artists 5000] [--home index.html]
+//     [--template index.html] [--artists 5000] [--home index.html] [--cards] [--sounds "a, b"]
 //   FIREBASE_DATABASE_URL overrides config.js's database address.
 //
 // The deploy (.github/workflows/deploy.yml) runs it after versioning the
@@ -36,6 +40,7 @@
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { createHash } from "crypto";
+import { shareCards } from "./share-cards.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => { const i = args.indexOf("--" + name); return i === -1 ? fallback : args[i + 1]; };
@@ -44,6 +49,9 @@ const OUT = arg("out", "music");
 const BASE = "/music/";
 const ARTISTS = Number(arg("artists", 5000)); // every artist with a page in Discover
 const HOME = arg("home", "");
+const CARDS = args.includes("--cards") ? await shareCards() : null;
+if (args.includes("--cards") && !CARDS) { console.error("--cards needs sharp: run npm ci in the repository's root"); process.exit(2); }
+const CARD_ARTISTS = Number(arg("card-artists", 500));
 const ROWS = 50;
 // IndexNow: the key's file sits under /music/, so it speaks for those addresses only. Not a secret.
 const INDEXNOW_KEY = "7c1f3a9e5b2d4c68a0e1f7b3d95c2a46";
@@ -115,7 +123,7 @@ const songUrl = (t) => Number(t.type || 1) === 1 ? "https://www.youtube.com/watc
 const coverOf = (key) => { const i = String(key).indexOf("_"); return art({ type: Number(key.slice(0, i)) || 1, cid: key.slice(i + 1) }); };
 
 // what's published, so links only go to pages that exist
-const have = { genre: new Set(), dj: new Map(), artist: new Set() };
+const have = { genre: new Set(), dj: new Map(), artist: new Set(), year: new Set() };
 const djHref = (name, uid) => {
   const key = (uid && have.dj.get("uid:" + uid)) || (name && have.dj.get("name:" + String(name).toLowerCase()));
   return key ? BASE + "djs/" + key + "/" : null;
@@ -140,6 +148,8 @@ const HOME_TITLE = (TEMPLATE.match(/<title>([^<]*)<\/title>/i) || [])[1] || esc(
 const ORIGIN = SITE.replace(/\/$/, "");
 const abs = (path) => ORIGIN + BASE + path;
 const pages = []; // {path, html, hash}
+const cardJobs = []; // {path, card: {kicker, title, fact, covers: ["type_cid", ...]}}
+const keysOf = (list) => (list || []).filter((t) => t && t.cid).slice(0, 4).map((t) => (t.type || 1) + "_" + t.cid);
 const updated = { at: Date.now() };
 const icon = (name) => `<i class="material-symbols-outlined" aria-hidden="true">${name}</i>`;
 const ldScript = (ld) => `\t<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n`;
@@ -162,9 +172,12 @@ function fill(html, route, body, visible) {
   return html;
 }
 
-function page({ path, title, heading, description, image, ld, crumbs, route, body }) {
+function page({ path, title, heading, description, image, ld, crumbs, route, body, card }) {
   const url = abs(path);
   description = clip(description);
+  // its share image: drawn after every page is known (cards, below)
+  const drawn = !!(CARDS && card);
+  if (drawn) { cardJobs.push({ path, card }); image = abs(path + "card.jpg"); }
   const fullTitle = `${title} · ${ROOM}`;
   const graph = [{ "@type": "WebPage", "@id": url, url, name: fullTitle, description, inLanguage: "en", isPartOf: { "@id": SITE + "#site" }, dateModified: new Date(updated.at).toISOString() },
     crumbsLd(crumbs || [], heading || title, url), ...(ld ? [].concat(ld) : [])];
@@ -178,7 +191,7 @@ function page({ path, title, heading, description, image, ld, crumbs, route, bod
 	<meta property="og:description" content="${esc(description)}" />
 	<meta property="og:url" content="${esc(url)}" />
 	<meta property="og:image" content="${esc(image || SITE + "img/og.png")}" />
-	<meta name="twitter:card" content="${image ? "summary" : "summary_large_image"}" />
+${drawn || !image ? `	<meta property="og:image:width" content="1200" />\n	<meta property="og:image:height" content="630" />\n` : ""}${drawn ? `	<meta property="og:image:alt" content="${esc(card.title + (card.fact ? ": " + card.fact : ""))}" />\n` : ""}	<meta name="twitter:card" content="${image && !drawn ? "summary" : "summary_large_image"}" />
 ${ldScript({ "@context": "https://schema.org", "@graph": graph })}`;
   const foot = `<p class="d-fact d-plainfoot">${esc(ROOM)} is a live room where DJs take turns playing songs for each other. This page comes from the room's play history${route === "discover/new" ? " and is updated every day" : ""}.</p>`;
   let html = TEMPLATE
@@ -270,12 +283,20 @@ if (!SOUNDS.length) SOUNDS.push(...genreList.slice(0, 4).map((g) => g.name.toLow
 const soundsText = SOUNDS.length > 1 ? SOUNDS.slice(0, -1).join(", ") + " and " + SOUNDS[SOUNDS.length - 1] : SOUNDS[0] || "music";
 const names = (list, max = 3) => (list || []).slice(0, max).map((t) => t.a + " - " + t.t).join(", ");
 
+// which of a genre's years have a page (the bot lists them, ys), and the pages themselves
+const genreYears = await readAll(genreList.flatMap((g) => (g.ys || []).map((y) => "discover/lib/genreYear/" + g.slug + "_" + y)));
+const yearsOf = (g) => (g.ys || []).filter((y) => ((genreYears["discover/lib/genreYear/" + g.slug + "_" + y] || {}).top || []).length);
+const genresIn = (y) => genreList.filter((g) => yearsOf(g).some((x) => String(x) === String(y)));
+const yearChips = (g, not) => `<div class="d-chips">${yearsOf(g).slice().reverse().filter((y) => String(y) !== String(not)).map((y) => `<a class="d-chip d-num" href="${BASE}genres/${g.slug}/${y}/">${y}</a>`).join("")}</div>`;
+yearList.forEach((y) => { if (lib["discover/lib/year/" + y]) have.year.add(String(y)); });
+
 // genres
 if (genreList.length) {
   page({
     path: "genres/", title: `Music genres: ${genreList.length} sounds, from ${genreList[0].name} to ${genreList[genreList.length - 1].name}`, heading: "Genres", route: "discover/genres",
     description: `The ${genreList.length} genres played in ${ROOM}, most played first: ${genreList.slice(0, 8).map((g) => g.name).join(", ")} and more. Songs, plays and the usual tempo of each.`,
     ld: listLd("Genres", genreList.map((g) => [g.name, "genres/" + g.slug + "/"])),
+    card: { kicker: "Library", title: "Genres", fact: genreList.length + " sounds, from " + genreList[0].name + " to " + genreList[genreList.length - 1].name, covers: genreList.slice(0, 4).map((g) => (g.covers || [])[0]) },
     body: viewHead("Genres", genreList.length + " sounds the room plays, most played first.") +
       `<div class="d-gcards">` + genreList.map((g) =>
         `<a class="d-gcard" href="${BASE}genres/${g.slug}/">${mosaic(g.covers)}<span class="d-gname">${esc(g.name)}</span>` +
@@ -298,16 +319,40 @@ if (genreList.length) {
       description: `${g.about ? g.about + " " : ""}The ${shown} ${g.name} songs ${ROOM}'s DJs play most${top ? ": " + top : ""}. ${facts.join(", ")}.`,
       image: g.covers && g.covers[0] ? coverOf(g.covers[0]) : null,
       ld: playlistLd(`Best ${g.name} songs`, "genres/" + g.slug + "/", p.fav, Object.assign({ genre: g.name }, g.about ? { description: g.about } : {}, ytmUrl(g.slug) ? { sameAs: ytmUrl(g.slug) } : {})),
+      card: { kicker: "Genre", title: g.name, fact: plural(g.songs, "song", "songs") + " · " + plural(g.plays, "play", "plays"), covers: g.covers },
       body: back("genres/", "Genres") + pageHead(g.name, esc(facts.join(" · ")), { mosaic: mosaic(g.covers, true), more: g.about ? `<p class="d-about">${esc(g.about)}</p>` : "", play: ["discover/genres/" + g.slug, "Play " + g.name + " radio", "radio"],
         actions: ytmUrl(g.slug) ? `<a class="butt graybutt d-ytm" href="${esc(ytmUrl(g.slug))}" target="_blank" rel="noopener">${icon("open_in_new")}<span>YouTube Music</span></a>` : "" }) +
         `<section>${head("Room favorites")}<p class="d-fact">Most played in the room</p>${rows(p.fav)}</section>` +
         ((p.newHere || []).length ? `<section>${head("New here")}<p class="d-fact">Played here for the first time lately</p>${rows(p.newHere, { max: 20, stamp: (t) => t.first ? day(t.first) : "" })}</section>` : "") +
         ((p.deep || []).length ? `<section>${head("Deep cuts")}<p class="d-fact">Played here once or twice</p>${rows(p.deep, { max: 20, stamp: (t) => t.first ? day(t.first) : "" })}</section>` : "") +
+        ((p.story || []).filter(Boolean).length ? `<section class="d-story">${head("About " + g.name)}${p.story.filter(Boolean).map((para) => `<p>${esc(para)}</p>`).join("")}</section>` : "") +
+        (yearsOf(g).length ? `<section>${head("The best of each year")}<p class="d-fact">${esc(g.name)} released that year, most played here first</p>${yearChips(g, null)}</section>` : "") +
         (who.length ? `<section>${head("Who plays it")}<div class="d-people">${who.map((x) => person(djHref(x.dj, x.djid), x.dj, plural(x.plays, "play", "plays"))).join("")}</div></section>` : "") +
         (next.length ? `<section>${head("Next door")}<p class="d-fact">Genres its songs share most</p>${chips(next.map((k) => [BASE + "genres/" + k + "/", genres[k].name]))}</section>` : "")
     });
   });
 }
+
+// a genre's songs released in one year ("the best nu-disco of 2014"): discover/lib/genreYear/<slug>_<year>
+genreList.forEach((g) => yearsOf(g).forEach((y) => {
+  const p = genreYears["discover/lib/genreYear/" + g.slug + "_" + y];
+  const path = "genres/" + g.slug + "/" + y + "/";
+  const others = genresIn(y).filter((o) => o.slug !== g.slug);
+  page({
+    path, title: `Best ${g.name} songs of ${y}`, heading: String(y), route: "discover/genres/" + g.slug + "/" + y,
+    crumbs: [["Genres", "genres/"], [g.name, "genres/" + g.slug + "/"]],
+    description: `The ${g.name} songs released in ${y} that ${ROOM}'s DJs play most: ${names(p.top)}. ${plural(p.songs, "song", "songs")}${p.plays ? ", " + plural(p.plays, "play", "plays") : ""}.`,
+    image: p.top[0] ? art(p.top[0]) : null,
+    ld: playlistLd(`Best ${g.name} songs of ${y}`, path, p.top, { genre: g.name }),
+    card: { kicker: g.name, title: "The best of " + y, fact: plural(p.songs, "song", "songs") + (p.plays ? " · " + plural(p.plays, "play", "plays") : ""), covers: keysOf(p.top) },
+    body: back("genres/" + g.slug + "/", g.name) + pageHead("The best " + g.name + " of " + y, esc(plural(p.songs, "song", "songs") + " released in " + y + " played here" + (p.plays ? " · " + plural(p.plays, "play", "plays") : "")), {
+      mosaic: mosaic(keysOf(p.top), true), play: ["discover/genres/" + g.slug + "/" + y, "Play all"]
+    }) +
+      `<section>${head("Most played here")}${rows(p.top, { max: 40 })}</section>` +
+      (yearsOf(g).length > 1 ? `<section>${head("Other years")}${yearChips(g, y)}</section>` : "") +
+      (others.length ? `<section>${head("More from " + y, have.year.has(String(y)) ? "All of " + y : "", "years/" + y + "/")}${chips(others.map((o) => [BASE + "genres/" + o.slug + "/" + y + "/", o.name]))}</section>` : "")
+  });
+}));
 
 // DJs
 if (djList.length) {
@@ -315,6 +360,7 @@ if (djList.length) {
     path: "djs/", title: `The DJs: ${djList.length} people and what they play`, heading: "DJs", route: "discover/djs",
     description: `The DJs of ${ROOM}: ${djList.length} people with 25 or more plays, their sound and the songs they play most. Most plays: ${djList.slice(0, 6).map((d) => d.name).join(", ")}.`,
     ld: listLd("DJs", djList.map((d) => [d.name, "djs/" + d.key + "/"])),
+    card: { kicker: "Library", title: "The DJs", fact: plural(djList.length, "person", "people") + " and what they play", covers: keysOf((lib["discover/lib/dj/" + djList[0].key] || {}).most) },
     body: viewHead("DJs", plural(djList.length, "DJ", "DJs") + " with 25 or more plays here") +
       `<div class="d-people d-people-wide">` + djList.map((d) => person(BASE + "djs/" + d.key + "/", d.name,
         esc((d.since ? "since " + year(d.since) + " · " : "") + n(d.plays) + " plays · " + n(d.firsts) + " firsts"), esc((d.g || []).join(", ")))).join("") + `</div>`
@@ -336,6 +382,7 @@ if (djList.length) {
       description: `${p.name} DJs in ${ROOM}${taste.length ? ", mostly " + taste.filter((x) => x.slug).slice(0, 3).map((x) => x.g).join(", ") : ""}. ${cap(facts.join(", "))}.${(p.most || []).length ? " Most played: " + names(p.most) + "." : ""}`,
       ld: [{ "@type": "ProfilePage", url, mainEntity: { "@type": "Person", name: p.name, url, ...(taste.length ? { knowsAbout: taste.filter((x) => x.slug).map((x) => x.g) } : {}) } },
         playlistLd(p.name + "'s most played songs", "djs/" + d.key + "/", p.most)],
+      card: { kicker: "DJ", title: p.name, fact: (p.since ? "since " + year(p.since) + " · " : "") + plural(p.plays, "play", "plays"), covers: keysOf(p.most) },
       body: back("djs/", "DJs") + pageHead(p.name, esc(facts.join(" · ")), { play: ["discover/djs/" + d.key, "Play their favorites"] }) +
         (taste.length ? `<section>${head("Their sound")}<div class="d-taste">${taste.map((x) =>
           `<div class="d-tasterow${x.slug ? "" : " d-other"}">${x.slug && have.genre.has(x.slug) ? `<a href="${BASE}genres/${x.slug}/">${esc(x.g)}</a>` : `<span>${esc(x.g)}</span>`}` +
@@ -354,6 +401,7 @@ topArtists.forEach(([slug]) => {
   if (!a) { have.artist.delete(slug); return; }
   artistPages.push([slug, a]);
 });
+const cardArtists = new Set(artistPages.slice(0, CARD_ARTISTS).map(([slug]) => slug));
 artistPages.forEach(([slug, a]) => {
   const facts = [plural(a.songs, "song", "songs") + " played here", plural(a.plays, "play", "plays")];
   const who = (a.djs || []).filter((x) => x.dj);
@@ -367,6 +415,7 @@ artistPages.forEach(([slug, a]) => {
     crumbs: [["Artists", "artists/"]],
     description: `The ${a.name} songs ${ROOM}'s DJs play most${top ? ": " + top : ""}. ${facts.join(", ")}.${sound.length ? " " + sound.join(", ") + "." : ""}${like.length ? " Sounds like " + like.slice(0, 4).map((x) => x.n).join(", ") + "." : ""}`,
     image: a.rows && a.rows[0] ? art(a.rows[0]) : null,
+    card: cardArtists.has(slug) ? { kicker: "Artist", title: a.name, fact: plural(a.songs, "song", "songs") + " · " + plural(a.plays, "play", "plays"), covers: keysOf(a.rows) } : null,
     ld: playlistLd(a.name + ": top songs", "artists/" + slug + "/", a.rows, { about: { "@type": "MusicGroup", name: a.name, mainEntityOfPage: url, ...(sound.length ? { genre: sound } : {}) } }),
     body: back("artists/", "Artists") + pageHead(a.name, esc(facts.join(" · ")), {
       mosaic: mosaic((a.rows || []).slice(0, 4).map((t) => (t.type || 1) + "_" + t.cid), true),
@@ -389,6 +438,7 @@ if (artistPages.length) {
     path: "artists/", title: `Artists: the ${n(artistPages.length)} the room plays, A to Z`, heading: "Artists", route: "discover/page/artists",
     description: `The ${n(artistPages.length)} artists played in ${ROOM}, with each one's most played songs and who plays them. Most played: ${artistPages.slice(0, 8).map(([, a]) => a.name).join(", ")}.`,
     ld: listLd("Artists", artistPages.slice(0, 100).map(([slug, a]) => [a.name, "artists/" + slug + "/"])),
+    card: { kicker: "Library", title: "Artists", fact: n(artistPages.length) + " artists, A to Z", covers: artistPages.slice(0, 4).map(([, a]) => keysOf(a.rows)[0]) },
     body: viewHead("Artists", n(artistPages.length) + " artists played here. The " + Math.min(TOP, artistPages.length) + " most played, and everyone by letter.") + letterChips(null) +
       `<div class="d-people d-people-wide">` + artistPages.slice(0, TOP).map(([slug, a]) => person(BASE + "artists/" + slug + "/", a.name, plural(a.plays, "play", "plays"))).join("") + `</div>`
   });
@@ -411,6 +461,7 @@ if (yearList.length) {
     path: "years/", title: `The best songs of every year, ${yearList[yearList.length - 1]} to ${yearList[0]}`, heading: "Years", route: "discover/years",
     description: `${ROOM}'s playlist for each year since ${yearList[yearList.length - 1]}: the ${soundsText} released that year, and what the room played most from each.`,
     ld: listLd("Years", yearList.map((y) => [y, "years/" + y + "/"])),
+    card: { kicker: "Library", title: "The best songs of every year", fact: yearList[yearList.length - 1] + " to " + yearList[0], covers: yearList.slice(0, 4).map((y) => keysOf((lib["discover/lib/year/" + y] || {}).top)[0]) },
     body: viewHead("Years", "The room's playlist for each year, and how much of it was played here") +
       `<div class="d-yearlist">` + yearList.map((y) => {
         const v = years[y] || {};
@@ -430,11 +481,13 @@ if (yearList.length) {
       description: `The ${y} songs ${ROOM}'s DJs played most${top ? ": " + top : ""}. From the room's ${y} playlist of ${n(v.songs)} songs${v.genre ? ", mostly " + v.genre : ""}.`,
       image: p.top && p.top[0] ? art(p.top[0]) : null,
       ld: playlistLd("The best songs of " + y, "years/" + y + "/", p.top),
+      card: { kicker: "Year", title: "The best songs of " + y, fact: n(v.songs) + " songs" + (v.genre ? " · mostly " + v.genre : ""), covers: keysOf(p.top) },
       body: back("years/", "Years") + pageHead(y, esc(n(v.songs) + " songs on the playlist · " + n(v.played) + " played here" + (v.genre ? " · mostly " + v.genre : "")), {
         mosaic: mosaic((p.top || []).slice(0, 4).map((t) => (t.type || 1) + "_" + t.cid), true), play: ["discover/years/" + y, "Play the year"]
       }) +
         `<section>${head("Most played here")}${rows(p.top)}</section>` +
-        ((p.more || []).length ? `<section>${head("Not played here yet")}<p class="d-fact">From ${y}'s playlist. Play one for the room.</p>${rows(p.more, { max: 24, stamp: () => "", right: () => "" })}</section>` : "")
+        ((p.more || []).length ? `<section>${head("Not played here yet")}<p class="d-fact">From ${y}'s playlist. Play one for the room.</p>${rows(p.more, { max: 24, stamp: () => "", right: () => "" })}</section>` : "") +
+        (genresIn(y).length ? `<section>${head(y + " by genre")}${chips(genresIn(y).map((o) => [BASE + "genres/" + o.slug + "/" + y + "/", o.name]))}</section>` : "")
     });
   });
 }
@@ -471,6 +524,7 @@ chartPaths.forEach((p) => {
     description: `The ${soundsText} songs played most in ${ROOM}, ${what}: ${names(c.rows)}. ${chartFact(c) ? chartFact(c) + "." : ""}`,
     image: c.rows[0] ? art(c.rows[0]) : null,
     ld: playlistLd(ROOM + " chart: " + name, path, c.rows),
+    card: { kicker: "Chart", title: period === "all" ? "The top " + shown + " of all time" : period === "week" ? "Top " + shown + ": week of " + day(c.from || Date.now()).replace(/, \d{4}$/, "") : "Top " + shown + " of " + name, fact: "#1 " + names(c.rows, 1), covers: keysOf(c.rows) },
     body: back("charts/", "Charts") + viewHead("Room chart: " + name, chartFact(c)) + chartRows(c)
   });
 });
@@ -486,6 +540,7 @@ if (chartList.length) {
     description: `${ROOM}'s weekly, monthly, yearly and all-time charts: the ${soundsText} songs DJs played most.${latestWeek ? " This week: " + names(latestWeek.c.rows) + "." : ""}`,
     image: latestWeek && latestWeek.c.rows[0] ? art(latestWeek.c.rows[0]) : null,
     ld: [listLd("Charts", chartList.map((x) => [x.name, x.path]))].concat(latestWeek ? [playlistLd(ROOM + " chart: " + latestWeek.name, latestWeek.path, latestWeek.c.rows)] : []),
+    card: { kicker: "Charts", title: "This week's top " + (latestWeek ? Math.min(latestWeek.c.rows.length, 40) : 40), fact: latestWeek ? "#1 " + names(latestWeek.c.rows, 1) : "", covers: latestWeek ? keysOf(latestWeek.c.rows) : [] },
     body: (latestWeek ? viewHead("Room chart: " + latestWeek.name, chartFact(latestWeek.c)) + chartRows(latestWeek.c) : viewHead("Room charts", "The songs played most in the room")) +
       group("all", "All time") + group("week", "Weeks") + group("month", "Months") + group("year", "Years")
   });
@@ -504,6 +559,7 @@ if (newTracks.length) {
     description: `New ${soundsText} songs, out in the last ${fresh.days || 90} days and found by ${ROOM}'s DJs: ${names(newTracks, 4)}. Updated every day.`,
     image: art(newTracks[0]),
     ld: playlistLd("New releases in " + ROOM, "new/", newTracks),
+    card: { kicker: "New releases", title: "Out this week", fact: names(newTracks, 1), covers: keysOf(newTracks) },
     body: viewHead("New releases", plural(newTracks.length, "song", "songs") + " released in the last " + (fresh.days || 90) + " days, newest first") +
       (week.length ? `<section>${head("Out this week")}${newRows(week, 60)}</section>` : "") +
       (rest.length ? `<section>${head(week.length ? "Earlier" : "The last " + (fresh.days || 90) + " days")}${newRows(rest, 100 - Math.min(week.length, 60))}</section>` : "")
@@ -525,6 +581,7 @@ nightList.forEach((k) => {
     description: `${n.theme}: the ${n.n} songs ${ROOM} played on ${nightDay(n.from)}${(n.djs || []).length ? ", with " + n.djs.join(", ") : ""}. ${names(n.rows)}.`,
     image: n.rows && n.rows[0] ? art(n.rows[0]) : null,
     ld: playlistLd(n.theme + " · " + nightDay(n.from), "themes/" + k + "/", n.rows),
+    card: { kicker: "Theme night", title: n.theme, fact: nightDay(n.from) + " · " + plural(n.n, "song", "songs"), covers: keysOf(n.rows) },
     body: back("themes/", "Theme nights") + pageHead(n.theme, esc(nightDay(n.from) + " · " + plural(n.n, "song", "songs") + ((n.djs || []).length ? " · " + n.djs.join(", ") : "")), {
       mosaic: mosaic((n.rows || []).slice(0, 4).map((t) => (t.type || 1) + "_" + t.cid), true), play: ["discover/themes/" + k, "Play the night"]
     }) + rows(n.rows, { max: 100, stamp: (t) => new Date(t.w).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).replace(" ", "").toLowerCase() })
@@ -556,6 +613,7 @@ const counts = `${n(genreList.length)} genres, ${n(djList.length)} DJs, ${n(arti
 page({
   path: "", title: "The library: every genre, DJ, artist and year", heading: "Library", route: "discover/page/library",
   description: `Everything ${ROOM} has played: ${counts}, with the charts and new releases. ${cap(soundsText)}, from the room's play history.`,
+  card: { kicker: ROOM, title: "The library", fact: "Every genre, DJ, artist and year the room has played", covers: genreList.slice(0, 4).map((g) => (g.covers || [])[0]) },
   ld: listLd("The library", [["New releases", "new/"], ["Charts", "charts/"], ["Genres", "genres/"], ["DJs", "djs/"], ["Artists", "artists/"], ["Years", "years/"], ["Theme nights", "themes/"]]
     .filter(([, path]) => pages.some((p) => p.path === path))),
   body: viewHead(ROOM + ": the library", "Everything the room has played, by genre, DJ, artist and year.") +
@@ -598,6 +656,37 @@ pages.forEach((p) => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "index.html"), p.html);
 });
+// Share images: each page's covers, name and a fact (tools/share-cards.mjs).
+// Covers are read once each, a few at a time; a cover that can't be read is
+// left out. Each file keeps one old date: the same picture is the same file,
+// so the upload sends only the ones that changed (a different size).
+if (CARDS && cardJobs.length) {
+  const covers = new Map(); // "type_cid" -> Promise<Buffer|null>
+  const coverOfKey = (key) => {
+    if (!covers.has(key)) {
+      const cut = String(key).indexOf("_"), type = Number(String(key).slice(0, cut)) || 1, cid = String(key).slice(cut + 1);
+      covers.set(key, type !== 1 ? Promise.resolve(null) : fetch("https://i.ytimg.com/vi/" + encodeURIComponent(cid) + "/hqdefault.jpg", { headers: { "User-Agent": "firetable-plain-pages" } })
+        .then((res) => (res.ok ? res.arrayBuffer() : null)).then((b) => (b ? CARDS.cover(Buffer.from(b), { youtube: true }) : null)).catch(() => null));
+    }
+    return covers.get(key);
+  };
+  const { utimesSync } = await import("fs");
+  const old = new Date("2001-01-01T00:00:00Z");
+  let next = 0, drawn = 0;
+  await Promise.all(Array.from({ length: 6 }, async () => {
+    while (next < cardJobs.length) {
+      const job = cardJobs[next++];
+      const keys = (job.card.covers || []).filter(Boolean).slice(0, 4);
+      const got = (await Promise.all(keys.map(coverOfKey))).filter(Boolean);
+      const file = join(OUT, job.path, "card.jpg");
+      // four covers make a square of four; fewer, the first one alone
+      writeFileSync(file, await CARDS.card({ kicker: job.card.kicker, title: job.card.title, fact: job.card.fact, site: new URL(SITE).host.replace(/^www\./, ""), covers: got.length >= 4 ? got : got.slice(0, 1) }));
+      utimesSync(file, old, old);
+      drawn++;
+    }
+  }));
+  console.log(`share images: ${drawn} drawn from ${covers.size} covers`);
+}
 writeFileSync(join(OUT, "pages.json"), JSON.stringify({ at: new Date().toISOString(), pages: Object.fromEntries(pages.map((p) => [p.path, [p.hash, p.lastmod]])) }));
 const newest = pages.reduce((m, p) => (p.lastmod > m ? p.lastmod : m), "");
 const others = [[SITE, newest], [SITE + "about/", null]]; // the sitemap is named in robots.txt, so it may list the whole site
