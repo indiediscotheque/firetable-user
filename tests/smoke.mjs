@@ -476,6 +476,12 @@ try {
     const mid = (r) => r.top + r.height / 2;
     out.rows = { oneRow: Math.abs(mid(sw) - mid(more)) < 3 && Math.abs(mid(more) - mid(find)) < 3, filterRow: Math.abs(mid(filt) - mid(show)) < 3 && filt.top > sw.bottom,
       height: Math.round(top.height), oldGone: ["plIndexBtn", "mergeLists", "plDeleteLauncher", "plAddLauncher"].every((id) => document.getElementById(id).offsetParent === null) };
+    // Show only, Sort and Select: a glyph each (all in the icon font: a missing one would spill its name),
+    // and at this width (1280px) their names beside them
+    const three = ["cr-showOnly", "cr-sort", "cr-select"].map((id) => document.getElementById(id));
+    out.three = { glyphs: three.map((b) => b.querySelector("i").textContent.trim()).join(), drawn: three.every((b) => { const i = b.querySelector("i"); return i.scrollWidth <= i.clientWidth + 1; }),
+      names: three.map((b) => { const l = b.querySelector(".cr-toolLabel"); return l.getClientRects().length ? l.textContent : ""; }).join(),
+      oneLine: three.every((b) => Math.abs(mid(b.getBoundingClientRect()) - mid(filt)) < 3), filter: Math.round(filt.width), wide: innerWidth };
     // each item does what its old button did
     const calls = [];
     const keep = { idx: firetable.actions.openPlaylistIndex, shuf: firetable.actions.shuffleQueuePrompt, check: firetable.actions.checkBrokenTracks };
@@ -511,6 +517,9 @@ try {
     document.getElementById("cr-showOnlyMenu").hidePopover();
     return out;
   });
+  check(tools.three.glyphs === "tune,swap_vert,checklist" && tools.three.drawn && tools.three.oneLine && tools.three.filter >= 180 &&
+    tools.three.names === (tools.three.wide >= 1200 ? "Show only,Sort,Select" : ",,"),
+    "the crate's three tools each have their own glyph, and on a computer their names, with the filter box left its room (" + JSON.stringify(tools.three) + ")");
   check(tools.rows.oneRow && tools.rows.filterRow && tools.rows.height < 112 && tools.rows.oldGone,
     "the playlist, ⋮ and Find tracks share one row; the filter and Show only the next (" + JSON.stringify(tools.rows) + ")");
   check(tools.opened === 6 && tools.calls === "all,shuffle:cr-listBtn,check:" + (await page.evaluate(() => $("#listpicker").val())) && tools.import && tools.create && tools.createEnds && tools.merge && tools.mergeCloses && tools.deleteOff,
@@ -718,10 +727,17 @@ try {
       stored: row("k1").getAttribute("data-tags"),
       k1: tags("k1"), k4: tags("k4"), k2: tags("k2")
     };
+    // the two pickers: the stage's is a status line (no box, as wide as its name, its label beside it),
+    // and the crate's says "DJ list" while it shows the list you DJ from
+    const stagePick = document.getElementById("djlistpicker"), sp = getComputedStyle(stagePick), tag = document.getElementById("cr-djTag");
+    const lab = document.getElementById("djlistpickerLabel").getBoundingClientRect(), pick = stagePick.getBoundingClientRect();
+    out.status = { box: sp.backgroundColor + "|" + sp.borderTopColor + "|" + sp.boxShadow, hugs: pick.width < 0.8 * document.getElementById("djlistpickerWrap").getBoundingClientRect().width,
+      beside: innerWidth < 640 || (lab.width > 40 && lab.right <= pick.left + 1), select: stagePick.tagName, tag: !tag.hidden && tag.getClientRects().length > 0 ? tag.querySelector("span").textContent.trim() : "" };
     ftapi.events.emit("djListChanged", "elsewhere");
     ftapi.selectedListThing = "elsewhere";
     firetable.ui.markDjList();
     out.notDj = tags("k1");
+    out.status.tagOff = tag.hidden;
     ftapi.selectedListThing = realDj;
     firetable.ui.markDjList();
     // ⋮ → Delete and search for another
@@ -741,6 +757,9 @@ try {
   check(rowLook.k1 === "Next+Low audio" && rowLook.k4 === "Remix" && rowLook.k2 === "Broken" && rowLook.notDj === "Low audio",
     "tags: Next on the first song of the list you DJ from (only that list), Broken (or why) when flagged, Remix when the title says so (" + JSON.stringify(rowLook) + ")");
   check(rowLook.delsearch === "k2|Daft Punk - One More Time|1", "the row's ⋮ has Delete and search for another (" + rowLook.delsearch + ")");
+  check(/^rgba\(0, 0, 0, 0\)\|rgba\(0, 0, 0, 0\)\|none$/.test(rowLook.status.box) && rowLook.status.hugs && rowLook.status.beside && rowLook.status.select === "SELECT",
+    "under the stage, the playlist you DJ from reads as a status: no box, as wide as its name, still the same select (" + JSON.stringify(rowLook.status) + ")");
+  check(rowLook.status.tag === "DJ list" && rowLook.status.tagOff, "the crate's picker says DJ list while it shows the list you DJ from, and only then (" + JSON.stringify(rowLook.status) + ")");
 
   console.log("-- one song menu: the same items, words and order in each ⋮");
   const oneMenu = await page.evaluate(async () => {
@@ -1670,11 +1689,14 @@ try {
     const blocks = [...document.querySelectorAll("#chats > .newChat:not(.nowplayn)")].slice(-2);
     const size = (b) => getComputedStyle(b.querySelector(".chatText")).fontSize;
     const role = document.querySelector("#usersbox .prsnRole[title]");
-    return { bot: blocks[0].classList.contains("ch-bot") + "|" + size(blocks[0]), person: blocks[1].classList.contains("ch-bot") + "|" + size(blocks[1]),
+    const members = [...document.querySelectorAll("#usersRegular .prson:not(.ft-skeleton)")];
+    const plain = members.length + "|" + members.filter((m) => m.querySelector(".prsnRole")).length;
+    return { plain, bot: blocks[0].classList.contains("ch-bot") + "|" + size(blocks[0]), person: blocks[1].classList.contains("ch-bot") + "|" + size(blocks[1]),
       role: role ? role.getAttribute("title") + "|" + role.getAttribute("aria-label") : "" };
   });
   check(botLine.bot === "true|13px" && botLine.person === "false|14px", "the room bot's chat lines are quieter than people's (" + JSON.stringify(botLine) + ")");
-  check(/^(Member|Mod|Supermod|Room bot)\|\1$/.test(botLine.role), "the people list names each role icon, for a tooltip and screen readers (" + botLine.role + ")");
+  check(/^(Mod|Supermod|Room bot)\|\1$/.test(botLine.role), "the people list names each role icon, for a tooltip and screen readers (" + botLine.role + ")");
+  check(/^[1-9]\d*\|0$/.test(botLine.plain), "only the bot, mods and supermods have a role icon: no member's row repeats one (" + botLine.plain + ")");
   await put("/cards/cardL/owner", "smoke");
   await page.waitForFunction(() => $('.chat-grab-btn[data-card="cardL"]').attr("data-state") === "mine", null, { timeout: 8000 }).catch(() => {});
   legacy.after = await page.$eval('.chat-grab-btn[data-card="cardL"]', (b) => b.dataset.state).catch(() => "missing");
@@ -2063,8 +2085,16 @@ try {
     out.liveTabs = [...document.querySelectorAll("#minimodeoptions .tab")].filter((t) => t.offsetParent)
       .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left).map((t) => t.textContent.trim()).join();
     out.liveLit = !document.body.classList.contains("nt-library") && document.querySelector('#nav-tabs [data-tab="live"]').classList.contains("on");
+    // the stage stays with Chat: Live's other tabs are lists, and get the screen (the bar names the song)
+    const stageAt = () => { const r = document.getElementById("stage").getBoundingClientRect(), t = document.getElementById("minimodeoptions").getBoundingClientRect();
+      return (r.right > 0 && r.left < innerWidth ? "on" : "off") + "|" + Math.round(t.top - document.getElementById("topbar").getBoundingClientRect().bottom); };
+    out.stageChat = stageAt();
+    firetable.nav.mobileSection = "people";
+    firetable.nav.apply();
+    out.stagePeople = stageAt();
     firetable.nav.mobileSection = "view";
     firetable.nav.apply();
+    out.stageList = stageAt() + "|" + (document.querySelector("#dMini .pb-title, #dMini .d-mini-title") || document.getElementById("dMini")).textContent.trim().slice(0, 40);
     const label = document.getElementById("djlistpickerLabel").getBoundingClientRect();
     out.labelHidden = label.width <= 1 && label.height <= 1;
     out.labelledBy = document.getElementById("djlistpicker").getAttribute("aria-labelledby");
@@ -2098,6 +2128,8 @@ try {
     "phone, a member: Playlists is the Library tab; Live keeps Chat, Recent, Fresh, Cards and People (" + JSON.stringify(phoneFix) + ")");
   check(/^−\d+:\d\d$/.test(phoneFix.left) && /^\d+:\d\d$/.test(phoneFix.played), "time left has a minus, time played doesn't (" + phoneFix.played + " / " + phoneFix.left + ")");
   check(phoneFix.first === "mmchat", "Chat is the first phone tab (" + phoneFix.first + ")");
+  check(/^on\|\d{3}$/.test(phoneFix.stageChat) && /^off\|\d$/.test(phoneFix.stagePeople) && /^off\|\d\|\S/.test(phoneFix.stageList),
+    "phone, a member: the stage stays with Chat; Recent, Fresh, Cards and People get the screen, and the bar names the song (" + JSON.stringify([phoneFix.stageChat, phoneFix.stagePeople, phoneFix.stageList]) + ")");
   check(phoneFix.labelHidden && phoneFix.labelledBy === "djlistpickerLabel", "on a phone the DJ playlist's label is for screen readers only, and still names the picker");
   check(phoneFix.btn && phoneFix.armed && phoneFix.afterOne.length === 0 && phoneFix.afterTwo.join() === "!remove dj1",
     "a mod's first tap on the plate's remove asks again; the second removes (" + JSON.stringify(phoneFix) + ")");
@@ -3346,10 +3378,23 @@ try {
   await qPage.waitForFunction(() => document.querySelector("#deck .spot") && /Smoke|\S/.test(document.getElementById("track").textContent), null, { timeout: 30000 }).catch(() => {});
   await sleep(1500);
   const listenWide = await listenAt(qPage);
+  // who is in the room, in the left column (1024px and up): a visitor's was empty
+  const hereAt = (pg) => pg.evaluate(() => {
+    const box = document.getElementById("pe-here"), head = document.getElementById("topbar").getBoundingClientRect(), stage = document.getElementById("stage").getBoundingClientRect();
+    const rows = [...box.querySelectorAll(".pe-row")], first = rows[0] && rows[0].getBoundingClientRect();
+    return { shown: box.getClientRects().length > 0, rows: rows.length, djsFirst: rows.length > 1 && rows[0].classList.contains("is-dj") && !rows[rows.length - 1].classList.contains("is-dj"),
+      count: (box.querySelector(".pe-count") || {}).textContent || "", pressable: box.querySelectorAll("button, a, [tabindex], [role=button]").length,
+      clear: !!first && first.top >= head.bottom && first.right <= stage.left + 1, pulse: document.getElementById("roomPulse").getClientRects().length > 0 };
+  });
+  const hereWide = await hereAt(qPage);
   await qPage.setViewportSize({ width: 390, height: 844 });
   await sleep(600);
   const listenPhone = await listenAt(qPage);
+  const herePhone = await hereAt(qPage);
   await qContext.close();
+  check(hereWide.shown && hereWide.rows >= 2 && hereWide.djsFirst && Number(hereWide.count) >= 1 && hereWide.pressable === 0 && hereWide.clear && !hereWide.pulse,
+    "a visitor's Live on a computer lists who is in the room in the left column, DJs first, nothing to press, under the header (" + JSON.stringify(hereWide) + ")");
+  check(!herePhone.shown && herePhone.pulse, "on a phone the line of faces above Create account says it instead (" + JSON.stringify(herePhone) + ")");
   check([listenWide, listenPhone].every((l) => l.text === "Listen to the room" && l.sub === "none" && l.inStage && l.lines && l.clearOfDj && l.underSong) && listenPhone.left === 0,
     "Listen to the room is one line under the song, inside the stage and clear of the DJ, on a computer and on a phone (where it lines up with the cover) (" + JSON.stringify({ wide: listenWide, phone: listenPhone }) + ")");
   check(freshBeside.djPicker === "hidden" && freshBeside.clock, "a visitor isn't offered a playlist to DJ from under the stage; the clocks stay (" + freshBeside.djPicker + ")");
@@ -3511,6 +3556,29 @@ try {
   skip.after = await skipState();
   check(!skip.rest.inView && skip.tab1.at === "page" && skip.tab1.inView && skip.tab1.shown === "page,player" && skip.page === "dBrowse" && skip.player && !skip.after.inView,
     "the first Tab on Discover Home is Skip to the page (the chat box and the playlist aren't offered to a visitor); it and Skip to the player go there, and the links hide again (" + JSON.stringify(skip) + ")");
+  // one Tab stop per song: a card was five or six (play, title, artist, ⋮, Add, the DJ)
+  const at = () => sPage.evaluate(() => { const a = document.activeElement, bar = a.closest && a.closest("#dBrowse .pvbar[data-list]");
+    return (bar ? bar.getAttribute("data-list") + "/" + bar.getAttribute("data-i") + ":" : "") + (a.classList.contains("d-play") ? "play" : a.classList.contains("d-sheetlink") ? "title" : a.classList.contains("d-alink") ? "artist" :
+      a.classList.contains("d-more") ? "more" : a.classList.contains("histeal") ? "add" : a.classList.contains("d-djlink") ? "dj" : a.classList.contains("butt") ? "list" : a.tagName); });
+  await sPage.evaluate(() => document.querySelector("#dBrowse .ft-cards .pvbar .d-play").focus());
+  const one = { from: await at(), name: await sPage.evaluate(() => document.activeElement.getAttribute("aria-label")), tabs: [], arrows: [] };
+  for (let i = 0; i < 2; i++) { await sPage.keyboard.press("Tab"); one.tabs.push(await at()); }
+  await sPage.evaluate(() => document.querySelector("#dBrowse .ft-cards .pvbar .d-play").focus());
+  for (let i = 0; i < 4; i++) { await sPage.keyboard.press("ArrowRight"); one.arrows.push((await at()).split(":")[1]); }
+  await sPage.keyboard.press("ContextMenu");
+  await sleep(250);
+  one.menu = await sPage.evaluate(() => { const m = document.getElementById("dMenu"); return !!m && !m.hidden && m.contains(document.activeElement); });
+  await sPage.keyboard.press("Escape");
+  await sleep(150);
+  one.back = (await at()).split(":")[1];
+  one.ring = await sPage.evaluate(() => { const b = document.querySelector("#dBrowse .ft-cards .pvbar .d-play"); b.focus(); return true; }) && await (async () => {
+    await sPage.keyboard.press("Tab"); await sPage.keyboard.press("Shift+Tab");
+    return sPage.evaluate(() => getComputedStyle(document.activeElement.closest(".pvbar")).outlineStyle); })();
+  const songOf = (t) => t.split(":")[0];
+  check(/^Play \S.* by \S/.test(one.name) && one.tabs.every((t) => /:play$/.test(t)) && new Set([one.from].concat(one.tabs).map(songOf)).size === 3,
+    "Discover: Tab goes from song to song, one stop each, and the stop names its song (" + JSON.stringify([one.from, one.name, one.tabs]) + ")");
+  check(one.arrows.slice(0, 2).join() === "title,artist" && one.arrows.indexOf("more") !== -1 && one.menu && one.back === "more" && one.ring === "solid",
+    "Discover: ← and → reach a song's title, artist, ⋮ and Add, the menu key opens ⋮, and the ring goes round the whole song (" + JSON.stringify(one) + ")");
   await sPage.close();
 
   console.log("-- Discover: members chat with the room from Discover");

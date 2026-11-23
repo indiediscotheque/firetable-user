@@ -230,6 +230,7 @@
 			<div id="timrUp" class="themeTimr" title="Time played"></div>
 			<div class="themeCenter">
 				<div id="djlistpickerWrap">
+					<i class="material-symbols-outlined st-djIcon" aria-hidden="true">headphones</i>
 					<span id="djlistpickerLabel">You DJ from</span>
 					<select id="djlistpicker" aria-labelledby="djlistpickerLabel">
 						<option value="0">Default Playlist</option>
@@ -364,7 +365,6 @@
 						<div class="ft-avatar">
 							<span class="material-symbols-outlined blockon"></span>
 						</div>
-						<span class="material-symbols-outlined prsnRole">person</span>
 						<div class="prsnNameRole">
 							<span class="prsnName"></span>
 						</div>
@@ -398,6 +398,7 @@
 						<select id="listpicker" aria-label="Playlist">
 							<option value="0">Default Playlist</option>
 						</select>
+						<span id="cr-djTag" class="cr-djtag" title="You DJ from this playlist" hidden><i class="material-symbols-outlined" aria-hidden="true">headphones</i><span>DJ list</span></span>
 						<div id="plmanager">
 							<input type="text" placeholder="Name your playlist, hit Enter" id="plmaker" enterkeyhint="done" />
 						</div>
@@ -459,16 +460,16 @@
 					<form id="queueFilterForm" autocomplete="off">
 						<input type="search" autocomplete="off" spellcheck="false" placeholder="Filter playlist…" name="queueFilter" id="queueFilter" class="ft-filter" aria-label="Filter playlist" />
 						<button type="button" class="butt graybutt iconbutt" id="cr-showOnly" aria-label="Show only" aria-haspopup="true" aria-expanded="false" popovertarget="cr-showOnlyMenu" style="anchor-name: --tip-cr-showOnly" aria-describedby="tip-cr-showOnly">
-							<i class="material-symbols-outlined">filter_list</i>
+							<i class="material-symbols-outlined" aria-hidden="true">tune</i><span class="cr-toolLabel">Show only</span>
 							<span id="cr-showOnlyCount" class="cr-badge" hidden></span>
 						</button>
 						<span id="tip-cr-showOnly" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-showOnly">Show only</span>
 						<button type="button" class="butt graybutt iconbutt" id="cr-sort" aria-label="Sort: Your order" aria-haspopup="true" aria-expanded="false" popovertarget="cr-sortMenu" style="anchor-name: --tip-cr-sort" aria-describedby="tip-cr-sort">
-							<i class="material-symbols-outlined">sort</i>
+							<i class="material-symbols-outlined" aria-hidden="true">swap_vert</i><span class="cr-toolLabel">Sort</span>
 						</button>
 						<span id="tip-cr-sort" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-sort">Sort</span>
 						<button type="button" class="butt graybutt iconbutt" id="cr-select" aria-label="Select several" aria-pressed="false" style="anchor-name: --tip-cr-select" aria-describedby="tip-cr-select">
-							<i class="material-symbols-outlined">checklist</i>
+							<i class="material-symbols-outlined" aria-hidden="true">checklist</i><span class="cr-toolLabel">Select</span>
 						</button>
 						<span id="tip-cr-select" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-select">Select several</span>
 					</form>
@@ -590,6 +591,8 @@
 				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2.5rem;height:2.5rem;flex-shrink:0;border-radius:3px"></div><div style="flex:1;min-width:0"><div class="skel" style="height:0.75rem;max-width:18rem;margin-bottom:0.35rem"></div><div class="skel" style="height:0.65rem;max-width:9rem"></div></div></div>
 			</div>
 		</div>
+
+		<div id="pe-here" class="scroll-view" role="region" aria-label="People in the room"></div>
 
 		<div id="login" class="scroll-view" role="region" aria-label="Join or log in">
 			<div id="welcomeInfo">
@@ -1229,6 +1232,7 @@
 					<dt><kbd>Space</kbd></dt><dd>Play or pause</dd>
 					<dt><kbd>Shift</kbd> <kbd>←</kbd> <kbd>→</kbd></dt><dd>The previous or next song in Discover</dd>
 					<dt><kbd>/</kbd></dt><dd>Search Discover</dd>
+					<dt><kbd>Tab</kbd>, then <kbd>←</kbd> <kbd>→</kbd></dt><dd>In Discover, Tab goes from song to song (Enter plays it); the arrows reach its title, artist, menu and Add</dd>
 					<dt><kbd>T</kbd></dt><dd>Selecting songs in a playlist: move them to the top</dd>
 					<dt><kbd>Alt</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Move the focused playlist song up or down</dd>
 					<dt><kbd>?</kbd></dt><dd>This list</dd>
