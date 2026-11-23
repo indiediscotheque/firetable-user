@@ -3091,6 +3091,8 @@ try {
     out.hear = [...document.querySelectorAll("#dBrowse .d-mapg.d-hear")].map((a) => a.getAttribute("data-slug")).join();
     await until(() => document.querySelector("#dBrowse .d-mapg.d-tonight"));
     out.tonight = [...document.querySelectorAll("#dBrowse .d-mapg.d-tonight")].map((a) => a.getAttribute("data-slug")).join();
+    out.rings = [...document.querySelectorAll("#dBrowse .d-mapg.d-tonight")].map((a) => a.style.getPropertyValue("--t")).join();
+    out.halo = getComputedStyle(document.querySelector("#dBrowse .d-mapg")).textShadow !== "none";
     out.legend = [...document.querySelectorAll("#dMapLegend > span")].filter((x) => getComputedStyle(x).display !== "none").map((x) => x.textContent).join("|");
     const before = location.hash;
     document.querySelector('#dBrowse .d-mapg[data-slug="soul-and-randb"]').click();
@@ -3103,6 +3105,8 @@ try {
   });
   check(soundMap.room === "nu-disco" && soundMap.hear === "nu-disco" && /The room is playing/.test(soundMap.legend) && /You're hearing/.test(soundMap.legend),
     "the sound map: the room song's genre has the room's dot, and the one you're hearing its outline, with a legend (" + JSON.stringify(soundMap) + ")");
+  check(/(^|,)1\.00(,|$)/.test(soundMap.rings || "") && (soundMap.rings || "").split(",").every((t) => Number(t) > 0 && Number(t) <= 1) && soundMap.halo && /Bigger: played here more/.test(soundMap.legend),
+    "the sound map: a ring is brighter the more of tonight was its genre, names have a halo so the middle lines pass behind them, and the legend says what size means (" + soundMap.rings + " / " + soundMap.legend + ")");
   check(/soul-and-randb/.test(soundMap.tonight || "") && /Played tonight/.test(soundMap.legend),
     "the sound map rings the genres played tonight, from the Recent rows' genre (" + soundMap.tonight + " / " + soundMap.legend + ")");
   check(soundMap.stayed && /^Soul & R&B\|true\|open$/.test(soundMap.card) && soundMap.picked === "soul-and-randb|true",

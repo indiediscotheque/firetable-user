@@ -539,7 +539,12 @@ section .d-chips a.d-chip {
     line-height: 1.15;
     white-space: nowrap;
     mix-blend-mode: normal;
+    /* a halo in the page's colour: the middle lines pass behind a name, where
+       they ran through its letters like a strike-through (Indie Rock, Electro) */
+    text-shadow: 0 0 0.2em var(--color-bg-s1), 0 0 0.2em var(--color-bg-s1), 0 0 0.2em var(--color-bg-s1),
+        0 0 0.3em var(--color-bg-s1), 0 0 0.3em var(--color-bg-s1), 0 0 0.3em var(--color-bg-s1);
 }
+.d-mapg:hover, .d-mapg.is-picked { text-shadow: none; }
 @media only screen and (max-width: 639px) {
     .d-mapg { font-size: calc(0.6rem + var(--s, 0) * 0.5rem); }
 }
@@ -570,6 +575,7 @@ section .d-chips a.d-chip {
     border: 2px solid var(--color-danger);
     border-radius: 50%;
     vertical-align: 0.1em;
+    opacity: calc(0.35 + 0.65 * var(--t, 1)); /* --t: this genre's share of tonight's most played (mapMarks) */
 }
 .d-mapg.is-picked { z-index: 2; color: var(--color-bg); background: var(--color-text); }
 .d-maplegend {
@@ -581,6 +587,8 @@ section .d-chips a.d-chip {
     font-size: var(--fs-label);
 }
 .d-maplegend > span { display: none; align-items: center; gap: 0.4rem; }
+.d-maplegend > .d-mlsize { display: inline-flex; }
+.d-mlsize::before { content: "Aa"; color: var(--color-text); font-size: 1.25em; font-weight: 600; line-height: 1; }
 .d-maplegend.has-room .d-mlroom,
 .d-maplegend.has-tonight .d-mltonight,
 .d-maplegend.has-hear .d-mlhear,

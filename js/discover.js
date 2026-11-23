@@ -788,7 +788,7 @@ firetable.discover = (function () {
           esc(g.name + " · " + n(g.plays) + " plays" + (g.bpm ? " · usually " + g.bpm + " BPM" : "")) + '">' + esc(g.name) + "</a>";
       }).join("") + "</div>";
     // what the marks mean (the room's genre and yours are found after the page draws: mapMarks)
-    h += '<p class="d-maplegend" id="dMapLegend"><span class="d-mlroom">The room is playing</span><span class="d-mltonight">Played tonight</span><span class="d-mlhear">You\'re hearing</span><span class="d-mlpick">Picked: its card is below</span></p>';
+    h += '<p class="d-maplegend" id="dMapLegend"><span class="d-mlsize">Bigger: played here more</span><span class="d-mlroom">The room is playing</span><span class="d-mltonight">Played tonight (brighter: more)</span><span class="d-mlhear">You\'re hearing</span><span class="d-mlpick">Picked: its card is below</span></p>';
     h += '<div class="d-mapcard" id="dMapCard" aria-live="polite">' + mapCard(D.mapPick) + "</div>";
     h += '<div class="d-gcards">' + list.map(function (g) {
       return '<a class="d-gcard" href="#discover/genres/' + esc(g.slug) + '">' + mosaic(g.covers) +
@@ -836,11 +836,16 @@ firetable.discover = (function () {
       (firetable._historyCache || []).forEach(function (h) {
         if (h && h.g && (h.when || 0) >= since) tonight[genreSlug(h.g)] = (tonight[genreSlug(h.g)] || 0) + 1;
       });
+      var most = Math.max.apply(null, Object.keys(tonight).map(function (k) { return tonight[k]; }).concat(1));
       box.querySelectorAll(".d-mapg").forEach(function (el) {
         var slug = el.getAttribute("data-slug");
         el.classList.toggle("d-room", !!gs[0] && slug === gs[0]);
         el.classList.toggle("d-hear", !!gs[1] && slug === gs[1]);
         el.classList.toggle("d-tonight", !!tonight[slug]);
+        // the ring is brighter the more of tonight was this genre: on a full
+        // evening nearly every genre has one, and they all looked the same
+        if (tonight[slug]) el.style.setProperty("--t", (tonight[slug] / most).toFixed(2));
+        else el.style.removeProperty("--t");
       });
       var legend = document.getElementById("dMapLegend");
       if (legend) {
