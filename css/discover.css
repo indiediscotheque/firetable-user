@@ -2496,9 +2496,12 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 .d-chartctl { gap: var(--space-2); }
 .d-chartacts { display: inline-flex; flex-wrap: wrap; gap: var(--space-2); margin-left: auto; }
 /* a panel's main action: a dark button with gold text (round 4: no big gold fills) */
-#dBrowse .butt.d-panelmain { background: var(--color-bg-t2); color: var(--color-accent); box-shadow: none; }
+#dBrowse .butt.d-panelmain,
+.butt.d-panelmain { background: var(--color-bg-t2); color: var(--color-accent); box-shadow: none; }
 #dBrowse .butt.d-panelmain:hover,
-#dBrowse .butt.d-panelmain:focus-visible { background: var(--color-bg-t3); }
+#dBrowse .butt.d-panelmain:focus-visible,
+.butt.d-panelmain:not(:disabled):hover,
+.butt.d-panelmain:focus-visible { background: var(--color-bg-t3); }
 /* first played here: who and when, on wide rows */
 .d-firsthere {
     color: var(--color-text-subtle);

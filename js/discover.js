@@ -683,7 +683,7 @@ firetable.discover = (function () {
     }).join("") + "</span>";
   }
   function playAllButton(listName, label) {
-    return '<button type="button" class="butt d-playall" data-list="' + esc(listName) + '">' + ms("play_arrow", true) + "<span>" + esc(label) + "</span></button>" +
+    return '<button type="button" class="butt d-playall d-panelmain" data-list="' + esc(listName) + '">' + ms("play_arrow", true) + "<span>" + esc(label) + "</span></button>" +
       saveAllButton(listName);
   }
   // The genre's playlist on YouTube Music, once the bot has made it (discover/ytm)
@@ -922,7 +922,7 @@ firetable.discover = (function () {
     setList("genre", g.name + " · " + tabs[tab][0], tracks);
     h += '<div class="d-pagehead">' + mosaic(g.covers, true) + '<div class="d-pagetext"><h2>' + esc(g.name) + "</h2>" +
       (g.about ? '<p class="d-about">' + esc(g.about) + "</p>" : "") + factChips(facts) +
-      '<div class="d-actions"><button type="button" class="butt d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>Play " + esc(g.name) + " radio</span></button>" +
+      '<div class="d-actions"><button type="button" class="butt d-panelmain d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>Play " + esc(g.name) + " radio</span></button>" +
       saveAllButton("genre") + ytmButton(slug, g.name) + "</div></div></div>";
     h += "<section>" + '<div class="d-headrow">' + chips("gtab", [["fav", "Room favorites"], ["newHere", "New here"], ["deep", "Deep cuts"]], tab) + "</div>" +
       '<p class="d-fact">' + esc(tab === "fav" ? "Most played in the room" : tab === "newHere" ? "Played here for the first time lately" : "Played here once or twice, last played first") + "</p>" +
@@ -3876,7 +3876,7 @@ firetable.discover = (function () {
       '<div class="d-now"><span class="d-title">' + esc(t.t) + '</span><span class="d-artist">' + artistLinks(t.a) + "</span>" +
       '<div class="d-tags" id="dSheetTags"></div></div></div>' +
       '<div class="d-hist" id="dSheetHist"><p>' + ms("hourglass_empty") + "Looking it up…</p></div>" +
-      '<div class="d-actions"><button type="button" class="butt d-sheetplay">' + ms("play_arrow", true) + "<span>Play" + (D.mode === "discover" ? "" : " in Discover") + "</span></button>" +
+      '<div class="d-actions"><button type="button" class="butt d-panelmain d-sheetplay">' + ms("play_arrow", true) + "<span>Play" + (D.mode === "discover" ? "" : " in Discover") + "</span></button>" +
       '<button type="button" class="butt graybutt d-sheetsave' + (saved ? " is-saved" : "") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "<span>" + (saved ? "Saved" : "Save") + "</span></button>" +
       (link ? '<a class="butt graybutt iconbutt" href="' + esc(link) + '" target="_blank" rel="noopener" title="Open on ' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + '" aria-label="Open on ' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + '">' + ms("open_in_new") + "</a>" +
         '<button type="button" class="butt graybutt iconbutt d-sheetcopy" title="Copy the song\'s link" aria-label="Copy the song\'s link">' + ms("link") + "</button>" : "") +
