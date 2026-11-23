@@ -3747,6 +3747,7 @@ firetable.discover = (function () {
     var key = dj && djKey(dj.uid, dj.name);
     if (key) h += item("headphones", esc(dj.name) + "'s DJ page", 'href="#discover/djs/' + esc(key) + '"');
     if (url) h += act("copy");
+    if (canRetag(t)) h += act("tags");
     m.innerHTML = h;
     m.hidden = false;
     btn.setAttribute("aria-expanded", "true");
@@ -3775,6 +3776,70 @@ firetable.discover = (function () {
     if (act === "sheet" && t) return openSheet(t);
     if (act === "add" && t) return save(t, opener || b);
     if (act === "copy" && t) firetable.songMenu.copyLink(linkOf(t));
+    if (act === "tags" && t) return editTags(t, opener && opener.isConnected ? opener : b);
+  }
+
+  // ─── Fixing a song's tags (mods) ────────────────────────────────────────
+  // The site's tag editor, as on Recent: saving fixes the upload's tags for
+  // the room (globalTracks, and the tag log the hostbot spreads to every copy
+  // and to Discover's published charts and lists). The room's own song goes
+  // through !fixtags, so the stage shows it too. What's on screen here takes
+  // the new tags at once.
+
+  /** Mods can fix a song's tags: any upload with a valid id. */
+  function canRetag(t) {
+    return !!(ftapi.uid && ftapi.isMod && t && t.cid != null && /^[12][A-Za-z0-9_-]{1,64}$/.test(Number(t.type || 1) + String(t.cid)));
+  }
+  function editTags(t, anchor) {
+    if (!canRetag(t)) return;
+    var type = Number(t.type || 1), cid = String(t.cid);
+    var before = (t.a ? t.a + " - " : "") + (t.t || "");
+    $(".pvbar.editing").removeClass("editing");
+    firetable.editingPvbar = null;
+    firetable.tagEditNowPlaying = null;
+    firetable.ui.openTagEditor(anchor, before, "bottom");
+    firetable.tagEditTarget = {
+      save: function (tag) {
+        if (tag === before) return;
+        var s = firetable.song;
+        var playing = s && String(s.cid) === cid && Number(s.type || 1) === type;
+        var shown = function () { retagged(type, cid, tag); };
+        if (playing) {
+          ftapi.actions.sendBotCommand("!fixtags " + tag);
+          firetable.ui.toast("Tags sent: " + tag, "success");
+          return shown();
+        }
+        ftapi.actions.editTag(type, cid, tag, null, "discover", function (err) {
+          if (err) return firetable.ui.toast("Couldn't save those tags. Please try again.", "error");
+          firetable.ui.toast("Tags saved: " + tag, "success");
+          shown();
+        });
+      }
+    };
+  }
+  /** The song's rows everywhere Discover keeps them, as the hostbot's retag does. */
+  function eachSongRow(value, type, cid, fn, seen) {
+    if (!value || typeof value !== "object") return;
+    if (seen.has(value)) return;
+    seen.add(value);
+    if (value.cid != null && String(value.cid) === cid && Number(value.type || 1) === type && (typeof value.a === "string" || typeof value.t === "string")) return fn(value);
+    Object.keys(value).forEach(function (k) { eachSongRow(value[k], type, cid, fn, seen); });
+  }
+  function retagged(type, cid, tag) {
+    var sep = tag.indexOf(" - ");
+    var a = sep === -1 ? tag : tag.slice(0, sep), ti = sep === -1 ? "" : tag.slice(sep + 3);
+    var seen = new Set();
+    [D.data, libData, lists, P.track, sheetTrack, menuTrack].forEach(function (v) {
+      eachSongRow(v, type, cid, function (row) { row.a = a; row.t = ti; }, seen);
+    });
+    delete details[type + "_" + cid]; // its history may now be another song's
+    if (P.track && String(P.track.cid) === cid && Number(P.track.type || 1) === type && discoverActive()) mediaSession(P.track);
+    if (D.mode === "discover") renderBrowse();
+    renderSide();
+    renderBar();
+    renderFull(true);
+    var dlg = document.getElementById("dSheetBox");
+    if (dlg && dlg.open && sheetTrack && String(sheetTrack.cid) === cid && Number(sheetTrack.type || 1) === type) openSheet(sheetTrack);
   }
 
   function save(t, btn) {
@@ -4174,8 +4239,9 @@ firetable.discover = (function () {
       return;
     }
     firetable.ui.toast("That song can't play here. Skipping it.");
-    // unless they've gone to Live or Listen in meanwhile
-    setTimeout(function () { if (firetable.preview === "discover" && discoverActive()) step(1); }, 800);
+    // unless they've gone to Live or Listen, or picked another song, in meanwhile
+    var was = P.play;
+    setTimeout(function () { if (P.play === was && firetable.preview === "discover" && discoverActive()) step(1); }, 800);
   }
 
   function signedIn(on) {
