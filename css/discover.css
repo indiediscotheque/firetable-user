@@ -1492,23 +1492,30 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
 :is(.pb, .pvf) .graybutt.iconbutt.is-saved,
 :is(.pb, .pvf) .graybutt.iconbutt.on { background: color-mix(in srgb, var(--pb-tone) 16%, transparent); }
 
-/* 1024 to 1439: the other source shrinks to its cover and dot, Step inside to its icon */
-@media only screen and (max-width: 1439px) {
-    .pb { padding-inline: var(--pad3); gap: var(--pad2); }
-    .pb-other { padding: 0.2rem; }
-    .pb-other .d-mini-text, .pb-otherdo { display: none; }
-    .pb-other { position: relative; }
-    .pb-other.d-listen::after {
+/* Under 1920 there isn't the width for the whole chip beside the tools: its
+   label was cut to "THE ROC" and its song to a few letters. It's the cover (a
+   red dot on it for the room) and what the chip does; the song is in its
+   tooltip. The label and the song show from 1920. */
+@media only screen and (max-width: 1919px) {
+    .pb-other .d-mini-text { display: none; }
+    .pb-other .d-mini-art { position: relative; }
+    .pb-other.d-listen .d-mini-art::after {
         content: "";
         position: absolute;
-        top: 0.1rem;
-        right: 0.1rem;
+        top: -0.1rem;
+        right: -0.1rem;
         width: 0.5rem;
         height: 0.5rem;
         border-radius: 50%;
         background: var(--color-danger);
         box-shadow: 0 0 0 2px var(--color-bg-t1);
     }
+}
+/* 1024 to 1439: the other source shrinks to its cover and dot, Step inside to its icon */
+@media only screen and (max-width: 1439px) {
+    .pb { padding-inline: var(--pad3); gap: var(--pad2); }
+    .pb-other { padding: 0.2rem; }
+    .pb-otherdo { display: none; }
     .pb .pb-stepin span { display: none; }
     #pv-vol { width: 4.5rem; }
 }
