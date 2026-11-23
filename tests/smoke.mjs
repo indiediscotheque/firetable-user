@@ -2253,6 +2253,18 @@ try {
   const scFits = (b) => Math.abs(b.cw - b.fw) <= 1 && Math.abs(b.ch - b.fh) <= 1 && b.left === 0 && b.top === 0;
   check(scFits(scFull.full) && scFull.full.cw > scFull.stage.cw && scFits(scFull.back),
     "a SoundCloud cover's canvas fills the screen in the full-screen player and on the stage again after (" + JSON.stringify(scFull) + ")");
+  // the Turntable theme's screen is a small TV: the 500px cover is scaled to fit it, not drawn as a giant crop
+  const scTT = await page.evaluate(() => {
+    const at = () => { push(); placeCover({ width: 500, height: 500 }); const m = drawingContext.getTransform(); pop(); return m; };
+    const d = pixelDensity(), stage = at();
+    document.body.classList.add("tt-skin");
+    const tt = at();
+    document.body.classList.remove("tt-skin");
+    const k = Math.min(width, height) / 500;
+    return { stage: Math.abs(stage.a / d - 1) < 1e-6, k: +(tt.a / d).toFixed(4), want: +k.toFixed(4),
+      centred: Math.abs(tt.e / d - (width - 500 * k) / 2) < 0.5 && Math.abs(tt.f / d - (height - 500 * k) / 2) < 0.5 };
+  });
+  check(scTT.stage && scTT.k === scTT.want && scTT.centred, "in the Turntable theme a SoundCloud cover is scaled to fit the room's screen, centred; on the stage it keeps its own size (" + JSON.stringify(scTT) + ")");
 
   console.log("-- someone sends a 🔥: the fire burns behind the DJ, sized to them, with no library to load");
   await page.evaluate(() => window.firetableIgniteFyre(3));
