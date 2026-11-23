@@ -718,10 +718,17 @@ try {
       stored: row("k1").getAttribute("data-tags"),
       k1: tags("k1"), k4: tags("k4"), k2: tags("k2")
     };
+    // the two pickers: the stage's is a status line (no box, as wide as its name, its label beside it),
+    // and the crate's says "DJ list" while it shows the list you DJ from
+    const stagePick = document.getElementById("djlistpicker"), sp = getComputedStyle(stagePick), tag = document.getElementById("cr-djTag");
+    const lab = document.getElementById("djlistpickerLabel").getBoundingClientRect(), pick = stagePick.getBoundingClientRect();
+    out.status = { box: sp.backgroundColor + "|" + sp.borderTopColor + "|" + sp.boxShadow, hugs: pick.width < 0.8 * document.getElementById("djlistpickerWrap").getBoundingClientRect().width,
+      beside: innerWidth < 640 || (lab.width > 40 && lab.right <= pick.left + 1), select: stagePick.tagName, tag: !tag.hidden && tag.getClientRects().length > 0 ? tag.textContent.trim() : "" };
     ftapi.events.emit("djListChanged", "elsewhere");
     ftapi.selectedListThing = "elsewhere";
     firetable.ui.markDjList();
     out.notDj = tags("k1");
+    out.status.tagOff = tag.hidden;
     ftapi.selectedListThing = realDj;
     firetable.ui.markDjList();
     // ⋮ → Delete and search for another
@@ -741,6 +748,9 @@ try {
   check(rowLook.k1 === "Next+Low audio" && rowLook.k4 === "Remix" && rowLook.k2 === "Broken" && rowLook.notDj === "Low audio",
     "tags: Next on the first song of the list you DJ from (only that list), Broken (or why) when flagged, Remix when the title says so (" + JSON.stringify(rowLook) + ")");
   check(rowLook.delsearch === "k2|Daft Punk - One More Time|1", "the row's ⋮ has Delete and search for another (" + rowLook.delsearch + ")");
+  check(/^rgba\(0, 0, 0, 0\)\|rgba\(0, 0, 0, 0\)\|none$/.test(rowLook.status.box) && rowLook.status.hugs && rowLook.status.beside && rowLook.status.select === "SELECT",
+    "under the stage, the playlist you DJ from reads as a status: no box, as wide as its name, still the same select (" + JSON.stringify(rowLook.status) + ")");
+  check(rowLook.status.tag === "DJ list" && rowLook.status.tagOff, "the crate's picker says DJ list while it shows the list you DJ from, and only then (" + JSON.stringify(rowLook.status) + ")");
 
   console.log("-- one song menu: the same items, words and order in each ⋮");
   const oneMenu = await page.evaluate(async () => {

@@ -1263,7 +1263,7 @@ a.sociallogo[href] {
         clip-path: inset(50%);
         white-space: nowrap;
     }
-    #djlistpickerWrap #djlistpicker { padding-inline-start: 0.75em; }
+    #djlistpickerWrap #djlistpicker { padding-inline-start: 0.4em; }
 }
 
 #sidepanel-tabs {
@@ -3970,6 +3970,74 @@ a.importLinkCheck {
     border-radius: var(--radius-md);
     color: rgba(255, 255, 255, 0.7);
 }
+
+/* Under the stage it reads as a status, "You DJ from <playlist>", not a second
+   playlist box: it and the crate's picker looked the same and do different
+   things. Still the same select (press the name to change it), without the
+   box, as wide as the name. (Turntable moves it to the crate and styles it
+   there, so this is for the stage's bar alone.) */
+.st-djIcon {
+    flex: none;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.62);
+}
+#themebox #djlistpickerWrap {
+    justify-content: center;
+    gap: var(--pad1);
+}
+#themebox #djlistpickerLabel {
+    position: static;
+    flex: none;
+}
+#themebox #djlistpicker {
+    flex: 0 1 auto;
+    field-sizing: content;
+    padding-block: 0.35em;
+    padding-inline: 0.4em 1.5rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    background-color: transparent;
+    background-position: right 0.3rem center;
+    background-size: 0.875rem 0.875rem;
+    border-color: transparent;
+    box-shadow: none;
+}
+#themebox #djlistpicker:focus-visible { background-color: rgba(255, 255, 255, 0.1); }
+@media (hover: hover) {
+    #themebox #djlistpicker:hover { background-color: rgba(255, 255, 255, 0.1); }
+}
+#queuebox .st-djIcon { display: none; }
+
+/* The crate's picker says when the list it shows is the one you DJ from */
+.cr-djtag {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.1rem var(--pad2) 0.1rem var(--pad1);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    color: var(--color-text-light);
+}
+.cr-djtag[hidden] { display: none; }
+/* a phone keeps the row for the playlist's name: the glyph alone (its title and
+   the words, for screen readers, stay) */
+@media only screen and (max-width: 639px) {
+    .cr-djtag { padding: 0.15rem; border-color: transparent; }
+    .cr-djtag > span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+}
+.cr-djtag [class*="material-symbols-"] { font-size: 0.95rem; }
 
 /* Mods: who to add to the decks (1.7) */
 #npAddDjMenu .ft-menu { width: min(18rem, calc(100vw - 2rem)); }
