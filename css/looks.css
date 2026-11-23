@@ -1263,7 +1263,7 @@ a.sociallogo[href] {
         clip-path: inset(50%);
         white-space: nowrap;
     }
-    #djlistpickerWrap #djlistpicker { padding-inline-start: 0.75em; }
+    #djlistpickerWrap #djlistpicker { padding-inline-start: 0.4em; }
 }
 
 #sidepanel-tabs {
@@ -1563,6 +1563,25 @@ button.waitlist-pos {
 .prson.ghost .prsnRole {
     color: #ee9900;
 }
+/* The role icon comes after the name, and only the bot, mods and supermods
+   have one, so every name starts on the same line of the column. */
+#allUsers .prson .prsnNameRole { flex: 0 1 auto; }
+#allUsers .prson .prsnRole { order: 1; flex: none; }
+/* Idle used to be the colour of the member icon alone; now it is a word. */
+#allUsers .prson.idle .prsnName,
+#allUsers .prson.ghost .prsnName { color: var(--color-text-muted); }
+#allUsers .prson.idle::after,
+#allUsers .prson.ghost::after {
+    content: "idle";
+    order: 2;
+    margin-left: auto;
+    padding-right: var(--pad1);
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+#allUsers .prson.ghost::after { content: "away"; }
 
 .imptcon {
     display: none;
@@ -3280,6 +3299,29 @@ input.ft-filter {
 /* Find tracks: the panel's main action, a dark circle with a gold + */
 #addToQueueBttn { border-radius: 50%; color: var(--color-accent); }
 #addToQueueBttn [class*="material-symbols-"] { font-size: 1.6rem; font-weight: 600; }
+/* Show only, Sort and Select were three buttons of stacked lines. Each has
+   its own glyph now (sliders, two arrows, ticks), and its name beside it
+   where the row has the room: from 1200px, where the middle column (46vw)
+   is wide enough to keep the filter box its placeholder. Narrower, the
+   glyphs and their tooltips do the work. */
+.cr-toolLabel { display: none; }
+@media only screen and (min-width: 1200px) {
+    body:not(.tt-skin) #queueFilterForm :is(#cr-showOnly, #cr-sort, #cr-select) {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        width: auto;
+        padding: 0 0.75rem 0 0.5rem;
+    }
+    body:not(.tt-skin) #queueFilterForm .cr-toolLabel {
+        display: inline;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    /* the name is on the button, so the tooltip would say it twice */
+    body:not(.tt-skin) #queueFilterForm :is(#tip-cr-showOnly, #tip-cr-sort, #tip-cr-select) { display: none; }
+}
 #cr-showOnly { position: relative; flex: none; }
 #cr-showOnly.is-on { color: var(--color-accent); }
 .cr-badge {
@@ -3960,6 +4002,75 @@ a.importLinkCheck {
     border-radius: var(--radius-md);
     color: rgba(255, 255, 255, 0.7);
 }
+
+/* Under the stage it reads as a status, "You DJ from <playlist>", not a second
+   playlist box: it and the crate's picker looked the same and do different
+   things. Still the same select (press the name to change it), without the
+   box, as wide as the name. (Turntable moves it to the crate and styles it
+   there, so this is for the stage's bar alone.) */
+.st-djIcon {
+    flex: none;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.62);
+}
+#themebox #djlistpickerWrap {
+    justify-content: center;
+    gap: var(--pad1);
+}
+#themebox #djlistpickerLabel {
+    position: static;
+    flex: none;
+}
+#themebox #djlistpicker {
+    flex: 0 1 auto;
+    field-sizing: content;
+    padding-block: 0.35em;
+    padding-inline: 0.4em 1.5rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    background-color: transparent;
+    background-position: right 0.3rem center;
+    background-size: 0.875rem 0.875rem;
+    border-color: transparent;
+    box-shadow: none;
+}
+#themebox #djlistpicker:focus-visible { background-color: rgba(255, 255, 255, 0.1); }
+@media (hover: hover) {
+    #themebox #djlistpicker:hover { background-color: rgba(255, 255, 255, 0.1); }
+}
+#queuebox .st-djIcon { display: none; }
+
+/* The crate's picker says when the list it shows is the one you DJ from */
+.cr-djtag {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.1rem var(--pad2) 0.1rem var(--pad1);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    color: var(--color-text-light);
+}
+.cr-djtag[hidden] { display: none; }
+/* a phone keeps the row for the playlist's name, and so does a small computer
+   (three columns: the middle one is narrower than a tablet's): the glyph
+   alone (its title and the words, for screen readers, stay) */
+@media only screen and (max-width: 639px), (min-width: 1024px) and (max-width: 1199px) {
+    .cr-djtag { padding: 0.15rem; border-color: transparent; }
+    .cr-djtag > span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+}
+.cr-djtag [class*="material-symbols-"] { font-size: 0.95rem; }
 
 /* Mods: who to add to the decks (1.7) */
 #npAddDjMenu .ft-menu { width: min(18rem, calc(100vw - 2rem)); }
@@ -7141,6 +7252,69 @@ body.media-off .q-art.no-art {
     background-size: cover;
 }
 #roomPulse .pulse-text { padding-left: 0.5rem; }
+
+/* Who is in the room, in the left column of a visitor's Live on a wide
+   screen (it was empty: the members' people list isn't on the page for them).
+   The line of faces above Create account says the same, so it steps aside. */
+#pe-here { display: none; }
+@media only screen and (min-width: 1024px) {
+    #mainGrid.login:not(.pre-auth) #pe-here:not(:empty) {
+        display: block;
+        grid-area: people;
+        min-height: 0;
+        overflow: auto;
+        padding: var(--topbar-h, 10rem) var(--pad4) var(--pad4);
+    }
+    #mainGrid.login:not(.pre-auth):has(#pe-here:not(:empty)) #roomPulse { display: none; }
+}
+body.ft-discover #pe-here { display: none !important; }
+.pe-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--pad2);
+    padding: var(--pad4) 0 var(--pad2);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.66);
+}
+.pe-count { font-family: var(--font-numbers); font-weight: 400; }
+.pe-list { list-style: none; margin: 0; padding: 0; }
+.pe-row {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    padding: var(--pad1) 0;
+    min-width: 0;
+}
+.pe-row .ft-avatar { flex: none; width: 2rem; height: 2rem; background-size: cover; }
+.pe-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 300;
+}
+.pe-row.is-idle .pe-name { color: var(--color-text-muted); }
+.pe-role { flex: none; font-size: 1.2rem; line-height: 1; color: #43b581; }
+.pe-tag {
+    flex: none;
+    margin-left: auto;
+    padding: 0 var(--pad1);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+}
+.pe-foot {
+    margin-top: var(--pad4);
+    padding-top: var(--pad3);
+    border-top: 1px solid var(--color-border);
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
 
 /* Things only members can do */
 #mainGrid.login #thediscovers .histeal { display: none; }

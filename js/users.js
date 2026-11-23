@@ -412,6 +412,7 @@ firetable.actions.unban = function (userid) {
  */
 firetable.ui.renderRoomPulse = function () {
   var el = document.getElementById("roomPulse");
+  firetable.ui.renderRoomPeople(!!el);
   if (!el) return;
   var people = [];
   for (var uid in ftapi.users || {}) {
@@ -435,6 +436,52 @@ firetable.ui.renderRoomPulse = function () {
   var text = firetable.utilities.pluralize(people.length, "person", "people") + " here now";
   if (djs.length) text += " · DJing: " + djs.join(", ");
   $el.append($faces).append($('<span class="pulse-text"></span>').text(text));
+};
+
+/**
+ * Who is in the room, for a visitor on a wide screen: the left column of Live
+ * is the members' people list, and a visitor's was empty. Names only, nothing
+ * to press: DJs first, then the rest, the bot last.
+ * @param {boolean} visitor - false empties it (a member has the real list)
+ */
+firetable.ui.renderRoomPeople = function (visitor) {
+  var el = document.getElementById("pe-here");
+  if (!el) return;
+  var $el = $(el).empty();
+  if (!visitor) return;
+  var esc = firetable.utilities.htmlEscape;
+  var users = ftapi.users || {};
+  var seen = {};
+  var rows = [];
+  var add = function (id, name, dj) {
+    if (!id || seen[id]) return;
+    seen[id] = true;
+    var u = users[id] || {};
+    var role = u.hostbot ? ["smart_toy", "Room bot"] : u.supermod ? ["local_police", "Supermod"] : u.mod ? ["shield", "Mod"] : null;
+    rows.push({
+      bot: !!u.hostbot,
+      html: '<li class="pe-row' + (dj ? " is-dj" : "") + (u.idle && u.idle.isIdle && !u.hostbot ? " is-idle" : "") + '">' +
+        '<span class="ft-avatar" aria-hidden="true" style="background-image:url(' + esc(firetable.utilities.avatarURL(id, name)) + ')"></span>' +
+        '<span class="pe-name">' + esc(name) + '</span>' +
+        (role ? '<span class="material-symbols-filled pe-role" role="img" title="' + role[1] + '" aria-label="' + role[1] + '">' + role[0] + '</span>' : '') +
+        (dj ? '<span class="pe-tag">DJ</span>' : '') +
+        '</li>'
+    });
+  };
+  for (var k in firetable.tableData || {}) {
+    var dj = firetable.tableData.hasOwnProperty(k) && firetable.tableData[k];
+    if (dj) add(dj.id, dj.name, true);
+  }
+  Object.keys(users)
+    .map(function (id) { return { id: id, name: users[id].username || id }; })
+    .sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; })
+    .forEach(function (u) { add(u.id, u.name, false); });
+  if (!rows.length) return;
+  rows.sort(function (a, b) { return a.bot - b.bot; }); // stable: the bot goes last
+  var count = rows.filter(function (r) { return !r.bot; }).length;
+  $el.html('<h2 class="pe-head">In the room <span class="pe-count">' + count + '</span></h2>' +
+    '<ul class="pe-list">' + rows.map(function (r) { return r.html; }).join("") + '</ul>' +
+    '<p class="pe-foot">Members chat with the room and take a turn on the decks.</p>');
 };
 
 // ─── Login Form Events ──────────────────────────────────────────────────────
@@ -884,9 +931,11 @@ function buildUserHTML(data) {
   var blockcon = data.blocked ? "block" : "";
 
   if (!data.username) data.username = data.userid;
-  var roleicon = "person";
+  // An icon only for the roles that differ: on every member's row it was noise.
+  // Each is named, for the icon's tooltip and for screen readers (1.12).
+  var roleicon = "";
   var roleiconclass = "material-symbols-filled";
-  var rolename = "Member"; // named for the icon's tooltip and for screen readers (1.12)
+  var rolename = "";
   if (data.mod) { roleicon = "shield"; roleiconclass = "material-symbols-filled"; rolename = "Mod"; }
   if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; rolename = "Supermod"; }
   if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; rolename = "Room bot"; }
@@ -894,7 +943,7 @@ function buildUserHTML(data) {
   return '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + firetable.utilities.htmlEscape(data.username) + ' — profile" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username)) + ');">' +
          '<span class="material-symbols-outlined blockon">' + blockcon + '</span>' +
          '</div>' +
-         '<span class="' + roleiconclass + ' prsnRole" role="img" title="' + rolename + '" aria-label="' + rolename + '">' + roleicon + '</span>' +
+         (roleicon ? '<span class="' + roleiconclass + ' prsnRole" role="img" title="' + rolename + '" aria-label="' + rolename + '">' + roleicon + '</span>' : '') +
          '<div class="prsnNameRole">' +
          '<span class="prsnName">' + firetable.utilities.htmlEscape(data.username) + '</span>' +
          '</div>';

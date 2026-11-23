@@ -115,14 +115,15 @@ const FEATURES = [
   { row: "DJ-06", name: "Mod tools on the song: add someone to the decks (1.7)", who: ["mod"], widths: WIDE, via: ["#npModBtn", "#npAddDj"], target: "#npAddDjFind" },
   { row: "DJ-06", name: "Mod tools on the song: add someone (phone: the full-screen player's More)", who: ["mod"], widths: PHONE, via: [...fullMore, "#npModBtn", "#npAddDj"], target: "#npAddDjFind" },
   { row: "ST-24", name: "A DJ's user card (from the DJs up next)", who: IN, via: [...peopleTab, "#ondeck .ondeck-slot:not(.empty)"], target: "#ft-user-tip" },
-  { row: "NP-01", name: "The song's title and artist", who: ALL, target: "#track" },
+  // phones: a member's stage is on Live's Chat tab (the lists have the screen on the others)
+  { row: "NP-01", name: "The song's title and artist", who: ALL, via: chatTab, target: "#track" },
   { row: "NP-02", name: "Plays here", who: ALL, widths: WIDE, target: "#playStats" },
   { row: "NP-02", name: "Plays here (phone: the full-screen player)", who: ALL, widths: PHONE, via: full, target: "#pv-fhist" },
   { row: "NP-08", name: "The song sheet from the player", who: ALL, widths: WIDE, via: ["#pv-title .d-sheetlink"], target: ".d-sheet" },
   { row: "NP-08", name: "The song sheet (phone: tap the bar, then the title)", who: ALL, widths: PHONE, via: [...full, "#pv-ftitle .d-sheetlink"], target: ".d-sheet" },
 
   // ── decks, people, chat (DJ, PE, CH) ──
-  { row: "DJ-01", name: "Which playlist you DJ from", who: IN, target: "#djlistpicker" },
+  { row: "DJ-01", name: "Which playlist you DJ from", who: IN, via: chatTab, target: "#djlistpicker" },
   { row: "DJ-03", name: "The waitlist", who: IN, via: peopleTab, target: "#usersWaitlist" },
   { row: "PE-01", name: "The people in the room", who: IN, via: peopleTab, target: "#allUsers" },
   { row: "CH-01", name: "Chat", who: IN, via: chatTab, target: "#chats" },
