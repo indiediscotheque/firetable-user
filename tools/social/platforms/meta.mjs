@@ -5,9 +5,10 @@
 //
 // Music: a Reel goes out through the API only with a track from Instagram's
 // own licensed library (the Audio API: Facebook Login only), matched exactly
-// to the song. Without one it's handed to the post kit (studio.mjs), to post
-// from the app with its sound picker. Nothing is posted with uploaded music.
-// Facebook Reels and Stories with music have no API: always the kit.
+// to the song. Without one, the song's picture is posted instead, or, if a
+// post kit is set up (studio.mjs), a person adds the sound in the app.
+// Nothing is posted with uploaded music. On Facebook a song is a post of its
+// own YouTube video, which plays in the feed.
 //
 // Instagram with Facebook Login (needed for music; one Meta login covers
 // Facebook too: `node tools/social/auth.mjs facebook` prints all of these):
@@ -31,6 +32,7 @@ const WEEK = 7 * 86400000;
 const ver = (env) => env.GRAPH_API_VERSION || "v23.0";
 const list = (s) => String(s == null ? "" : s).split(",").map((x) => x.trim()).filter(Boolean);
 /** Many pictures for a carousel, else one. */
+const kitReady = (env) => !!(env.STUDIO_DISCORD_WEBHOOK || (env.STUDIO_TELEGRAM_CHAT_ID && env.TELEGRAM_BOT_TOKEN));
 const carousel = (post) => post.media.slides && post.media.slides.length > 1 ? post.media.slides : null;
 
 /** A token from the environment, refreshed every week and kept in the state. */
@@ -128,7 +130,17 @@ export const instagram = {
         collab.length ? [["collaborators", { collaborators: JSON.stringify(collab) }, /collaborat|user/i]] : [])).id;
     } else if (post.media.video) {
       const a = await track(post.sound).catch((err) => { ctx.log("instagram: music search failed: " + err.message.slice(0, 160)); return null; });
-      if (!a) throw new Handoff(`"${post.sound ? post.sound.title : post.title}" isn't in Instagram's API music library (or this login can't use it): in the post kit, to add the sound in the app`);
+      if (!a) {
+        const what = `"${post.sound ? post.sound.title : post.title}" isn't in Instagram's API music library (or this login can't use it)`;
+        // with a post kit set up, a person adds the sound in the app; without one, the picture goes out by itself
+        if (kitReady(ctx.env)) throw new Handoff(what + ": in the post kit, to add the sound in the app");
+        ctx.log("instagram: " + what + ": posting the picture instead");
+        const c = await tolerant((extra) => call(`${user}/media`, { image_url: ctx.url(post.media.image), caption: text, ...extra }), [
+          ["alt text", { alt_text: alt }, /alt/i], ...(collab.length ? [["collaborators", { collaborators: JSON.stringify(collab) }, /collaborat|user/i]] : [])
+        ]);
+        await wait(c.id);
+        return publish(c.id);
+      }
       ctx.log(`instagram: music "${a.title}" by ${a.display_artist}`);
       const trial = list(ctx.env.INSTAGRAM_TRIAL == null ? "fresh,onthisday,fires" : ctx.env.INSTAGRAM_TRIAL).includes(post.kind);
       creation = (await tolerant((extra) => call(`${user}/media`, {
@@ -177,6 +189,11 @@ export const facebook = {
   async publish(post, ctx) {
     const { page, call } = fb(ctx);
     const text = caption(post, "facebook");
+    // a song: its own video, which plays in the post (Facebook's player, the artist's plays)
+    if (post.targets === "song" && post.listen) {
+      const r = await call(`${page}/feed`, { message: text, link: post.listen });
+      return { id: r.id, url: `https://www.facebook.com/${r.id}` };
+    }
     const pics = carousel(post) || [post.media.image];
     if (pics.length === 1) {
       const r = await call(`${page}/photos`, { url: ctx.url(pics[0]), message: text, alt_text_custom: altText(post) });

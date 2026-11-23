@@ -45,13 +45,19 @@ export const bluesky = {
     const auth = { Authorization: "Bearer " + s.accessJwt };
     const text = caption(post, "bluesky");
     const facets = await blueskyFacets(text, async (handle) => (await http("https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=" + encodeURIComponent(handle), { tries: 1 })).did);
+    let embed;
+    if (post.targets === "song" && post.listen) {
+      // a song: its own video as the card, with our picture on it; Bluesky plays YouTube in the post
+      const thumb = await http(pds + "/xrpc/com.atproto.repo.uploadBlob", { method: "POST", retry: true, headers: { ...auth, "Content-Type": "image/jpeg" }, body: await underMB(await ctx.file(post.media.image)) });
+      embed = { $type: "app.bsky.embed.external", external: { uri: post.listen, title: post.title.slice(0, 300), description: post.hook.slice(0, 1000), thumb: thumb.blob } };
+    }
     const images = [];
-    for (const name of four(post)) {
+    for (const name of embed ? [] : four(post)) {
       const buf = await underMB(await ctx.file(name));
       const b = await http(pds + "/xrpc/com.atproto.repo.uploadBlob", { method: "POST", retry: true, headers: { ...auth, "Content-Type": "image/jpeg" }, body: buf });
       images.push({ image: b.blob, alt: alt(post).slice(0, 1000), aspectRatio: { width: 1080, height: 1350 } });
     }
-    const embed = { $type: "app.bsky.embed.images", images };
+    embed = embed || { $type: "app.bsky.embed.images", images };
     const r = await http(pds + "/xrpc/com.atproto.repo.createRecord", { method: "POST", headers: { ...auth, "Content-Type": "application/json" }, body: JSON.stringify({
       repo: s.did, collection: "app.bsky.feed.post",
       record: { $type: "app.bsky.feed.post", text, facets, langs: ["en"], createdAt: new Date().toISOString(), embed }
@@ -174,7 +180,8 @@ export const discord = {
     const color = parseInt(String(post.color || "#cc9933").replace("#", ""), 16) || 0xcc9933;
     const r = await http(ctx.env.DISCORD_WEBHOOK_URL + (ctx.env.DISCORD_WEBHOOK_URL.includes("?") ? "&" : "?") + "wait=true", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ embeds: [{ title: (post.emoji ? post.emoji + " " : "") + post.title.slice(0, 240), description: caption(post, "discord").slice(0, 4000),
+      // the song's video as a link of its own: Discord shows its player
+      body: JSON.stringify({ content: post.listen || undefined, embeds: [{ title: (post.emoji ? post.emoji + " " : "") + post.title.slice(0, 240), description: caption(post, "discord").slice(0, 4000),
         url: linkFor(post, "discord") || undefined, color, image: { url: ctx.url(post.media.image) }, timestamp: new Date().toISOString() }] })
     });
     return { id: r.id, url: null };

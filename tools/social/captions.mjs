@@ -13,6 +13,9 @@
 //                       people): it goes in a reply; 1 hashtag
 //   pinterest           keywords in the title and description, no hashtags
 // Tags are CamelCase everywhere: screen readers read them as words.
+// A song post also links the song's own YouTube video ("▶ Hear it"): Facebook,
+// Bluesky, X, Discord and Telegram play it right in the post, and every play
+// counts for the artist.
 // Never deployed (tools/).
 
 import { clip, graphemes } from "./util.mjs";
@@ -42,6 +45,8 @@ export function mentions(post, platform) {
   return [...new Set(list)].slice(0, 3).map((h) => "@" + h);
 }
 
+/** "▶ Hear it: <the song's video>", where links are clickable. */
+const listen = (post) => post.listen ? `▶ Hear it: ${post.listen}` : "";
 const join = (...parts) => parts.flat().filter((p) => p != null && String(p).trim() !== "").join("\n\n");
 const hookOf = (post) => (post.emoji ? post.emoji + " " : "") + post.hook + (/[.!?…"”]$/.test(post.hook) ? "" : ".");
 
@@ -69,28 +74,30 @@ export function caption(post, platform) {
     case "studio":
       return clip(join(hook, facts, at && "🎤 " + at, post.prompt, `🎧 ${post.cta}: link in bio`, tags), 2150);
     case "facebook":
+      // the song's video plays in the post itself (platforms/meta.mjs): the site's link goes here
       return join(hook, facts, post.prompt, `🎧 ${post.cta}: ${link}`, tags);
     case "youtube":
       return join(hook, `🎧 ${post.cta}: ${link}`, facts, post.prompt, ["#Shorts", ...hashtags(post, "youtube")].join(" "));
     case "threads":
-      return fit(500, (f) => join(hook, f, at, post.prompt, `${post.cta}: ${link}`, tags), facts);
+      return fit(500, (f) => join(hook, f, at, post.prompt, listen(post), `${post.cta}: ${link}`, tags), facts);
     case "mastodon":
-      return fit(500, (f) => join(hook, f, `${post.cta}: ${link}`, tags), facts);
+      return fit(500, (f) => join(hook, f, listen(post), `${post.cta}: ${link}`, tags), facts);
     case "bluesky":
+      // a song's video is the post's card (it plays in Bluesky): the site's link goes in the text
       return fit(300, (f) => join(hook, f, at, link, tags), facts);
     case "x":
       return fit(280, (f) => join(hook, f, at, tags), facts);
     case "pinterest":
       return clip(join(hook, facts, `${post.cta} at ${new URL(post.link || "https://example.com").host.replace(/^www\./, "")}.`), 500);
     case "telegram":
-      return clip(join(hook, facts, `${post.cta}: ${link}`), 1000);
+      return clip(join(hook, facts, listen(post), `${post.cta}: ${link}`), 1000);
     default:
-      return join(hook, facts, link);
+      return join(hook, facts, listen(post), link);
   }
 }
 
 /** X's reply under the post, with the link. */
-export const xReply = (post) => `🎧 ${post.cta}: ${linkFor(post, "x")}`;
+export const xReply = (post) => join(listen(post), `🎧 ${post.cta}: ${linkFor(post, "x")}`).replace(/\n\n/g, "\n");
 
 /** A YouTube Short's title: the words people search for, at most 100 characters. */
 export const youtubeTitle = (post) => clip(post.searchTitle || post.title, 100);

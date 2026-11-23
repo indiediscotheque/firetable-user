@@ -4,9 +4,10 @@
 //   feed   1080 x 1350 (4:5):  feed posts, carousels, Bluesky, X, Pinterest
 //
 // Every frame has the same head (the room's mark, the subject under it) and
-// foot (the address on its own), with what matters inside the platforms' safe
-// zone (SAFE). A song scene is the song's cover with a record sliding out of
-// its sleeve, its name and artist, on a blurred, darkened copy of the cover.
+// foot (the address on its own), all on one left edge, with what matters
+// inside the platforms' safe zone (SAFE). A song scene is the song's cover
+// with a record sliding out of its sleeve, its name and artist, on the room's
+// dark ground lit by the song's colour.
 // As a video the record turns and the video loops seamlessly. Videos are
 // silent: the song is added in each app from its own licensed sound picker.
 // Lists (the charts, New Music Friday, Rising, Wrapped) are slides, and as a
@@ -126,16 +127,18 @@ async function rounded(bytes, size, radius) {
   return sharp(bytes).resize(size, size, { fit: "cover" }).composite([{ input: roundMask(size, size, radius), blend: "dest-in" }]).png().toBuffer();
 }
 
-/** The cover, blurred and darkened to fill the frame, with the colour glowing from the top. */
-async function backdrop(cover, { w, h }, accent) {
-  const blur = await sharp(cover).resize(w, h, { fit: "cover" }).blur(60).modulate({ brightness: 0.5, saturation: 1.25 }).toBuffer();
-  const shade = Buffer.from(`<svg width="${w}" height="${h}"><defs>
-    <linearGradient id="d" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${BG}" stop-opacity="0.35"/><stop offset="0.45" stop-color="${BG}" stop-opacity="0.45"/>
-      <stop offset="1" stop-color="${BG}" stop-opacity="0.92"/></linearGradient>
-    <radialGradient id="g" cx="0.5" cy="0" r="0.8"><stop offset="0" stop-color="${accent}" stop-opacity="0.35"/><stop offset="1" stop-color="${accent}" stop-opacity="0"/></radialGradient>
-  </defs><rect width="${w}" height="${h}" fill="url(#d)"/><rect width="${w}" height="${h}" fill="url(#g)"/></svg>`);
-  return sharp(blur).composite([{ input: shade }]).png().toBuffer();
+/**
+ * The ground: the room's near-black, lit from behind the record by the song's
+ * own colour, with a little grain so the light doesn't band. The same ground
+ * on every post; the cover and its colour are what change.
+ */
+async function backdrop({ w, h }, accent) {
+  const light = Buffer.from(`<svg width="${w}" height="${h}"><defs>
+    <radialGradient id="a" cx="0.82" cy="0.3" r="0.75"><stop offset="0" stop-color="${accent}" stop-opacity="0.42"/><stop offset="0.55" stop-color="${accent}" stop-opacity="0.12"/><stop offset="1" stop-color="${accent}" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b" cx="0.05" cy="1" r="0.7"><stop offset="0" stop-color="${accent}" stop-opacity="0.10"/><stop offset="1" stop-color="${accent}" stop-opacity="0"/></radialGradient>
+  </defs><rect width="${w}" height="${h}" fill="#121212"/><rect width="${w}" height="${h}" fill="url(#a)"/><rect width="${w}" height="${h}" fill="url(#b)"/></svg>`);
+  const grain = await sharp({ create: { width: w, height: h, channels: 3, noise: { type: "gaussian", mean: 128, sigma: 40 } } }).greyscale().ensureAlpha(0.05).png().toBuffer();
+  return sharp(light).composite([{ input: grain, blend: "overlay" }]).png().toBuffer();
 }
 
 /** A vinyl record with the cover as its label (it spins in the video). */
@@ -173,78 +176,89 @@ function shadow(size, blur = 40) {
 // Where the platforms' own buttons and captions sit over a 9:16 frame. The
 // strictest of them together: Reels' top 14% and bottom 35% (Meta), Shorts'
 // 288 px top and 192 px right (Google), TikTok's ~150 px of buttons on the
-// right. Words stay inside this box (x 150-930 centred on the frame, y
-// 290-1250), which is also inside Instagram's 3:4 crop of a Reel on the grid.
-export const SAFE = { top: 290, bottom: 1250, side: 150 };
+// right. Words stay inside this box (y 290-1250, left of x 930), which is
+// also inside Instagram's 3:4 crop of a Reel on the profile grid.
+export const SAFE = { top: 290, bottom: 1250, right: 930 };
+
+// The layout: everything hangs from one left edge (the mark, the subject, the
+// cover, the words, the address), and the record slides out of the sleeve to
+// the right. One frame for every post, so the series is recognisable; the
+// cover and its colour are what change. Three formats:
+//   feed   1080 x 1350, for feeds and carousels
+//   reel   1080 x 1920 inside SAFE, for videos (Reels, TikTok, Shorts), whose
+//          captions and buttons cover the bottom third
+//   story  1080 x 1920, for Stories, which only keep ~250 px clear top and bottom
+const GRID = {
+  feed: { x: 72, top: 64, logo: 44, kicker: 28, gap: 14, bottom: FEED.h - 60, right: FEED.w - 72, cover: 700, title: 62, titleMax: 140, artist: 40, meta: 28, foot: 28, after: 36 },
+  reel: { x: 96, top: SAFE.top, logo: 56, kicker: 34, gap: 16, bottom: SAFE.bottom, right: SAFE.right, cover: 520, title: 64, titleMax: 130, artist: 46, meta: 32, foot: 34, after: 32 },
+  story: { x: 96, top: 250, logo: 64, kicker: 38, gap: 18, bottom: 1640, right: 984, cover: 740, title: 76, titleMax: 172, artist: 52, meta: 36, foot: 36, after: 44 }
+};
+const frameOf = (format) => format === "feed" ? FEED : STORY;
+const gridOf = (format) => GRID[format] || GRID.reel;
 
 const LOGO = ROOT + "img/idlogo2.png";
 
-/** The room's mark with the post's subject under it: the head of every frame. */
-async function header(kicker, F, story, accent) {
-  const lh = story ? 56 : 50;
-  const logo = await sharp(LOGO).resize({ height: lh }).png().toBuffer();
-  const lw = (await sharp(logo).metadata()).width;
-  const k = await pill(kicker, { size: story ? 36 : 32, color: accent });
-  const top = story ? SAFE.top : 54;
-  const gap = story ? 16 : 16;
+/** The room's mark with the post's subject under it, on the left edge: the head of every frame. */
+async function header(kicker, g, accent) {
+  const logo = await sharp(LOGO).resize({ height: g.logo }).png().toBuffer();
+  const k = await pill(kicker, { size: g.kicker, color: accent });
   return {
-    layers: [{ input: logo, left: Math.round((F.w - lw) / 2), top }, { input: k.input, left: Math.round((F.w - k.width) / 2), top: top + lh + gap }],
-    bottom: top + lh + gap + k.height
+    layers: [{ input: logo, left: g.x, top: g.top }, { input: k.input, left: g.x - 2, top: g.top + g.logo + g.gap }],
+    bottom: g.top + g.logo + g.gap + k.height
   };
 }
 
-/** The address on its own along the foot of the frame. */
-async function footer(site, F, story) {
-  const a = await words(site, { size: story ? 36 : 32, weight: 600, color: SOFT, spacing: 0.5, width: F.w - 120, align: "centre" });
-  const top = story ? SAFE.bottom - a.height : F.h - 60 - a.height;
-  return { layer: { input: a.input, left: Math.round((F.w - a.width) / 2), top }, top };
+/** The address on its own at the foot, on the same left edge. */
+async function footer(site, g) {
+  const a = await words(site, { size: g.foot, weight: 600, color: SOFT, spacing: 0.5, width: g.right - g.x });
+  const top = g.bottom - a.height;
+  return { layer: { input: a.input, left: g.x, top }, top };
 }
 
 function pill(text, { size = 30, color = GOLD } = {}) {
-  return words(String(text).toUpperCase(), { size, weight: 800, color, spacing: 3, width: 960, maxHeight: Math.round(size * 1.4), min: 24 });
+  return words(String(text).toUpperCase(), { size, weight: 800, color, spacing: 3, width: 960, maxHeight: Math.round(size * 1.4), min: 22 });
 }
 
 const kickerColour = (accent) => accent === GOLD ? GOLD : usable(accent);
+
+/** Words stacked down the left edge from `y`, dropping the last ones that won't fit above `room`. */
+function stack(layers, x, y, parts, room, gap = 10) {
+  const keep = [...parts];
+  while (keep.length > 1 && y + keep.reduce((h, p) => h + p.height + gap, 0) - gap > room) keep.pop();
+  for (const p of keep) { layers.push({ input: p.input, left: x, top: y }); y += p.height + gap; }
+  return y;
+}
 
 // ---------------------------------------------------------------- a song
 
 /**
  * Everything a song frame is made of, laid out for `format`.
  * @param {{cover: Buffer, accent?: string, kicker: string, title: string, artist: string, meta?: string[], site: string}} s
- * @param {"story"|"feed"} format
+ * @param {"feed"|"reel"|"story"} format
  */
-export async function songScene(s, format = "story") {
-  const F = format === "story" ? STORY : FEED;
+export async function songScene(s, format = "reel") {
+  const F = frameOf(format), g = gridOf(format);
   const accent = s.accent || await accentOf(s.cover);
-  const story = format === "story";
   const layers = [];
-  const head = await header(s.kicker, F, story, kickerColour(accent));
+  const head = await header(s.kicker, g, kickerColour(accent));
   layers.push(...head.layers);
-  const foot = await footer(s.site, F, story);
-  // the words first, so the cover and the words can sit together in the middle of the space
-  const W = story ? F.w - 2 * SAFE.side : F.w - 140;
-  const C = story ? 540 : 600, D = Math.round(C * 0.94), slide = Math.round(C * 0.36);
-  const t = await words(s.title, { size: story ? 66 : 60, weight: 800, width: W, maxHeight: story ? 150 : 136, align: "centre", min: 44 });
-  const a = await words(s.artist, { size: story ? 48 : 42, weight: 600, color: SOFT, width: W, maxHeight: story ? 60 : 54, align: "centre", min: 34 });
-  const meta = (s.meta || []).filter(Boolean);
-  const m = meta.length ? await words(meta.join("  ·  "), { size: story ? 34 : 32, weight: 500, color: SOFT, width: W, maxHeight: story ? 44 : 42, align: "centre", min: 28 }) : null;
-  const gap = story ? 30 : 34;
-  const space = foot.top - 18 - (head.bottom + (story ? 30 : 28));
-  const parts = [t, a, m].filter(Boolean);
-  // drop the facts, then the artist, if a long title leaves no room
-  while (parts.length > 1 && C + gap + parts.reduce((h, x) => h + x.height + 12, 0) > space) parts.pop();
-  const block = C + gap + parts.reduce((h, x) => h + x.height + 12, 0) - 12;
-  const cy = head.bottom + (story ? 30 : 28) + Math.max(0, Math.round((space - block) / 2));
-  const cx = Math.round((F.w - (C + slide)) / 2);
-  const dx = cx + C + slide - D, dy = cy + Math.round((C - D) / 2);
-  const coverPng = await rounded(s.cover, C, 22);
+  const foot = await footer(s.site, g);
+  // the sleeve on the left edge; the record's centre at the sleeve's right edge, so half of it shows
+  const C = g.cover, D = Math.round(C * 0.94);
+  const cx = g.x, cy = head.bottom + g.after - 2;
+  const dx = cx + C - Math.round(D / 2), dy = cy + Math.round((C - D) / 2);
+  const coverPng = await rounded(s.cover, C, 18);
   const disc = await vinyl(s.cover, D);
   const sh = await shadow(C);
   layers.unshift({ input: sh.input, left: cx - sh.pad, top: cy - sh.pad });
-  let y = cy + C + gap;
-  for (const x of parts) { layers.push({ input: x.input, left: Math.round((F.w - x.width) / 2), top: y }); y += x.height + 12; }
+  const W = g.right - g.x;
+  const t = await words(s.title, { size: g.title, weight: 800, width: W, maxHeight: g.titleMax, min: 44 });
+  const a = await words(s.artist, { size: g.artist, weight: 600, color: SOFT, width: W, maxHeight: Math.round(g.artist * 1.25), min: 32 });
+  const meta = (s.meta || []).filter(Boolean);
+  const m = meta.length ? await words(meta.join("  ·  "), { size: g.meta, weight: 500, color: DIM, width: W, maxHeight: Math.round(g.meta * 1.35), min: 24 }) : null;
+  stack(layers, g.x, cy + C + g.after - 4, [t, a, m].filter(Boolean), foot.top - 16);
   layers.push(foot.layer);
-  const base = await sharp(await backdrop(s.cover, F, accent)).composite(layers).png().toBuffer();
+  const base = await sharp(await backdrop(F, accent)).composite(layers).png().toBuffer();
   return { F, accent, base, disc, shine: shine(D), cover: coverPng, pos: { disc: [dx, dy], cover: [cx, cy], D } };
 }
 
@@ -262,7 +276,7 @@ export async function sceneStill(scene) {
 
 // ---------------------------------------------------------------- lists
 
-const finish = (bg, F, accent, layers) => backdrop(bg, F, accent).then((b) => sharp(b).composite(layers).flatten({ background: BG })
+const finish = (F, accent, layers) => backdrop(F, accent).then((b) => sharp(b).composite(layers).flatten({ background: BG })
   .jpeg({ quality: 90, mozjpeg: true, chromaSubsampling: "4:4:4" }).toBuffer());
 
 /**
@@ -270,38 +284,37 @@ const finish = (bg, F, accent, layers) => backdrop(bg, F, accent).then((b) => sh
  * @param {{kicker: string, title: string, sub?: string, rows: Array<{rank?: number|string, cover: Buffer, title: string, artist: string, note?: string}>, site: string, accent?: string}} l
  */
 export async function listFrame(l, format = "feed") {
-  const F = format === "story" ? STORY : FEED;
-  const story = format === "story";
+  const F = frameOf(format), g = gridOf(format);
   const accent = l.accent || GOLD;
   const layers = [];
-  const head = await header(l.kicker, F, story, accent);
+  const head = await header(l.kicker, g, accent);
   layers.push(...head.layers);
-  let y = head.bottom + 22;
-  const t = await words(l.title, { size: story ? 64 : 56, weight: 800, width: F.w - 2 * SAFE.side, maxHeight: story ? 150 : 130, align: "centre", min: 40 });
-  layers.push({ input: t.input, left: Math.round((F.w - t.width) / 2), top: y });
+  const W = g.right - g.x;
+  let y = head.bottom + 20;
+  const t = await words(l.title, { size: Math.round(g.title * 0.92), weight: 800, width: W, maxHeight: g.titleMax, min: 40 });
+  layers.push({ input: t.input, left: g.x, top: y });
   y += t.height + 6;
   if (l.sub) {
-    const s = await words(l.sub, { size: story ? 32 : 28, weight: 500, color: SOFT, width: F.w - 2 * SAFE.side, maxHeight: 44, align: "centre" });
-    layers.push({ input: s.input, left: Math.round((F.w - s.width) / 2), top: y });
+    const s = await words(l.sub, { size: g.meta, weight: 500, color: SOFT, width: W, maxHeight: Math.round(g.meta * 1.5) });
+    layers.push({ input: s.input, left: g.x, top: y });
     y += s.height;
   }
-  y += story ? 36 : 28;
-  const foot = await footer(l.site, F, story);
+  y += 30;
+  const foot = await footer(l.site, g);
   layers.push(foot.layer);
   const n = l.rows.length;
-  const rowH = Math.min(story ? 180 : 168, Math.floor((foot.top - 30 - y) / Math.max(n, 1)));
+  const rowH = Math.min(180, Math.floor((foot.top - 30 - y) / Math.max(n, 1)));
   const art = Math.round(rowH * 0.8);
-  const x0 = SAFE.side;
   for (const r of l.rows) {
-    let x = x0;
+    let x = g.x;
     if (r.rank != null) {
-      const rank = await words(String(r.rank), { size: Math.round(rowH * 0.4), weight: 800, color: accent, width: 96, align: "right" });
-      layers.push({ input: rank.input, left: x + 96 - rank.width, top: y + Math.round((rowH - rank.height) / 2) });
-      x += 116;
+      const rank = await words(String(r.rank), { size: Math.round(rowH * 0.4), weight: 800, color: accent, width: 80 });
+      layers.push({ input: rank.input, left: x, top: y + Math.round((rowH - rank.height) / 2) });
+      x += 84;
     }
-    layers.push({ input: await rounded(r.cover, art, 12), left: x, top: y + Math.round((rowH - art) / 2) });
+    layers.push({ input: await rounded(r.cover, art, 10), left: x, top: y + Math.round((rowH - art) / 2) });
     x += art + 26;
-    const w = F.w - x - SAFE.side;
+    const w = g.right - x;
     const ts = Math.round(rowH * 0.24), as = Math.round(rowH * 0.19);
     const tt = await words(oneLine(r.title, ts, w, 700), { size: ts, weight: 700, width: w });
     const aa = await words(oneLine(r.artist + (r.note ? "  ·  " + r.note : ""), as, w, 500), { size: as, weight: 500, color: SOFT, width: w });
@@ -310,62 +323,52 @@ export async function listFrame(l, format = "feed") {
     layers.push({ input: aa.input, left: x, top: top + tt.height + 6 });
     y += rowH;
   }
-  return finish(l.rows[0] ? l.rows[0].cover : await plainCover(), F, accent, layers);
+  return finish(F, accent, layers);
 }
 
 /**
  * A title frame: the head, up to four covers (or one, with a big number over
- * it), a title and a line or two. A list's first slide, Wrapped, themes and
- * "the room is busy".
+ * it), a title and a line or two, all on the left edge. A list's first slide,
+ * Wrapped, themes and "the room is busy".
  * @param {{kicker: string, title: string, sub?: string, big?: string, bigLabel?: string, covers: Buffer[], site: string, accent?: string, lines?: string[]}} c
  */
 export async function titleFrame(c, format = "feed") {
-  const F = format === "story" ? STORY : FEED;
-  const story = format === "story";
+  const F = frameOf(format), g = gridOf(format);
   const accent = c.accent || GOLD;
   const covers = (c.covers || []).filter(Boolean);
   const layers = [];
-  const head = await header(c.kicker, F, story, accent);
+  const head = await header(c.kicker, g, accent);
   layers.push(...head.layers);
-  const foot = await footer(c.site, F, story);
+  const foot = await footer(c.site, g);
   layers.push(foot.layer);
-  const M = story ? 520 : 600;
-  const W = story ? F.w - 2 * SAFE.side : F.w - 140;
-  const t = await words(c.title, { size: story ? 66 : 60, weight: 800, width: W, maxHeight: story ? 150 : 136, align: "centre", min: 44 });
-  const lines = [];
-  for (const [i, line] of [c.sub, ...(c.lines || [])].filter(Boolean).entries()) {
-    lines.push(await words(line, { size: i ? (story ? 32 : 30) : (story ? 40 : 36), weight: 500, color: SOFT, width: W, maxHeight: story ? 96 : 90, align: "centre", min: 28 }));
-  }
-  const top0 = head.bottom + (story ? 30 : 28);
-  const space = foot.top - 18 - top0;
-  const gap = story ? 30 : 34;
-  const parts = [t, ...lines];
-  const mosaicH = covers.length ? M + gap : 0;
-  while (parts.length > 1 && mosaicH + parts.reduce((h, x) => h + x.height + 10, 0) > space) parts.pop();
-  const block = mosaicH + parts.reduce((h, x) => h + x.height + 10, 0) - 10;
-  let y = top0 + Math.max(0, Math.round((space - block) / 2));
+  let y = head.bottom + g.after - 2;
+  const M = g.cover;
   if (covers.length) {
     const four = covers.length >= 4;
     const tile = four ? (M - 12) / 2 : M;
     const spots = four ? [[0, 0], [tile + 12, 0], [0, tile + 12], [tile + 12, tile + 12]] : [[0, 0]];
-    const mx = Math.round((F.w - M) / 2);
     const sh = await shadow(M);
-    layers.unshift({ input: sh.input, left: mx - sh.pad, top: y - sh.pad });
-    for (let i = 0; i < spots.length; i++) layers.push({ input: await rounded(covers[i], Math.round(tile), 18), left: mx + Math.round(spots[i][0]), top: y + Math.round(spots[i][1]) });
+    layers.unshift({ input: sh.input, left: g.x - sh.pad, top: y - sh.pad });
+    for (let i = 0; i < spots.length; i++) layers.push({ input: await rounded(covers[i], Math.round(tile), 14), left: g.x + Math.round(spots[i][0]), top: y + Math.round(spots[i][1]) });
     if (c.big) {
-      // a number over the covers, on a dark band
-      const bigW = await words(c.big, { size: story ? 190 : 170, weight: 900, color: TEXT, width: M, align: "centre" });
-      const lab = c.bigLabel ? await words(c.bigLabel, { size: 38, weight: 700, color: TEXT, width: M - 40, align: "centre" }) : null;
-      const bandH = bigW.height + (lab ? lab.height + 10 : 0) + 50;
-      const by = y + Math.round((M - bandH) / 2);
-      layers.push({ input: Buffer.from(`<svg width="${M}" height="${bandH}"><rect width="${M}" height="${bandH}" rx="18" fill="${BG}" fill-opacity="0.78"/></svg>`), left: mx, top: by });
-      layers.push({ input: bigW.input, left: Math.round((F.w - bigW.width) / 2), top: by + 20 });
-      if (lab) layers.push({ input: lab.input, left: Math.round((F.w - lab.width) / 2), top: by + 20 + bigW.height + 10 });
+      // a number over the covers, on a dark band along their foot
+      const bigW = await words(c.big, { size: Math.round(M * 0.26), weight: 900, color: TEXT, width: M - 60 });
+      const lab = c.bigLabel ? await words(c.bigLabel, { size: Math.round(g.meta * 1.15), weight: 700, color: TEXT, width: M - 60 }) : null;
+      const bandH = bigW.height + (lab ? lab.height + 6 : 0) + 44;
+      const by = y + M - bandH;
+      layers.push({ input: Buffer.from(`<svg width="${M}" height="${bandH}"><path d="M0 0H${M}V${bandH - 14}Q${M} ${bandH} ${M - 14} ${bandH}H14Q0 ${bandH} 0 ${bandH - 14}Z" fill="${BG}" fill-opacity="0.82"/></svg>`), left: g.x, top: by });
+      layers.push({ input: bigW.input, left: g.x + 30, top: by + 18 });
+      if (lab) layers.push({ input: lab.input, left: g.x + 32, top: by + 18 + bigW.height + 6 });
     }
-    y += M + gap;
+    y += M + g.after - 4;
   }
-  for (const x of parts) { layers.push({ input: x.input, left: Math.round((F.w - x.width) / 2), top: y }); y += x.height + 10; }
-  return finish(covers[0] || await plainCover(), F, accent, layers);
+  const W = g.right - g.x;
+  const parts = [await words(c.title, { size: g.title, weight: 800, width: W, maxHeight: g.titleMax, min: 44 })];
+  for (const [i, line] of [c.sub, ...(c.lines || [])].filter(Boolean).entries()) {
+    parts.push(await words(line, { size: i ? g.meta : Math.round(g.artist * 0.85), weight: 500, color: i ? DIM : SOFT, width: W, maxHeight: Math.round(g.artist * 2), min: 26 }));
+  }
+  stack(layers, g.x, y, parts, foot.top - 16);
+  return finish(F, accent, layers);
 }
 
 // ---------------------------------------------------------------- video

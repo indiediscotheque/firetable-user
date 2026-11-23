@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// Social posting for the room: carousels and pictures posted straight to each
-// platform, and for the short-video apps a silent video whose music is added
-// from the app's own licensed sound picker: Instagram Reels through
-// Instagram's music library where the song is in it, TikTok as a draft in the
-// app, and everything else (YouTube Shorts, Facebook Reels, Stories with a
-// music sticker) as a post kit sent to a private channel (platforms/studio.mjs).
+// Social posting for the room, hands-off: carousels and pictures posted
+// straight to each platform, Instagram Reels with the song from Instagram's own
+// licensed library, and every other song post carrying the song's own YouTube
+// video, which most platforms play in the post. No audio is ever uploaded.
+// Optional extras that need a person: TikTok drafts finished in the app, and a
+// daily post kit (platforms/studio.mjs) for YouTube Shorts, Facebook Reels and
+// Stories with a music sticker.
 //
 // Two steps, so the files are on the web server (Instagram, Facebook,
 // Threads, Pinterest and Telegram fetch them from a public address) before
@@ -62,8 +63,9 @@ export const PLATFORMS = { instagram, instagram_story, facebook, facebook_story,
 
 // where each kind of post goes
 const ROUTES = {
-  // a song: an Instagram Reel (with licensed music, or in the kit), a TikTok draft, the kit, pictures elsewhere
-  song: ["instagram", "tiktok", "threads", "bluesky", "mastodon", "x", "pinterest", "telegram", "discord", "studio"],
+  // a song: an Instagram Reel with licensed music (or its picture), the song's own video on
+  // Facebook, its picture with the video linked elsewhere; TikTok drafts and the kit only when set up
+  song: ["instagram", "facebook", "tiktok", "threads", "bluesky", "mastodon", "x", "pinterest", "telegram", "discord", "studio"],
   // a chart, New Music Friday, Wrapped: carousels everywhere, the countdown video through TikTok and the kit
   list: ["instagram", "facebook", "tiktok", "threads", "bluesky", "mastodon", "x", "pinterest", "telegram", "discord", "studio"],
   // Rising: the quick feeds, and an Instagram Story
@@ -178,6 +180,8 @@ async function render() {
     if (!targets.length && held.length) {
       // every platform has had its share: this one waits for another day
       console.log(`held ${post.id} for another day: every budget is full (${held.join(", ")})`);
+      // its song can come up again
+      for (const [k, v] of Object.entries(state.posted)) if (v && v.as === post.id) delete state.posted[k];
       for (const f of [post.media.video, post.media.image, post.media.story, ...(post.media.slides || []), ...(post.media.glance || [])].filter(Boolean)) rmSync(join(ctx.out, f), { force: true });
       continue;
     }
@@ -330,15 +334,16 @@ async function check() {
   mkdirSync(dir, { recursive: true });
   const art = await squareCover(readFileSync(root + "img/og.png"));
   const look = { cover: art, kicker: "New release", title: "Röyksopp & Robyn, 坂本龍一 and a title long enough to wrap", artist: "Artist & Another", meta: ["Nu-Disco", "Out Nov 20", "4 plays in the room"], site: "indiediscotheque.com" };
-  const story = await songScene(look, "story");
+  const story = await songScene(look, "reel");
   const feed = await songScene(look, "feed");
-  writeFileSync(join(dir, "story.jpg"), await sceneStill(story));
+  writeFileSync(join(dir, "story.jpg"), await sceneStill(await songScene(look, "story")));
+  writeFileSync(join(dir, "reel.jpg"), await sceneStill(story));
   writeFileSync(join(dir, "feed.jpg"), await sceneStill(feed));
   const rows = Array.from({ length: 5 }, (_, i) => ({ rank: i + 1, cover: art, title: "Song number " + (i + 1), artist: "An artist", note: i ? "↑" + i : "New" }));
   writeFileSync(join(dir, "list.jpg"), await listFrame({ kicker: "Weekly chart", title: "Top 10 · Nov 16–22", rows, site: "indiediscotheque.com" }));
   writeFileSync(join(dir, "title.jpg"), await titleFrame({ kicker: "Live now", big: "12", bigLabel: "listening right now", covers: [art], title: "A song", sub: "An artist", site: "indiediscotheque.com" }, "story"));
   const sharp = (await import("sharp")).default;
-  for (const [f, w, h] of [["story.jpg", 1080, 1920], ["feed.jpg", 1080, 1350], ["list.jpg", 1080, 1350], ["title.jpg", 1080, 1920]]) {
+  for (const [f, w, h] of [["story.jpg", 1080, 1920], ["reel.jpg", 1080, 1920], ["feed.jpg", 1080, 1350], ["list.jpg", 1080, 1350], ["title.jpg", 1080, 1920]]) {
     const m = await sharp(join(dir, f)).metadata();
     if (m.width !== w || m.height !== h) throw new Error(`${f}: expected ${w} x ${h}, got ${m.width} x ${m.height}`);
   }

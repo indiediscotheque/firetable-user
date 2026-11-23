@@ -34,6 +34,22 @@ const DAY = 86400000;
 const short = (s) => createHash("sha1").update(String(s)).digest("hex").slice(0, 10);
 const pick = (list, seed) => list[parseInt(short(seed), 16) % list.length];
 const songKey = (t) => (Number(t.type || 1)) + "_" + t.cid;
+/**
+ * A song whatever upload it was played from: its artist and title, matched
+ * loosely ("feat.", case, accents and "(Official Video)" don't count). A song
+ * gets one post of its own a year, whichever kind it comes up in (a new
+ * release, the room's favourite, On This Day); lists (the chart, New Music
+ * Friday) can name it again.
+ */
+export const songOf = (t) => "song:" + norm(artists(t.a || t.artist)[0] || t.a || t.artist) + "|" + norm(t.t || t.title);
+// like util's plain(), but a remix, edit or version is a song of its own
+const norm = (s) => String(s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  .replace(/\s*[([]?\b(feat|ft|featuring)\b\.?[^)\]]*[)\]]?/g, " ")
+  .replace(/[([][^)\]]*\b(official|video|audio|lyrics?|visuali[sz]er|hd|hq)\b[^)\]]*[)\]]/g, " ")
+  .replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim();
+const fresh1 = (ctx, t) => !wasPosted(ctx.state, songOf(t));
+/** The song's own YouTube video: the room plays it from there, and most platforms play a YouTube link right in the post. */
+const listenUrl = (t) => Number(t.type || 1) === 1 && t.cid ? "https://www.youtube.com/watch?v=" + encodeURIComponent(t.cid) : null;
 const cap = (s) => String(s).charAt(0).toUpperCase() + String(s).slice(1);
 const isBot = (ctx, name) => !name || ctx.bots.has(String(name).toLowerCase());
 
@@ -89,29 +105,31 @@ async function prepare(ctx, t) {
 
 /** One song: the 9:16 silent video, the 4:5 picture and the 9:16 still. */
 async function songMedia(ctx, base, look) {
-  const story = await songScene(look, "story");
-  const feed = await songScene({ ...look, accent: story.accent }, "feed");
+  const reel = await songScene(look, "reel");
+  const feed = await songScene({ ...look, accent: reel.accent }, "feed");
+  const story = await songScene({ ...look, accent: reel.accent }, "story");
   const files = { image: base + "-feed.jpg", story: base + "-story.jpg", video: null };
   writeFileSync(join(ctx.out, files.image), await sceneStill(feed));
   writeFileSync(join(ctx.out, files.story), await sceneStill(story));
   if (ctx.video) {
     files.video = base + ".mp4";
-    await songVideo(story, { duration: ctx.seconds, out: join(ctx.out, files.video), tmp: join(ctx.tmp, base) });
+    await songVideo(reel, { duration: ctx.seconds, out: join(ctx.out, files.video), tmp: join(ctx.tmp, base) });
   }
-  return { files, accent: story.accent };
+  return { files, accent: reel.accent };
 }
 
 function newPost(ctx, kind, id, o) {
   return {
     id, kind, at: ctx.now, emoji: o.emoji || "", title: o.title, hook: o.hook, facts: (o.facts || []).filter(Boolean), prompt: o.prompt || "",
     cta: o.cta || `Listen live, 24/7, on ${ctx.room}`, link: o.link, tags: o.tags || [], topic: o.topic || (o.tags || [])[0] || "",
-    searchTitle: o.searchTitle || o.title, sound: o.sound || null, mentions: o.mentions || {}, media: o.media,
+    searchTitle: o.searchTitle || o.title, sound: o.sound || null, listen: o.listen || null, mentions: o.mentions || {}, media: o.media,
     targets: o.targets || "song", color: o.color || null, platforms: {}
   };
 }
 
 /** A song post: the parts every song kind shares. */
 async function songPost(ctx, kind, id, t, o) {
+  markPosted(ctx.state, songOf(t), { as: id });
   const p = await prepare(ctx, t);
   const { genre, like } = await genreOf(ctx, t, p.info);
   const g = phrase(genre);
@@ -123,7 +141,7 @@ async function songPost(ctx, kind, id, t, o) {
     emoji: o.emoji, title: `${t.a} - ${t.t}`, hook: o.hook(g), facts: [...o.facts, like.length ? `Sounds like ${like.join(", ")}.` : ""],
     prompt: pick(PROMPTS[o.prompts || "song"], id), link: await pageFor(ctx, t.a, o.fallback || ""),
     tags: tagsFor(o.tags, [genre]), topic: topicOf([genre], o.tags[0]),
-    searchTitle: o.searchTitle ? o.searchTitle(g, year) : `${t.a} - ${t.t}`, sound: { title: t.t, artist: t.a },
+    searchTitle: o.searchTitle ? o.searchTitle(g, year) : `${t.a} - ${t.t}`, sound: { title: t.t, artist: t.a }, listen: listenUrl(t),
     mentions: await accountsFor(t.a, ctx.state), media: files, color: accent
   });
 }
@@ -142,7 +160,7 @@ export async function spotlight(ctx) {
   }
   const since = new Date(ctx.now - ctx.freshDays * DAY).toISOString().slice(0, 10);
   // the newest release the room has actually been playing; then the newest
-  const t = tracks.filter((x) => String(x.rel) >= since && !wasPosted(ctx.state, "fresh:" + songKey(x)))
+  const t = tracks.filter((x) => String(x.rel) >= since && !wasPosted(ctx.state, "fresh:" + songKey(x)) && fresh1(ctx, x))
     .sort((a, b) => ((b.plays || 0) > 0) - ((a.plays || 0) > 0) || String(b.rel).localeCompare(String(a.rel)) || (b.plays || 0) - (a.plays || 0))[0];
   markPosted(ctx.state, "spotlight:" + ctx.zone.date);
   if (!t) return onthisday(ctx);
@@ -160,7 +178,7 @@ export async function spotlight(ctx) {
 
 export async function onthisday(ctx) {
   const rows = ((await ctx.data.read("discover/lib/onThisDay/" + ctx.zone.mmdd)) || []).filter((r) => r && r.cid && r.first);
-  const t = rows.filter((r) => zoned(r.first, ctx.tz).y < ctx.zone.y && !wasPosted(ctx.state, "otd-song:" + songKey(r))).sort((a, b) => (b.plays || 0) - (a.plays || 0))[0];
+  const t = rows.filter((r) => zoned(r.first, ctx.tz).y < ctx.zone.y && !wasPosted(ctx.state, "otd-song:" + songKey(r)) && fresh1(ctx, r)).sort((a, b) => (b.plays || 0) - (a.plays || 0))[0];
   if (!t) return null;
   const year = zoned(t.first, ctx.tz).y, ago = ctx.zone.y - year;
   console.log(`on this day: ${t.a} - ${t.t} (${year})`);
@@ -181,7 +199,7 @@ export async function fires(ctx) {
   const f = (await ctx.data.read("discover/fires")) || {};
   const songs = [];
   for (const d of Object.values(f.djs || {})) for (const s of d.songs || []) songs.push(s);
-  const t = songs.filter((s) => s.cid && (s.fires || 0) >= 2 && ctx.now - (s.w || 0) < 8 * DAY && !wasPosted(ctx.state, "fires-song:" + songKey(s)))
+  const t = songs.filter((s) => s.cid && (s.fires || 0) >= 2 && ctx.now - (s.w || 0) < 8 * DAY && !wasPosted(ctx.state, "fires-song:" + songKey(s)) && fresh1(ctx, s))
     .sort((a, b) => b.fires - a.fires || (b.w || 0) - (a.w || 0))[0];
   markPosted(ctx.state, "fires:" + week);
   if (!t) return null;
@@ -235,10 +253,10 @@ async function listMedia(ctx, base, o) {
   let video = null;
   if (ctx.video) {
     // about 3 s a song and longer on the top one: 30-40 s, where Reels do best
-    const frames = [{ jpg: await titleFrame(titleLook, "story"), dur: 2.5 }];
+    const frames = [{ jpg: await titleFrame(titleLook, "reel"), dur: 2.5 }];
     for (let i = looks.length - 1; i >= 0; i--) {
       const { r, p } = looks[i];
-      frames.push({ jpg: await sceneStill(await songScene({ cover: p.cover, kicker: rankKicker(i), title: r.t, artist: r.a, meta: o.meta ? o.meta(r) : [], site: ctx.host }, "story")), dur: i === 0 ? 5 : 3 });
+      frames.push({ jpg: await sceneStill(await songScene({ cover: p.cover, kicker: rankKicker(i), title: r.t, artist: r.a, meta: o.meta ? o.meta(r) : [], site: ctx.host }, "reel")), dur: i === 0 ? 5 : 3 });
     }
     video = base + ".mp4";
     await slideshowVideo(frames, { out: join(ctx.out, video), tmp: join(ctx.tmp, base) });
@@ -298,7 +316,7 @@ export async function newweek(ctx) {
     note: (r) => "Out " + releaseDay(r.rel), meta: (r) => ["Out " + releaseDay(r.rel), r.plays ? plural(r.plays, "play", "plays") + " in the room" : ""]
   });
   // they've had their moment: the daily spotlight moves on to newer ones
-  for (const r of rows) markPosted(ctx.state, "fresh:" + songKey(r));
+  for (const r of rows) { markPosted(ctx.state, "fresh:" + songKey(r)); markPosted(ctx.state, songOf(r), { as: "newweek:" + week }); }
   const g = topGenres(m.genres);
   return newPost(ctx, "newweek", "newweek:" + week, {
     emoji: "🆕", title: `New Music Friday: ${rows.length} new ${genreWords(g)} songs`,

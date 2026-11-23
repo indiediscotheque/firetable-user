@@ -181,11 +181,16 @@ Every push to `master` publishes the site to DreamHost (pages last, so a visitor
 
 Posts name songs and artists, never the room's DJs.
 
-**Music only from the platforms' own libraries.** The videos are silent, and the song is added from each app's licensed sound picker:
-- **Instagram Reels** go out with the song from Instagram's music library (its Audio API), when the library has that exact song. Reels for the daily song go out as Trial Reels (`INSTAGRAM_TRIAL`), shown to non-followers first and shared with followers only if they do well, so followers aren't flooded. This needs Instagram through Facebook Login (below).
-- **TikTok** gets the video as a draft in the app's inbox: add the sound, paste the caption, post.
-- **YouTube Shorts, Facebook Reels, Stories with a music sticker, and Reels whose song isn't in Instagram's API library** have no way to add licensed music from outside the app. They go in a **post kit**: one message to a private channel (`STUDIO_DISCORD_WEBHOOK` and/or `STUDIO_TELEGRAM_CHAT_ID`) with the video and the Story picture to save, the song to pick, and each platform's caption ready to copy, in order. It takes a few minutes a day.
-- **Carousels and pictures** (Instagram and Facebook carousels, Threads, Bluesky, Mastodon, X, Pinterest, Telegram, Discord) post themselves.
+**Hands-off by default, and people hear the songs.** Nothing needs a person once the keys are set. No audio is ever uploaded: the song plays from the platforms' own licensed sources.
+- **Instagram:** the daily song is a Reel with the song from Instagram's own music library, attached through its Audio API when the library has that exact song. It goes out as a Trial Reel (`INSTAGRAM_TRIAL`), shown to non-followers first and shared with followers if it does well. When the library doesn't have the song, its picture is posted instead. This needs Instagram through Facebook Login (below). Turning on "Share your reels to Facebook" in Instagram's Accounts Center puts the Reels on the Page too.
+- **Everywhere else** a song post carries the song's own YouTube video, the upload the room plays it from. Facebook and Bluesky show it as a card that plays in the post; Discord, Telegram and X (in the reply) play the link inline; Threads and Mastodon link it ("▶ Hear it"). Every play counts for the artist's upload.
+- **Carousels and pictures** (charts, New Music Friday, Rising, Wrapped, themes, Stories) post themselves.
+
+**Optional extras that take a few minutes a day** (left out unless their secrets are set):
+- **TikTok:** the video arrives in the app's inbox as a draft; add the sound from TikTok's picker and post. TikTok offers no way to add music from outside the app.
+- **The post kit** (`STUDIO_DISCORD_WEBHOOK` and/or `STUDIO_TELEGRAM_CHAT_ID`): one message to a private channel each day, with the video and the Story picture to save, the song to pick and each caption to paste. It covers YouTube Shorts, Facebook Reels and Stories with a music sticker, which have no way to add licensed music from outside the apps. It also covers Instagram Reels whose song isn't in the API's library (with the kit set up, those wait for the kit instead of posting the picture).
+
+**One post per song.** A song gets a single post of its own a year. That holds whichever kind it comes up in (new release, the room's favourite, On This Day) and whichever upload it was played from. Lists (the chart, New Music Friday) can name it again. "(feat. …)", "(Official Video)", case and accents don't make a new song; a remix, edit or version does. Every post also has its own id that's never sent twice, a post that fails is retried only on the platforms that failed, and the workflow stops rather than start from nothing when it can't read what's been posted.
 
 **Budgets** (`tools/social/run.mjs`, `SOCIAL_BUDGET` to change one, e.g. `threads=3/15/3`; `x=0` turns one off). A post over budget skips that platform, and one over budget everywhere waits for another day:
 
@@ -211,9 +216,9 @@ Posts name songs and artists, never the room's DJs.
 **Artists:** their accounts come from MusicBrainz (exact name matches only). They're @-mentioned and invited as Instagram collaborators (`INSTAGRAM_COLLAB=false` turns that off).
 
 **Design** (`render.mjs`):
-- **Every frame:** the room's mark with the post's subject under it at the top, and the address alone at the foot.
-- **A song** is its album cover with a record sliding out of the sleeve, the song, the artist and a line of facts, centred, on a blurred, darkened copy of the cover.
-- **Safe zone:** in 9:16 frames everything sits between y 290 and 1250, x 150 and 930, clear of the Reels, TikTok and Shorts buttons and captions and inside Instagram's 3:4 grid crop.
+- **One left edge:** everything hangs from it, so every post reads as one series. The room's mark with the post's subject sits at the top, then the album cover, the song, the artist and a line of facts, then the address alone at the foot. The record slides out of the sleeve to the right and runs off the edge.
+- **The ground** is the room's near-black, lit by the song's own colour with a little grain. The cover and its colour are what change from post to post.
+- **Three layouts:** 4:5 for feeds; 9:16 for videos, with everything between y 290 and 1250 and left of x 930, clear of the Reels, TikTok and Shorts buttons and captions and inside Instagram's 3:4 grid crop; 9:16 for Stories, which only need about 250 px clear at the top and bottom, so the cover and type are larger.
 - **Song videos** run 30 seconds and loop seamlessly (the record makes whole turns).
 - **Carousels** open on a hook (the number one, or the covers), then one song a slide (each stands alone, since Instagram can re-show a carousel from slide 2), then a "listen live" slide. Platforms that take 4 pictures get the hook and the list, five songs a slide.
 
@@ -222,10 +227,10 @@ Posts name songs and artists, never the room's DJs.
 | platform | secrets | how |
 |---|---|---|
 | Facebook Page and Instagram (with music) | `FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_TOKEN`, `INSTAGRAM_USER_ID`, `INSTAGRAM_TOKEN`, and the variable `INSTAGRAM_GRAPH_HOST=graph.facebook.com` | an Instagram professional account linked to the Facebook Page, a Meta app with Facebook Login for Business, then `node tools/social/auth.mjs facebook` (prints them all; the tokens don't expire) |
-| Instagram without Facebook | `INSTAGRAM_TOKEN` | `node tools/social/auth.mjs instagram`. Carousels and Stories only: every Reel goes to the kit |
+| Instagram without Facebook | `INSTAGRAM_TOKEN` | `node tools/social/auth.mjs instagram`. No music: songs go out as pictures |
 | Threads | `THREADS_TOKEN`, `THREADS_USER_ID` | the Meta app with the Threads use case, then `node tools/social/auth.mjs threads` |
-| TikTok | `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`, `TIKTOK_REFRESH_TOKEN` | an app at developers.tiktok.com with Login Kit and the Content Posting API (`video.upload`), then `node tools/social/auth.mjs tiktok` |
-| the post kit | `STUDIO_DISCORD_WEBHOOK` and/or `STUDIO_TELEGRAM_CHAT_ID` | a webhook on a private Discord channel; or message the Telegram bot and use your chat id |
+| TikTok (optional: drafts to finish in the app) | `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`, `TIKTOK_REFRESH_TOKEN` | an app at developers.tiktok.com with Login Kit and the Content Posting API (`video.upload`), then `node tools/social/auth.mjs tiktok` |
+| the post kit (optional) | `STUDIO_DISCORD_WEBHOOK` and/or `STUDIO_TELEGRAM_CHAT_ID` | a webhook on a private Discord channel; or message the Telegram bot and use your chat id |
 | Bluesky | `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD` | Settings → Privacy and security → App passwords |
 | Mastodon | `MASTODON_URL`, `MASTODON_TOKEN` | Preferences → Development → New application (`write:statuses write:media`). Tick "This is an automated account"; a server's bot rules (a tag, a daily limit) go in `SOCIAL_MASTODON_TAGS` and `SOCIAL_BUDGET` |
 | X | `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` | an app at developer.x.com with read and write access |

@@ -12,11 +12,11 @@
 #   theme      when it happens  a new room theme, and a recap when one ends
 #   busy       8+ people online, at most once a day: Stories
 #
-# Music is only ever added from each platform's own licensed library: Instagram
-# Reels through Instagram's music API when the song is in it, TikTok as a
-# draft finished in the app, and the rest (YouTube Shorts, Facebook Reels,
-# Stories with a music sticker) as a post kit sent to a private channel to
-# post from the phone. Carousels and pictures post themselves.
+# Hands-off: no audio is ever uploaded. Instagram Reels get the song from
+# Instagram's own music library when it has it (else the song's picture),
+# and every other song post carries the song's own YouTube video, which most
+# platforms play in the post. Optional extras: TikTok drafts and a daily post
+# kit for Shorts, Facebook Reels and music Stories, finished by hand.
 #
 # What it remembers (what's been posted and where, the queue, the week's
 # posts for the budgets, renewed tokens) is firetable-social/state.json in the

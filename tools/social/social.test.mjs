@@ -10,6 +10,7 @@ import { isoWeek, plain, genreTags, clip, graphemes, dayRange, zoned, artists, a
 import { caption, linkFor, blueskyFacets, youtubeTitle, hashtags, xReply } from "./captions.mjs";
 import { roomGenre, tagsFor, GENRES } from "./keywords.mjs";
 import { kit } from "./platforms/studio.mjs";
+import { songOf } from "./content.mjs";
 import { oauth1 } from "./platforms/social.mjs";
 import { targetsFor, configured, withinBudget, budgets } from "./run.mjs";
 import { emptyState, saveState, loadState, markPosted, count, today } from "./state.mjs";
@@ -106,6 +107,23 @@ test("the post kit: the sound to pick and each caption, minus what already went 
   assert.deepEqual(kit(post({ media: { image: "a.jpg" } })).steps, []);
 });
 
+test("people can hear the song: its own video, linked where links play", () => {
+  const p = post({ listen: "https://www.youtube.com/watch?v=abc" });
+  for (const name of ["threads", "mastodon", "telegram", "discord"]) assert.match(caption(p, name), /▶ Hear it: https:\/\/www\.youtube\.com\/watch\?v=abc/, name);
+  assert.match(xReply(p), /▶ Hear it: https:\/\/www\.youtube\.com/);
+  assert.ok(!caption(p, "instagram").includes("youtube.com"), "not where links don't work");
+  assert.ok(!caption(post(), "threads").includes("Hear it"), "nothing when there's no video");
+});
+
+test("a song gets one post of its own, whichever upload or kind it comes up in", () => {
+  const a = songOf({ a: "Justice", t: "Starting From Zero (feat. Michael McDonald)" });
+  assert.equal(a, songOf({ artist: "Justice & Michael McDonald", title: "Starting from Zero (Official Video)" }));
+  assert.equal(a, songOf({ a: "JUSTICE", t: "Starting From Zero" }));
+  assert.notEqual(a, songOf({ a: "Justice", t: "Starting From Zero (Breakbot Remix)" }), "a remix is a song of its own");
+  assert.notEqual(a, songOf({ a: "Justice", t: "Generator" }));
+  assert.notEqual(a, songOf({ a: "Breakbot", t: "Starting From Zero" }));
+});
+
 test("Bluesky rich text counts bytes, not characters", async () => {
   const text = "🆕 Röyksopp @royksopp.bsky.social https://example.com/a?b=1 #NewMusic";
   const f = await blueskyFacets(text, async () => "did:plc:abc");
@@ -129,7 +147,7 @@ test("a post goes only where its keys are set, and fits the platform", () => {
     FACEBOOK_PAGE_ID: "1", FACEBOOK_PAGE_TOKEN: "2", DISCORD_WEBHOOK_URL: "g", STUDIO_DISCORD_WEBHOOK: "h" };
   assert.deepEqual(configured(env).map((p) => p.name).sort(), ["bluesky", "discord", "facebook", "facebook_story", "instagram", "instagram_story", "studio", "tiktok"]);
   // a song: a Reel, a TikTok draft and the kit; the older poster already sends new releases to Bluesky and Discord
-  assert.deepEqual(targetsFor(post(), env), ["instagram", "tiktok", "studio"]);
+  assert.deepEqual(targetsFor(post(), env), ["instagram", "facebook", "tiktok", "studio"]);
   // a list: carousels, the countdown through TikTok and the kit (the kit last: it reads what the others did)
   assert.deepEqual(targetsFor(post({ kind: "chart", targets: "list" }), env), ["instagram", "facebook", "tiktok", "bluesky", "discord", "studio"]);
   // no video (no ffmpeg): no TikTok, no kit
@@ -137,7 +155,7 @@ test("a post goes only where its keys are set, and fits the platform", () => {
   // "right now": Stories and the quick feeds only
   assert.deepEqual(targetsFor(post({ kind: "busy", targets: "live" }), env), ["instagram_story", "facebook_story", "bluesky", "discord"]);
   assert.deepEqual(targetsFor(post({ kind: "chart", targets: "list" }), { ...env, SOCIAL_PLATFORMS: "instagram" }), ["instagram"]);
-  assert.deepEqual(targetsFor(post(), { ...env, SOCIAL_SKIP: "" }), ["instagram", "tiktok", "bluesky", "discord", "studio"]);
+  assert.deepEqual(targetsFor(post(), { ...env, SOCIAL_SKIP: "" }), ["instagram", "facebook", "tiktok", "bluesky", "discord", "studio"]);
 });
 
 test("budgets keep each platform to a steady few", () => {
