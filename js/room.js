@@ -423,11 +423,11 @@ firetable.ui.setupRoomEvents = function () {
       if (!deckHtml) {
         var stepUpBtn = isSelfOnDeck
           ? '&nbsp;'
-          : '<button type="button" class="butt graybutt small addmeButt">Play <span class="material-symbols-filled">queue_music</span></button>';
+          : '<button type="button" class="butt graybutt small addmeButt">Hop on <span class="material-symbols-filled">queue_music</span></button>';
         deckHtml = '<div class="spot empty"><div class="djplaque">' + stepUpBtn + '</div></div>';
       }
     } else {
-      deckHtml = '<div class="spot empty"><div class="djplaque"><button type="button" class="butt graybutt small addmeButt">Play <span class="material-symbols-filled">queue_music</span></button></div></div>';
+      deckHtml = '<div class="spot empty"><div class="djplaque"><button type="button" class="butt graybutt small addmeButt">Hop on <span class="material-symbols-filled">queue_music</span></button></div></div>';
     }
 
     // Always render exactly 3 on-deck slots to the right of the active DJ;
@@ -1421,7 +1421,7 @@ firetable.ui.setupRoomEvents = function () {
         wlLabel +
         '<div class="waitlist-empty">' +
         '<span class="waitlist-empty-msg">Less than 4 DJs = no need to wait!</span>' +
-        (ftapi.uid && !selfInWaitlist ? '<button class="butt graybutt small wlAddMeBtn"' + (isSelfOnDeck ? ' disabled' : '') + '>Play <span class="material-symbols-filled">queue_music</span></button>' : '') +
+        (ftapi.uid && !selfInWaitlist ? '<button class="butt graybutt small wlAddMeBtn"' + (isSelfOnDeck ? ' disabled' : '') + '>Hop on <span class="material-symbols-filled">queue_music</span></button>' : '') +
         '</div>'
       ).removeClass('has-entries');
     }
