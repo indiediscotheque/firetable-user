@@ -552,8 +552,9 @@ body.tt-skin #screenover { display: none; }
 .tt-theme[hidden] { display: none; }
 .tt-theme i { font-size: 18px; color: #ddd; }
 
-/* the awesome meter */
-.tt-meter { left: 680px; top: 118px; width: 109px; height: 108px; background: url(../img/tt/dial.webp?v=01.12.08); }
+/* the awesome meter: dial.webp's face is 6–103 across (centre 54.5), the board's
+   469 + 264 = 733, so it sits on the board's mount with its needle on the hub */
+.tt-meter { left: 678.5px; top: 118px; width: 109px; height: 108px; background: url(../img/tt/dial.webp?v=01.12.08); }
 .tt-needle {
     position: absolute;
     left: 52px;
