@@ -583,6 +583,54 @@ test("suggest finds emoji by their search words once the picker's data is in", a
   assert.ok(r.cow.includes("cut_of_meat") || r.cow.includes("water_buffalo"), "related emoji follow the names: " + r.cow);
 });
 
+test("usersSig: changes with what's shown of the people here, not with idle", async () => {
+  const r = await run(() => {
+    const was = ftapi.users;
+    const sig = (users, fields) => { ftapi.users = users; return firetable.utilities.usersSig(fields); };
+    const base = sig({ b: { username: "Bea", mod: true, idle: { isIdle: false } }, a: { username: "Al" } });
+    const out = {
+      idle: sig({ a: { username: "Al" }, b: { username: "Bea", mod: true, idle: { isIdle: true, since: 5 } } }) === base,
+      role: sig({ a: { username: "Al" }, b: { username: "Bea", idle: { isIdle: false } } }) === base,
+      left: sig({ a: { username: "Al" } }) === base,
+      nameOnly: sig({ a: { username: "Al", avatarStyle: "x" } }, ["username"]) === sig({ a: { username: "Al" } }, ["username"]),
+      renamed: sig({ a: { username: "Alan" } }, ["username"]) === sig({ a: { username: "Al" } }, ["username"]),
+      none: sig(null)
+    };
+    ftapi.users = was;
+    return out;
+  });
+  assert.equal(r.idle, true, "going idle or coming back redraws nothing");
+  assert.equal(r.role, false, "a role change does");
+  assert.equal(r.left, false, "someone leaving does");
+  assert.equal(r.nameOnly, true, "only the fields asked for count");
+  assert.equal(r.renamed, false, "a new name does");
+  assert.equal(r.none, "null");
+});
+
+test("the emoji picker's search: by the emoji or its words, headers hidden, all back when cleared", async () => {
+  const r = await run(async () => {
+    await firetable.emojis.buildPicker();
+    const root = firetable.emojis.results(); // in the app shell, detached for a visitor
+    const els = [...root.querySelectorAll(".pickerResult")];
+    const shown = () => els.filter((el) => el.style.display !== "none");
+    const heads = () => [...root.querySelectorAll("h3")].filter((h) => h.style.display !== "none").length;
+    firetable.emojis.niceSearch("Mirror");
+    const mirror = shown().map((el) => el.textContent);
+    const mirrorHeads = heads();
+    firetable.emojis.niceSearch("🪩");
+    const byEmoji = shown().map((el) => el.textContent);
+    firetable.emojis.niceSearch("");
+    return { all: els.length, mirror, mirrorHeads, byEmoji, back: shown().length, headsBack: heads() };
+  });
+  assert.ok(r.all > 1500, "the whole picker is built: " + r.all);
+  assert.ok(r.mirror.includes("🪩"), "found by its words, whatever the case: " + r.mirror.join(" "));
+  assert.ok(r.mirror.length < 20, "and only the ones that match");
+  assert.equal(r.mirrorHeads, 0, "section headers hide while searching");
+  assert.deepEqual(r.byEmoji, ["🪩"], "found by the emoji itself");
+  assert.equal(r.back, r.all, "clearing the search shows them all again");
+  assert.ok(r.headsBack > 0);
+});
+
 test("no page errors while the site loaded and ran these", () => {
   assert.deepEqual(errors, []);
 });

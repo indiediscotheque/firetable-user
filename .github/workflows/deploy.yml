@@ -203,10 +203,7 @@ jobs:
           fi
           # Give each file its last-commit time, so only files changed in git
           # differ from the server copy on later runs.
-          git ls-files -z | while IFS= read -r -d '' f; do
-            t=$(git log -1 --format=%ct -- "$f")
-            [ -n "$t" ] && touch -m -d "@$t" "$f"
-          done
+          python3 .github/scripts/commit-times.py .
           # Version links from file contents (only rewritten files get a new time)
           python3 .github/scripts/cache-bust.py .
           # "/indiediscotheque.com" (FTP style) means the folder in the home directory

@@ -221,10 +221,13 @@ firetable.ui.renderTyping = function () {
     names.push(String(e.name));
   }
   var $el = $('#typingIndicator');
-  if (!names.length) { $el.removeClass('show').empty(); return; }
-  var text = names.length === 1 ? names[0] + ' is typing'
+  var text = !names.length ? '' : names.length === 1 ? names[0] + ' is typing'
     : names.length === 2 ? names[0] + ' and ' + names[1] + ' are typing'
     : names.length + ' people are typing';
+  // the same as shown (the 2-second sweep): leave it, so the dots keep their beat
+  if (text === firetable.typing.shown && $el.hasClass('show') === !!text) return;
+  firetable.typing.shown = text;
+  if (!text) { $el.removeClass('show').empty(); return; }
   $el.empty().addClass('show')
     .append($('<span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>'))
     .append($('<span class="typing-text"></span>').text(text));
@@ -1414,8 +1417,13 @@ firetable.ui.setupChatEvents = function () {
     if (e.key === 'ArrowRight') { e.preventDefault(); $items.eq((idx + 1) % $items.length).focus(); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); $items.eq((idx - 1 + $items.length) % $items.length).focus(); }
   });
-  // names in chip tooltips fill in as the people list arrives
+  // names in chip tooltips fill in as the people list arrives (only when a
+  // name changed: not on every tab someone hides or shows)
+  var reactNames = null;
   ftapi.events.on('usersChanged', firetable.utilities.oncePerFrame(function () {
+    var sig = firetable.utilities.usersSig(['username']);
+    if (sig === reactNames) return;
+    reactNames = sig;
     Object.keys(firetable.reactionListeners).forEach(function (id) {
       var $bar = byId('reactions' + id);
       if ($bar.hasClass('has-reactions')) firetable.reactionListeners[id].ref.once('value', function (s) { firetable.ui.renderReactions(id, s.val()); });

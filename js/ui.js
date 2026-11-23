@@ -2092,7 +2092,7 @@ firetable.ui.setupMiscEvents = function () {
       });
     }
   });
-  $("#pickerSearch").on("change paste keyup", function () {
+  $("#pickerSearch").on("input change", function () {
     firetable.emojis.niceSearch($("#pickerSearch").val());
   });
   $("#pickerResults").on("click", "span", function () {

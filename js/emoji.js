@@ -13,8 +13,15 @@ firetable.emojis = {
    * Show all emoji results and section headers (resets any active search filter).
    */
   h: function () {
-    $(".pickerResult").show();
-    $("#pickerResults h3").show();
+    firetable.emojis.lastSearch = "";
+    var $root = $(firetable.emojis.results());
+    $root.find(".pickerResult").show();
+    $root.find("h3").show();
+  },
+
+  /** The picker's results (#pickerResults), also while the app shell is detached (the login screen). */
+  results: function () {
+    return document.getElementById("pickerResults") || (firetable.$appShell && firetable.$appShell.find("#pickerResults")[0]) || null;
   },
 
   /**
@@ -65,22 +72,31 @@ firetable.emojis = {
    * @param {string} val - Search text
    */
   niceSearch: function (val) {
+    val = String(val || "").toLowerCase();
+    if (val === (firetable.emojis.lastSearch || "")) return; // the same search again (change on blur)
     if (val.length === 0) {
       firetable.emojis.h();
       return;
     }
+    firetable.emojis.lastSearch = val;
+    var root = firetable.emojis.results();
+    if (!root) return;
     // Hide headers during filtered search
-    if ($("#pickerResults h3").is(":visible")) {
-      $("#pickerResults h3").hide();
-    }
-    val = val.toLowerCase();
-    $(".pickerResult").each(function (i, el) {
-      if (firetable.emojis.n($(el), val)) {
-        $(el).show();
-      } else {
-        $(el).hide();
+    $(root).find("h3").hide();
+    // ~1,900 emoji: decide every one first, then show and hide them in one
+    // pass (jQuery's show() reads each one's style, a recalculation apiece
+    // between the hides), matching against each one's words worked out once
+    var els = root.querySelectorAll(".pickerResult");
+    var show = [];
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el._ftWords === undefined) {
+        var altName = el.getAttribute("data-alternative-name");
+        el._ftWords = el.textContent.toLowerCase() + "\n" + (altName != null ? altName.toLowerCase() : "");
       }
-    });
+      show.push(el._ftWords.indexOf(val) >= 0);
+    }
+    for (var j = 0; j < els.length; j++) els[j].style.display = show[j] ? "" : "none";
   }
 };
 

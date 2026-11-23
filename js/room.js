@@ -621,10 +621,15 @@ firetable.ui.setupRoomEvents = function () {
   // markers always stay, so the timeline keeps its shape with no matches and
   // plays come back as soon as the text matches again. Every row is decided
   // before any is changed, so a long history is restyled once, not per row.
+  var histFilterQ = ""; // the filter last applied: "" means no row is hidden
   function applyHistoryFilter() {
     var q = ($("#histFilter").val() || "").toLowerCase().trim();
     var root = document.getElementById("thehistory");
     if (!root) return;
+    // no filter now or before: nothing to hide or show again (each new play
+    // called this, a scan of every row, 100 times while the list loads)
+    if (!q && !histFilterQ) return;
+    histFilterQ = q;
     var entries = root.querySelectorAll(".hist-entry");
     var hide = [], shown = 0;
     for (var i = 0; i < entries.length; i++) {
@@ -1432,8 +1437,37 @@ firetable.ui.setupRoomEvents = function () {
   // ── DJ Table ──
   var _disarmRemove = null; // the timer that puts an armed remove / step-down button back
   var _pendingDeparture = {}; // userId -> true|null while bot command is in-flight
+
+  // What the deck and the waitlist show of the people in the room: whether
+  // each DJ, each waiting person and you are here, and what they are (roles,
+  // names, avatars). Not their idle state, which flips with every tab hidden
+  // or shown, and which neither shows.
+  var _deckUsersSig = null;
+  function deckUsersSig() {
+    var users = ftapi.users;
+    var ids = {};
+    if (ftapi.uid) ids[ftapi.uid] = true;
+    [firetable.tableData, firetable.waitlistData].forEach(function (list) {
+      for (var k in list || {}) {
+        if (list.hasOwnProperty(k) && list[k] && list[k].id) ids[list[k].id] = true;
+      }
+    });
+    var parts = [users === null ? 'null' : typeof users];
+    Object.keys(ids).sort().forEach(function (id) {
+      var u = users && users[id];
+      var seen = null;
+      if (u) {
+        seen = {};
+        for (var f in u) if (u.hasOwnProperty(f) && f !== 'idle') seen[f] = u[f];
+      }
+      parts.push(id + ':' + JSON.stringify(seen));
+    });
+    return parts.join('|');
+  }
+
   ftapi.events.on("tableChanged", function (data) {
     firetable.tableData = data;
+    _deckUsersSig = deckUsersSig();
     var _activeIdx = (firetable.displayedPlaydex !== undefined) ? firetable.displayedPlaydex : firetable.playdex;
     renderDeckAndQueue(data, _activeIdx, true);
     firetable.ui.renderStageState();
@@ -1479,9 +1513,11 @@ firetable.ui.setupRoomEvents = function () {
   ftapi.events.on("newSong", function () { setTimeout(firetable.ui.renderStageState, 0); });
 
   // Re-render deck when user data arrives (mod status affects button visibility),
-  // at most once per frame however many updates arrive together
+  // at most once per frame however many updates arrive together, and only
+  // when something the deck or the waitlist shows has changed: the people
+  // list, the stage's notes and the room pulse follow usersChanged themselves
   ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () {
-    if (firetable.tableData !== undefined) {
+    if (firetable.tableData !== undefined && deckUsersSig() !== _deckUsersSig) {
       ftapi.events.emit("tableChanged", firetable.tableData);
     }
   }));

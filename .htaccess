@@ -10,6 +10,14 @@ Options -Indexes
   AddType image/webp .webp
 </IfModule>
 
+# The host compresses pages, scripts, styles and XML but not JSON, so the
+# emoji data every page loads (js/emoji-map.json), the picker's and the
+# Turntable avatars' (about 400 KB) went out whole: compress them, the app
+# manifest and SVGs too (a quarter of the size, or less)
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE application/json application/manifest+json image/svg+xml
+</IfModule>
+
 # A library address with no page of its own yet (a DJ's first week, this
 # week's chart before the next deploy builds it): the site itself, which opens
 # that Discover page (js/discover.js) and asks search engines not to keep the
