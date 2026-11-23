@@ -7,3 +7,7 @@ api/audience-config.php
 *-debug.log
 music/
 tests/screens/
+social-out/
+social-preview/
+social-check/
+social-state.json*

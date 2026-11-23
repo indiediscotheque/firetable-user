@@ -2,7 +2,7 @@
 # stylesheets flatten for older Safari (what the deploy serves), a PHP syntax
 # check on the API proxies, and that the CSP in .htaccess covers every
 # published path. Run the same locally with:
-#   npm ci && npm run lint && node tools/flatten-css.mjs --check && node tools/check-colours.mjs && node tools/share-cards.mjs --check && php -l api/*.php && python3 .github/scripts/check-htaccess-scope.py
+#   npm ci && npm run lint && node tools/flatten-css.mjs --check && node tools/check-colours.mjs && node tools/share-cards.mjs --check && node --test tools/social/social.test.mjs && node tools/social/run.mjs check && php -l api/*.php && python3 .github/scripts/check-htaccess-scope.py
 
 name: Lint
 
@@ -46,6 +46,13 @@ jobs:
       # the library pages' share images (tools/share-cards.mjs): one is drawn here, as the deploy draws them
       - name: Share images draw
         run: node tools/share-cards.mjs --check
+
+      # the social posts (tools/social/): their captions, signing and routing, and the pictures
+      # (and a video where ffmpeg is installed) drawn as .github/workflows/social.yml draws them
+      - name: Social posting
+        run: |
+          node --test tools/social/social.test.mjs
+          node tools/social/run.mjs check
 
       - name: PHP syntax
         run: |

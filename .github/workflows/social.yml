@@ -1,0 +1,263 @@
+# Social posting (tools/social/): every hour it checks what's due, draws it,
+# puts the files on the site under social/ and posts them, within each
+# platform's budget (a few a day at most; tools/social/run.mjs). In the room's
+# time zone (TZ, default America/Chicago):
+#   chart      Monday 9:00      the week's top 10: carousel and countdown video
+#   rising     Wednesday 9:00   what's climbing: carousel
+#   newweek    Friday 9:00      New Music Friday: the week's new releases
+#   fires      Saturday 11:00   the week's most-fired song
+#   spotlight  daily 18:00      one new release the room has been playing (or
+#                               On This Day, when there isn't one)
+#   wrapped    December 1st     the year's top 10
+#   theme      when it happens  a new room theme, and a recap when one ends
+#   busy       8+ people online, at most once a day: Stories
+#
+# Hands-off: no audio is ever uploaded. Instagram Reels get the song from
+# Instagram's own music library when it has it (else the song's picture),
+# and every other song post carries the song's own YouTube video, which most
+# platforms play in the post. Optional extras: TikTok drafts and a daily post
+# kit for Shorts, Facebook Reels and music Stories, finished by hand.
+#
+# What it remembers (what's been posted and where, the queue, the week's
+# posts for the budgets, renewed tokens) is firetable-social/state.json in the
+# SFTP user's home on the server, outside the site. Media are deleted from
+# social/ after 10 days.
+#
+# Uses the deploy's DreamHost secrets (DREAMHOST_HOST, DREAMHOST_USER,
+# DREAMHOST_PASSWORD or DREAMHOST_SSH_KEY, DREAMHOST_PATH, DREAMHOST_KNOWN_HOSTS)
+# and SITE_URL, and each platform's own secrets (README "social posting"). A
+# platform without its secrets is left out. Repository variables (optional)
+# set TZ and the SOCIAL_* settings listed in tools/social/run.mjs.
+#
+# Manual run: Actions → "Social posting" → Run workflow. Pick a kind and
+# "Post even if it isn't due" to send one now; "Dry run" draws and prints
+# every platform's words and the post kit without uploading or posting.
+
+name: Social posting
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: "What to post (auto: whatever is due)"
+        type: choice
+        options: [auto, spotlight, onthisday, chart, newweek, rising, fires, wrapped, theme, busy]
+        default: auto
+      force:
+        description: "Post even if it isn't due"
+        type: boolean
+        default: false
+      dry_run:
+        description: "Dry run (draw and print, post nothing)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: social
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HOST: ${{ secrets.DREAMHOST_HOST }}
+      SFTP_USER: ${{ secrets.DREAMHOST_USER }}
+      LFTP_PASSWORD: ${{ secrets.DREAMHOST_PASSWORD }}
+      DEST_RAW: ${{ secrets.DREAMHOST_PATH }}
+      KNOWN_HOSTS: ${{ secrets.DREAMHOST_KNOWN_HOSTS }}
+      SSH_KEY: ${{ secrets.DREAMHOST_SSH_KEY }}
+      SITE_URL: ${{ vars.SITE_URL }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      KIND: ${{ github.event_name == 'workflow_dispatch' && inputs.kind || 'auto' }}
+      FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+      # settings (repository variables)
+      TZ: ${{ vars.TZ || 'America/Chicago' }}
+      SOCIAL_SPOTLIGHT_HOUR: ${{ vars.SOCIAL_SPOTLIGHT_HOUR }}
+      SOCIAL_FRESH_DAYS: ${{ vars.SOCIAL_FRESH_DAYS }}
+      SOCIAL_BUDGET: ${{ vars.SOCIAL_BUDGET }}
+      SOCIAL_SKIP: ${{ vars.SOCIAL_SKIP }}
+      SOCIAL_PLATFORMS: ${{ vars.SOCIAL_PLATFORMS }}
+      SOCIAL_SECONDS: ${{ vars.SOCIAL_SECONDS }}
+      SOCIAL_BUSY_MIN: ${{ vars.SOCIAL_BUSY_MIN }}
+      SOCIAL_BUSY_HOURS: ${{ vars.SOCIAL_BUSY_HOURS }}
+      SOCIAL_BOTS: ${{ vars.SOCIAL_BOTS }}
+      # which platforms have keys, for the budgets in the render step
+      INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+      FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+      FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+      TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+      TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+      TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+      THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
+      BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+      BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+      MASTODON_URL: ${{ secrets.MASTODON_URL }}
+      MASTODON_TOKEN: ${{ secrets.MASTODON_TOKEN }}
+      X_API_KEY: ${{ secrets.X_API_KEY }}
+      X_API_SECRET: ${{ secrets.X_API_SECRET }}
+      X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+      X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+      PINTEREST_BOARD_ID: ${{ secrets.PINTEREST_BOARD_ID }}
+      PINTEREST_APP_ID: ${{ secrets.PINTEREST_APP_ID }}
+      PINTEREST_APP_SECRET: ${{ secrets.PINTEREST_APP_SECRET }}
+      PINTEREST_REFRESH_TOKEN: ${{ secrets.PINTEREST_REFRESH_TOKEN }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      STUDIO_DISCORD_WEBHOOK: ${{ secrets.STUDIO_DISCORD_WEBHOOK }}
+      STUDIO_TELEGRAM_CHAT_ID: ${{ secrets.STUDIO_TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        # no install scripts: the platform keys are in this job's environment (sharp needs none)
+        run: npm ci --no-audit --no-fund --ignore-scripts
+
+      - name: Check secrets
+        run: |
+          missing=""
+          for v in HOST SFTP_USER DEST_RAW KNOWN_HOSTS; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          [ -n "$LFTP_PASSWORD" ] || [ -n "$SSH_KEY" ] || missing="$missing LFTP_PASSWORD (or SSH_KEY)"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing DreamHost secret(s):$missing (the same ones the deploy uses). Nothing was posted."
+            exit 1
+          fi
+
+      # lftp (uploads) and ffmpeg (videos) from Ubuntu's package servers, kept between runs
+      - name: Keep the tools between runs
+        uses: actions/cache@v6
+        with:
+          path: ~/social-debs
+          key: social-debs-${{ runner.os }}-${{ runner.arch }}-1
+
+      - name: Prepare
+        run: |
+          need=""
+          command -v lftp >/dev/null || need="$need lftp"
+          command -v ffmpeg >/dev/null || need="$need ffmpeg"
+          if [ -n "$need" ]; then
+            if ! { ls ~/social-debs/*.deb >/dev/null 2>&1 && sudo dpkg -i ~/social-debs/*.deb >/dev/null 2>&1 && command -v lftp >/dev/null && command -v ffmpeg >/dev/null; }; then
+              got=""
+              for try in 1 2 3 4; do
+                bash .github/scripts/apt-mirror.sh
+                if sudo apt-get install -y -qq --download-only $need; then got=1; break; fi
+                echo "Ubuntu's package servers didn't answer (try $try); waiting..."
+                sleep $((try * 30))
+              done
+              [ -n "$got" ] || { echo "::error::Couldn't get$need from Ubuntu's package servers. Nothing was posted; the next run tries again."; exit 1; }
+              mkdir -p ~/social-debs
+              cp /var/cache/apt/archives/*.deb ~/social-debs/ 2>/dev/null || true
+              sudo apt-get install -y -qq $need
+            fi
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh_opts="-a -x -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          if [ -n "$SSH_KEY" ]; then
+            ( umask 077; printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key )
+            ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null || { echo "::error::DREAMHOST_SSH_KEY isn't a readable private key."; exit 1; }
+            ssh_opts="$ssh_opts -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o BatchMode=yes"
+          else
+            ssh_opts="$ssh_opts -o BatchMode=no"
+          fi
+          cat > ~/.lftprc <<EOF
+          set sftp:connect-program "ssh $ssh_opts"
+          set net:max-retries 3
+          set net:timeout 30
+          set cmd:fail-exit yes
+          EOF
+          DEST="$DEST_RAW"
+          case "$DEST" in /home/*) ;; /*) DEST="${DEST#/}" ;; esac
+          DEST="${DEST%/}"
+          echo "DEST=$DEST" >> "$GITHUB_ENV"
+          # the address the site answers on, after any redirect (links and media addresses)
+          [ -n "$SITE_URL" ] || { d=$(basename "$DEST"); case "$d" in *.*) SITE_URL="https://$d/" ;; esac; }
+          [ -n "$SITE_URL" ] || { echo "::error::No SITE_URL repository variable, and DREAMHOST_PATH doesn't look like a domain."; exit 1; }
+          site=$(curl -s -L --max-redirs 5 -o /dev/null -m 20 -w '%{url_effective}' "$SITE_URL" || true)
+          echo "SITE=${site:-$SITE_URL}" >> "$GITHUB_ENV"
+          node tools/social/run.mjs platforms
+
+      # Stop here if the server can't be read: starting from nothing would post things twice
+      - name: Fetch what's been posted
+        run: |
+          remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
+          if remote "cd firetable-social" >/dev/null 2>&1; then
+            if remote "cd firetable-social; cls -1 state.json" >/dev/null 2>&1; then
+              remote "get firetable-social/state.json -o social-state.json"
+              echo "State: $(wc -c < social-state.json) bytes."
+            else
+              echo "No state yet: this is the first run."
+            fi
+          else
+            remote "cls -1 ." >/dev/null || { echo "::error::Couldn't reach the server. Nothing was posted."; exit 1; }
+            [ "$DRY_RUN" = "true" ] || remote "mkdir -p firetable-social; chmod 700 firetable-social"
+            echo "No state yet: this is the first run."
+          fi
+
+      - name: Draw what's due
+        run: |
+          flags="--kind $KIND"
+          [ "$FORCE" = "true" ] && flags="$flags --force"
+          [ "$DRY_RUN" = "true" ] && flags="$flags --dry-run"
+          node tools/social/run.mjs render --site "$SITE" --state social-state.json --out social-out $flags
+
+      - name: Upload the files and save the queue
+        if: env.DRY_RUN != 'true'
+        run: |
+          remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
+          if ls social-out/*.jpg social-out/*.mp4 >/dev/null 2>&1; then
+            # not for search engines, and no folder listing
+            printf 'Options -Indexes\n<IfModule mod_headers.c>\n  Header set X-Robots-Tag "noindex"\n  Header set Access-Control-Allow-Origin "*"\n</IfModule>\n' > social-out/.htaccess
+            remote "mirror --reverse --no-perms --parallel=4 --exclude-glob posts.json --exclude-glob .tmp/ ./social-out/ \"$DEST/social/\""
+          fi
+          [ -f social-state.json ] && remote "put social-state.json -o firetable-social/state.json; chmod 600 firetable-social/state.json"
+          true
+
+      - name: Post
+        env:
+          INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
+          INSTAGRAM_GRAPH_HOST: ${{ vars.INSTAGRAM_GRAPH_HOST }}
+          INSTAGRAM_COLLAB: ${{ vars.INSTAGRAM_COLLAB }}
+          INSTAGRAM_TRIAL: ${{ vars.INSTAGRAM_TRIAL }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          GRAPH_API_VERSION: ${{ vars.GRAPH_API_VERSION }}
+          BLUESKY_SERVICE: ${{ vars.BLUESKY_SERVICE }}
+          SOCIAL_MASTODON_TAGS: ${{ vars.SOCIAL_MASTODON_TAGS }}
+        run: |
+          flags=""
+          [ "$DRY_RUN" = "true" ] && flags="--dry-run"
+          node tools/social/run.mjs publish --site "$SITE" --state social-state.json --out social-out $flags
+
+      # Always put the state back once it was read, even if posting broke part way:
+      # it records what already went out
+      - name: Save what's been posted, and clear out old files
+        if: ${{ always() && env.DRY_RUN != 'true' && hashFiles('social-state.json') != '' }}
+        run: |
+          remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
+          old=$(node tools/social/run.mjs old-media --state social-state.json)
+          remote "put social-state.json -o firetable-social/state.json; chmod 600 firetable-social/state.json"
+          if [ -n "$old" ]; then
+            script=$(mktemp)
+            printf 'open --env-password -u "%s" "sftp://%s"\nset cmd:fail-exit no\n' "$SFTP_USER" "$HOST" > "$script"
+            while IFS= read -r f; do
+              case "$f" in */*|..*|"") continue ;; esac
+              printf 'rm -f "%s/social/%s"\n' "$DEST" "$f" >> "$script"
+            done <<< "$old"
+            lftp -f "$script" || true
+            echo "Removed $(printf '%s\n' "$old" | wc -l) old file(s) from social/."
+          fi
