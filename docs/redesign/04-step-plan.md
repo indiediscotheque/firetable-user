@@ -1,5 +1,7 @@
 # 04 · The steps
 
+> **Closed (the owner, November 23, 2026).** Every step below shipped or was dropped. Kept as the record; don't take new work from it.
+
 Each step is one pull request. **Order since round 4 (November 12, 2026): Phase 0, Phase 2 (Discover), Phase 4 (phones), then Phase 1's Live steps one at a time, each with the owner's yes before it starts. Phase 3 is dropped (November 23, 2026).** **Realigned November 15, 2026:** the working order is the priority list in [README.md](README.md) ("Next, in this order"); the notes marked *Realigned* below say what earlier work already did for a step. Step numbers haven't changed, so the inventory's references still hold. Do the steps in order within a phase. Follow the per-step routine in [01-ground-rules.md](01-ground-rules.md) every time.
 
 Every step lists:
@@ -118,8 +120,8 @@ Nothing moves region. Regulars find everything where it was.
 - **Check:** smoke: `#st-avatarsBtn` toggles the class and the chip has the playing DJ's name; reload keeps it.
 - **Undo:** revert.
 
-### 1.4 The song facts on stage (on hold: the owner, November 22, 2026)
-- **On hold:** the owner saw the mockup (a bold, tappable title, the artist as a link, tempo and genre as two small tags, the plays in smaller muted type) and skipped it for now. Kept for reference.
+### 1.4 The song facts on stage ✗ dropped (the owner, November 23, 2026)
+- **Dropped:** the owner saw the mockup (a bold, tappable title, the artist as a link, tempo and genre as two small tags, the plays in smaller muted type) on November 22 and dropped it with the plan's close: the stage's song facts stay as they are. Kept for reference.
 - **Goal:** the song is easy to read; facts in a clear order.
 - **Rows:** NP-01 to NP-05, NP-08.
 - **Files and change:** `#npText` CSS: `#track` 18px bold, `#artist` 14px link, `#plays` lines at 12px `--text-3`; `#npBpm` and genre as small tags. Clicking `#track` opens the song sheet (`discover.js` `openSheet`, available when Discover is on; otherwise nothing).

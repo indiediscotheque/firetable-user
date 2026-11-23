@@ -17,4 +17,4 @@ The deploy also serves the stylesheets with CSS nesting flattened (`tools/flatte
 `music/` (the library's plain pages) isn't in git: the deploy builds it with `tools/plain-pages.mjs` and uploads it in its own step, deleting pages no longer built. The main upload skips it.
 
 ## Redesign
-The site's design upgrade follows `docs/redesign/` (start at its README): small steps on top of what exists, never a rewrite. Read `01-ground-rules.md` before any design work, take the next unshipped step in `04-step-plan.md`, keep every feature in `02-feature-inventory.md`, and mark what shipped. `docs/` is never deployed.
+The redesign plan in `docs/redesign/` is closed (November 23, 2026): every step shipped or was dropped, and nothing is queued. Don't take work from `04-step-plan.md` or offer its dropped steps (Phase 3, 1.4 and the rest) again. It stays as the record of what changed and why. For any new design work, still read `01-ground-rules.md` first, keep every feature in `02-feature-inventory.md`, and work in small steps on top of what exists, never a rewrite. `docs/` is never deployed.
