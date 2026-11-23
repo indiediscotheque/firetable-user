@@ -1567,12 +1567,12 @@ button.waitlist-pos {
    have one, so every name starts on the same line of the column. */
 #allUsers .prson .prsnNameRole { flex: 0 1 auto; }
 #allUsers .prson .prsnRole { order: 1; flex: none; }
-/* Idle used to be the colour of the member icon alone; now it is a word. */
+/* Idle: the name greys (and the role icon turns orange). A DJ who dropped
+   off also greys, and says "away" so it isn't read as idle. */
 #allUsers .prson.idle .prsnName,
 #allUsers .prson.ghost .prsnName { color: var(--color-text-muted); }
-#allUsers .prson.idle::after,
 #allUsers .prson.ghost::after {
-    content: "idle";
+    content: "away";
     order: 2;
     margin-left: auto;
     padding-right: var(--pad1);
@@ -1581,7 +1581,6 @@ button.waitlist-pos {
     text-transform: uppercase;
     color: var(--color-text-muted);
 }
-#allUsers .prson.ghost::after { content: "away"; }
 
 .imptcon {
     display: none;
