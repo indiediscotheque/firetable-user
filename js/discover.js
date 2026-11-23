@@ -4239,8 +4239,9 @@ firetable.discover = (function () {
       return;
     }
     firetable.ui.toast("That song can't play here. Skipping it.");
-    // unless they've gone to Live or Listen in meanwhile
-    setTimeout(function () { if (firetable.preview === "discover" && discoverActive()) step(1); }, 800);
+    // unless they've gone to Live or Listen, or picked another song, in meanwhile
+    var was = P.play;
+    setTimeout(function () { if (P.play === was && firetable.preview === "discover" && discoverActive()) step(1); }, 800);
   }
 
   function signedIn(on) {
