@@ -52,10 +52,8 @@ function setup(useThis) {
   if (!useThis) useThis = firetable.scImg;
   background(0);
 
-  var $screenFrame = $('#screenFrame');
-  var frameW = $screenFrame.outerWidth() || $('#djStage').outerWidth();
-  var frameH = $screenFrame.outerHeight() || $('#djStage').outerHeight();
-  var cnv = createCanvas(frameW, frameH);
+  var size = screenSize();
+  var cnv = createCanvas(size.w, size.h);
   cnv.parent('scScreen');
 
   loadImage(useThis, function (img) {
@@ -66,6 +64,27 @@ function setup(useThis) {
     $can.data('ratio', canrat);
     syncGlitchLoop(); // a full-screen view draws the plain cover once
   });
+}
+
+/** The screen's size now: the canvas fills it. */
+function screenSize() {
+  var $screenFrame = $('#screenFrame');
+  return {
+    w: Math.round($screenFrame.outerWidth() || $('#djStage').outerWidth() || 0),
+    h: Math.round($screenFrame.outerHeight() || $('#djStage').outerHeight() || 0)
+  };
+}
+
+/**
+ * Keep the canvas the screen's size whenever the screen changes size: the
+ * window, the stage's layout, or the full-screen player opening and closing
+ * (which never resizes the window, so the canvas stayed stage-sized there).
+ */
+function fitCanvas() {
+  if (typeof resizeCanvas !== 'function' || !document.querySelector('#scScreen canvas')) return;
+  var size = screenSize();
+  if (!size.w || !size.h || (size.w === width && size.h === height)) return;
+  resizeCanvas(size.w, size.h); // redraws once, even while the loop rests
 }
 
 /** Whether a full-screen view is showing the screen: the cover is plain there. */
@@ -252,13 +271,18 @@ class Glitch {
     return destImg;
   }
 
-  /** Draw the untouched cover, centred (the full-screen views). */
+  /**
+   * Draw the untouched cover, centred and as big as the screen allows (the
+   * full-screen views: the 500px cover at its own size sat small in a corner
+   * of a TV-sized screen).
+   */
   showPlain() {
     this.replaceData(this.imgOrigin, this.copyData);
-    push();
-    translate((width - this.imgOrigin.width) / 2, (height - this.imgOrigin.height) / 2);
-    image(this.imgOrigin, 0, 0);
-    pop();
+    var iw = this.imgOrigin.width, ih = this.imgOrigin.height;
+    if (!iw || !ih) return;
+    var k = Math.min(width / iw, height / ih);
+    var w = Math.round(iw * k), h = Math.round(ih * k);
+    image(this.imgOrigin, Math.round((width - w) / 2), Math.round((height - h) / 2), w, h);
   }
 
   /**
@@ -383,3 +407,9 @@ document.addEventListener('visibilitychange', syncGlitchLoop);
 document.addEventListener('fullscreenchange', function () { setTimeout(syncGlitchLoop, 0); });
 document.addEventListener('webkitfullscreenchange', function () { setTimeout(syncGlitchLoop, 0); });
 new MutationObserver(syncGlitchLoop).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+if (typeof ResizeObserver === 'function') {
+  var screenFrameEl = document.getElementById('screenFrame');
+  if (screenFrameEl) new ResizeObserver(function () { fitCanvas(); }).observe(screenFrameEl);
+} else {
+  window.addEventListener('resize', fitCanvas);
+}

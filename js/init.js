@@ -97,14 +97,8 @@ firetable.init = function () {
   // ── Window Resize Handler (debounced) ──
   $(window).resize(firetable.utilities.debounce(function () {
     $("#thehistory").css('top', $('#stage').outerHeight() + $('#topbar').outerHeight());
-    var $screenFrame = $('#screenFrame');
-    var frameW = $screenFrame.outerWidth() || $('#djStage').outerWidth();
-    var frameH = $screenFrame.outerHeight() || $('#djStage').outerHeight();
-    // (the YouTube player is sized in CSS, taller than the frame, to crop its chrome)
-    $('#scScreen')
-      .width(frameW)
-      .height(frameH);
-    setup(); // Re-create the p5.js canvas at the new size
+    // (the SoundCloud cover's canvas follows the screen's size itself, glitch.js;
+    // the YouTube player is sized in CSS, taller than the frame, to crop its chrome)
   }, 500));
 
   firetable.utilities.scrollToBottom();

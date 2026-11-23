@@ -2201,6 +2201,26 @@ try {
   const sc = await page.$eval("#sc-widget", (f) => ({ src: f.getAttribute("src") || "", widget: !!firetable.scwidget }));
   check(sc.widget && /^https:\/\/w\.soundcloud\.com\/player\/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F13158665&/.test(sc.src) && /auto_play=true/.test(sc.src),
     "the first SoundCloud song makes SoundCloud's player, pointed straight at that track (" + sc.src.slice(0, 120) + ")");
+  // the full-screen player grows the screen without resizing the window: the cover's canvas grows with it
+  const scFull = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const box = () => {
+      const c = document.querySelector("#scScreen canvas"), f = document.getElementById("screenFrame");
+      const cr = c.getBoundingClientRect(), fr = f.getBoundingClientRect();
+      return { cw: Math.round(cr.width), ch: Math.round(cr.height), fw: Math.round(fr.width), fh: Math.round(fr.height), left: Math.round(cr.left - fr.left), top: Math.round(cr.top - fr.top) };
+    };
+    const out = { stage: box() };
+    firetable.discover.openFull();
+    await wait(800);
+    out.full = box();
+    document.getElementById("pv-fclose").click();
+    await wait(800);
+    out.back = box();
+    return out;
+  });
+  const scFits = (b) => Math.abs(b.cw - b.fw) <= 1 && Math.abs(b.ch - b.fh) <= 1 && b.left === 0 && b.top === 0;
+  check(scFits(scFull.full) && scFull.full.cw > scFull.stage.cw && scFits(scFull.back),
+    "a SoundCloud cover's canvas fills the screen in the full-screen player and on the stage again after (" + JSON.stringify(scFull) + ")");
 
   console.log("-- someone sends a 🔥: the fire burns behind the DJ, sized to them, with no library to load");
   await page.evaluate(() => window.firetableIgniteFyre(3));
