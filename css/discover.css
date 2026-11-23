@@ -248,6 +248,10 @@ body.ft-discover #discoverPage {
 }
 #dBrowse .pvbar.previewing { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .d-nobody { visibility: hidden; }
+/* Discover's lists borrow Recent's timeline row but have no timeline: without
+   its backbone the row's connector was a stray dash after every rank, and ran
+   behind the first DJ's face like a strike-through */
+#dBrowse .d-rowlist .hist-entry::before { content: none; }
 .d-noface { background-color: var(--color-bg-t3); }
 .hist-timestamp.d-rank {
     color: var(--color-text-light);
