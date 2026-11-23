@@ -2940,7 +2940,7 @@ try {
     const sheet = document.getElementById("dSheetBox");
     out.sheet = (sheet.querySelector(".d-title") || {}).textContent + "|" + (sheet.querySelector("#dSheetHist") || {}).textContent;
     const faces = [...sheet.querySelectorAll("#dSheetHist .pv-dj-avatar")];
-    out.faces = faces.map((f) => (f.classList.contains("d-noface") ? "none" : (f.style.backgroundImage.match(/robots\/([^.?]+)/) || [])[1] || f.style.backgroundImage)).join(",");
+    out.faces = faces.map((f) => (f.classList.contains("d-noface") ? (/img\/robot-generic\.png/.test(f.style.backgroundImage) ? "generic" : "none") : (f.style.backgroundImage.match(/robots\/([^.?]+)/) || [])[1] || f.style.backgroundImage)).join(",");
     sheet.querySelector(".closeModal").click();
     document.getElementById("track").click();
     await until(() => /playing in the room now/.test((document.getElementById("dSheetHist") || {}).textContent || ""));
@@ -2954,7 +2954,7 @@ try {
   });
   check(doors.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && /^#discover\/artist\//.test(doors.stageArtist || "") && doors.titleButton === "button",
     "in Live, artist names link to their pages and titles are buttons (" + JSON.stringify(doors) + ")");
-  check(doors.faces === "uidZZed,none", "a name-only history line shows that member's face (uid + name), or a plain circle when unknown (" + doors.faces + ")");
+  check(doors.faces === "uidZZed,generic", "a name-only history line shows that member's face (uid + name), or the generic gray robot bust when unknown (" + doors.faces + ")");
   check(/^Fav One\|.*30 plays/.test(doors.sheet || "") && /playing in the room now/.test(doors.stageSheet || ""), "a title opens its song sheet, with the room's plays; the stage's says it's playing now");
   check(doors.robot === "#discover/djs/dj1", "a DJ's robot in Live opens their DJ page (" + doors.robot + ")");
 
@@ -3137,7 +3137,7 @@ try {
     const faces = () => [...document.querySelectorAll("#dBrowse .hist-entry .pv-dj-avatar:not(.d-nobody)")].map((a) => Math.round(a.getBoundingClientRect().width) + "x" + Math.round(a.getBoundingClientRect().height));
     out.favFaces = faces().join();
     document.querySelector('.d-chip[data-gtab="deep"]').click();
-    out.deepFace = faces().join() + "|" + !!document.querySelector("#dBrowse .hist-entry .d-noface") + "|" + Math.round(document.querySelector("#dBrowse .hist-track-title").getBoundingClientRect().width);
+    out.deepFace = faces().join() + "|" + /img\/robot-generic\.png/.test((document.querySelector("#dBrowse .hist-entry .d-noface") || { style: {} }).style.backgroundImage || "") + "|" + Math.round(document.querySelector("#dBrowse .hist-track-title").getBoundingClientRect().width);
     document.querySelector('.d-chip[data-gtab="newHere"]').click();
     out.newHere = [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join();
     document.querySelector("#dBrowse .d-radio").click();
@@ -3198,7 +3198,7 @@ try {
   check(/^(\d+)x\1,\1x\1$/.test(libPages.favFaces) && Number(libPages.favFaces.split("x")[0]) > 10 && Number(libPages.favFaces.split("x")[0]) < 40,
     "faces on a genre's timeline are the timeline's size, linked to a DJ page or not (" + libPages.favFaces + ")");
   check(/^(\d+)x\1\|true\|(\d+)$/.test(libPages.deepFace) && Number(libPages.deepFace.split("x")[0]) < 40 && Number(libPages.deepFace.split("|")[2]) > 40,
-    "a first DJ nobody can name now is a small plain circle, and the title keeps its room (" + libPages.deepFace + ")");
+    "a first DJ nobody can name now is a small generic gray robot bust, and the title keeps its room (" + libPages.deepFace + ")");
   check(/^radio\|.*Nu-Disco radio/.test(libPages.radio), "genre radio plays (" + libPages.radio + ")");
   check(/^dj1\|.*Friday nights/.test(libPages.dj) && libPages.artist === "Alpha|1" && libPages.year === "1|1", "DJ, artist and year pages; a year listing one song three times shows it once (" + [libPages.dj, libPages.artist, libPages.year].join(" / ") + ")");
   check(/no page for this DJ/.test(libPages.missing), "a DJ without a page says so (" + libPages.missing + ")");

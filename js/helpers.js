@@ -47,7 +47,10 @@ firetable.utilities = {
    * A Bouletmaton is drawn here (js/bouletmaton.js); someone not in the room
    * is looked up first. Either way the URL comes back at once (a stand-in
    * until it's ready, swapped by itself).
-   * @param {string} uid - User ID
+   * Someone with no uid (known only by a name) has no avatar yet: the
+   * generic gray robot bust (GENERIC_AVATAR_URL), whatever the style or
+   * season, since a face made from the name alone would be nobody's.
+   * @param {string} [uid] - User ID; none: the generic gray robot bust
    * @param {string} username - Display name
    * @param {string|null} [size="110x110"] - Dimensions ("110x110")
    * @param {string} [style] - Draw in this style instead (a printed card's stamp, a preview), e.g. "robohash:set1", "bouletmaton"
@@ -59,6 +62,7 @@ firetable.utilities = {
    */
   avatarURL: function (uid, username, size, style, keepName, boulet) {
     size = size || "110x110";
+    if (!uid && !style) return GENERIC_AVATAR_URL;
     if (!keepName && uid) {
       var current = (ftapi.users && ftapi.users[uid] && ftapi.users[uid].username) ||
         (firetable.knownNames && firetable.knownNames[uid]);

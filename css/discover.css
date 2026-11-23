@@ -252,7 +252,7 @@ body.ft-discover #discoverPage {
    its backbone the row's connector was a stray dash after every rank, and ran
    behind the first DJ's face like a strike-through */
 #dBrowse .d-rowlist .hist-entry::before { content: none; }
-.d-noface { background-color: var(--color-bg-t3); }
+/* .d-noface: a DJ with no avatar yet, drawn as the generic gray robot bust (js/discover.js robot()) */
 .hist-timestamp.d-rank {
     color: var(--color-text-light);
     font-size: var(--fs-title);
