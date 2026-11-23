@@ -1464,17 +1464,23 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
             flex: 0 0 var(--dj-side-w);
             max-width: var(--dj-side-w);
         }
-        /* "Tap to start audio" gets a row of its own under the song, centred left of the DJ */
+        /* "Listen to the room" gets a row of its own under the song, left of the DJ */
         body.media-blocked & #nowplaying,
         &:has(#st-notlive:not([hidden])) #nowplaying {
             padding-bottom: calc(var(--tap-min) + var(--pad3) * 2);
         }
+        /* one line, from the cover's edge to the DJ's column */
         & #tapToPlay {
-            top: auto;
-            bottom: var(--pad3);
-            left: calc((100% - var(--dj-side-w) - var(--pad3)) / 2);
-            transform: translateX(-50%);
+            left: calc(var(--pad4) + var(--pad1));
+            width: auto;
+            max-width: calc(100% - var(--dj-side-w) - var(--pad3) - var(--pad4) - var(--pad1));
+            height: var(--tap-min);
+            min-height: 0;
+            padding: 0 var(--pad3) 0 var(--pad2);
+            white-space: nowrap;
+            border-radius: var(--radius-pill);
         }
+        & #tapToPlay .ttp-text { position: static; width: auto; height: auto; clip-path: none; }
     }
 }
 

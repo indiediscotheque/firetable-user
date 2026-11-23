@@ -2454,36 +2454,60 @@ body.screen:not(.yt-stalled) #stageTopRight .graybutt {
     border-top-color: rgba(255, 255, 255, 0.18);
 }
 
-/* Shown when the browser blocked autoplay and audio is not running */
+/* Shown when the browser blocked autoplay and audio is not running: "Listen
+   to the room", one line, in the stage's lower left under the song, clear of
+   the DJ (where "You're not listening live" goes too). It was a two-line pill
+   in the middle of the stage, over the DJ, that repeated who was playing what
+   and ran off a phone's edge (the owner, November 22, 2026). */
 #tapToPlay {
     display: none;
     position: absolute;
     z-index: 4;
-    top: 55%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    bottom: var(--pad3);
+    left: calc(var(--pad4) + var(--pad1)); /* the cover's left edge */
+    /* never as far as the DJ in the middle */
+    max-width: min(100% - 2 * var(--pad4), 34cqw);
     gap: var(--pad1);
     height: var(--tap-min);
     padding: 0 var(--pad3) 0 var(--pad2);
-    font-size: var(--fs-meta);
+    font-size: var(--fs-title);
     white-space: nowrap;
     border-radius: var(--radius-pill);
     box-shadow: 0 0.5rem 1.5rem -0.5rem black;
 }
 
 #tapToPlay [class*="material-symbols-"] {
+    flex: none;
     font-size: 1.4rem;
 }
 
 body.media-blocked #tapToPlay {
     display: inline-flex;
 }
-/* "Listen to the room", and under it who's playing what and how many are here (1.10) */
-#tapToPlay { height: auto; min-height: var(--tap-min); padding-block: var(--pad1); }
-#tapToPlay .ttp-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; text-align: left; }
-#tapToPlay .ttp-text b { font-size: var(--fs-title); }
-#tapToPlay #tapToPlaySub { max-width: 18rem; overflow: hidden; text-overflow: ellipsis; opacity: 0.8; font-size: var(--fs-meta); }
-#tapToPlay #tapToPlaySub:empty { display: none; }
+#tapToPlay .ttp-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* its old second line (who's playing what, how many are here): the stage and the bar say it */
+#tapToPlaySub { display: none; }
+/* "You're not listening live" has that corner while it shows, with its own Listen live */
+#djStage:has(#st-notlive:not([hidden])) #tapToPlay { display: none; }
+/* a smaller stage (a tablet's, a narrow window's) keeps it smaller, as "You're not
+   listening live" does: two lines in the corner, then the button alone */
+@container (max-width: 520px) {
+    #tapToPlay {
+        left: var(--pad3);
+        max-width: 28cqw;
+        height: auto;
+        min-height: var(--tap-min);
+        padding-block: var(--pad1);
+        line-height: 1.15;
+        text-align: left;
+        white-space: normal;
+        border-radius: var(--radius-md);
+    }
+}
+@container (max-width: 420px) {
+    #tapToPlay { justify-content: center; width: var(--tap-min); padding: 0; border-radius: 50%; }
+    #tapToPlay .ttp-text { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); white-space: nowrap; }
+}
 
 /* The decks' state (1.10): open, or the bot keeping the music going */
 /* a line just above the deck, where its own join button (Play / +) is */
