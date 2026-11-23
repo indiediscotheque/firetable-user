@@ -230,7 +230,7 @@ jobs:
             exit 0
           fi
           # --home: the home page with this week's songs in it; --sounds: what the room plays, in the words people search with
-          if node tools/plain-pages.mjs --site "$site" --out music --home index.html --sounds "indie dance, synthpop, nu-disco, house"; then
+          if node tools/plain-pages.mjs --site "$site" --out music --home index.html --sounds "alternative dance, synthpop, nu-disco"; then
             # version their stylesheet links like every other page
             [ -f music/.built ] && python3 .github/scripts/cache-bust.py .
           else
