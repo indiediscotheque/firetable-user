@@ -55,7 +55,8 @@ var STORAGE = {
   ttSkin:             "firetableTurntable",   // "1": the Turntable theme is on, on this device (js/ttskin.js)
   ttAvatar:           "firetableTurntableAvatar", // your Turntable avatar, also kept at users/<uid>/ttAvatar
   ttLaptop:           "firetableTurntableLaptop", // your laptop's lid and stickers, also kept at users/<uid>/ttLaptop
-  ttLayout:           "firetableTurntableLayout"  // the theme's sidebars: "one" or "two"
+  ttLayout:           "firetableTurntableLayout", // the theme's sidebars: "one" or "two"
+  guestId:            "firetableGuestId"          // a visitor's random id, so the people list counts each browser once (js/audience.js)
 };
 
 // ─── External Service URLs ──────────────────────────────────────────────────
@@ -121,6 +122,15 @@ var SC_PLAYER_PAGE_URL = "https://w.soundcloud.com/player/?visual=true&url=";
  */
 var LASTFM_PROXY_URL = new URL(
   (typeof ftconfigs !== "undefined" && ftconfigs.lastfmProxyURL) || "api/lastfm.php",
+  document.baseURI
+).href;
+/**
+ * Guests on the site and the radio stream's listeners by country, for the
+ * people list (api/audience.php, js/audience.js). Override with
+ * ftconfigs.audienceURL if it lives elsewhere.
+ */
+var AUDIENCE_URL = new URL(
+  (typeof ftconfigs !== "undefined" && ftconfigs.audienceURL) || "api/audience.php",
   document.baseURI
 ).href;
 

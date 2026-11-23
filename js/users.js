@@ -434,6 +434,8 @@ firetable.ui.renderRoomPulse = function () {
       .appendTo($faces);
   });
   var text = firetable.utilities.pluralize(people.length, "person", "people") + " here now";
+  var heard = firetable.audience && firetable.audience.data();
+  if (heard && heard.stream && heard.stream.listeners) text += " · " + heard.stream.listeners + " on the radio";
   if (djs.length) text += " · DJing: " + djs.join(", ");
   $el.append($faces).append($('<span class="pulse-text"></span>').text(text));
 };
@@ -476,12 +478,16 @@ firetable.ui.renderRoomPeople = function (visitor) {
     .map(function (id) { return { id: id, name: users[id].username || id }; })
     .sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; })
     .forEach(function (u) { add(u.id, u.name, false); });
-  if (!rows.length) return;
+  // the radio's listeners by country and the guests (js/audience.js), under the members
+  var elsewhere = firetable.audience ? firetable.audience.html("pe") : "";
+  if (!rows.length && !elsewhere) return;
   rows.sort(function (a, b) { return a.bot - b.bot; }); // stable: the bot goes last
   var count = rows.filter(function (r) { return !r.bot; }).length;
-  $el.html('<h2 class="pe-head">In the room <span class="pe-count">' + count + '</span></h2>' +
-    '<ul class="pe-list">' + rows.map(function (r) { return r.html; }).join("") + '</ul>' +
+  $el.html((rows.length ? '<h2 class="pe-head">In the room <span class="pe-count">' + count + '</span></h2>' +
+    '<ul class="pe-list">' + rows.map(function (r) { return r.html; }).join("") + '</ul>' : '') +
+    (elsewhere ? '<div class="pe-audience">' + elsewhere + '</div>' : '') +
     '<p class="pe-foot">Members chat with the room and take a turn on the decks.</p>');
+  if (elsewhere) firetable.audience.emojify(el);
 };
 
 // ─── Login Form Events ──────────────────────────────────────────────────────
@@ -1025,6 +1031,9 @@ firetable.ui.syncGhostUsers = function () {
 };
 
 firetable.ui.setupUserEvents = function () {
+
+  // guests and the radio's listeners by country, beside the members (js/audience.js)
+  firetable.audience.start();
 
   // ── Auth state events (already bound in init.js, but user-list events here) ──
 

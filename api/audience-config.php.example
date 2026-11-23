@@ -1,0 +1,28 @@
+<?php
+/*
+ * Settings for api/audience.php (guests on the site and the radio stream's
+ * listeners by country, for the people list).
+ *
+ * Easiest: set the BROADCAST_PAL_URL repository variable on GitHub (Settings →
+ * Secrets and variables → Actions → Variables) to Broadcast Pal's page, e.g.
+ * https://example.com/broadcastpal/, and the deploy writes audience-config.php
+ * for you. Or copy this file to audience-config.php (same folder) by hand.
+ *
+ * audience-config.php is git-ignored and only ever lives on the server. The
+ * LISTENERS_URL environment variable works too and takes priority.
+ */
+return [
+    // Broadcast Pal's page (id-broadcast-pal); its api/listeners.php is next to it.
+    'broadcast_pal_url' => 'https://example.com/broadcastpal/',
+
+    // Or the full address of listeners.php itself.
+    // 'listeners_url' => 'https://example.com/broadcastpal/api/listeners.php',
+
+    // Optional. Heartbeats allowed per visitor IP address: [requests, seconds].
+    // Default [60, 600]. false turns it off.
+    // 'rate_limit' => [60, 600],
+
+    // Optional. Private folder for the guest list and the stream's last answer.
+    // Default: a folder in the system temp directory only this account can read.
+    // 'cache_dir' => '/home/youruser/.firetable-cache',
+];

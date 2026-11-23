@@ -1309,6 +1309,13 @@ a.sociallogo[href] {
     color: var(--color-text-muted);
 }
 
+/* Shown once js/audience.js has the counts: everyone, then members in the
+   room, guests on the site and radio listeners (each says so on hover) */
+#usersStats.is-on { display: flex; flex-wrap: wrap; }
+#usersStats.is-on .listenerType:not([hidden]) { display: inline-flex; gap: 0.2rem; }
+#usersStats #numListeners,
+#usersStats .listenerType span { font-family: var(--font-numbers); font-weight: 400; }
+
 #allUsers {
     display: flex;
     flex-direction: column;
@@ -7313,6 +7320,61 @@ body.ft-discover #pe-here { display: none !important; }
     border-top: 1px solid var(--color-border);
     font-size: 0.8125rem;
     color: var(--color-text-muted);
+}
+
+/* The radio's listeners by country and the guests (js/audience.js): under
+   the members in the people list, in a visitor's list and in the Turntable
+   theme's People */
+#pe-audience { padding: 0 var(--pad4) var(--pad4); }
+#pe-audience[hidden] { display: none; }
+.pe-audHead {
+    display: flex;
+    align-items: center;
+    gap: var(--pad1);
+    margin: 0;
+    padding: var(--pad4) 0 var(--pad2);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    & [class*="material-symbols-"] { font-size: 1rem; }
+    & > span:last-child { font-family: var(--font-numbers); font-weight: 400; }
+}
+.pe-audList { list-style: none; margin: 0; padding: 0; }
+.pe-audRow {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    min-width: 0;
+    padding: var(--pad1) 0;
+    font-size: 0.875rem;
+}
+.pe-flag {
+    flex: none;
+    width: 1.25rem;
+    font-size: 1rem;
+    line-height: 1;
+    text-align: center;
+    & img.emoji { width: 1.1rem; height: 1.1rem; vertical-align: middle; }
+}
+.pe-audName {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 300;
+}
+.pe-audN { flex: none; margin-left: auto; font-family: var(--font-numbers); color: var(--color-text-muted); }
+.pe-audRow.is-unplaced {
+    & .pe-audName { color: var(--color-text-muted); }
+    & .pe-flag { color: var(--color-icon); }
+}
+.pe-audNote { margin: 0; padding: var(--pad1) 0; font-size: 0.8125rem; color: var(--color-text-muted); }
+.pe-audLive {
+    white-space: nowrap;
+    color: var(--color-text);
+    & [class*="material-symbols-"] { margin-right: 0.15em; font-size: 0.9rem; vertical-align: -0.15em; color: var(--color-accent); }
 }
 
 /* Things only members can do */

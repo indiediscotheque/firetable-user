@@ -914,7 +914,9 @@ firetable.tt = (function () {
           '<span class="tt-face" style="' + faceStyle(avatarOf(u, d.username)) + '"></span><span class="tt-gname">' + esc(nameOf(u, d.username)) + "</span>" + badges + "</button></li>";
       }).join("") + "</ul>";
     }).join("");
-    if (box.innerHTML !== html) box.innerHTML = html;
+    // the radio's listeners by country and the guests (js/audience.js)
+    if (firetable.audience) html += firetable.audience.html("tt");
+    if (box.innerHTML !== html) { box.innerHTML = html; if (firetable.audience) firetable.audience.emojify(box); }
   }
 
   /**
@@ -1572,7 +1574,7 @@ firetable.tt = (function () {
       render();
       if ($id("tt-picker") && $id("tt-picker").open) renderPicker();
     });
-    ["tableChanged", "usersChanged", "spotlightStateChanged", "newSong", "danceStateChanged", "playLimitChanged", "loggedIn", "loggedOut", "banListChanged"].forEach(function (ev) {
+    ["tableChanged", "usersChanged", "spotlightStateChanged", "newSong", "danceStateChanged", "playLimitChanged", "loggedIn", "loggedOut", "banListChanged", "audienceChanged"].forEach(function (ev) {
       ftapi.events.on(ev, function () { setTimeout(again, 0); });
     });
     apply();
