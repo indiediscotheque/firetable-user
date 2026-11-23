@@ -37,7 +37,7 @@
  * for search engines is served from (tools/plain-pages.mjs), so a link someone
  * copies, shares or follows from a search is one address with one preview:
  *   /music/new/, /music/charts/[<week|month|year>/<id>/ | all-time/],
- *   /music/genres/[<slug>/], /music/djs/[<key>/], /music/years/[<year>/],
+ *   /music/genres/[<slug>/[<year>/]], /music/djs/[<key>/], /music/years/[<year>/],
  *   /music/artists/<slug>/, /music/themes/[<id>/]
  * and the library's own lists, which the site shows as they were built:
  *   /music/ (the library), /music/artists/, /music/artists-a-z/<letter>/
@@ -82,6 +82,7 @@ firetable.discover = (function () {
     mode: null,          // "discover" | "live"
     view: "home",        // home | new | charts | genres | djs | years | recent | artist
     sub: null,           // the genre, DJ, artist or year a page is about
+    year: null,          // a genre's page for one year's releases (genres/<slug>/<year>)
     chart: { period: "week", id: null },
     newFilter: null,     // week | month | days90 | unplayed (null: this week when it has any, else this month)
     newLayout: "grid",
@@ -192,7 +193,7 @@ firetable.discover = (function () {
     if (p[0] !== "discover") return null;
     var view = p[1] || "home";
     if (VIEW_IDS.indexOf(view) === -1) return null;
-    var r = { mode: "discover", view: view, sub: null, period: null, id: null };
+    var r = { mode: "discover", view: view, sub: null, period: null, id: null, year: null };
     if (view === "charts") {
       if (/^(week|month|year|all)$/.test(p[2] || "")) { r.period = p[2]; r.id = /^[\w-]+$/.test(p[3] || "") ? p[3] : null; }
     } else if (view === "search") {
@@ -200,6 +201,8 @@ firetable.discover = (function () {
     } else if (view === "genres" || view === "djs" || view === "years" || view === "artist" || view === "themes") {
       r.sub = SLUG.test(p[2] || "") ? p[2] : null;
       if (view === "artist" && !r.sub) return null;
+      // a genre's songs from one year: genres/<slug>/<year>
+      if (view === "genres" && r.sub && /^(?:19|20)\d\d$/.test(p[3] || "")) r.year = p[3];
     } else if (view === "bpm") {
       if (!isTempo(Number(p[2]))) return null;
       r.sub = String(Number(p[2]));
@@ -222,7 +225,7 @@ firetable.discover = (function () {
       if (r.period === "all") return MUSIC_PATH + "charts/all-time/";
       return r.id ? MUSIC_PATH + "charts/" + r.period + "/" + r.id + "/" : null;
     }
-    if (v === "genres" || v === "djs" || v === "years" || v === "themes") return MUSIC_PATH + v + "/" + (r.sub ? r.sub + "/" : "");
+    if (v === "genres" || v === "djs" || v === "years" || v === "themes") return MUSIC_PATH + v + "/" + (r.sub ? r.sub + "/" + (v === "genres" && r.year ? r.year + "/" : "") : "");
     if (v === "artist") return r.sub ? MUSIC_PATH + "artists/" + r.sub + "/" : null;
     if (v === "page") return MUSIC_PATH + (r.sub === "library" ? "" : r.sub + "/");
     return null;
@@ -579,7 +582,7 @@ firetable.discover = (function () {
     if (v === "home") h = viewHome();
     else if (v === "new") h = viewNew();
     else if (v === "charts") h = viewCharts();
-    else if (v === "genres") h = D.sub ? viewGenre(D.sub) : viewGenres();
+    else if (v === "genres") h = D.sub ? (D.year ? viewGenreYear(D.sub, D.year) : viewGenre(D.sub)) : viewGenres();
     else if (v === "djs") h = D.sub ? viewDj(D.sub) : viewDjs();
     else if (v === "years") h = D.sub ? viewYear(D.sub) : viewYears();
     else if (v === "artist") h = viewArtist(D.sub);
@@ -1039,6 +1042,14 @@ firetable.discover = (function () {
     h += "<section>" + '<div class="d-headrow">' + chips("gtab", [["fav", "Room favorites"], ["newHere", "New here"], ["deep", "Deep cuts"]], tab) + "</div>" +
       '<p class="d-fact">' + esc(tab === "fav" ? "Most played in the room" : tab === "newHere" ? "Played here for the first time lately" : "Played here once or twice, last played first") + "</p>" +
       (tab === "fav" ? rankedRows(tracks, "genre") : datedRows(tracks, "genre")) + "</section>";
+    // a few sentences about it (the bot's genre-stories.md)
+    var story = (page.story || []).filter(Boolean);
+    if (story.length) h += '<section class="d-story">' + head("About " + g.name) + story.map(function (para) { return "<p>" + esc(para) + "</p>"; }).join("") + "</section>";
+    // its songs from each year's releases, a page a year
+    if ((g.ys || []).length) {
+      h += "<section>" + head("The best of each year") + '<p class="d-fact">' + esc(g.name) + ' released that year, most played here first</p><div class="d-chips">' +
+        g.ys.slice().reverse().map(function (y) { return '<a class="d-chip d-num" href="' + hrefTo("discover/genres/" + slug + "/" + y) + '">' + esc(y) + "</a>"; }).join("") + "</div></section>";
+    }
     var years = page.years || {};
     var ys = Object.keys(years).sort();
     if (ys.length > 1) {
@@ -1057,6 +1068,41 @@ firetable.discover = (function () {
         next.map(function (k) { return '<a class="d-chip" href="' + hrefTo("discover/genres/" + k) + '">' + esc(all[k].name) + "</a>"; }).join("") + "</div></section>";
     }
     return h;
+  }
+
+  /** A genre's songs released in one year, most played here first ("the best nu-disco of 2014"). */
+  function viewGenreYear(slug, year) {
+    var all = lib("genres");
+    var g = all && all[slug];
+    var page = lib("genreYear/" + slug + "_" + year);
+    var h = back("discover/genres/" + slug, g ? g.name : "Genre");
+    if (all === undefined || page === undefined) return h + loading();
+    if (!g || !page) return h + emptyNote("There's no page for " + (g ? g.name + " in " : "this genre in ") + year + " yet. A year gets one when the room has played enough of its songs.");
+    var tracks = withType(page.top);
+    setList("genre-year", g.name + " · " + year, tracks);
+    h += '<div class="d-pagehead">' + mosaic(tracks.slice(0, 4).map(function (t) { return t.type + "_" + t.cid; }), true) +
+      '<div class="d-pagetext"><h2>' + esc("The best " + g.name + " of " + year) + "</h2>" +
+      factChips([firetable.utilities.pluralize(page.songs, "song", "songs") + " released in " + year + " played here"].concat(page.plays ? [n(page.plays) + " plays"] : [])) +
+      '<div class="d-actions">' + playAllButton("genre-year", "Play all") + "</div></div></div>";
+    h += "<section>" + head("Most played here") + rankedRows(tracks, "genre-year") + "</section>";
+    var others = (g.ys || []).filter(function (y) { return String(y) !== String(year); });
+    if (others.length) {
+      h += "<section>" + head("Other years") + '<div class="d-chips">' + others.slice().reverse().map(function (y) {
+        return '<a class="d-chip d-num" href="' + hrefTo("discover/genres/" + slug + "/" + y) + '">' + esc(y) + "</a>";
+      }).join("") + "</div></section>";
+    }
+    h += genresOfYear(year, slug);
+    return h;
+  }
+  /** The genres with a page for a year's releases, as links (leaving out `not`), with the year's own page. */
+  function genresOfYear(year, not) {
+    var all = lib("genres") || {};
+    var list = Object.keys(all).filter(function (k) { return k !== not && (all[k].ys || []).some(function (y) { return String(y) === String(year); }); })
+      .sort(function (x, y) { return (all[y].plays || 0) - (all[x].plays || 0); });
+    if (!list.length) return "";
+    return "<section>" + head(not ? "More from " + year : year + " by genre", not ? "All of " + year : "", "discover/years/" + year) + '<div class="d-chips">' + list.map(function (k) {
+      return '<a class="d-chip" href="' + hrefTo("discover/genres/" + k + "/" + year) + '">' + esc(all[k].name) + "</a>";
+    }).join("") + "</div></section>";
   }
 
   function viewDjs() {
@@ -1548,6 +1594,7 @@ firetable.discover = (function () {
       h += "<section>" + head("Not played here yet") + '<p class="d-fact">From ' + esc(y) + "'s playlist. Play one for the room.</p>" +
         '<div class="ft-cards">' + extra.map(function (t, i) { return card(t, "year-more", i, { tag: "Be the first", who: "Nobody has played it yet" }); }).join("") + "</div></section>";
     }
+    h += genresOfYear(y, null);
     return h;
   }
 
@@ -3370,11 +3417,11 @@ firetable.discover = (function () {
       var id = D.chart.id || currentId(D.chart.period);
       return "#discover/charts" + (D.chart.period !== "week" || D.chart.id ? "/" + D.chart.period + (id && D.chart.period !== "all" ? "/" + id : "") : "");
     }
-    return "#discover/" + D.view + (D.sub ? "/" + (D.view === "search" ? encodeURIComponent(D.sub) : D.sub) : "");
+    return "#discover/" + D.view + (D.sub ? "/" + (D.view === "search" ? encodeURIComponent(D.sub) : D.sub) + (D.view === "genres" && D.year ? "/" + D.year : "") : "");
   }
   /** The page that's showing, as {mode, view, sub, period, id}. */
   function current() {
-    return { mode: D.mode, view: D.view, sub: D.sub, period: D.view === "charts" ? D.chart.period : null, id: D.view === "charts" ? D.chart.id : null };
+    return { mode: D.mode, view: D.view, sub: D.sub, year: D.view === "genres" ? D.year : null, period: D.view === "charts" ? D.chart.period : null, id: D.view === "charts" ? D.chart.id : null };
   }
   /** This page's address: its own in the library when it has one, else the site's with a #. */
   function urlFor() {
@@ -3398,7 +3445,7 @@ firetable.discover = (function () {
     if (D.mode !== "discover" || D.view === "home") return HOME_TITLE;
     var room = ftconfigs.roomName || "firetable";
     var v = D.view, name = "";
-    if (v === "genres" && D.sub) name = ((libData.genres || {})[D.sub] || {}).name ? "Best " + libData.genres[D.sub].name + " songs" : "";
+    if (v === "genres" && D.sub) name = ((libData.genres || {})[D.sub] || {}).name ? "Best " + libData.genres[D.sub].name + " songs" + (D.year ? " of " + D.year : "") : "";
     else if (v === "djs" && D.sub) name = (libData["dj/" + D.sub] || (libData.djs || {})[D.sub] || {}).name ? (libData["dj/" + D.sub] || libData.djs[D.sub]).name + ", DJ" : "";
     else if (v === "artist") { name = (libData["artist/" + D.sub] || {}).name || ((libData.artistIndex || {})[D.sub] || [])[0] || ""; if (name) name += ": top songs"; }
     else if (v === "page") return (builtPages[D.sub] || {}).title || "The library · " + room;
@@ -3430,7 +3477,7 @@ firetable.discover = (function () {
     closeMenu();
     applyRoute(r);
     setMode(r.mode, { remember: true });
-    if (r.mode === "discover") setView(D.view, D.sub);
+    if (r.mode === "discover") setView(D.view, D.sub, D.year);
   }
   function onAddress() {
     if (location.href === handled) return;
@@ -3497,9 +3544,10 @@ firetable.discover = (function () {
     setTimeout(function () { el.removeEventListener("blur", back); }, 2000);
   }
 
-  function setView(view, sub) {
+  function setView(view, sub, year) {
     D.view = view;
     D.sub = sub || null;
+    D.year = (view === "genres" && sub && year) || null;
     D.browse = false;
     renderRail();
     renderBrowse();
@@ -4509,6 +4557,7 @@ firetable.discover = (function () {
       if (r.view !== D.view || r.sub !== D.sub) { D.genreTab = "fav"; D.djTab = null; D.showAll = {}; }
       D.view = r.view;
       D.sub = r.sub || null;
+      D.year = r.year || null;
     }
     if (r.period) D.chart = { period: r.period, id: r.id || null };
   }

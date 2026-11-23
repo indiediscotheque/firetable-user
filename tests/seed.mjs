@@ -50,9 +50,12 @@ export const library = (now) => {
   const row = (cid, a, t, plays, extra) => Object.assign({ type: 1, cid, a, t, plays, first: now - 400 * DAY, dj: "dj1", djid: "dj1" }, extra || {});
   return {
     genres: { "nu-disco": { name: "Nu-Disco", songs: 40, plays: 300, bpm: 118, first: 2010, djs: 2, x: 0.64, covers: ["1_lib0000001"], next: ["soul-and-randb"],
-      about: "Disco's grooves rebuilt with modern synths.", dec: { 2010: 200, 2020: 100 } },
+      about: "Disco's grooves rebuilt with modern synths.", dec: { 2010: 200, 2020: 100 }, ys: [2025, 2026] },
       "soul-and-randb": { name: "Soul & R&B", songs: 10, plays: 60, bpm: 98, first: 2012, djs: 1, x: 0.17, covers: [], next: ["nu-disco"], dec: { 2010: 60 } } },
-    genre: { "nu-disco": { fav: [row("lib0000001", "Alpha & Beta", "Fav One", 30), row("lib0000002", "Gamma", "Fav Two", 20)], newHere: [row("lib0000003", "Delta", "New One", 1)],
+    // a genre's songs released in one year (ys on the genre lists the years)
+    genreYear: { "nu-disco_2026": { songs: 2, plays: 50, top: [row("lib0000001", "Alpha & Beta", "Fav One", 30), row("lib0000002", "Gamma", "Fav Two", 20)] },
+      "nu-disco_2025": { songs: 1, plays: 1, top: [row("lib0000003", "Delta", "New One", 1)] } },
+    genre: { "nu-disco": { story: ["Nu-disco is disco rebuilt by people who grew up on house.", "It runs a little slower and warmer than house."], fav: [row("lib0000001", "Alpha & Beta", "Fav One", 30), row("lib0000002", "Gamma", "Fav Two", 20)], newHere: [row("lib0000003", "Delta", "New One", 1)],
       // a first DJ known only by a name nobody here has now: the generic gray robot bust, not a face
       deep: [row("lib0000004", "Echo", "Deep One", 2, { dj: "Long Gone DJ", djid: null })],
       years: { 2010: 3, 2011: 5 }, who: [{ dj: "dj1", djid: "dj1", key: "dj1", plays: 40 }] } },

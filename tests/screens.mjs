@@ -83,6 +83,7 @@ const VIEWS = [
   { name: "d-charts", run: hash("#discover/charts") },
   { name: "d-genres", run: hash("#discover/genres") },
   { name: "d-genre", run: hash("#discover/genres/nu-disco") },
+  { name: "d-genre-year", run: hash("#discover/genres/nu-disco/2026") },
   { name: "d-djs", run: hash("#discover/djs") },
   { name: "d-dj", run: hash("#discover/djs/dj1") },
   { name: "d-years", run: hash("#discover/years") },

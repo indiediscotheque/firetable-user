@@ -4077,6 +4077,45 @@ try {
   check(lds.length >= 2 && graph.some((g) => g["@type"] === "MusicPlaylist" && g.about && g.about["@type"] === "MusicGroup") &&
     (graph.find((g) => g["@type"] === "BreadcrumbList") || { itemListElement: [] }).itemListElement.map((i) => i.name).join(" > ").endsWith("Library > Artists > Alpha"),
     "its structured data reads: the site, the page, its trail and its songs (" + graph.map((g) => g["@type"]).join() + ")");
+  // a genre's write-up and its years: in Discover and on the pages as sent, each year a page of its own
+  await openPage(plain, SITE + "music/genres/nu-disco/");
+  await plain.waitForFunction(() => document.querySelector("#dBrowse .d-radio"), null, { timeout: 20000 }).catch(() => {});
+  const gy = await plain.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    const out = { story: [...document.querySelectorAll("#dBrowse .d-story p")].map((p) => p.textContent).join("|"), storyHead: (document.querySelector("#dBrowse .d-story h2") || {}).textContent,
+      years: [...document.querySelectorAll('#dBrowse a.d-chip[href^="/music/genres/nu-disco/"]')].map((a) => a.textContent + ">" + a.getAttribute("href")).join() };
+    document.querySelector('#dBrowse a.d-chip[href="/music/genres/nu-disco/2026/"]').click();
+    await until(() => /2026/.test((document.querySelector("#dBrowse .d-pagetext h2") || {}).textContent || ""));
+    out.page = location.pathname + location.hash + "|" + document.querySelector("#dBrowse .d-pagetext h2").textContent + "|" + [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join() + "|" +
+      [...document.querySelectorAll("#dBrowse .d-facts li")].map((e) => e.textContent).join(" · ");
+    out.at = firetable.discover.address() + "|" + document.title;
+    out.others = [...document.querySelectorAll('#dBrowse a.d-chip')].map((a) => a.getAttribute("href")).join();
+    out.back = document.querySelector("#dBrowse .d-back").getAttribute("href") + "|" + document.querySelector("#dBrowse .d-back").textContent;
+    document.querySelector("#dBrowse .d-playall").click();
+    await wait(300);
+    out.playing = firetable.discover.state().list + "|" + firetable.discover.state().playing;
+    // the year's own page lists the genres with a page for it
+    location.hash = "#discover/years/2026";
+    await until(() => document.querySelector('#dBrowse a.d-chip[href="/music/genres/nu-disco/2026/"]'));
+    out.year = location.pathname + "|" + [...document.querySelectorAll("#dBrowse a.d-chip")].map((a) => a.textContent + ">" + a.getAttribute("href")).join();
+    return out;
+  });
+  check(gy.storyHead === "About Nu-Disco" && gy.story === "Nu-disco is disco rebuilt by people who grew up on house.|It runs a little slower and warmer than house.",
+    "a genre's page tells a little about it, under its songs (" + gy.storyHead + ": " + gy.story + ")");
+  check(gy.years === "2026>/music/genres/nu-disco/2026/,2025>/music/genres/nu-disco/2025/", "and links to its best of each year, newest first (" + gy.years + ")");
+  check(gy.page === "/music/genres/nu-disco/2026/|The best Nu-Disco of 2026|Fav One,Fav Two|2 songs released in 2026 played here · 50 plays" && /^#discover\/genres\/nu-disco\/2026\|Best Nu-Disco songs of 2026 · /.test(gy.at) &&
+    gy.others === "/music/genres/nu-disco/2025/" && gy.back === "/music/genres/nu-disco/|arrow_backNu-Disco" && gy.playing === "genre-year|lib0000001",
+    "a genre's year is a page at its own address: its songs that year, most played first, playable, with the other years (" + JSON.stringify(gy) + ")");
+  check(gy.year === "/music/years/2026/|Nu-Disco>/music/genres/nu-disco/2026/", "a year's page lists the genres with a page for that year (" + gy.year + ")");
+  const rawGenre = await (await fetch(SITE + "music/genres/nu-disco/")).text();
+  const rawGy = await (await fetch(SITE + "music/genres/nu-disco/2026/")).text();
+  check(/<section class="d-story"><div class="d-head"><h2>About Nu-Disco<\/h2><\/div><p>Nu-disco is disco rebuilt/.test(rawGenre) && /<a class="d-chip d-num" href="\/music\/genres\/nu-disco\/2026\/">2026<\/a>/.test(rawGenre),
+    "the genre's page as sent has the write-up and the years");
+  check(/<title>Best Nu-Disco songs of 2026 · /.test(rawGy) && /<link rel="canonical" href="[^"]*\/music\/genres\/nu-disco\/2026\/"/.test(rawGy) && /<meta name="ft-route" content="discover\/genres\/nu-disco\/2026"/.test(rawGy) &&
+    /<h1>The best Nu-Disco of 2026<\/h1>/.test(rawGy) && (rawGy.match(/class="hist-entry"/g) || []).length === 2 && /"name":"Genres"[^\]]*"name":"Nu-Disco"[^\]]*"name":"2026"/.test(rawGy) &&
+    /href="\/music\/genres\/nu-disco\/2025\/">2025<\/a>/.test(rawGy) && readFileSync(join(ROOT, "music/sitemap.xml"), "utf8").includes("/music/genres/nu-disco/2025/"),
+    "a genre's year as sent: its own title, address, trail and songs, in the sitemap");
   // an address with no page built yet: the site itself on that Discover page, not for search engines to keep
   await openPage(plain, SITE + "music/djs/nobody/");
   await plain.waitForFunction(() => window.firetable && firetable.discover && firetable.discover.state().view === "djs", null, { timeout: 20000 }).catch(() => {});

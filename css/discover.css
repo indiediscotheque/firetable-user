@@ -1067,6 +1067,9 @@ body.ft-has-discover #thediscovers .pv-dj-avatar { cursor: pointer; }
 
 /* A genre's line, and genres quiet in the chosen decade */
 .d-about { margin: 0; color: var(--color-text); font-size: var(--fs-title); max-width: 36rem; }
+/* A few sentences about a genre, under its songs: a column to read */
+.d-story p { margin: 0 0 var(--pad2); max-width: 40rem; color: var(--color-text-subtle); line-height: 1.55; }
+.d-story p:last-child { margin-bottom: 0; }
 .d-mapg.d-quiet { opacity: 0.35; }
 
 /* Live chat in Discover's right panel (members): the room's own chat, moved in */
