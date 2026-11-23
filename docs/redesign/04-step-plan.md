@@ -1,6 +1,6 @@
 # 04 · The steps
 
-Each step is one pull request. **Order since round 4 (November 12, 2026): Phase 0, Phase 2 (Discover), Phase 4 (phones), then Phase 1's Live steps one at a time, each with the owner's yes before it starts. Phase 3 is on hold.** **Realigned November 15, 2026:** the working order is the priority list in [README.md](README.md) ("Next, in this order"); the notes marked *Realigned* below say what earlier work already did for a step. Step numbers haven't changed, so the inventory's references still hold. Do the steps in order within a phase. Follow the per-step routine in [01-ground-rules.md](01-ground-rules.md) every time.
+Each step is one pull request. **Order since round 4 (November 12, 2026): Phase 0, Phase 2 (Discover), Phase 4 (phones), then Phase 1's Live steps one at a time, each with the owner's yes before it starts. Phase 3 is dropped (November 23, 2026).** **Realigned November 15, 2026:** the working order is the priority list in [README.md](README.md) ("Next, in this order"); the notes marked *Realigned* below say what earlier work already did for a step. Step numbers haven't changed, so the inventory's references still hold. Do the steps in order within a phase. Follow the per-step routine in [01-ground-rules.md](01-ground-rules.md) every time.
 
 Every step lists:
 - **Goal:** what changes for people.
@@ -383,33 +383,9 @@ Runs right after Phase 0. Boards `R4 · …` on the canvas's "Round 4" page; the
 
 ---
 
-## Phase 3 · The new room
+## Phase 3 · The new room ✗ dropped (the owner, November 23, 2026)
 
-**On hold since round 4.** The owner wants Live to stay as it looks and is laid out today, so none of this is built unless they ask for it. Kept for reference. **In short:** round 3's mockups rearranged Live into a three-column room: Discover's navigation over the people list on the left, a taller stage, Chat · Mentions tabs on the right, and an **expand** button that shrinks the stage to a strip and gives the crate the full width with genre, BPM, year and room-play columns (03-target-design.md, "The Live room"). Much of what it was for has since come another way: the player bar carries the stage's tools, the full-screen player is the big view, the crate has its one-row toolbar, Select several and Show only, and the phone tab bar moves between Discover and Live. What only Phase 3 would add: the nav in Live's left column, the taller stage, the Mentions tab, and the expanded crate's columns. If it is taken up, each step ships to everyone with the owner's yes (no opt-in switch): CSS and element moves, one region at a time.
-
-### 3.1 The left column: nav over the room
-- **Rows:** PE-01, DJ-03, NV-03.
-- **Change:** new `#nav-rail` (Home, Live room, DISCOVER views) inserted at the top of `#usersbox` (desktop only), reusing Discover's routes. `#usersStats` becomes "IN THE ROOM · N" with the radio count; the waitlist card above the people.
-- **Check:** all items route; under 1024px `#nav-rail` is hidden.
-
-### 3.2 The stage, full height
-- **Rows:** ST-01, ST-02, ST-04.
-- **Change:** `#djStage` height from `--stage-max-height` (33vh today) to about 440px at 1920 / 360px at 1440, the video at full height and 16:9; the playing DJ about 230px tall, next DJs about 84px, per 03-target-design.md. Check with SoundCloud art (square), dance mode, lights and snow.
-
-### 3.3 Chat column tabs
-- **Rows:** CH-01, TB-05, SE-08.
-- **Change:** tabs CHAT · MENTIONS · ⚙ over `#actualChat`; MENTIONS shows `#inboxList` (move the node into the tab while v2 is on, like `chatIn`); ⚙ opens Settings at the chat toggles.
-
-### 3.4 The crate, expanded
-- **Rows:** CR-01 to CR-27, CR-08.
-- **Change:** `#cr-expand` toggles `.cr-expanded`: the stage becomes the compact strip, the left column folds to icons, the crate gets the full table (genre, BPM, year, room plays, first here: fetched lazily for visible rows from `globalTracks` / `globalSongs` / `bpm`, cached, the way `discover.js` `loadDetails` does), and **Find tracks** opens as a tab in the right column (move `#searchMachine` and `#searchResults` there while expanded). **Back to the stage** restores it.
-- **Check:** the room's audio and spotlight keep running; dragging still works.
-
-### 3.5 1440 and 1024
-- **Change:** the left column folds to a 64px rail with faces at 1440 (opens as an overlay); the Your turn bar's buttons become icons with tooltips; at 1024–1439 the three columns as today.
-
-### 3.6 Owner and regulars' review
-- Show each step to the owner and a few regulars on the review branch before it merges. Collect what they miss and fix it in the same pull request.
+Round 3's rearranged Live (Discover's pages in Live's left column, a taller stage, Chat · Mentions tabs, and an expanded crate with its own table and Find tracks beside chat) isn't being built. The owner saw it mocked up over today's Live and chose today's room: Live keeps its layout and look for good. Steps 3.1 to 3.6 are gone; their numbers aren't reused, so older references still read as "dropped".
 
 ---
 

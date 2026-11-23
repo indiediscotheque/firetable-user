@@ -73,14 +73,14 @@ Walk these by hand on every step that touches Live, at 1440 and 390 wide, as the
 
 | Risk | Where | What reduces it |
 |---|---|---|
-| Regulars lose muscle memory | Phases 3–4 | Phase 1 keeps regions; anything that moves a region needs the owner's yes and a review by a few regulars before it merges; small steps, each revertible (no opt-in switch) |
+| Regulars lose muscle memory | Phase 4 | Phase 1 keeps regions; anything that moves a region needs the owner's yes and a review by a few regulars before it merges; small steps, each revertible (no opt-in switch) |
 | Live's look drifts | Any step | Round 4 froze it: no step recolours or restyles the stage, plates, buttons or panels; the screenshot harness (0.2) compares Live before and after every step |
 | A control disappears | Any step | Step 0.4's "nothing lost" smoke check; the inventory; the ten flows |
-| The stage loses its signature | 1.10, 3.2 | DJs on stage by default; floor; full-height video; screenshots with every avatar family |
+| The stage loses its signature | 1.10 | DJs on stage by default; floor; full-height video; screenshots with every avatar family |
 | YouTube quota runs out | Import, search | No automatic searches; bot-side YouTube Music matching (free); 1-unit checks |
 | YouTube Music's song catalog stops answering the bot | Swaps, import matching | `catalogGate` stops YouTube Music searches and saves nothing for them; the free fallbacks (room history, year playlists, people's playlists on YouTube) carry on; `!ytmtest` |
 | CSS growth makes later steps fragile | All | Tokens first; scoped selectors; delete the replaced controls' CSS in 5.2 |
 | The big files get harder to change (November 15, 2026: `discover.js` 4,000 lines, `looks.css` 7,100, `ui.js` 2,200, `playlist.js` 2,100) | Phases 1–4 | Add new code in small new functions or files (e.g. `js/crate.js` for the toolbar and menus), loaded in the right order, linted with their globals |
-| Element moves break handlers | 3.3, 3.4, 4.5 | Move nodes, never clone; a comment node marks home (the `chatIn` pattern); smoke checks the handlers after moving |
+| Element moves break handlers | 4.5, any step that moves a node | Move nodes, never clone; a comment node marks home (the `chatIn` pattern); smoke checks the handlers after moving |
 | Visitors bounce before the room loads | 2.4 | Discover Home renders from published data first; the live card uses art, not a second player |
 | Phone work is wasted if few use phones | Phase 4 | Measure first (server logs or ask the room) |
