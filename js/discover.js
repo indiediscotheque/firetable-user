@@ -210,6 +210,10 @@ firetable.discover = (function () {
   function moreButton() {
     return '<button type="button" class="row-icon material-symbols-outlined d-more" title="More" aria-label="More" aria-haspopup="menu">more_vert</button>';
   }
+  /** The play button's name: it is the song's one Tab stop, so it says which song. */
+  function playLabel(t, list, i) {
+    return esc((isSounding(list, i) ? "Pause " : "Play ") + (t.t || "this song") + (t.a ? " by " + t.a : ""));
+  }
   function rowAttrs(t, list, i) {
     return ' data-cid="' + esc(t.cid) + '" data-type="' + esc(t.type || 1) + '" data-list="' + esc(list) + '" data-i="' + i + '"';
   }
@@ -219,7 +223,7 @@ firetable.discover = (function () {
     var playing = isPlaying(list, i);
     return '<div class="pvbar' + (playing ? " previewing" : "") + '"' + rowAttrs(t, list, i) + ">" +
       '<div class="pv-art discart" style="background-image:url(' + esc(artOf(t)) + ')">' +
-      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, i) ? "Pause" : "Play") + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
+      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, i) + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
       '<div class="qtxt"><div class="listwords"><div class="fresh-title"><span class="fresh-track-title d-sheetlink" role="button" tabindex="0">' + esc(t.t) + '</span><span class="fresh-track-artist">' + artistLinks(t.a) + "</span></div>" +
       moreButton() + saveButton(t) + "</div>" +
       '<div class="fresh-meta">' + robotLink(meta.dj) + (meta.tag ? '<span class="d-tag d-befirst">' + esc(meta.tag) + "</span>" : "") + '<span class="histdj">' + esc(meta.who || "") + '</span><span class="histdate">' + esc(meta.date || "") + '</span><span class="histtime">' + esc(meta.extra || "") + "</span></div></div></div>";
@@ -231,7 +235,7 @@ firetable.discover = (function () {
     return '<div class="hist-entry"><span class="hist-timestamp' + (meta.rank ? " d-rank" : "") + '">' + esc(meta.stamp || "") + "</span>" +
       (meta.dj ? robotLink(meta.dj) : '<span class="ft-avatar pv-dj-avatar dj-avatar-tip d-nobody" aria-hidden="true"></span>') +
       '<div class="pvbar' + (playing ? " previewing" : "") + '"' + rowAttrs(t, list, i) + ">" +
-      '<div class="pv-art histart" style="background-image:url(' + esc(artOf(t)) + ')"><button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, i) ? "Pause" : "Play") + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
+      '<div class="pv-art histart" style="background-image:url(' + esc(artOf(t)) + ')"><button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, i) + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
       '<div class="listwords"><div class="histlink"><span class="hist-track-title d-sheetlink" role="button" tabindex="0">' + esc(t.t) + '</span><span class="hist-track-artist">' + artistLinks(t.a) + "</span></div></div>" +
       (meta.right ? '<span class="d-right">' + meta.right + "</span>" : "") +
       moreButton() + saveButton(t) + "</div></div>";
@@ -307,7 +311,7 @@ firetable.discover = (function () {
       (t.rel ? '<span class="d-tag d-numtag">out ' + esc(u.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime())) + "</span>" : "");
     return '<div class="pvbar d-lead' + (isPlaying(list, 0) ? " previewing" : "") + '"' + rowAttrs(t, list, 0) + ">" +
       '<div class="pv-art discart d-leadart" style="background-image:url(' + esc(artOf(t)) + ')">' +
-      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + (isSounding(list, 0) ? "Pause" : "Play") + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button></div>" +
+      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, 0) + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button></div>" +
       '<div class="d-leadtext"><p class="d-kicker">' + (t.plays ? "The week's most played" : "New this week") + "</p>" +
       '<h3 class="d-leadtitle"><span class="d-sheetlink" role="button" tabindex="0">' + esc(t.t) + "</span></h3>" +
       '<p class="d-leadartist">' + artistLinks(t.a) + "</p>" +
@@ -3654,6 +3658,56 @@ firetable.discover = (function () {
     }
   }
 
+  // ─── One Tab stop per song ───────────────────────────────────────────────
+  // A card was five or six stops (play, title, each artist, ⋮, Add, the DJ):
+  // Home's first row of six covers took 30 presses to cross. Each song in the
+  // page is now one stop, its play button; ← and → walk the rest of that song,
+  // the menu key opens ⋮, and Tab goes on to the next song. Every control
+  // still works with the mouse, touch and a screen reader's own keys.
+  var ROVE_STOPS = "button, a[href], [tabindex]";
+  /** A song's box: the row with its DJ beside it, or the card. */
+  function songBox(el) {
+    var bar = el && el.closest && el.closest("#dBrowse .pvbar[data-list]");
+    return bar ? (bar.closest(".hist-entry") || bar) : null;
+  }
+  function songStops(box) {
+    return Array.prototype.filter.call(box.querySelectorAll(ROVE_STOPS), function (el) { return !el.disabled && el.getClientRects().length > 0; });
+  }
+  /** Leave each song one Tab stop. Runs as Tab is pressed, so it covers whatever was drawn since. */
+  function rove() {
+    var bars = document.querySelectorAll("#dBrowse .pvbar[data-list]");
+    for (var n = 0; n < bars.length; n++) {
+      var bar = bars[n];
+      if (bar._roved) continue;
+      bar._roved = true;
+      var stops = songStops(bar.closest(".hist-entry") || bar);
+      var play = bar.querySelector(".d-play");
+      // (Settings can turn the play buttons off: then the title is the stop)
+      var main = play && stops.indexOf(play) !== -1 ? play : stops.filter(function (el) { return el.classList.contains("d-sheetlink"); })[0] || stops[0];
+      stops.forEach(function (el) {
+        // "Play the week's 6" and "Save all" on the lead card are about the whole list, so they keep their stops
+        if (el !== main && !el.classList.contains("butt")) el.setAttribute("tabindex", "-1");
+      });
+    }
+  }
+  function roveKey(e) {
+    if (e.key === "Tab") return rove();
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var box = songBox(e.target);
+    if (!box || /^(input|textarea|select)$/i.test(e.target.tagName || "")) return;
+    if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) {
+      var more = box.querySelector(".d-more");
+      if (more) { e.preventDefault(); more.focus(); more.click(); }
+      return;
+    }
+    if (e.shiftKey || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return;
+    var stops = songStops(box), at = stops.indexOf(e.target);
+    if (at === -1) return;
+    e.preventDefault();
+    var to = stops[at + (e.key === "ArrowRight" ? 1 : -1)];
+    if (to) to.focus();
+  }
+
   /** Make a playlist the one the room plays from when you DJ (as All Playlists does). */
   function djFrom(id) {
     if (!D.signedIn || djList() === id) return;
@@ -4267,6 +4321,7 @@ firetable.discover = (function () {
         var box = document.getElementById("dDjList");
         if (box) box.innerHTML = djRows(Object.keys(all).map(function (k) { return Object.assign({ key: k }, all[k]); }));
       });
+      document.addEventListener("keydown", roveKey, true);
       document.addEventListener("keydown", function (e) {
         var menuWasOpen = !!document.querySelector("#dMenu:not([hidden])");
         if (e.key === "Escape") closeMenu(true);

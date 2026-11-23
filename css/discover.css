@@ -2650,3 +2650,15 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
         background: rgb(0 0 0 / 0.5);
     }
 }
+
+/* ============================================
+   One Tab stop per song (discover.js rove)
+   The play button is the stop, so the ring goes round the whole song: on a
+   cover the button alone sat in the middle of the picture.
+   ============================================ */
+#dBrowse .pvbar[data-list]:has(.d-play:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-md);
+}
+#dBrowse .pvbar[data-list] .d-play:focus-visible { outline: none; opacity: 1; }

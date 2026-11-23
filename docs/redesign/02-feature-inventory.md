@@ -186,6 +186,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | NV-03 | View under the stage (Playlists, Recent, Fresh, Cards) | All | `firetable.ui.showView`, `syncNavState`, `STORAGE.navView`, `#mainGrid.view-*` | keep |
 | NV-04 | Addresses (`#live`, `#discover/...`) and back button | All | `discover.js` `route`, `writeAddress` | keep; 2.2 adds nothing new |
 | NV-05 | (new) Skip links: the first Tab stops, out of sight until one has focus. Skip to the page (Discover), the chat box, your playlist, the player; each offered only while what it goes to is on screen. Tab starts from the top on Discover Home too, whose address `#discover` is also the Fresh panel's id | All | `#nav-skip`, `firetable.ui.setupSkipLinks` (`ui.js`) | ✅ added November 22, 2026 (the UX audit, H1); keep |
+| NV-06 | (new, November 22, 2026) One Tab stop per song in Discover's page: the play button, which names its song ("Play Riviera by Kartell"). ← and → reach the song's title, artist, ⋮, Add and DJ; the menu key (or Shift F10) opens ⋮; Tab goes on to the next song. The lead card's "Play the week's N" and "Save all" keep their own stops. Mouse, touch and screen readers' own keys are unchanged | All | `discover.js` `rove`, `roveKey`, `playLabel`; listed in `#helpBox` | keep |
 
 ## AU · Joining, logging in, account
 

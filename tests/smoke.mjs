@@ -723,7 +723,7 @@ try {
     const stagePick = document.getElementById("djlistpicker"), sp = getComputedStyle(stagePick), tag = document.getElementById("cr-djTag");
     const lab = document.getElementById("djlistpickerLabel").getBoundingClientRect(), pick = stagePick.getBoundingClientRect();
     out.status = { box: sp.backgroundColor + "|" + sp.borderTopColor + "|" + sp.boxShadow, hugs: pick.width < 0.8 * document.getElementById("djlistpickerWrap").getBoundingClientRect().width,
-      beside: innerWidth < 640 || (lab.width > 40 && lab.right <= pick.left + 1), select: stagePick.tagName, tag: !tag.hidden && tag.getClientRects().length > 0 ? tag.textContent.trim() : "" };
+      beside: innerWidth < 640 || (lab.width > 40 && lab.right <= pick.left + 1), select: stagePick.tagName, tag: !tag.hidden && tag.getClientRects().length > 0 ? tag.querySelector("span").textContent.trim() : "" };
     ftapi.events.emit("djListChanged", "elsewhere");
     ftapi.selectedListThing = "elsewhere";
     firetable.ui.markDjList();
@@ -3506,6 +3506,29 @@ try {
   skip.after = await skipState();
   check(!skip.rest.inView && skip.tab1.at === "page" && skip.tab1.inView && skip.tab1.shown === "page,player" && skip.page === "dBrowse" && skip.player && !skip.after.inView,
     "the first Tab on Discover Home is Skip to the page (the chat box and the playlist aren't offered to a visitor); it and Skip to the player go there, and the links hide again (" + JSON.stringify(skip) + ")");
+  // one Tab stop per song: a card was five or six (play, title, artist, ⋮, Add, the DJ)
+  const at = () => sPage.evaluate(() => { const a = document.activeElement, bar = a.closest && a.closest("#dBrowse .pvbar[data-list]");
+    return (bar ? bar.getAttribute("data-list") + "/" + bar.getAttribute("data-i") + ":" : "") + (a.classList.contains("d-play") ? "play" : a.classList.contains("d-sheetlink") ? "title" : a.classList.contains("d-alink") ? "artist" :
+      a.classList.contains("d-more") ? "more" : a.classList.contains("histeal") ? "add" : a.classList.contains("d-djlink") ? "dj" : a.classList.contains("butt") ? "list" : a.tagName); });
+  await sPage.evaluate(() => document.querySelector("#dBrowse .ft-cards .pvbar .d-play").focus());
+  const one = { from: await at(), name: await sPage.evaluate(() => document.activeElement.getAttribute("aria-label")), tabs: [], arrows: [] };
+  for (let i = 0; i < 2; i++) { await sPage.keyboard.press("Tab"); one.tabs.push(await at()); }
+  await sPage.evaluate(() => document.querySelector("#dBrowse .ft-cards .pvbar .d-play").focus());
+  for (let i = 0; i < 4; i++) { await sPage.keyboard.press("ArrowRight"); one.arrows.push((await at()).split(":")[1]); }
+  await sPage.keyboard.press("ContextMenu");
+  await sleep(250);
+  one.menu = await sPage.evaluate(() => { const m = document.getElementById("dMenu"); return !!m && !m.hidden && m.contains(document.activeElement); });
+  await sPage.keyboard.press("Escape");
+  await sleep(150);
+  one.back = (await at()).split(":")[1];
+  one.ring = await sPage.evaluate(() => { const b = document.querySelector("#dBrowse .ft-cards .pvbar .d-play"); b.focus(); return true; }) && await (async () => {
+    await sPage.keyboard.press("Tab"); await sPage.keyboard.press("Shift+Tab");
+    return sPage.evaluate(() => getComputedStyle(document.activeElement.closest(".pvbar")).outlineStyle); })();
+  const songOf = (t) => t.split(":")[0];
+  check(/^Play \S.* by \S/.test(one.name) && one.tabs.every((t) => /:play$/.test(t)) && new Set([one.from].concat(one.tabs).map(songOf)).size === 3,
+    "Discover: Tab goes from song to song, one stop each, and the stop names its song (" + JSON.stringify([one.from, one.name, one.tabs]) + ")");
+  check(one.arrows.slice(0, 2).join() === "title,artist" && one.arrows.indexOf("more") !== -1 && one.menu && one.back === "more" && one.ring === "solid",
+    "Discover: ← and → reach a song's title, artist, ⋮ and Add, the menu key opens ⋮, and the ring goes round the whole song (" + JSON.stringify(one) + ")");
   await sPage.close();
 
   console.log("-- Discover: members chat with the room from Discover");
