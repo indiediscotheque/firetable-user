@@ -543,7 +543,7 @@ firetable.discover = (function () {
     if (unplayed.length) {
       setList("home-unplayed", "Not played live yet", unplayed);
       h += "<section>" + newHead("Not played live yet", "All " + allUnplayed.length, "unplayed") +
-        '<div class="ft-cards d-compact">' + unplayed.slice(0, 4).map(function (t, i) {
+        '<div class="ft-cards d-compact">' + unplayed.slice(0, 6).map(function (t, i) {
           return card(t, "home-unplayed", i, { tag: "Be the first", date: t.rel ? "out " + firetable.utilities.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime()) : "" });
         }).join("") + "</div></section>";
     }
