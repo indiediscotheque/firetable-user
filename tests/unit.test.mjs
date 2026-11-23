@@ -447,10 +447,10 @@ test("dates and times", async () => {
       firetable.utilities.format_time(new Date(2026, 0, 1, 0, 5)), firetable.utilities.format_time(new Date(2026, 0, 1, 12, 30)),
       firetable.utilities.format_time(new Date(2026, 0, 1, 23, 9)),
       firetable.utilities.shortDate(new Date(thisYear, 10, 10)), firetable.utilities.shortDate(new Date(2011, 10, 10)),
-      firetable.utilities.pluralize(1, "play"), firetable.utilities.pluralize(2, "play"), firetable.utilities.pluralize(2, "person", "people")
+      firetable.utilities.pluralize(1, "play"), firetable.utilities.pluralize(2, "play"), firetable.utilities.pluralize(2, "person", "people"), firetable.utilities.pluralize(170236, "play")
     ];
   });
-  assert.deepEqual(r, ["12:05am", "12:30pm", "11:09pm", "Nov 10", "Nov 10, 2011", "1 play", "2 plays", "2 people"]);
+  assert.deepEqual(r, ["12:05am", "12:30pm", "11:09pm", "Nov 10", "Nov 10, 2011", "1 play", "2 plays", "2 people", "170,236 plays"]);
 });
 
 test("saveFailed: tells the person once per burst, and swallows the error", async () => {
