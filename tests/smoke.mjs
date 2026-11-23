@@ -526,8 +526,11 @@ try {
     "every ⋮ item reaches what its old button did: All playlists, Shuffle, Check, Import, New (with Cancel), Merge, Delete (" + JSON.stringify(tools) + ")");
   check(tools.showOpen && tools.badge === "1/Show only (1 on)" && tools.badgeOff, "Show only holds Remixes and Broken, and counts what's on (" + tools.badge + ")");
 
-  console.log("-- the playlist's ⋮: Rename, Remove duplicates, Export; Show only: Duplicates");
+  console.log("-- the playlist's ⋮: Rename, Remove duplicates, Export; Show only: Duplicates, Not played here yet");
   const listBefore = await listNow(); // put back after: the drag test below goes on from it
+  // the room played "Aa - One" under another upload (linked to its song); "Bb - Two" never
+  await put("/globalTracks/1dupe000001", { artist: "Aa", title: "One", type: 1, song: "sDupe1" });
+  await put("/globalSongs/sDupe1", { artist: "Aa", title: "One", plays: 2 });
   await put("/queues/smoke", { d1: { type: 1, cid: "dupe000001", name: "Aa - One" }, d2: { type: 1, cid: "dupe000002", name: "Bb - Two" }, d3: { type: 1, cid: "dupe000001", name: "Aa - One" } });
   const listTools = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -550,6 +553,20 @@ try {
     out.badge = document.getElementById("cr-showOnlyCount").textContent;
     $("#cr-dupesOnly").prop("checked", false).trigger("change");
     out.allBack = document.querySelectorAll("#mainqueue .pvbar:not(.ft-filtered)").length;
+    // Show only: Not played here yet asks the history, then leaves the song the room hasn't played
+    $("#cr-unplayedOnly").prop("checked", true).trigger("change");
+    out.unplayedBarOn = !document.getElementById("cr-unplayedBar").hidden;
+    await until(() => /hasn't played/.test(document.getElementById("cr-unplayedBarText").textContent));
+    await wait(50);
+    out.unplayedShown = [...document.querySelectorAll("#mainqueue .pvbar:not(.ft-filtered)")].map((r) => r.getAttribute("data-cid")).join();
+    out.unplayedBar = document.getElementById("cr-unplayedBarText").textContent;
+    out.unplayedBadge = document.getElementById("cr-showOnlyCount").textContent;
+    // the room plays it: it leaves the list without asking again
+    firetable.actions.notePlayedHere(1, "dupe000002");
+    await wait(100);
+    out.afterPlay = document.querySelectorAll("#mainqueue .pvbar:not(.ft-filtered)").length + "|" + document.getElementById("cr-unplayedBarText").textContent + "|" + document.getElementById("mainqueue").classList.contains("overFiltered");
+    document.getElementById("cr-unplayedOff").click();
+    out.unplayedOff = !$("#cr-unplayedOnly").is(":checked") && document.getElementById("cr-unplayedBar").hidden && document.querySelectorAll("#mainqueue .pvbar:not(.ft-filtered)").length;
     // Export: the list as "Artist - Title" lines, in play order
     const made = URL.createObjectURL;
     let file = null;
@@ -577,6 +594,10 @@ try {
   });
   check(/rename/.test(listTools.items) && /dupes/.test(listTools.items) && /export/.test(listTools.items), "the playlist's ⋮ has Rename, Remove duplicates and Export (" + listTools.items + ")");
   check(listTools.dupesShown === "dupe000001,dupe000001" && listTools.badge === "1" && listTools.allBack === 3, "Show only: Duplicates shows the songs that are in twice (" + JSON.stringify(listTools) + ")");
+  check(listTools.unplayedBarOn && listTools.unplayedShown === "dupe000002" && listTools.unplayedBar === "1 song the room hasn't played yet. Play one for the room." && listTools.unplayedBadge === "1",
+    "Show only: Not played here yet leaves the songs the room hasn't played, counting another upload's plays (" + JSON.stringify(listTools) + ")");
+  check(listTools.afterPlay === "0|The room has played every song here.|true" && listTools.unplayedOff === 3,
+    "a song the room plays leaves Not played here yet, and Show all puts every song back (" + JSON.stringify(listTools) + ")");
   check(listTools.exported === "Aa - One|Bb - Two|Aa - One", "Export downloads the list as Artist - Title lines in play order (" + listTools.exported + ")");
   check(listTools.renameOpen === "Default Playlist" && listTools.renamed === "Smoke Crate|true", "Rename opens with the list's name and saves the new one (" + JSON.stringify(listTools) + ")");
   check(/Removed 1 duplicate/.test(listTools.toast) && listTools.left === "dupe000001,dupe000002", "Remove duplicates keeps the first copy and says how many went (" + JSON.stringify(listTools) + ")");
@@ -2144,7 +2165,7 @@ try {
     bar.classList.add("is-member", "is-room");
     await wait(400);
     const size = (el) => { const r = el.getBoundingClientRect(); return el.offsetParent ? Math.round(r.width) + "x" + Math.round(r.height) : "hidden"; };
-    const out = { fire: size(document.getElementById("fire")), main: size(bar.querySelector(".pb-main")), open: size(bar.querySelector(".pb-expand")),
+    const out = { fire: size(document.getElementById("fire")), main: size(bar.querySelector(".pb-main")), open: bar.querySelector(".pb-expand") ? size(bar.querySelector(".pb-expand")) : "gone",
       pick: size(document.getElementById("st-grabPick")), inBar: !!document.getElementById("st-grabPick").closest("#dMini") };
     const grab = document.getElementById("grab");
     out.grab = grab.closest("#dMini") ? (getComputedStyle(grab).display === "none" ? "44x44" : size(grab)) : "moved";
@@ -2187,7 +2208,7 @@ try {
     return out;
   });
   await page.setViewportSize({ width: 1280, height: 720 });
-  check(phoneRow.inBar && phoneRow.fire === "44x44" && phoneRow.main === "44x44" && phoneRow.grab === "44x44" && phoneRow.pick === "hidden" && phoneRow.open === "hidden" && phoneRow.text >= 140,
+  check(phoneRow.inBar && phoneRow.fire === "44x44" && phoneRow.main === "44x44" && phoneRow.grab === "44x44" && phoneRow.pick === "hidden" && phoneRow.open === "gone" && phoneRow.text >= 140,
     "phone: Fire, Grab and play are 44px, the ▾ and ⌃ are gone from the bar, and the song has more room (" + JSON.stringify(phoneRow) + ")");
   check(phoneRow.keepFixed, "phone: Fire and Grab stay at the right, however long the title (" + phoneRow.keepAt + ")");
   check(phoneRow.lines && phoneRow.mainPlain === "rgba(0, 0, 0, 0)", "phone: the song in two lines with the room's mark beside the artist, and play/stop a plain icon (" + JSON.stringify(phoneRow) + ")");
@@ -2200,7 +2221,7 @@ try {
     const isOpen = () => document.body.classList.contains("pv-full-on");
     const close = async () => { if (isOpen()) { document.getElementById("pv-fclose").click(); await wait(500); } };
     const out = {};
-    out.expand = getComputedStyle(bar.querySelector(".pb-expand")).display;
+    out.expand = bar.querySelector(".pb-expand") ? getComputedStyle(bar.querySelector(".pb-expand")).display : "gone";
     out.pill = parseFloat(getComputedStyle(bar.querySelector(".pb-kind")).fontSize);
     const status = bar.querySelector(".pb-src > span:last-child");
     out.status = status ? Math.round(status.getBoundingClientRect().width) + ":" + (status.textContent.length > 0) : "none";
@@ -2219,7 +2240,7 @@ try {
     await close();
     return out;
   });
-  check(wideBar.expand === "none" && wideBar.pill === 0 && /^1:true$/.test(wideBar.status),
+  check(wideBar.expand === "gone" && wideBar.pill === 0 && /^1:true$/.test(wideBar.status),
     "computer: no ⌃ and no LIVE pill on the bar; who's on deck stays for screen readers (" + JSON.stringify(wideBar) + ")");
   check(wideBar.spaceOpens && wideBar.titleSheet, "computer: a click on the bar opens the full-screen player; the title still opens the song's page (" + JSON.stringify(wideBar) + ")");
 

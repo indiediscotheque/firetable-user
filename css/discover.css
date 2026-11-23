@@ -1409,7 +1409,6 @@ body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
 #pv-vol::-webkit-slider-thumb, #pv-fvol::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--color-text-light); border: 0; }
 #pv-vol::-moz-range-thumb, #pv-fvol::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--color-text-light); border: 0; }
 #pv-vol:focus-visible, #pv-fvol:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
-.pb .pb-expand { display: none; }
 .pb-line { display: none; }
 /* the stage's screen, reload and full screen, moved in from the stage (placeStage) */
 .pb-tools { display: flex; align-items: center; gap: var(--pad1); }
@@ -1707,7 +1706,7 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
     /* Grab's ▾ is in the full-screen player: here the first grab, and the
        grab toast's Change, open the picker, and Fire and Grab keep their room */
     .pb #st-grabPick { display: none; }
-    .pb-transport > :not(.pb-main), .pb-time, .pb-side > :not(.pb-expand) { display: none; }
+    .pb-transport > :not(.pb-main), .pb-time, .pb-side > * { display: none; }
     .pb-keep #pv-dkeep .pb-joinfire { display: none; }
 }
 @media only screen and (max-width: 639px) and (pointer: coarse) {

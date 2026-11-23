@@ -3765,7 +3765,6 @@ firetable.discover = (function () {
     if ((b = t.closest("[data-sidetab]"))) { D.sideTab = b.getAttribute("data-sidetab"); if (D.sideTab === "chat") D.unread = 0; return renderSide(); }
     // the player bar
     if ((b = t.closest(".pb-main"))) return mainButton();
-    if ((b = t.closest(".pb-expand"))) return openFull(b);
     if ((b = t.closest(".d-toroom-undo"))) return undoToRoom();
     if ((b = t.closest(".d-toroom"))) {
       var room = P.track;
@@ -4493,8 +4492,7 @@ firetable.discover = (function () {
       '<div class="pb-vol"><button type="button" class="butt graybutt iconbutt d-mute" aria-label="Mute">' + ms("volume_up") + "</button>" +
       '<input type="range" id="pv-vol" min="0" max="100" step="5" value="50" aria-label="Volume" /></div>' +
       // the stage's screen, reload and full screen (placeStage moves them in)
-      '<div class="pb-tools"><span class="pb-host" id="pv-tools"></span></div>' +
-      '<button type="button" class="butt graybutt iconbutt pb-expand" title="Open the player" aria-label="Open the full-screen player" aria-haspopup="dialog">' + ms("expand_less") + "</button></div>" +
+      '<div class="pb-tools"><span class="pb-host" id="pv-tools"></span></div></div>' +
       '<span id="pv-announce" class="sr-only" aria-live="polite"></span></div>';
   }
 
