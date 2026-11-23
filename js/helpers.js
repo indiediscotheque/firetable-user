@@ -551,7 +551,9 @@ firetable.utilities = {
 
   /** Returns "count singular" or "count plural" (defaults to singular+"s") */
   pluralize: function (count, singular, plural) {
-    return count + " " + (count === 1 ? singular : (plural || singular + "s"));
+    // 170,236 plays, not 170236: the same count was written both ways on different pages
+    var shown = typeof count === "number" && isFinite(count) ? count.toLocaleString("en-US") : count;
+    return shown + " " + (count === 1 ? singular : (plural || singular + "s"));
   },
 
   // ─── Chat Scroll ─────────────────────────────────────────────────────────

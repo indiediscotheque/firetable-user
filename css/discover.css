@@ -248,6 +248,10 @@ body.ft-discover #discoverPage {
 }
 #dBrowse .pvbar.previewing { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .d-nobody { visibility: hidden; }
+/* Discover's lists borrow Recent's timeline row but have no timeline: without
+   its backbone the row's connector was a stray dash after every rank, and ran
+   behind the first DJ's face like a strike-through */
+#dBrowse .d-rowlist .hist-entry::before { content: none; }
 .d-noface { background-color: var(--color-bg-t3); }
 .hist-timestamp.d-rank {
     color: var(--color-text-light);
@@ -302,6 +306,22 @@ body.ft-discover #discoverPage {
     border-radius: 50%;
 }
 #dBrowse .d-compact .listwords .d-more { right: 2.5rem; }
+/* Three buttons on an 88px cover hid a good part of it. With a mouse, save and
+   ⋮ show when the card is pointed at or has focus (a saved song keeps its
+   mark), as New's cards do; play stays. On touch they're always there, a
+   little further apart: they were 3px from each other. */
+@media (hover: hover) and (pointer: fine) {
+    #dBrowse .d-compact .listwords .row-icon { opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
+    #dBrowse .d-compact .pvbar:hover .listwords .row-icon,
+    #dBrowse .d-compact .pvbar:focus-within .listwords .row-icon,
+    #dBrowse .d-compact .listwords .row-icon.is-saved { opacity: 1; }
+}
+@media (pointer: coarse) {
+    #dBrowse .d-compact .listwords .d-more { right: 2.75rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #dBrowse .d-compact .listwords .row-icon { transition: none; }
+}
 #dBrowse .d-compact .listwords button.histeal.is-saved { color: var(--color-accent); }
 #dBrowse .d-compact .fresh-track-title,
 #dBrowse .d-compact .fresh-track-artist {
@@ -539,7 +559,12 @@ section .d-chips a.d-chip {
     line-height: 1.15;
     white-space: nowrap;
     mix-blend-mode: normal;
+    /* a halo in the page's colour: the middle lines pass behind a name, where
+       they ran through its letters like a strike-through (Indie Rock, Electro) */
+    text-shadow: 0 0 0.2em var(--color-bg-s1), 0 0 0.2em var(--color-bg-s1), 0 0 0.2em var(--color-bg-s1),
+        0 0 0.3em var(--color-bg-s1), 0 0 0.3em var(--color-bg-s1), 0 0 0.3em var(--color-bg-s1);
 }
+.d-mapg:hover, .d-mapg.is-picked { text-shadow: none; }
 @media only screen and (max-width: 639px) {
     .d-mapg { font-size: calc(0.6rem + var(--s, 0) * 0.5rem); }
 }
@@ -570,6 +595,7 @@ section .d-chips a.d-chip {
     border: 2px solid var(--color-danger);
     border-radius: 50%;
     vertical-align: 0.1em;
+    opacity: calc(0.35 + 0.65 * var(--t, 1)); /* --t: this genre's share of tonight's most played (mapMarks) */
 }
 .d-mapg.is-picked { z-index: 2; color: var(--color-bg); background: var(--color-text); }
 .d-maplegend {
@@ -581,6 +607,8 @@ section .d-chips a.d-chip {
     font-size: var(--fs-label);
 }
 .d-maplegend > span { display: none; align-items: center; gap: 0.4rem; }
+.d-maplegend > .d-mlsize { display: inline-flex; }
+.d-mlsize::before { content: "Aa"; color: var(--color-text); font-size: 1.25em; font-weight: 600; line-height: 1; }
 .d-maplegend.has-room .d-mlroom,
 .d-maplegend.has-tonight .d-mltonight,
 .d-maplegend.has-hear .d-mlhear,
