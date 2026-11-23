@@ -93,7 +93,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | PE-02b | Who's listening elsewhere: the radio stream's listeners merged by country (flags, "Somewhere" for those it can't place) and guests on the site without an account (how many hear the room live) | All | `#pe-audience` under the members, the visitor's list `#pe-here`, the room pulse ("N on the radio"), the Turntable theme's People; `js/audience.js`, `api/audience.php` (heartbeats from guests, Broadcast Pal's `api/listeners.php` for the stream) | ✅ added November 23, 2026; keep (smoke checks it) |
 | PE-03 | User card (profile, DJ page link, cards they hold, block, deck controls) | All | `#ft-user-tip`, `ui.js` | keep |
 | PE-04 | Block / unblock | M | user card `utt-block-btn`, `/block`, `/unblock`, `blocks/` | keep |
-| PE-05 | Idle state | All | `js/state.js` (idleTracker), `users/<uid>/idle` | keep. Since November 22, 2026 the people list says it in a word at the row's end ("idle", or "away" for a DJ who dropped off) with the name greyed; it was the colour of the member icon alone |
+| PE-05 | Idle state | All | `js/state.js` (idleTracker), `users/<uid>/idle` | keep. In the people list the name greys and the role icon turns orange; a DJ who dropped off also says "away" at the row's end (an "idle" word there, added November 22, 2026, came out November 23 as redundant) |
 
 ## CH · Chat
 
