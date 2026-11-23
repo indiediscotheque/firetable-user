@@ -1,25 +1,37 @@
-// Meta: Instagram (Reels, carousels, pictures, Stories), Facebook Pages (Reels,
-// photos, Stories) and Threads. All three make a "container" from a public
-// URL of the file, wait for Meta to fetch and process it, then publish it.
+// Meta: Instagram (Reels with licensed music, carousels, Stories), Facebook
+// Pages (photo albums, photo Stories) and Threads. Each makes a "container"
+// from a public URL of the file, waits for Meta to fetch and process it, then
+// publishes it.
 //
-// Instagram, with Instagram Login (an Instagram professional account, no
-// Facebook Page needed):
-//   INSTAGRAM_TOKEN       a long-lived token (tools/social/auth.mjs instagram);
-//                         refreshed here every week, so it never lapses
-//   INSTAGRAM_USER_ID     optional: found from the token
-//   INSTAGRAM_COLLAB      "false" to stop inviting the artists as collaborators
-// With Facebook Login instead: INSTAGRAM_GRAPH_HOST=graph.facebook.com, the
-// Page's token as INSTAGRAM_TOKEN and INSTAGRAM_USER_ID set.
-// Facebook:  FACEBOOK_PAGE_ID, FACEBOOK_PAGE_TOKEN (a Page token, which doesn't expire)
-// Threads:   THREADS_TOKEN (refreshed here weekly), THREADS_USER_ID optional
+// Music: a Reel goes out through the API only with a track from Instagram's
+// own licensed library (the Audio API: Facebook Login only), matched exactly
+// to the song. Without one it's handed to the post kit (studio.mjs), to post
+// from the app with its sound picker. Nothing is posted with uploaded music.
+// Facebook Reels and Stories with music have no API: always the kit.
+//
+// Instagram with Facebook Login (needed for music; one Meta login covers
+// Facebook too: `node tools/social/auth.mjs facebook` prints all of these):
+//   INSTAGRAM_GRAPH_HOST=graph.facebook.com (repository variable),
+//   INSTAGRAM_TOKEN (the Page's token, which doesn't expire), INSTAGRAM_USER_ID
+// Instagram with Instagram Login (no music: Reels always go to the kit):
+//   INSTAGRAM_TOKEN (tools/social/auth.mjs instagram; renewed here weekly)
+// INSTAGRAM_COLLAB     "false": don't invite the artists as collaborators
+// INSTAGRAM_TRIAL      the kinds whose Reels go out as Trial Reels, shown to
+//                      non-followers first and shared with followers only if
+//                      they do well (default fresh,onthisday,fires; "" for none)
+// Facebook:  FACEBOOK_PAGE_ID, FACEBOOK_PAGE_TOKEN
+// Threads:   THREADS_TOKEN (renewed here weekly), THREADS_USER_ID optional
 // GRAPH_API_VERSION picks the Graph API version (default v23.0).
 // Never deployed (tools/).
 
-import { http, form, sleep } from "../util.mjs";
-import { caption } from "../captions.mjs";
+import { http, form, sleep, plain, artists, Handoff } from "../util.mjs";
+import { caption, altText } from "../captions.mjs";
 
 const WEEK = 7 * 86400000;
 const ver = (env) => env.GRAPH_API_VERSION || "v23.0";
+const list = (s) => String(s == null ? "" : s).split(",").map((x) => x.trim()).filter(Boolean);
+/** Many pictures for a carousel, else one. */
+const carousel = (post) => post.media.slides && post.media.slides.length > 1 ? post.media.slides : null;
 
 /** A token from the environment, refreshed every week and kept in the state. */
 async function longLived(ctx, name, envToken, refreshUrl) {
@@ -52,12 +64,12 @@ async function ready(url, field, done, failed, what) {
 
 function ig(env) {
   const host = env.INSTAGRAM_GRAPH_HOST || "graph.instagram.com";
-  return { host, base: `https://${host}/${ver(env)}` };
+  return { host, base: `https://${host}/${ver(env)}`, music: host === "graph.facebook.com" };
 }
 
 async function igSetup(ctx) {
   const { env } = ctx;
-  const { host, base } = ig(env);
+  const { host, base, music } = ig(env);
   const token = await longLived(ctx, "instagram", env.INSTAGRAM_TOKEN,
     host === "graph.instagram.com" ? (t) => `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${encodeURIComponent(t)}` : null);
   let user = env.INSTAGRAM_USER_ID;
@@ -65,6 +77,7 @@ async function igSetup(ctx) {
     const me = await http(`${base}/me?fields=user_id,username&access_token=${encodeURIComponent(token)}`);
     user = me.user_id || me.id;
   }
+  const q = (o) => new URLSearchParams({ ...o, access_token: token }).toString();
   // containers aren't posts until media_publish: those calls may be repeated
   const call = (path, params) => http(`${base}/${path}`, { method: "POST", body: form({ ...params, access_token: token }), retry: !path.endsWith("media_publish") });
   const wait = (id) => ready(`${base}/${id}?access_token=${encodeURIComponent(token)}`, "status_code", "FINISHED", ["ERROR", "EXPIRED"], "Instagram");
@@ -74,49 +87,74 @@ async function igSetup(ctx) {
     try { url = (await http(`${base}/${p.id}?fields=permalink&access_token=${encodeURIComponent(token)}`)).permalink; } catch { /* no link, still posted */ }
     return { id: p.id, url };
   };
-  return { user, call, wait, publish };
+  /** The song in Instagram's licensed library: the same title by the same artist, or nothing. */
+  const track = async (sound) => {
+    if (!music || !sound) return null;
+    const j = await http(`${base}/ig_audio?${q({ audio_type: "music", user_id: user, search_query: `${sound.title} ${artists(sound.artist)[0] || sound.artist}` })}`);
+    const first = plain(artists(sound.artist)[0] || sound.artist);
+    return ((j && j.audio) || []).find((a) => plain(a.title) === plain(sound.title) && plain(a.display_artist || "").includes(first)) || null;
+  };
+  return { user, call, wait, publish, track };
 }
 
 export const instagram = {
   name: "instagram",
   needs: ["INSTAGRAM_TOKEN"],
-  cap: (env) => Number(env.INSTAGRAM_PER_DAY || 20),
   async publish(post, ctx) {
-    const { user, call, wait, publish } = await igSetup(ctx);
+    const { user, call, wait, publish, track } = await igSetup(ctx);
     const text = caption(post, "instagram");
+    const alt = altText(post);
     const collab = ctx.env.INSTAGRAM_COLLAB === "false" ? [] : [...new Set((post.mentions && post.mentions.instagram) || [])].slice(0, 3);
-    const tryCollab = async (make) => {
-      try { return await make(collab.length ? { collaborators: JSON.stringify(collab) } : {}); } catch (err) {
-        // an artist who can't be invited (private, or not a professional account): post without
-        if (collab.length && /collaborat|user/i.test(err.message)) { ctx.log("instagram: posting without collaborators (" + err.message.slice(0, 120) + ")"); return make({}); }
-        throw err;
+    // an artist who can't be invited (private, or not a professional account), or an
+    // option this account doesn't have: post without it
+    const tolerant = async (make, extras) => {
+      for (let i = extras.length; i >= 0; i--) {
+        const extra = Object.assign({}, ...extras.slice(0, i).map((e) => e[1]));
+        try { return await make(extra); } catch (err) {
+          if (i === 0 || !extras[i - 1][2].test(err.message)) throw err;
+          ctx.log(`instagram: posting without ${extras[i - 1][0]} (${err.message.slice(0, 120)})`);
+        }
       }
     };
-    const slides = post.media.slides && post.media.slides.length > 1 && post.kind !== "fresh" ? post.media.slides : null;
+    const slides = carousel(post);
     let creation;
     if (slides) {
       const children = [];
-      for (const s of slides.slice(0, 10)) children.push((await call(`${user}/media`, { image_url: ctx.url(s), is_carousel_item: "true" })).id);
+      for (const s of slides.slice(0, 20)) {
+        children.push((await tolerant((extra) => call(`${user}/media`, { image_url: ctx.url(s), is_carousel_item: "true", ...extra }), [["alt text", { alt_text: alt }, /alt/i]])).id);
+      }
       for (const c of children) await wait(c);
-      creation = (await tryCollab((extra) => call(`${user}/media`, { media_type: "CAROUSEL", children: children.join(","), caption: text, ...extra }))).id;
+      creation = (await tolerant((extra) => call(`${user}/media`, { media_type: "CAROUSEL", children: children.join(","), caption: text, ...extra }),
+        collab.length ? [["collaborators", { collaborators: JSON.stringify(collab) }, /collaborat|user/i]] : [])).id;
     } else if (post.media.video) {
-      creation = (await tryCollab((extra) => call(`${user}/media`, { media_type: "REELS", video_url: ctx.url(post.media.video), caption: text, share_to_feed: "true", thumb_offset: "1500", ...extra }))).id;
+      const a = await track(post.sound).catch((err) => { ctx.log("instagram: music search failed: " + err.message.slice(0, 160)); return null; });
+      if (!a) throw new Handoff(`"${post.sound ? post.sound.title : post.title}" isn't in Instagram's API music library (or this login can't use it): in the post kit, to add the sound in the app`);
+      ctx.log(`instagram: music "${a.title}" by ${a.display_artist}`);
+      const trial = list(ctx.env.INSTAGRAM_TRIAL == null ? "fresh,onthisday,fires" : ctx.env.INSTAGRAM_TRIAL).includes(post.kind);
+      creation = (await tolerant((extra) => call(`${user}/media`, {
+        media_type: "REELS", video_url: ctx.url(post.media.video), caption: text, share_to_feed: "true", thumb_offset: "0",
+        audio_configuration: JSON.stringify({ audio_id: String(a.audio_id), audio_volume: 100, video_volume: 1 }), ...extra
+      }), [
+        ...(collab.length ? [["collaborators", { collaborators: JSON.stringify(collab) }, /collaborat|user/i]] : []),
+        ...(trial ? [["Trial Reels", { trial_params: JSON.stringify({ graduation_strategy: "SS_PERFORMANCE" }) }, /trial/i]] : [])
+      ])).id;
     } else {
-      creation = (await tryCollab((extra) => call(`${user}/media`, { image_url: ctx.url(post.media.image), caption: text, ...extra }))).id;
+      creation = (await tolerant((extra) => call(`${user}/media`, { image_url: ctx.url(post.media.image), caption: text, ...extra }), [
+        ["alt text", { alt_text: alt }, /alt/i], ...(collab.length ? [["collaborators", { collaborators: JSON.stringify(collab) }, /collaborat|user/i]] : [])
+      ])).id;
     }
     await wait(creation);
     return publish(creation);
   }
 };
 
+/** Stories through the API are pictures (a Story's music sticker is only in the app: the kit). */
 export const instagram_story = {
   name: "instagram_story",
   needs: ["INSTAGRAM_TOKEN"],
-  cap: (env) => Number(env.INSTAGRAM_STORIES_PER_DAY || 10),
   async publish(post, ctx) {
     const { user, call, wait, publish } = await igSetup(ctx);
-    const media = post.media.video ? { video_url: ctx.url(post.media.video) } : { image_url: ctx.url(post.media.story) };
-    const c = await call(`${user}/media`, { media_type: "STORIES", ...media });
+    const c = await call(`${user}/media`, { media_type: "STORIES", image_url: ctx.url(post.media.story) });
     await wait(c.id);
     return publish(c.id);
   }
@@ -128,38 +166,24 @@ function fb(ctx) {
   const { env } = ctx;
   const base = `https://graph.facebook.com/${ver(env)}`;
   const page = env.FACEBOOK_PAGE_ID, token = env.FACEBOOK_PAGE_TOKEN;
-  // an unpublished photo, or a video upload's start, may be repeated; what posts may not
-  const call = (path, params) => http(`${base}/${path}`, { method: "POST", body: form({ ...params, access_token: token }), retry: params.published === "false" || params.upload_phase === "start" });
-  /** Reels and video Stories: start, Meta fetches the file from its URL, finish. */
-  const video = async (edge, url, finish) => {
-    const start = await call(`${page}/${edge}`, { upload_phase: "start" });
-    await http(start.upload_url || `https://rupload.facebook.com/video-upload/${ver(env)}/${start.video_id}`, {
-      method: "POST", headers: { Authorization: "OAuth " + token, file_url: url }, retry: true
-    });
-    const done = await call(`${page}/${edge}`, { upload_phase: "finish", video_id: start.video_id, ...finish });
-    return { id: done.post_id || start.video_id, video: start.video_id };
-  };
-  return { page, call, video };
+  // an unpublished photo may be repeated; what posts may not
+  const call = (path, params) => http(`${base}/${path}`, { method: "POST", body: form({ ...params, access_token: token }), retry: params.published === "false" });
+  return { page, call };
 }
 
 export const facebook = {
   name: "facebook",
   needs: ["FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_TOKEN"],
-  cap: (env) => Number(env.FACEBOOK_PER_DAY || 20),
   async publish(post, ctx) {
-    const { page, call, video } = fb(ctx);
+    const { page, call } = fb(ctx);
     const text = caption(post, "facebook");
-    if (post.media.video) {
-      const r = await video("video_reels", ctx.url(post.media.video), { video_state: "PUBLISHED", description: text });
-      return { id: r.video, url: `https://www.facebook.com/reel/${r.video}` };
-    }
-    const pics = post.media.slides && post.media.slides.length > 1 ? post.media.slides : [post.media.image];
+    const pics = carousel(post) || [post.media.image];
     if (pics.length === 1) {
-      const r = await call(`${page}/photos`, { url: ctx.url(pics[0]), message: text });
+      const r = await call(`${page}/photos`, { url: ctx.url(pics[0]), message: text, alt_text_custom: altText(post) });
       return { id: r.post_id || r.id, url: `https://www.facebook.com/${r.post_id || r.id}` };
     }
     const ids = [];
-    for (const p of pics.slice(0, 10)) ids.push((await call(`${page}/photos`, { url: ctx.url(p), published: "false" })).id);
+    for (const p of pics.slice(0, 20)) ids.push((await call(`${page}/photos`, { url: ctx.url(p), published: "false", alt_text_custom: altText(post) })).id);
     const attached = Object.fromEntries(ids.map((id, i) => [`attached_media[${i}]`, JSON.stringify({ media_fbid: id })]));
     const r = await call(`${page}/feed`, { message: text, ...attached });
     return { id: r.id, url: `https://www.facebook.com/${r.id}` };
@@ -169,13 +193,8 @@ export const facebook = {
 export const facebook_story = {
   name: "facebook_story",
   needs: ["FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_TOKEN"],
-  cap: (env) => Number(env.FACEBOOK_STORIES_PER_DAY || 10),
   async publish(post, ctx) {
-    const { page, call, video } = fb(ctx);
-    if (post.media.video) {
-      const r = await video("video_stories", ctx.url(post.media.video), {});
-      return { id: r.id, url: null };
-    }
+    const { page, call } = fb(ctx);
     const photo = await call(`${page}/photos`, { url: ctx.url(post.media.story), published: "false" });
     const r = await call(`${page}/photo_stories`, { photo_id: photo.id });
     return { id: r.post_id || photo.id, url: null };
@@ -187,7 +206,6 @@ export const facebook_story = {
 export const threads = {
   name: "threads",
   needs: ["THREADS_TOKEN"],
-  cap: (env) => Number(env.THREADS_PER_DAY || 20),
   async publish(post, ctx) {
     const base = "https://graph.threads.net/v1.0";
     const token = await longLived(ctx, "threads", ctx.env.THREADS_TOKEN, (t) => `https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=${encodeURIComponent(t)}`);
@@ -195,17 +213,16 @@ export const threads = {
     const call = (path, params) => http(`${base}/${path}`, { method: "POST", body: form({ ...params, access_token: token }), retry: !path.endsWith("threads_publish") });
     const wait = (id) => ready(`${base}/${id}?access_token=${encodeURIComponent(token)}`, "status", "FINISHED", ["ERROR", "EXPIRED"], "Threads");
     const text = caption(post, "threads");
+    const alt = altText(post);
     let c;
-    const slides = post.media.slides && post.media.slides.length > 1 ? post.media.slides : null;
-    if (post.media.video && !slides) {
-      c = await call(`${user}/threads`, { media_type: "VIDEO", video_url: ctx.url(post.media.video), text });
-    } else if (slides) {
+    const slides = carousel(post);
+    if (slides) {
       const kids = [];
-      for (const s of slides.slice(0, 20)) kids.push((await call(`${user}/threads`, { media_type: "IMAGE", image_url: ctx.url(s), is_carousel_item: "true" })).id);
+      for (const s of slides.slice(0, 20)) kids.push((await call(`${user}/threads`, { media_type: "IMAGE", image_url: ctx.url(s), is_carousel_item: "true", alt_text: alt })).id);
       for (const k of kids) await wait(k);
       c = await call(`${user}/threads`, { media_type: "CAROUSEL", children: kids.join(","), text });
     } else {
-      c = await call(`${user}/threads`, { media_type: "IMAGE", image_url: ctx.url(post.media.image), text });
+      c = await call(`${user}/threads`, { media_type: "IMAGE", image_url: ctx.url(post.media.image), text, alt_text: alt });
     }
     await wait(c.id);
     const p = await call(`${user}/threads_publish`, { creation_id: c.id });

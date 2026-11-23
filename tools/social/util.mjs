@@ -129,3 +129,10 @@ export const dayName = (ms, tz) => new Date(ms).toLocaleDateString("en-US", { mo
 export const releaseDay = (rel) => new Date(String(rel) + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 export const num = (x) => Number(x || 0).toLocaleString("en-US");
 export const plural = (x, one, many) => num(x) + " " + (Number(x) === 1 ? one : many);
+
+/**
+ * Thrown by a platform that can't post this one itself (a Reel without a
+ * licensed track): the post kit (platforms/studio.mjs) hands it to a person to
+ * post from the app instead. Not a failure, and not tried again.
+ */
+export class Handoff extends Error {}

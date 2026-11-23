@@ -1,12 +1,23 @@
-// The words for each platform, from one post (content.mjs): each platform's
-// length limit, how it treats links (Instagram and TikTok don't make them
-// clickable), how many hashtags it rewards, and how it tags people.
+// The words for each platform, from one post's parts (content.mjs): a hook
+// that leads with what people search for (genre, artist, song), a fact or two,
+// a prompt to comment, save or send, the call to listen, and tags. Each
+// platform gets its own order, length and tag count:
+//
+//   instagram, tiktok   no clickable links: "link in bio"; 5 hashtags (Instagram's cap)
+//   youtube             a keyword title; #Shorts and 2 more (the 3 shown above the title)
+//   facebook            the link, 2 hashtags
+//   threads             one topic tag
+//   bluesky             300 characters, links, mentions and tags as rich text
+//   mastodon            CamelCase hashtags, which is how people find posts there
+//   x                   no link in the post (X shows posts with links to fewer
+//                       people): it goes in a reply; 1 hashtag
+//   pinterest           keywords in the title and description, no hashtags
+// Tags are CamelCase everywhere: screen readers read them as words.
 // Never deployed (tools/).
 
 import { clip, graphemes } from "./util.mjs";
 
-// how many hashtags each platform gets (Instagram allows 5; Threads takes one topic)
-const TAGS = { instagram: 5, instagram_story: 0, facebook: 3, facebook_story: 0, tiktok: 5, youtube: 3, threads: 1, bluesky: 3, mastodon: 5, x: 2, pinterest: 6, telegram: 3, discord: 0 };
+export const TAGS = { instagram: 5, tiktok: 5, youtube: 2, facebook: 2, threads: 1, bluesky: 3, mastodon: 4, x: 1, pinterest: 0, telegram: 0, discord: 0, studio: 5 };
 
 /** The post's link, tagged so the site's stats show which platform sent the visit. */
 export function linkFor(post, platform) {
@@ -18,7 +29,11 @@ export function linkFor(post, platform) {
   return u.href;
 }
 
-export const hashtags = (post, platform) => (post.tags || []).slice(0, TAGS[platform] == null ? 3 : TAGS[platform]).map((t) => "#" + t);
+export function hashtags(post, platform) {
+  const n = TAGS[platform] == null ? 3 : TAGS[platform];
+  if (platform === "threads") return post.topic ? ["#" + post.topic] : [];
+  return (post.tags || []).slice(0, n).map((t) => "#" + t);
+}
 
 /** The artists' handles on a platform, with an @. Threads shares Instagram's names. */
 export function mentions(post, platform) {
@@ -27,8 +42,16 @@ export function mentions(post, platform) {
   return [...new Set(list)].slice(0, 3).map((h) => "@" + h);
 }
 
-const LINK23 = "⁣".repeat(23); // stands in for a link while measuring an X post
 const join = (...parts) => parts.flat().filter((p) => p != null && String(p).trim() !== "").join("\n\n");
+const hookOf = (post) => (post.emoji ? post.emoji + " " : "") + post.hook + (/[.!?…"”]$/.test(post.hook) ? "" : ".");
+
+/** Drop facts from the end until the whole thing fits; then cut it. */
+function fit(max, make, facts) {
+  let f = [...facts];
+  let s = make(f);
+  while (graphemes(s) > max && f.length) { f.pop(); s = make(f); }
+  return graphemes(s) > max ? clip(s, max) : s;
+}
 
 /**
  * The text for a platform.
@@ -36,52 +59,47 @@ const join = (...parts) => parts.flat().filter((p) => p != null && String(p).tri
  */
 export function caption(post, platform) {
   const link = linkFor(post, platform);
-  const tags = hashtags(post, platform);
-  const at = mentions(post, platform);
-  const lead = (post.emoji ? post.emoji + " " : "") + post.lead;
-  const body = post.body || [];
+  const tags = hashtags(post, platform).join(" ");
+  const at = mentions(post, platform).join(" ");
+  const hook = hookOf(post);
+  const facts = post.facts || [];
   switch (platform) {
     case "instagram":
     case "tiktok":
-      // links aren't clickable here: send people to the bio
-      return clip(join(lead, body, at.length ? "🎤 " + at.join(" ") : "", post.cta + " 🎧 link in bio", tags.join(" ")), 2150);
+    case "studio":
+      return clip(join(hook, facts, at && "🎤 " + at, post.prompt, `🎧 ${post.cta}: link in bio`, tags), 2150);
     case "facebook":
-      return join(lead, body, post.cta + ": " + link, tags.join(" "));
+      return join(hook, facts, post.prompt, `🎧 ${post.cta}: ${link}`, tags);
     case "youtube":
-      return join(lead, body, post.cta + ": " + link, post.credit || "", tags.join(" "));
+      return join(hook, `🎧 ${post.cta}: ${link}`, facts, post.prompt, ["#Shorts", ...hashtags(post, "youtube")].join(" "));
     case "threads":
-      return fit(500, (b) => join(lead, b, at.join(" "), post.cta + ": " + link, tags.join(" ")), body);
+      return fit(500, (f) => join(hook, f, at, post.prompt, `${post.cta}: ${link}`, tags), facts);
     case "mastodon":
-      return fit(500, (b) => join(lead, b, post.cta + ": " + link, tags.join(" ")), body);
+      return fit(500, (f) => join(hook, f, `${post.cta}: ${link}`, tags), facts);
     case "bluesky":
-      return fit(300, (b) => join(lead, b, at.join(" "), link, tags.join(" ")), body);
+      return fit(300, (f) => join(hook, f, at, link, tags), facts);
     case "x":
-      // a link counts as 23 characters whatever its length
-      return fit(280, (b) => join(lead, b, at.join(" "), LINK23, tags.join(" ")), body).replace(LINK23, link);
+      return fit(280, (f) => join(hook, f, at, tags), facts);
     case "pinterest":
-      return clip(join(lead, body, post.cta + " at " + new URL(post.link || "https://example.com").host.replace(/^www\./, ""), tags.join(" ")), 500);
+      return clip(join(hook, facts, `${post.cta} at ${new URL(post.link || "https://example.com").host.replace(/^www\./, "")}.`), 500);
     case "telegram":
-      return clip(join(lead, body, post.cta + ": " + link), 1000);
+      return clip(join(hook, facts, `${post.cta}: ${link}`), 1000);
     default:
-      return join(lead, body, link);
+      return join(hook, facts, link);
   }
 }
 
-/** Drop body lines from the end until the whole thing fits; then cut the lead itself. */
-function fit(max, make, body) {
-  let b = [...body];
-  let s = make(b);
-  while (graphemes(s) > max && b.length) { b.pop(); s = make(b); }
-  return graphemes(s) > max ? clip(s, max) : s;
-}
+/** X's reply under the post, with the link. */
+export const xReply = (post) => `🎧 ${post.cta}: ${linkFor(post, "x")}`;
 
-/** A YouTube title: at most 100 characters, ending in #Shorts. */
-export function youtubeTitle(post) {
-  return clip(post.title, 100 - " #Shorts".length) + " #Shorts";
-}
+/** A YouTube Short's title: the words people search for, at most 100 characters. */
+export const youtubeTitle = (post) => clip(post.searchTitle || post.title, 100);
 
-/** A Pinterest pin's title: at most 100 characters. */
-export const pinTitle = (post) => clip(post.title, 100);
+/** A Pinterest pin's title: keywords first, at most 100 characters. */
+export const pinTitle = (post) => clip(post.searchTitle || post.title, 100);
+
+/** Alt text for the pictures: what's in them, in words. */
+export const altText = (post) => clip(`${post.title}. ${post.hook}.`.replace(/\.\./g, "."), 1000);
 
 /**
  * Bluesky's rich text: the byte ranges of links, @mentions and #tags in the text.

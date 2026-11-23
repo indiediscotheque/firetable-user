@@ -3,12 +3,14 @@
 //   story  1080 x 1920 (9:16): Reels, Shorts, TikTok, Stories
 //   feed   1080 x 1350 (4:5):  feed posts, carousels, Bluesky, X, Pinterest
 //
-// A song scene is the song's cover with a record sliding out of its sleeve, its
-// name, artist and a line of facts, on a blurred, darkened copy of the cover.
-// As a video the record spins, the song's 30-second preview plays, its
-// waveform moves under the words and a bar fills as it plays. Lists (the
-// charts, rising, Wrapped) are slides, and as a video a countdown with a
-// second or two of each song.
+// Every frame has the same head (the room's mark, the subject under it) and
+// foot (the address on its own), with what matters inside the platforms' safe
+// zone (SAFE). A song scene is the song's cover with a record sliding out of
+// its sleeve, its name and artist, on a blurred, darkened copy of the cover.
+// As a video the record turns and the video loops seamlessly. Videos are
+// silent: the song is added in each app from its own licensed sound picker.
+// Lists (the charts, New Music Friday, Rising, Wrapped) are slides, and as a
+// video a countdown.
 //
 // Uses sharp (a dev dependency) for the pictures and ffmpeg for the videos.
 // Never deployed (tools/).
@@ -166,79 +168,84 @@ function shadow(size, blur = 40) {
     .blur(blur).png().toBuffer().then((input) => ({ input, pad }));
 }
 
-/** The room's logo and address along the bottom (or the top) of a frame. */
-async function brand(site, { width = 960, size = 34, logoH = 54 } = {}) {
-  const logo = await sharp(ROOT + "img/idlogo2.png").resize({ height: logoH }).png().toBuffer();
+// ---------------------------------------------------------------- the frame
+
+// Where the platforms' own buttons and captions sit over a 9:16 frame. The
+// strictest of them together: Reels' top 14% and bottom 35% (Meta), Shorts'
+// 288 px top and 192 px right (Google), TikTok's ~150 px of buttons on the
+// right. Words stay inside this box (x 150-930 centred on the frame, y
+// 290-1250), which is also inside Instagram's 3:4 crop of a Reel on the grid.
+export const SAFE = { top: 290, bottom: 1250, side: 150 };
+
+const LOGO = ROOT + "img/idlogo2.png";
+
+/** The room's mark with the post's subject under it: the head of every frame. */
+async function header(kicker, F, story, accent) {
+  const lh = story ? 56 : 50;
+  const logo = await sharp(LOGO).resize({ height: lh }).png().toBuffer();
   const lw = (await sharp(logo).metadata()).width;
-  const addr = await words(site, { size, weight: 600, color: TEXT, width: width - lw - 24 });
-  return { logo, lw, addr, height: Math.max(logoH, addr.height) };
+  const k = await pill(kicker, { size: story ? 36 : 32, color: accent });
+  const top = story ? SAFE.top : 54;
+  const gap = story ? 16 : 16;
+  return {
+    layers: [{ input: logo, left: Math.round((F.w - lw) / 2), top }, { input: k.input, left: Math.round((F.w - k.width) / 2), top: top + lh + gap }],
+    bottom: top + lh + gap + k.height
+  };
+}
+
+/** The address on its own along the foot of the frame. */
+async function footer(site, F, story) {
+  const a = await words(site, { size: story ? 36 : 32, weight: 600, color: SOFT, spacing: 0.5, width: F.w - 120, align: "centre" });
+  const top = story ? SAFE.bottom - a.height : F.h - 60 - a.height;
+  return { layer: { input: a.input, left: Math.round((F.w - a.width) / 2), top }, top };
 }
 
 function pill(text, { size = 30, color = GOLD } = {}) {
-  return words(text.toUpperCase(), { size, weight: 800, color, spacing: 3, width: 960 });
+  return words(String(text).toUpperCase(), { size, weight: 800, color, spacing: 3, width: 960, maxHeight: Math.round(size * 1.4), min: 24 });
 }
+
+const kickerColour = (accent) => accent === GOLD ? GOLD : usable(accent);
 
 // ---------------------------------------------------------------- a song
 
 /**
  * Everything a song frame is made of, laid out for `format`.
- * @param {{cover: Buffer, accent?: string, kicker: string, title: string, artist: string, meta?: string[], cta?: string, site: string}} s
+ * @param {{cover: Buffer, accent?: string, kicker: string, title: string, artist: string, meta?: string[], site: string}} s
  * @param {"story"|"feed"} format
  */
 export async function songScene(s, format = "story") {
   const F = format === "story" ? STORY : FEED;
   const accent = s.accent || await accentOf(s.cover);
   const story = format === "story";
-  // the cover and the record beside it
-  const C = story ? 720 : 680, D = Math.round(C * 0.94), slide = Math.round(C * 0.36);
-  const cx = Math.round((F.w - (C + slide)) / 2), cy = story ? 330 : 140;
+  const layers = [];
+  const head = await header(s.kicker, F, story, kickerColour(accent));
+  layers.push(...head.layers);
+  const foot = await footer(s.site, F, story);
+  // the words first, so the cover and the words can sit together in the middle of the space
+  const W = story ? F.w - 2 * SAFE.side : F.w - 140;
+  const C = story ? 540 : 600, D = Math.round(C * 0.94), slide = Math.round(C * 0.36);
+  const t = await words(s.title, { size: story ? 66 : 60, weight: 800, width: W, maxHeight: story ? 150 : 136, align: "centre", min: 44 });
+  const a = await words(s.artist, { size: story ? 48 : 42, weight: 600, color: SOFT, width: W, maxHeight: story ? 60 : 54, align: "centre", min: 34 });
+  const meta = (s.meta || []).filter(Boolean);
+  const m = meta.length ? await words(meta.join("  ·  "), { size: story ? 34 : 32, weight: 500, color: SOFT, width: W, maxHeight: story ? 44 : 42, align: "centre", min: 28 }) : null;
+  const gap = story ? 30 : 34;
+  const space = foot.top - 18 - (head.bottom + (story ? 30 : 28));
+  const parts = [t, a, m].filter(Boolean);
+  // drop the facts, then the artist, if a long title leaves no room
+  while (parts.length > 1 && C + gap + parts.reduce((h, x) => h + x.height + 12, 0) > space) parts.pop();
+  const block = C + gap + parts.reduce((h, x) => h + x.height + 12, 0) - 12;
+  const cy = head.bottom + (story ? 30 : 28) + Math.max(0, Math.round((space - block) / 2));
+  const cx = Math.round((F.w - (C + slide)) / 2);
   const dx = cx + C + slide - D, dy = cy + Math.round((C - D) / 2);
   const coverPng = await rounded(s.cover, C, 22);
   const disc = await vinyl(s.cover, D);
   const sh = await shadow(C);
-
-  const layers = [{ input: sh.input, left: cx - sh.pad, top: cy - sh.pad }];
-  // the kicker over the cover, the room's mark above it
-  const top = story ? 170 : 62;
-  const k = await pill(s.kicker, { color: accent === GOLD ? GOLD : "#ffffff" });
-  layers.push({ input: k.input, left: Math.round((F.w - k.width) / 2), top });
-  if (story) {
-    const logo = await sharp(ROOT + "img/idlogo2.png").resize({ height: 64 }).png().toBuffer();
-    const lw = (await sharp(logo).metadata()).width;
-    layers.push({ input: logo, left: Math.round((F.w - lw) / 2), top: 80 });
-  }
-  // the words under the cover
-  let y = cy + C + (story ? 60 : 40);
-  const W = F.w - 120;
-  const t = await words(s.title, { size: story ? 74 : 62, weight: 800, width: W, maxHeight: story ? 190 : 150, align: "centre", min: 40 });
-  layers.push({ input: t.input, left: Math.round((F.w - t.width) / 2), top: y });
-  y += t.height + 14;
-  const a = await words(s.artist, { size: story ? 46 : 40, weight: 600, color: SOFT, width: W, maxHeight: story ? 120 : 56, align: "centre", min: 30 });
-  layers.push({ input: a.input, left: Math.round((F.w - a.width) / 2), top: y });
-  y += a.height + 18;
-  if (s.meta && s.meta.length) {
-    const m = await words(s.meta.filter(Boolean).join("  ·  "), { size: story ? 32 : 28, weight: 500, color: DIM, width: W, maxHeight: story ? 84 : 40, align: "centre", min: 24 });
-    layers.push({ input: m.input, left: Math.round((F.w - m.width) / 2), top: y });
-    y += m.height;
-  }
-  // the waveform and the bar (moving in the video; a still line in a picture)
-  const wave = story ? { x: 90, y: Math.max(y + 40, 1330), w: 900, h: 130 } : null;
-  const bar = story ? { x: 90, y: wave.y + wave.h + 22, w: 900, h: 8 } : null;
-  if (bar) layers.push({ input: Buffer.from(`<svg width="${bar.w}" height="${bar.h}"><rect width="${bar.w}" height="${bar.h}" rx="${bar.h / 2}" fill="#fff" fill-opacity="0.18"/></svg>`), left: bar.x, top: bar.y });
-  // the call to come and listen, and the address
-  const b = await brand(s.site, { size: story ? 36 : 32, logoH: story ? 52 : 46 });
-  const cta = s.cta ? await words(s.cta, { size: story ? 34 : 28, weight: 700, color: accent, width: W, align: "centre" }) : null;
-  const by = story ? bar.y + 50 : F.h - 64 - b.height;
-  if (cta) {
-    const cy2 = story ? by : by - cta.height - 14;
-    layers.push({ input: cta.input, left: Math.round((F.w - cta.width) / 2), top: cy2 });
-  }
-  const bx = Math.round((F.w - (b.lw + 20 + b.addr.width)) / 2), byy = story ? by + (cta ? cta.height + 18 : 0) : by;
-  layers.push({ input: b.logo, left: bx, top: byy });
-  layers.push({ input: b.addr.input, left: bx + b.lw + 20, top: byy + Math.round((b.height - b.addr.height) / 2) });
-
+  layers.unshift({ input: sh.input, left: cx - sh.pad, top: cy - sh.pad });
+  let y = cy + C + gap;
+  for (const x of parts) { layers.push({ input: x.input, left: Math.round((F.w - x.width) / 2), top: y }); y += x.height + 12; }
+  layers.push(foot.layer);
   const base = await sharp(await backdrop(s.cover, F, accent)).composite(layers).png().toBuffer();
-  return { F, accent, base, disc, shine: shine(D), cover: coverPng, pos: { disc: [dx, dy], cover: [cx, cy], D }, wave, bar };
+  return { F, accent, base, disc, shine: shine(D), cover: coverPng, pos: { disc: [dx, dy], cover: [cx, cy], D } };
 }
 
 /** The scene as one picture: a JPEG (the record still, a little turned). */
@@ -255,41 +262,46 @@ export async function sceneStill(scene) {
 
 // ---------------------------------------------------------------- lists
 
+const finish = (bg, F, accent, layers) => backdrop(bg, F, accent).then((b) => sharp(b).composite(layers).flatten({ background: BG })
+  .jpeg({ quality: 90, mozjpeg: true, chromaSubsampling: "4:4:4" }).toBuffer());
+
 /**
- * A list frame: a title over up to ten rows of songs with their covers.
- * @param {{kicker: string, title: string, sub?: string, rows: Array<{rank?: number|string, cover: Buffer, title: string, artist: string, note?: string}>, site: string, accent?: string, cta?: string}} l
+ * A list frame: the head, a title, then up to five rows of songs with their covers.
+ * @param {{kicker: string, title: string, sub?: string, rows: Array<{rank?: number|string, cover: Buffer, title: string, artist: string, note?: string}>, site: string, accent?: string}} l
  */
 export async function listFrame(l, format = "feed") {
   const F = format === "story" ? STORY : FEED;
   const story = format === "story";
   const accent = l.accent || GOLD;
-  const bgCover = l.rows[0] ? l.rows[0].cover : await plainCover();
   const layers = [];
-  let y = story ? 150 : 60;
-  const k = await pill(l.kicker, { color: accent });
-  layers.push({ input: k.input, left: 60, top: y });
-  y += k.height + 14;
-  const t = await words(l.title, { size: story ? 76 : 64, weight: 800, width: F.w - 120, maxHeight: story ? 180 : 150, min: 40 });
-  layers.push({ input: t.input, left: 60, top: y });
-  y += t.height + 8;
+  const head = await header(l.kicker, F, story, accent);
+  layers.push(...head.layers);
+  let y = head.bottom + 22;
+  const t = await words(l.title, { size: story ? 64 : 56, weight: 800, width: F.w - 2 * SAFE.side, maxHeight: story ? 150 : 130, align: "centre", min: 40 });
+  layers.push({ input: t.input, left: Math.round((F.w - t.width) / 2), top: y });
+  y += t.height + 6;
   if (l.sub) {
-    const s = await words(l.sub, { size: story ? 34 : 30, weight: 500, color: SOFT, width: F.w - 120, maxHeight: 80 });
-    layers.push({ input: s.input, left: 60, top: y });
+    const s = await words(l.sub, { size: story ? 32 : 28, weight: 500, color: SOFT, width: F.w - 2 * SAFE.side, maxHeight: 44, align: "centre" });
+    layers.push({ input: s.input, left: Math.round((F.w - s.width) / 2), top: y });
     y += s.height;
   }
-  y += story ? 40 : 28;
-  const foot = 130;
-  const room = F.h - y - foot - (story ? 260 : 0);
+  y += story ? 36 : 28;
+  const foot = await footer(l.site, F, story);
+  layers.push(foot.layer);
   const n = l.rows.length;
-  const rowH = Math.min(story ? 190 : 170, Math.floor(room / Math.max(n, 1)));
-  const art = Math.round(rowH * 0.82);
+  const rowH = Math.min(story ? 180 : 168, Math.floor((foot.top - 30 - y) / Math.max(n, 1)));
+  const art = Math.round(rowH * 0.8);
+  const x0 = SAFE.side;
   for (const r of l.rows) {
-    const rank = r.rank != null ? await words(String(r.rank), { size: Math.round(rowH * 0.42), weight: 800, color: accent, width: 110, align: "right" }) : null;
-    let x = 60;
-    if (rank) { layers.push({ input: rank.input, left: x + 110 - rank.width, top: y + Math.round((rowH - rank.height) / 2) }); x += 130; }
+    let x = x0;
+    if (r.rank != null) {
+      const rank = await words(String(r.rank), { size: Math.round(rowH * 0.4), weight: 800, color: accent, width: 96, align: "right" });
+      layers.push({ input: rank.input, left: x + 96 - rank.width, top: y + Math.round((rowH - rank.height) / 2) });
+      x += 116;
+    }
     layers.push({ input: await rounded(r.cover, art, 12), left: x, top: y + Math.round((rowH - art) / 2) });
     x += art + 26;
-    const w = F.w - x - 60;
+    const w = F.w - x - SAFE.side;
     const ts = Math.round(rowH * 0.24), as = Math.round(rowH * 0.19);
     const tt = await words(oneLine(r.title, ts, w, 700), { size: ts, weight: 700, width: w });
     const aa = await words(oneLine(r.artist + (r.note ? "  ·  " + r.note : ""), as, w, 500), { size: as, weight: 500, color: SOFT, width: w });
@@ -298,84 +310,62 @@ export async function listFrame(l, format = "feed") {
     layers.push({ input: aa.input, left: x, top: top + tt.height + 6 });
     y += rowH;
   }
-  const b = await brand(l.site, { size: 32, logoH: 46 });
-  const by = F.h - (story ? 330 : 70) - b.height;
-  if (l.cta) {
-    const c = await words(l.cta, { size: 30, weight: 700, color: accent, width: F.w - 120 });
-    layers.push({ input: c.input, left: 60, top: by - c.height - 16 });
-  }
-  layers.push({ input: b.logo, left: 60, top: by });
-  layers.push({ input: b.addr.input, left: 60 + b.lw + 20, top: by + Math.round((b.height - b.addr.height) / 2) });
-  return sharp(await backdrop(bgCover, F, accent)).composite(layers).flatten({ background: BG }).jpeg({ quality: 90, mozjpeg: true, chromaSubsampling: "4:4:4" }).toBuffer();
+  return finish(l.rows[0] ? l.rows[0].cover : await plainCover(), F, accent, layers);
 }
 
 /**
- * A title frame: a kicker, a big title, a line under it and up to four covers
- * (or one big number). For a chart's first slide, Wrapped, theme nights and
+ * A title frame: the head, up to four covers (or one, with a big number over
+ * it), a title and a line or two. A list's first slide, Wrapped, themes and
  * "the room is busy".
- * @param {{kicker: string, title: string, sub?: string, big?: string, bigLabel?: string, covers: Buffer[], site: string, accent?: string, cta?: string, lines?: string[]}} c
+ * @param {{kicker: string, title: string, sub?: string, big?: string, bigLabel?: string, covers: Buffer[], site: string, accent?: string, lines?: string[]}} c
  */
 export async function titleFrame(c, format = "feed") {
   const F = format === "story" ? STORY : FEED;
   const story = format === "story";
   const accent = c.accent || GOLD;
   const covers = (c.covers || []).filter(Boolean);
-  const bg = covers[0] || await plainCover();
   const layers = [];
-  let y = story ? 200 : 70;
-  if (story) {
-    const logo = await sharp(ROOT + "img/idlogo2.png").resize({ height: 64 }).png().toBuffer();
-    const lw = (await sharp(logo).metadata()).width;
-    layers.push({ input: logo, left: Math.round((F.w - lw) / 2), top: 90 });
+  const head = await header(c.kicker, F, story, accent);
+  layers.push(...head.layers);
+  const foot = await footer(c.site, F, story);
+  layers.push(foot.layer);
+  const M = story ? 520 : 600;
+  const W = story ? F.w - 2 * SAFE.side : F.w - 140;
+  const t = await words(c.title, { size: story ? 66 : 60, weight: 800, width: W, maxHeight: story ? 150 : 136, align: "centre", min: 44 });
+  const lines = [];
+  for (const [i, line] of [c.sub, ...(c.lines || [])].filter(Boolean).entries()) {
+    lines.push(await words(line, { size: i ? (story ? 32 : 30) : (story ? 40 : 36), weight: 500, color: SOFT, width: W, maxHeight: story ? 96 : 90, align: "centre", min: 28 }));
   }
-  const k = await pill(c.kicker, { color: accent });
-  layers.push({ input: k.input, left: Math.round((F.w - k.width) / 2), top: y });
-  y += k.height + 30;
-  // the mosaic: four covers in a square, or one
-  const M = story ? 760 : 620;
+  const top0 = head.bottom + (story ? 30 : 28);
+  const space = foot.top - 18 - top0;
+  const gap = story ? 30 : 34;
+  const parts = [t, ...lines];
+  const mosaicH = covers.length ? M + gap : 0;
+  while (parts.length > 1 && mosaicH + parts.reduce((h, x) => h + x.height + 10, 0) > space) parts.pop();
+  const block = mosaicH + parts.reduce((h, x) => h + x.height + 10, 0) - 10;
+  let y = top0 + Math.max(0, Math.round((space - block) / 2));
   if (covers.length) {
     const four = covers.length >= 4;
     const tile = four ? (M - 12) / 2 : M;
     const spots = four ? [[0, 0], [tile + 12, 0], [0, tile + 12], [tile + 12, tile + 12]] : [[0, 0]];
     const mx = Math.round((F.w - M) / 2);
     const sh = await shadow(M);
-    layers.push({ input: sh.input, left: mx - sh.pad, top: y - sh.pad });
+    layers.unshift({ input: sh.input, left: mx - sh.pad, top: y - sh.pad });
     for (let i = 0; i < spots.length; i++) layers.push({ input: await rounded(covers[i], Math.round(tile), 18), left: mx + Math.round(spots[i][0]), top: y + Math.round(spots[i][1]) });
     if (c.big) {
       // a number over the covers, on a dark band
-      const bigW = await words(c.big, { size: story ? 200 : 170, weight: 900, color: TEXT, width: M, align: "centre" });
-      const lab = c.bigLabel ? await words(c.bigLabel, { size: 40, weight: 700, color: TEXT, width: M - 40, align: "centre" }) : null;
+      const bigW = await words(c.big, { size: story ? 190 : 170, weight: 900, color: TEXT, width: M, align: "centre" });
+      const lab = c.bigLabel ? await words(c.bigLabel, { size: 38, weight: 700, color: TEXT, width: M - 40, align: "centre" }) : null;
       const bandH = bigW.height + (lab ? lab.height + 10 : 0) + 50;
-      layers.push({ input: Buffer.from(`<svg width="${M}" height="${bandH}"><rect width="${M}" height="${bandH}" rx="18" fill="${BG}" fill-opacity="0.78"/></svg>`), left: mx, top: y + Math.round((M - bandH) / 2) });
-      layers.push({ input: bigW.input, left: Math.round((F.w - bigW.width) / 2), top: y + Math.round((M - bandH) / 2) + 20 });
-      if (lab) layers.push({ input: lab.input, left: Math.round((F.w - lab.width) / 2), top: y + Math.round((M - bandH) / 2) + 20 + bigW.height + 10 });
+      const by = y + Math.round((M - bandH) / 2);
+      layers.push({ input: Buffer.from(`<svg width="${M}" height="${bandH}"><rect width="${M}" height="${bandH}" rx="18" fill="${BG}" fill-opacity="0.78"/></svg>`), left: mx, top: by });
+      layers.push({ input: bigW.input, left: Math.round((F.w - bigW.width) / 2), top: by + 20 });
+      if (lab) layers.push({ input: lab.input, left: Math.round((F.w - lab.width) / 2), top: by + 20 + bigW.height + 10 });
     }
-    y += M + (story ? 60 : 40);
+    y += M + gap;
   }
-  const t = await words(c.title, { size: story ? 80 : 64, weight: 800, width: F.w - 120, maxHeight: story ? 200 : 150, align: "centre", min: 40 });
-  layers.push({ input: t.input, left: Math.round((F.w - t.width) / 2), top: y });
-  y += t.height + 14;
-  if (c.sub) {
-    const s = await words(c.sub, { size: story ? 40 : 32, weight: 500, color: SOFT, width: F.w - 120, maxHeight: story ? 110 : 80, align: "centre" });
-    layers.push({ input: s.input, left: Math.round((F.w - s.width) / 2), top: y });
-    y += s.height + 14;
-  }
-  for (const line of c.lines || []) {
-    const s = await words(line, { size: story ? 34 : 28, weight: 500, color: DIM, width: F.w - 120, maxHeight: 80, align: "centre" });
-    if (y + s.height > F.h - (story ? 420 : 140)) break;
-    layers.push({ input: s.input, left: Math.round((F.w - s.width) / 2), top: y });
-    y += s.height + 8;
-  }
-  const b = await brand(c.site, { size: 34, logoH: 50 });
-  const by = F.h - (story ? 360 : 66) - b.height;
-  if (c.cta) {
-    const cc = await words(c.cta, { size: story ? 36 : 30, weight: 700, color: accent, width: F.w - 120, align: "centre" });
-    layers.push({ input: cc.input, left: Math.round((F.w - cc.width) / 2), top: by - cc.height - 18 });
-  }
-  const bx = Math.round((F.w - (b.lw + 20 + b.addr.width)) / 2);
-  layers.push({ input: b.logo, left: bx, top: by });
-  layers.push({ input: b.addr.input, left: bx + b.lw + 20, top: by + Math.round((b.height - b.addr.height) / 2) });
-  return sharp(await backdrop(bg, F, accent)).composite(layers).flatten({ background: BG }).jpeg({ quality: 90, mozjpeg: true, chromaSubsampling: "4:4:4" }).toBuffer();
+  for (const x of parts) { layers.push({ input: x.input, left: Math.round((F.w - x.width) / 2), top: y }); y += x.height + 10; }
+  return finish(covers[0] || await plainCover(), F, accent, layers);
 }
 
 // ---------------------------------------------------------------- video
@@ -395,60 +385,38 @@ export async function haveFfmpeg() {
   try { await ffmpeg(["-version"]); return true; } catch { return false; }
 }
 
-// what every platform takes: H.264 high, yuv420p, 30 fps, AAC 48 kHz, a keyframe every 2 s, moov first
-const ENCODE = ["-c:v", "libx264", "-preset", "medium", "-crf", "20", "-profile:v", "high", "-pix_fmt", "yuv420p", "-r", String(FPS), "-g", String(FPS * 2),
-  "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", "-movflags", "+faststart"];
+// what every platform takes: H.264 high, yuv420p, 30 fps, a keyframe every second, moov first,
+// and a silent AAC track: the song is added in the app, from its own licensed sound picker
+const ENCODE = ["-c:v", "libx264", "-preset", "medium", "-crf", "19", "-profile:v", "high", "-pix_fmt", "yuv420p", "-r", String(FPS), "-g", String(FPS),
+  "-c:a", "aac", "-b:a", "64k", "-ar", "48000", "-ac", "2", "-movflags", "+faststart"];
 
 /**
- * A song scene as a video: the record turns, the preview plays, the waveform
- * moves and the bar fills.
+ * A song scene as a silent video that loops seamlessly: the record makes
+ * whole turns, so the last frame leads straight into the first.
  * @param {object} scene from songScene(…, "story")
- * @param {{audio?: string|null, start?: number, duration: number, out: string, tmp: string}} o
+ * @param {{duration: number, out: string, tmp: string}} o
  */
 export async function songVideo(scene, o) {
   mkdirSync(o.tmp, { recursive: true });
   const f = (n, b) => { const p = join(o.tmp, n); writeFileSync(p, b); return p; };
   const base = f("base.png", scene.base), disc = f("disc.png", scene.disc), sh = f("shine.png", scene.shine), cover = f("cover.png", scene.cover);
-  const D = o.duration, [dx, dy] = scene.pos.disc, [cx, cy] = scene.pos.cover, wv = scene.wave, br = scene.bar;
-  const accent = scene.accent.replace("#", "0x");
-  const inputs = ["-loop", "1", "-framerate", String(FPS), "-t", String(D), "-i", base,
-    "-loop", "1", "-framerate", String(FPS), "-t", String(D), "-i", disc,
-    "-loop", "1", "-framerate", String(FPS), "-t", String(D), "-i", sh,
-    "-loop", "1", "-framerate", String(FPS), "-t", String(D), "-i", cover];
-  if (o.audio) inputs.push("-ss", String(o.start || 0), "-t", String(D), "-i", o.audio);
-  else inputs.push("-f", "lavfi", "-t", String(D), "-i", "anullsrc=r=48000:cl=stereo");
-  const fade = Math.min(1, D / 6);
+  const D = o.duration, [dx, dy] = scene.pos.disc, [cx, cy] = scene.pos.cover;
+  const turn = D / Math.max(1, Math.round(D / 3.6)); // whole turns, about one every 3.6 s
+  const loop = (p) => ["-loop", "1", "-framerate", String(FPS), "-t", String(D), "-i", p];
   const g = [
-    // a turn every 3.6 s, the light staying put
-    `[1:v]format=rgba,rotate=a='t*2*PI/3.6':c=none:ow=iw:oh=ih[disc]`,
-    `[0:v][disc]overlay=${dx}:${dy}[a]`, `[a][2:v]overlay=${dx}:${dy}[b]`, `[b][3:v]overlay=${cx}:${cy}[c]`
+    `[1:v]format=rgba,rotate=a='t*2*PI/${turn.toFixed(4)}':c=none:ow=iw:oh=ih[disc]`,
+    `[0:v][disc]overlay=${dx}:${dy}[a]`, `[a][2:v]overlay=${dx}:${dy}[b]`, `[b][3:v]overlay=${cx}:${cy},format=yuv420p[v]`
   ];
-  let last = "c";
-  if (o.audio && wv) {
-    g.push(`[4:a]asplit=2[aw][ao]`,
-      `[aw]showwaves=s=${wv.w}x${wv.h}:mode=cline:rate=${FPS}:colors=${accent}|${accent}:scale=sqrt,format=rgba,colorchannelmixer=aa=0.9[w]`,
-      `[c][w]overlay=${wv.x}:${wv.y}:shortest=1[d]`);
-    last = "d";
-  }
-  if (br) {
-    // the bar slides into a clear strip the size of its track, so it never shows outside it
-    g.push(`color=c=black@0.0:s=${br.w}x${br.h}:r=${FPS},format=rgba[trk]`, `color=c=${accent}:s=${br.w}x${br.h}:r=${FPS},format=rgba[fill]`,
-      `[trk][fill]overlay=x='-${br.w}+${br.w}*t/${D}':y=0:format=auto[barl]`,
-      `[${last}][barl]overlay=${br.x}:${br.y}:shortest=1[e]`);
-    last = "e";
-  }
-  g.push(`[${last}]fade=t=in:st=0:d=0.35,fade=t=out:st=${(D - fade).toFixed(2)}:d=${fade.toFixed(2)},format=yuv420p[v]`);
-  const audioIn = o.audio ? (wv ? "[ao]" : "[4:a]") : "[4:a]";
-  g.push(`${audioIn}afade=t=in:st=0:d=0.5,afade=t=out:st=${(D - fade).toFixed(2)}:d=${fade.toFixed(2)},aresample=48000[aout]`);
-  await ffmpeg([...inputs, "-filter_complex", g.join(";"), "-map", "[v]", "-map", "[aout]", "-t", String(D), ...ENCODE, o.out]);
+  await ffmpeg([...loop(base), ...loop(disc), ...loop(sh), ...loop(cover), "-f", "lavfi", "-t", String(D), "-i", "anullsrc=r=48000:cl=stereo",
+    "-filter_complex", g.join(";"), "-map", "[v]", "-map", "4:a", "-t", String(D), ...ENCODE, o.out]);
   return o.out;
 }
 
 /**
- * A run of still frames as a video, each fading into the next, over one audio
- * track (or silence).
+ * A run of still frames as a silent video, each fading into the next (a
+ * countdown; the song is added in the app).
  * @param {Array<{jpg: Buffer, dur: number}>} frames
- * @param {{audio?: string|null, out: string, tmp: string}} o
+ * @param {{out: string, tmp: string}} o
  */
 export async function slideshowVideo(frames, o) {
   mkdirSync(o.tmp, { recursive: true });
@@ -461,8 +429,7 @@ export async function slideshowVideo(frames, o) {
   });
   const total = frames.reduce((s, fr) => s + fr.dur, 0) + X;
   const ai = frames.length;
-  if (o.audio) inputs.push("-t", String(total), "-i", o.audio);
-  else inputs.push("-f", "lavfi", "-t", String(total), "-i", "anullsrc=r=48000:cl=stereo");
+  inputs.push("-f", "lavfi", "-t", String(total), "-i", "anullsrc=r=48000:cl=stereo");
   const g = frames.map((_, i) => `[${i}:v]scale=${STORY.w}:${STORY.h},setsar=1,format=yuv420p[s${i}]`);
   let prev = "s0", at = 0;
   for (let i = 1; i < frames.length; i++) {
@@ -470,26 +437,9 @@ export async function slideshowVideo(frames, o) {
     g.push(`[${prev}][s${i}]xfade=transition=fade:duration=${X}:offset=${at.toFixed(2)}[x${i}]`);
     prev = "x" + i;
   }
-  g.push(`[${prev}]fade=t=out:st=${(total - 0.6).toFixed(2)}:d=0.6,format=yuv420p[v]`);
-  g.push(`[${ai}:a]afade=t=in:st=0:d=0.3,afade=t=out:st=${(total - 0.8).toFixed(2)}:d=0.8,aresample=48000[aout]`);
-  await ffmpeg([...inputs, "-filter_complex", g.join(";"), "-map", "[v]", "-map", "[aout]", "-t", total.toFixed(2), ...ENCODE, o.out]);
+  g.push(`[${prev}]format=yuv420p[v]`);
+  await ffmpeg([...inputs, "-filter_complex", g.join(";"), "-map", "[v]", "-map", ai + ":a", "-t", total.toFixed(2), ...ENCODE, o.out]);
   return o.out;
-}
-
-/**
- * A second or two of each song, one after another (a countdown's soundtrack).
- * @param {Array<{file: string|null, dur: number}>} clips  null: silence for that long
- */
-export async function audioMontage(clips, out) {
-  const inputs = [], g = [];
-  clips.forEach((c, i) => {
-    if (c.file) inputs.push("-ss", String(c.from == null ? 8 : c.from), "-t", String(c.dur), "-i", c.file);
-    else inputs.push("-f", "lavfi", "-t", String(c.dur), "-i", "anullsrc=r=48000:cl=stereo");
-    g.push(`[${i}:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=0:${c.dur},afade=t=in:st=0:d=0.12,afade=t=out:st=${Math.max(0, c.dur - 0.18).toFixed(2)}:d=0.18[a${i}]`);
-  });
-  g.push(clips.map((_, i) => `[a${i}]`).join("") + `concat=n=${clips.length}:v=0:a=1[out]`);
-  await ffmpeg([...inputs, "-filter_complex", g.join(";"), "-map", "[out]", "-c:a", "aac", "-b:a", "192k", out]);
-  return out;
 }
 
 /** A video's length in seconds and size in bytes, to check what was made. */

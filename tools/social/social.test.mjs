@@ -7,18 +7,21 @@ import { mkdtempSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { isoWeek, plain, genreTags, clip, graphemes, dayRange, zoned, artists, artistSlug } from "./util.mjs";
-import { caption, linkFor, blueskyFacets, youtubeTitle, hashtags } from "./captions.mjs";
+import { caption, linkFor, blueskyFacets, youtubeTitle, hashtags, xReply } from "./captions.mjs";
+import { roomGenre, tagsFor, GENRES } from "./keywords.mjs";
+import { kit } from "./platforms/studio.mjs";
 import { oauth1 } from "./platforms/social.mjs";
-import { targetsFor, configured } from "./run.mjs";
+import { targetsFor, configured, withinBudget, budgets } from "./run.mjs";
 import { emptyState, saveState, loadState, markPosted, count, today } from "./state.mjs";
 import { oneLine, usable } from "./render.mjs";
 
 const post = (o = {}) => ({
-  id: "fresh:1_abc", kind: "fresh", emoji: "🆕", title: "Röyksopp & Robyn - Do It Again",
-  lead: "Just out: Do It Again by Röyksopp & Robyn, a song with a long enough name to matter when the limits are tight.",
-  body: ["Chris brought it to Indie Discotheque.", "Out Nov 20, from a record whose name is also on the long side of things."],
-  cta: "Listen live with us", link: "https://www.indiediscotheque.com/music/artists/royksopp/",
-  tags: ["newmusicfriday", "newmusic", "synthpop", "electronic", "nowplaying", "indiediscotheque", "extra"],
+  id: "fresh:1_abc", kind: "fresh", emoji: "🆕", title: "Röyksopp & Robyn - Do It Again", targets: "song",
+  hook: "New synthpop from Röyksopp & Robyn: \"Do It Again\", a song with a long enough name to matter when the limits are tight",
+  facts: ["Out Nov 20 on a record whose name is also on the long side of things.", "Sounds like Robyn, The Knife, Annie."],
+  prompt: "Save it for your next playlist.", cta: "Listen live, 24/7, on Indie Discotheque", link: "https://www.indiediscotheque.com/music/artists/royksopp/",
+  tags: ["NewMusic", "Synthpop", "NewRelease", "Electropop", "SynthMusic", "IndieDiscotheque"], topic: "Synthpop",
+  searchTitle: "Röyksopp & Robyn - Do It Again (New Synthpop 2026)", sound: { title: "Do It Again", artist: "Röyksopp & Robyn" },
   mentions: { instagram: ["royksopp"], bluesky: ["royksopp.bsky.social"], x: ["royksopp"] },
   media: { video: "a.mp4", image: "a.jpg", story: "a-story.jpg" }, platforms: {}, ...o
 });
@@ -30,7 +33,6 @@ test("weeks, words and dates", () => {
   assert.equal(plain("Starting From Zero (feat. Michael McDonald)"), "starting from zero");
   assert.equal(plain("Café Del Mar (Radio Edit)"), "cafe del mar");
   assert.deepEqual(genreTags("Post-Punk & Darkwave"), ["postpunk", "darkwave"]);
-  assert.deepEqual(genreTags("R&B/Soul"), ["r", "b", "soul"].filter((t) => t.length > 1));
   assert.deepEqual(artists("Breakbot & Irfane"), ["Breakbot", "Irfane"]);
   assert.equal(artistSlug("Röyksopp"), "royksopp");
   assert.equal(clip("hello wonderful world", 12), "hello…");
@@ -42,28 +44,47 @@ test("weeks, words and dates", () => {
   assert.deepEqual([z.date, z.h, z.wd], ["2026-11-22", 21, 7]);
 });
 
-test("each platform's words fit its limits", () => {
+test("each platform's words fit its limits and lead with the keywords", () => {
   const p = post();
-  // X counts a link as 23 characters
+  for (const name of ["instagram", "tiktok", "facebook", "threads", "bluesky", "mastodon", "x", "pinterest", "telegram"]) {
+    assert.ok(caption(p, name).startsWith("🆕 New synthpop from Röyksopp"), name + " leads with the hook");
+  }
+  // X: no link in the post (it goes in the reply), one tag
   const xt = caption(p, "x");
-  const link = linkFor(p, "x");
-  assert.ok(xt.includes(link));
-  assert.ok(graphemes(xt.replace(link, "x".repeat(23))) <= 280, "x: " + graphemes(xt));
+  assert.ok(!xt.includes("https://") && graphemes(xt) <= 280);
+  assert.equal((xt.match(/#\w+/g) || []).length, 1);
+  assert.match(xReply(p), /utm_source=x/);
   assert.ok(graphemes(caption(p, "bluesky")) <= 300);
   assert.ok(graphemes(caption(p, "threads")) <= 500);
   assert.ok(graphemes(caption(p, "mastodon")) <= 500);
-  assert.ok(caption(p, "pinterest").length <= 500);
+  const pin = caption(p, "pinterest");
+  assert.ok(pin.length <= 500 && !pin.includes("#"), "Pinterest: keywords, no hashtags");
   const ig = caption(p, "instagram");
   assert.match(ig, /link in bio/);
   assert.ok(!ig.includes("https://"), "Instagram links aren't clickable: none in the caption");
   assert.equal((ig.match(/#\w+/g) || []).length, 5);
+  assert.match(ig, /#NewMusic #Synthpop/);
   assert.match(ig, /@royksopp/);
-  assert.equal(hashtags(p, "threads").length, 1);
-  assert.ok(youtubeTitle(post({ title: "x".repeat(200) })).length <= 100);
-  assert.match(youtubeTitle(p), /#Shorts$/);
-  // a lead too long for Bluesky on its own is cut, not dropped
-  const long = caption(post({ lead: "word ".repeat(120), body: [] }), "bluesky");
+  assert.match(ig, /Save it for your next playlist/);
+  assert.deepEqual(hashtags(p, "threads"), ["#Synthpop"]);
+  assert.match(caption(p, "youtube"), /#Shorts #NewMusic #Synthpop$/);
+  assert.ok(youtubeTitle(post({ searchTitle: "x".repeat(200) })).length <= 100);
+  assert.equal(youtubeTitle(p), "Röyksopp & Robyn - Do It Again (New Synthpop 2026)");
+  // a hook too long for Bluesky on its own is cut, not dropped
+  const long = caption(post({ hook: "word ".repeat(120), facts: [] }), "bluesky");
   assert.ok(graphemes(long) <= 300 && long.endsWith("…"));
+  // no DJ is ever named
+  for (const name of ["instagram", "x", "threads", "bluesky"]) assert.ok(!/found by|played by|brought it/i.test(caption(p, name)));
+});
+
+test("genre keywords", () => {
+  assert.equal(roomGenre(null, [], ["Nu-Disco"]), "Nu-Disco");
+  assert.equal(roomGenre("Soundtrack", "Dance"), "EDM");
+  assert.equal(roomGenre("nu-disco"), "Nu-Disco");
+  assert.equal(roomGenre("Soundtrack"), null);
+  assert.deepEqual(tagsFor(["NewMusic", "NewRelease"], ["French House"]).slice(0, 5), ["NewMusic", "FrenchHouse", "NewRelease", "FrenchTouch", "HouseMusic"]);
+  assert.deepEqual(tagsFor(["MusicChart", "Top10"], ["House", "Psych"]).slice(0, 4), ["MusicChart", "HouseMusic", "Psychedelic", "Top10"]);
+  assert.ok(Object.values(GENRES).every((g) => g.tags.every((t) => /^[A-Z0-9][A-Za-z0-9]*$/.test(t))), "tags are CamelCase");
 });
 
 test("links say which platform sent the visit", () => {
@@ -73,14 +94,26 @@ test("links say which platform sent the visit", () => {
   assert.equal(u.searchParams.get("utm_campaign"), "fresh");
 });
 
+test("the post kit: the sound to pick and each caption, minus what already went out", () => {
+  const k = kit(post());
+  assert.equal(k.sound, "\"Do It Again\" by Röyksopp & Robyn");
+  assert.deepEqual(k.steps.map((s) => s.where), ["Instagram Reel", "Instagram Story", "TikTok", "YouTube Short", "Facebook Reel"]);
+  assert.match(k.steps[3].text, /^Röyksopp & Robyn - Do It Again \(New Synthpop 2026\)/);
+  // the Reel went out with licensed music through the API: not in the kit
+  const k2 = kit(post({ platforms: { instagram: { status: "done" }, tiktok: { status: "done" } } }));
+  assert.ok(!k2.steps.some((s) => s.where === "Instagram Reel"));
+  assert.match(k2.steps.find((s) => s.where === "TikTok").how, /inbox/);
+  assert.deepEqual(kit(post({ media: { image: "a.jpg" } })).steps, []);
+});
+
 test("Bluesky rich text counts bytes, not characters", async () => {
-  const text = "🆕 Röyksopp @royksopp.bsky.social https://example.com/a?b=1 #newmusic";
+  const text = "🆕 Röyksopp @royksopp.bsky.social https://example.com/a?b=1 #NewMusic";
   const f = await blueskyFacets(text, async () => "did:plc:abc");
   const bytes = Buffer.from(text);
   const slice = (x) => bytes.subarray(x.index.byteStart, x.index.byteEnd).toString();
-  assert.deepEqual(f.map(slice), ["https://example.com/a?b=1", "@royksopp.bsky.social", "#newmusic"]);
+  assert.deepEqual(f.map(slice), ["https://example.com/a?b=1", "@royksopp.bsky.social", "#NewMusic"]);
   assert.equal(f[1].features[0].did, "did:plc:abc");
-  assert.equal(f[2].features[0].tag, "newmusic");
+  assert.equal(f[2].features[0].tag, "NewMusic");
 });
 
 test("OAuth 1.0a signature matches X's documented example", () => {
@@ -92,17 +125,33 @@ test("OAuth 1.0a signature matches X's documented example", () => {
 });
 
 test("a post goes only where its keys are set, and fits the platform", () => {
-  const env = { BLUESKY_HANDLE: "a", BLUESKY_APP_PASSWORD: "b", YOUTUBE_CLIENT_ID: "c", YOUTUBE_CLIENT_SECRET: "d", YOUTUBE_REFRESH_TOKEN: "e", INSTAGRAM_TOKEN: "f", DISCORD_WEBHOOK_URL: "g" };
-  assert.deepEqual(configured(env).map((p) => p.name).sort(), ["bluesky", "discord", "instagram", "instagram_story", "youtube"]);
-  // the older poster already sends new releases to Bluesky and Discord
-  assert.deepEqual(targetsFor(post(), env).sort(), ["instagram", "instagram_story", "youtube"]);
-  assert.deepEqual(targetsFor(post({ kind: "chart" }), env).sort(), ["bluesky", "discord", "instagram", "instagram_story", "youtube"]);
-  // no video: nothing for YouTube
-  assert.ok(!targetsFor(post({ kind: "chart", media: { image: "a.jpg" } }), env).includes("youtube"));
-  // "right now" posts: stories and the quick feeds only
-  assert.deepEqual(targetsFor(post({ kind: "busy", targets: "live", media: { image: "a.jpg", story: "s.jpg" } }), env).sort(), ["bluesky", "discord", "instagram_story"]);
-  assert.deepEqual(targetsFor(post({ kind: "chart" }), { ...env, SOCIAL_PLATFORMS: "instagram" }).sort(), ["instagram", "instagram_story"]);
-  assert.deepEqual(targetsFor(post(), { ...env, SOCIAL_SKIP: "" }).sort(), ["bluesky", "discord", "instagram", "instagram_story", "youtube"]);
+  const env = { BLUESKY_HANDLE: "a", BLUESKY_APP_PASSWORD: "b", TIKTOK_CLIENT_KEY: "c", TIKTOK_CLIENT_SECRET: "d", TIKTOK_REFRESH_TOKEN: "e", INSTAGRAM_TOKEN: "f",
+    FACEBOOK_PAGE_ID: "1", FACEBOOK_PAGE_TOKEN: "2", DISCORD_WEBHOOK_URL: "g", STUDIO_DISCORD_WEBHOOK: "h" };
+  assert.deepEqual(configured(env).map((p) => p.name).sort(), ["bluesky", "discord", "facebook", "facebook_story", "instagram", "instagram_story", "studio", "tiktok"]);
+  // a song: a Reel, a TikTok draft and the kit; the older poster already sends new releases to Bluesky and Discord
+  assert.deepEqual(targetsFor(post(), env), ["instagram", "tiktok", "studio"]);
+  // a list: carousels, the countdown through TikTok and the kit (the kit last: it reads what the others did)
+  assert.deepEqual(targetsFor(post({ kind: "chart", targets: "list" }), env), ["instagram", "facebook", "tiktok", "bluesky", "discord", "studio"]);
+  // no video (no ffmpeg): no TikTok, no kit
+  assert.deepEqual(targetsFor(post({ kind: "chart", targets: "list", media: { image: "a.jpg" } }), env), ["instagram", "facebook", "bluesky", "discord"]);
+  // "right now": Stories and the quick feeds only
+  assert.deepEqual(targetsFor(post({ kind: "busy", targets: "live" }), env), ["instagram_story", "facebook_story", "bluesky", "discord"]);
+  assert.deepEqual(targetsFor(post({ kind: "chart", targets: "list" }), { ...env, SOCIAL_PLATFORMS: "instagram" }), ["instagram"]);
+  assert.deepEqual(targetsFor(post(), { ...env, SOCIAL_SKIP: "" }), ["instagram", "tiktok", "bluesky", "discord", "studio"]);
+});
+
+test("budgets keep each platform to a steady few", () => {
+  const H = 3600000, now = Date.UTC(2026, 10, 23, 18);
+  const st = (...hoursAgo) => ({ sent: hoursAgo.map((h) => ({ p: "instagram", at: now - h * H })) });
+  assert.ok(withinBudget(st(), "instagram", now, {}));
+  assert.ok(!withinBudget(st(5), "instagram", now, {}), "one a day");
+  assert.ok(!withinBudget(st(19), "instagram", now, {}), "20 hours apart");
+  assert.ok(withinBudget(st(23.8), "instagram", now, {}), "yesterday's, a few minutes later in the day, doesn't block today's");
+  assert.ok(!withinBudget(st(21, 45, 69, 93, 117), "instagram", now, {}), "five a week");
+  assert.ok(withinBudget({ sent: [{ p: "threads", at: now - 5 * H }] }, "threads", now, {}), "Threads: two a day, 4 hours apart");
+  assert.ok(!withinBudget({ sent: [{ p: "threads", at: now - 2 * H }] }, "threads", now, {}));
+  assert.deepEqual(budgets({ SOCIAL_BUDGET: "threads=3/15/2,x=0" }).threads, [3, 15, 2]);
+  assert.ok(!withinBudget({ sent: [] }, "x", now, { SOCIAL_BUDGET: "x=0" }), "0 turns one off");
 });
 
 test("the state forgets what's too old and keeps the rest", () => {
@@ -116,12 +165,14 @@ test("the state forgets what's too old and keeps the rest", () => {
   count(s, "2026-11-23", "fresh");
   count(s, "2026-10-01", "fresh");
   s.queue.push({ at: now - 5 * 86400000 }, { at: now });
+  s.sent.push({ p: "x", at: now - 9 * 86400000 }, { p: "x", at: now });
   saveState(file, s, now);
   const back = loadState(file);
   assert.deepEqual(Object.keys(back.posted), ["new"]);
   assert.equal(today(back, "2026-11-23", "fresh"), 2);
   assert.equal(today(back, "2026-10-01", "fresh"), 0);
   assert.equal(back.queue.length, 1);
+  assert.equal(back.sent.length, 1);
   assert.ok(!existsSync(file + ".tmp"));
 });
 

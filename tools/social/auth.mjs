@@ -11,7 +11,9 @@
 //
 //   instagram  INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET   (Meta app → Instagram → API setup with Instagram login)
 //   threads    THREADS_APP_ID, THREADS_APP_SECRET       (Meta app with the Threads use case)
-//   facebook   FACEBOOK_APP_ID, FACEBOOK_APP_SECRET     (Meta app → Facebook Login for Business); prints each Page's token
+//   facebook   FACEBOOK_APP_ID, FACEBOOK_APP_SECRET     (Meta app → Facebook Login for Business); prints each Page's
+//              token, and the Instagram account linked to the Page: Instagram through Facebook Login
+//              is what can add licensed music to Reels (use it instead of "instagram")
 //   tiktok     TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET  (developers.tiktok.com app with Login Kit and Content Posting API)
 //   pinterest  PINTEREST_APP_ID, PINTEREST_APP_SECRET   (developers.pinterest.com app); lists your boards
 //
@@ -70,13 +72,19 @@ const FLOWS = {
   async facebook() {
     need("FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET");
     const code = await codeFrom(`https://www.facebook.com/${V}/dialog/oauth?` + qs({ client_id: env.FACEBOOK_APP_ID, redirect_uri: REDIRECT, response_type: "code",
-      scope: "pages_show_list,pages_read_engagement,pages_manage_posts,business_management" }));
+      scope: "pages_show_list,pages_read_engagement,pages_manage_posts,business_management,instagram_basic,instagram_content_publish" }));
     const short = await http(`https://graph.facebook.com/${V}/oauth/access_token?` + qs({ client_id: env.FACEBOOK_APP_ID, client_secret: env.FACEBOOK_APP_SECRET, redirect_uri: REDIRECT, code }));
     const long = await http(`https://graph.facebook.com/${V}/oauth/access_token?` + qs({ grant_type: "fb_exchange_token", client_id: env.FACEBOOK_APP_ID, client_secret: env.FACEBOOK_APP_SECRET, fb_exchange_token: short.access_token }));
     // a Page token from a long-lived user token doesn't expire
-    const pages = await http(`https://graph.facebook.com/${V}/me/accounts?` + qs({ fields: "id,name,access_token", access_token: long.access_token }));
+    const pages = await http(`https://graph.facebook.com/${V}/me/accounts?` + qs({ fields: "id,name,access_token,instagram_business_account{id,username}", access_token: long.access_token }));
     if (!(pages.data || []).length) throw new Error("no Pages on this account (or the app wasn't allowed to see them)");
-    for (const p of pages.data) { console.log(`\nPage "${p.name}":`); show({ FACEBOOK_PAGE_ID: p.id, FACEBOOK_PAGE_TOKEN: p.access_token }); }
+    for (const p of pages.data) {
+      console.log(`\nPage "${p.name}":`);
+      const igAcc = p.instagram_business_account;
+      show({ FACEBOOK_PAGE_ID: p.id, FACEBOOK_PAGE_TOKEN: p.access_token, ...(igAcc ? { INSTAGRAM_USER_ID: igAcc.id, INSTAGRAM_TOKEN: p.access_token } : {}) });
+      if (igAcc) console.log(`   and the repository variable INSTAGRAM_GRAPH_HOST=graph.facebook.com (Instagram @${igAcc.username}, with licensed music for Reels)\n`);
+      else console.log("   (no Instagram account linked to this Page: link one in the Page's settings for Reels with music)\n");
+    }
   },
   async tiktok() {
     need("TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET");

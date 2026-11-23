@@ -1,7 +1,7 @@
 // What the social posting remembers between runs: what's been posted (so
 // nothing goes out twice), the queue of posts still going out to some
-// platforms, how many went out today, the platforms' refreshed tokens, and
-// the lookups (lookup.mjs).
+// platforms, what went where this past week (the budgets in run.mjs), the
+// platforms' refreshed tokens, and the lookups (lookup.mjs).
 //
 // One JSON file. The workflow keeps it on the web server, outside the site's
 // folder (never served), and fetches it before each run and puts it back after.
@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
 const DAY = 86400000;
 
 export function emptyState() {
-  return { v: 1, posted: {}, queue: [], daily: {}, tokens: {}, cache: {}, media: [], seeded: {}, last: {} };
+  return { v: 1, posted: {}, queue: [], sent: [], daily: {}, tokens: {}, cache: {}, media: [], seeded: {}, last: {} };
 }
 
 export function loadState(file) {
@@ -31,6 +31,7 @@ export function saveState(file, s, now = Date.now()) {
   for (const [k, v] of Object.entries(s.cache)) if (now - (v.at || 0) > 45 * DAY) delete s.cache[k];
   for (const k of Object.keys(s.daily)) if (now - Date.parse(k + "T00:00:00Z") > 14 * DAY) delete s.daily[k];
   s.queue = s.queue.filter((q) => now - q.at < 3 * DAY);
+  s.sent = (s.sent || []).filter((x) => now - x.at < 8 * DAY);
   writeFileSync(file + ".tmp", JSON.stringify(s, null, 1));
   renameSync(file + ".tmp", file);
 }

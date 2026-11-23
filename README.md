@@ -164,48 +164,80 @@ Run them with `cd tests && npm ci && npx playwright install chromium`, then `npm
 Every push to `master` publishes the site to DreamHost (pages last, so a visitor mid-upload never gets a new page before its scripts) (`.github/workflows/deploy.yml`, settings listed at the top of that file). It runs the checks below first and only publishes if they pass. The `?v=…` on each link to this site's own scripts, stylesheets and fonts is set at deploy time from a hash of that file, so visitors' browsers fetch exactly the files that changed; there's nothing to bump by hand (except `config.js?v=`, since `config.js` lives only on the server). Because each link changes with its file, `.htaccess` lets browsers keep those hashed files for a year (`Cache-Control: immutable`; not `config.js` or `sw.js`). The repository secret `DREAMHOST_KNOWN_HOSTS` (the output of `ssh-keyscan <your DreamHost server>`, run on your own computer) is required: the deploy only logs in to that server. It logs in with `DREAMHOST_PASSWORD`, or, if the repository secret `DREAMHOST_SSH_KEY` holds a private key whose public half is in the user's `~/.ssh/authorized_keys`, with that key only (no password is ever sent then).
 
 ## social posting
-`.github/workflows/social.yml` runs every hour (`tools/social/`): it works out what's due, draws it, puts the files on the site under `social/` and posts them to every platform whose keys are set. Times are in the room's time zone (`TZ` repository variable, default `America/Chicago`):
+`.github/workflows/social.yml` runs every hour (`tools/social/`). It works out what's due, draws it, puts the files on the site under `social/` and posts them, keeping to each platform's budget. The research behind the formats, the budgets, the keywords and the design is in the social audit (linked from the pull request that added it).
+
+**The week** (the room's time zone, the `TZ` repository variable, default `America/Chicago`). Weekly posts go out on weekday mornings, when the feeds are busiest; the day's song goes out in the evening, when the video apps are:
 
 | kind | when | what |
 |---|---|---|
-| `fresh` | up to 4 a day (10:00, 13:00, 16:00, 19:00) | a new release from Discover's New, newest first, songs a DJ brought in before the rest |
-| `onthisday` | daily, 12:00 | the most played song first played here on this day in an earlier year (`discover/lib/onThisDay`) |
-| `chart` | Mondays, 11:00 | last week's top 10, as slides and a countdown video |
-| `rising` | Wednesdays, 17:00 | the songs played more these four weeks than the four before |
-| `fires` | Fridays, 18:00 | the week's most-fired song |
-| `wrapped` | December 1st, 14:00 | the year's top 10, plays and most played artists |
-| `theme` | when it happens | a new room theme (come and play to it), and a recap when one ends |
-| `busy` | 8 or more people online, at most every 12 hours | "N people in the room right now", with what's playing (Stories and the quick feeds) |
+| `chart` | Monday 9:00 | last week's top 10: a carousel and a countdown video |
+| `rising` | Wednesday 9:00 | the songs played more these four weeks than the four before |
+| `newweek` | Friday 9:00 | New Music Friday: the week's new releases, the ones the room played most first |
+| `fires` | Saturday 11:00 | the week's most-fired song |
+| `spotlight` | daily 18:00 | one new release the room has been playing, or, on a day without one, the song first played here on this day in an earlier year (`onthisday`) |
+| `wrapped` | December 1st | the year's top 10 and the room's year in numbers |
+| `theme` | when it happens | a new room theme, and a recap when one ends |
+| `busy` | 8 or more people online, at most once a day | "N listening right now", as Stories |
 
-**What's drawn** (`tools/social/render.mjs`, `sharp` and ffmpeg): a song is its album cover with a record sliding out of the sleeve, the song's name, artist and a line of facts, on a blurred copy of the cover tinted with its colour. The 9:16 video (Reels, Shorts, TikTok, Stories) spins the record, plays the song's 30-second preview, moves a waveform in the song's colour and fills a bar as it plays. Lists are a title slide plus five songs a slide (4:5, carousels), and a countdown video: two seconds of each song from the bottom up, the top one longest. Covers and previews come from Apple's catalog, then Deezer's, then the YouTube thumbnail (`lookup.mjs`). Each caption fits its platform (`captions.mjs`): Instagram and TikTok say "link in bio" and take 5 hashtags, Threads one, X counts a link as 23 characters, Bluesky gets real links, mentions and tags. Every link carries `utm_source`/`utm_medium`/`utm_campaign`, so the site's stats show what each platform sends.
+Posts name songs and artists, never the room's DJs.
 
-**Tagging the artists.** Their accounts come from MusicBrainz (an exact name match only, so the wrong band is never tagged): they're @-mentioned on Instagram, Threads, TikTok, Bluesky and X, and invited as Instagram collaborators (`INSTAGRAM_COLLAB=false` turns that off). An artist who accepts shows the post to their own followers.
+**Music only from the platforms' own libraries.** The videos are silent, and the song is added from each app's licensed sound picker:
+- **Instagram Reels** go out with the song from Instagram's music library (its Audio API), when the library has that exact song. Reels for the daily song go out as Trial Reels (`INSTAGRAM_TRIAL`), shown to non-followers first and shared with followers only if they do well, so followers aren't flooded. This needs Instagram through Facebook Login (below).
+- **TikTok** gets the video as a draft in the app's inbox: add the sound, paste the caption, post.
+- **YouTube Shorts, Facebook Reels, Stories with a music sticker, and Reels whose song isn't in Instagram's API library** have no way to add licensed music from outside the app. They go in a **post kit**: one message to a private channel (`STUDIO_DISCORD_WEBHOOK` and/or `STUDIO_TELEGRAM_CHAT_ID`) with the video and the Story picture to save, the song to pick, and each platform's caption ready to copy, in order. It takes a few minutes a day.
+- **Carousels and pictures** (Instagram and Facebook carousels, Threads, Bluesky, Mastodon, X, Pinterest, Telegram, Discord) post themselves.
 
-**Where things go:** song and list posts go everywhere; theme posts skip YouTube and TikTok; `busy` goes to Stories, Threads, Bluesky, Mastodon, X, Telegram and Discord. New releases skip Bluesky and Discord (`SOCIAL_SKIP`, default `fresh:bluesky,fresh:discord`), which the older fresh-track poster already covers. A platform that fails is tried on the next two runs; each has a daily limit (YouTube 2, as its uploads share the bot's API quota; X 2).
+**Budgets** (`tools/social/run.mjs`, `SOCIAL_BUDGET` to change one, e.g. `threads=3/15/3`; `x=0` turns one off). A post over budget skips that platform, and one over budget everywhere waits for another day:
 
-**Setting up a platform** (repository secrets, Settings → Secrets and variables → Actions). It's left out until its secrets are set. `node tools/social/run.mjs platforms` lists what's set.
+| | a day | a week | hours apart |
+|---|---|---|---|
+| Instagram feed (Reels, carousels) | 1 | 5 | 20 |
+| Instagram Stories | 2 | 10 | 4 |
+| Facebook feed / Stories | 1 / 1 | 4 / 7 | 20 / 8 |
+| TikTok drafts, the post kit | 1 | 5–6 | 20 |
+| Threads, Mastodon | 2 | 10 | 3–4 |
+| Bluesky, Telegram, Discord | 2 | 12 | 3 |
+| X | 1 | 6 | 12 |
+| Pinterest | 2 | 10 | 3 |
 
-| platform | secrets | how to get them |
+**Words built for each platform's search and ranking** (`captions.mjs`, `keywords.mjs`):
+- **The opening line** names the genre, artist and song people search for ("French house new release: Justice, …"). The genre is the room's own, or the artist's most played genre here for songs not tagged yet.
+- **Under it:** a fact from the room (plays, chart moves), "sounds like" artists, and a prompt to comment, save or send. Those are what the feeds rank on.
+- **Tags:** CamelCase hashtags, which screen readers read as words. Instagram and TikTok get 5 (Instagram's cap), YouTube #Shorts and 2 more, Threads one topic, Bluesky 3, Mastodon 4, X 1, Pinterest none (it ranks on keywords).
+- **Links:** Instagram and TikTok say "link in bio". X puts the link in a reply, since posts with links reach fewer people. YouTube and Pinterest titles are keyword titles ("Justice - Starting From Zero (New French House 2026)").
+- **Alt text** on every picture where the platform takes it.
+- **UTM tags** on every link, so the site's stats show what each platform sends.
+
+**Artists:** their accounts come from MusicBrainz (exact name matches only). They're @-mentioned and invited as Instagram collaborators (`INSTAGRAM_COLLAB=false` turns that off).
+
+**Design** (`render.mjs`):
+- **Every frame:** the room's mark with the post's subject under it at the top, and the address alone at the foot.
+- **A song** is its album cover with a record sliding out of the sleeve, the song, the artist and a line of facts, centred, on a blurred, darkened copy of the cover.
+- **Safe zone:** in 9:16 frames everything sits between y 290 and 1250, x 150 and 930, clear of the Reels, TikTok and Shorts buttons and captions and inside Instagram's 3:4 grid crop.
+- **Song videos** run 30 seconds and loop seamlessly (the record makes whole turns).
+- **Carousels** open on a hook (the number one, or the covers), then one song a slide (each stands alone, since Instagram can re-show a carousel from slide 2), then a "listen live" slide. Platforms that take 4 pictures get the hook and the list, five songs a slide.
+
+**Setting up** (repository secrets; a platform is left out until its secrets are set; `node tools/social/run.mjs platforms` lists what's set and each budget):
+
+| platform | secrets | how |
 |---|---|---|
-| YouTube Shorts | `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` | the same three as the hostbot's `.env` (its `tools/youtube-auth.js`) |
-| TikTok | `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`, `TIKTOK_REFRESH_TOKEN` | an app at developers.tiktok.com with Login Kit and the Content Posting API, then `node tools/social/auth.mjs tiktok`. Videos arrive in the TikTok app as drafts: add the song's official sound and post. Once TikTok has audited the app, the `TIKTOK_MODE=direct` variable posts them straight away |
-| Instagram (Reels, carousels, Stories) | `INSTAGRAM_TOKEN`, `INSTAGRAM_USER_ID` | a professional (Business or Creator) account and a Meta app with "Instagram API with Instagram login", then `node tools/social/auth.mjs instagram`. The token is renewed every week |
-| Facebook Page (Reels, photos, Stories) | `FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_TOKEN` | the same Meta app with Facebook Login for Business, then `node tools/social/auth.mjs facebook` |
+| Facebook Page and Instagram (with music) | `FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_TOKEN`, `INSTAGRAM_USER_ID`, `INSTAGRAM_TOKEN`, and the variable `INSTAGRAM_GRAPH_HOST=graph.facebook.com` | an Instagram professional account linked to the Facebook Page, a Meta app with Facebook Login for Business, then `node tools/social/auth.mjs facebook` (prints them all; the tokens don't expire) |
+| Instagram without Facebook | `INSTAGRAM_TOKEN` | `node tools/social/auth.mjs instagram`. Carousels and Stories only: every Reel goes to the kit |
 | Threads | `THREADS_TOKEN`, `THREADS_USER_ID` | the Meta app with the Threads use case, then `node tools/social/auth.mjs threads` |
+| TikTok | `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`, `TIKTOK_REFRESH_TOKEN` | an app at developers.tiktok.com with Login Kit and the Content Posting API (`video.upload`), then `node tools/social/auth.mjs tiktok` |
+| the post kit | `STUDIO_DISCORD_WEBHOOK` and/or `STUDIO_TELEGRAM_CHAT_ID` | a webhook on a private Discord channel; or message the Telegram bot and use your chat id |
 | Bluesky | `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD` | Settings → Privacy and security → App passwords |
-| Mastodon | `MASTODON_URL`, `MASTODON_TOKEN` | Preferences → Development → New application (`write:statuses write:media`) |
+| Mastodon | `MASTODON_URL`, `MASTODON_TOKEN` | Preferences → Development → New application (`write:statuses write:media`). Tick "This is an automated account"; a server's bot rules (a tag, a daily limit) go in `SOCIAL_MASTODON_TAGS` and `SOCIAL_BUDGET` |
 | X | `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` | an app at developer.x.com with read and write access |
-| Pinterest | `PINTEREST_APP_ID`, `PINTEREST_APP_SECRET`, `PINTEREST_REFRESH_TOKEN`, `PINTEREST_BOARD_ID` | an app at developers.pinterest.com, then `node tools/social/auth.mjs pinterest` (lists your boards) |
-| Telegram channel | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | a bot from @BotFather, made an admin of the channel; the chat id is `@channelname` |
+| Pinterest | `PINTEREST_APP_ID`, `PINTEREST_APP_SECRET`, `PINTEREST_REFRESH_TOKEN`, `PINTEREST_BOARD_ID` | an app at developers.pinterest.com, then `node tools/social/auth.mjs pinterest` |
+| Telegram channel | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | a bot from @BotFather, made an admin of the channel (`@channelname`) |
 | Discord | `DISCORD_WEBHOOK_URL` | the channel → Edit → Integrations → Webhooks |
 
-`auth.mjs` needs the app's id and secret in the environment (named at the top of the file) and the app's redirect address set to `https://www.indiediscotheque.com/` (or `REDIRECT_URI`). It prints a link; allow the app and paste back the address the browser lands on.
+`auth.mjs` needs the app's id and secret in the environment (named at the top of the file) and the app's redirect address set to `https://www.indiediscotheque.com/` (or `REDIRECT_URI`). It prints a link; allow the app and paste back the address the browser lands on. New releases skip Bluesky and Discord by default (`SOCIAL_SKIP`), which the older fresh-track poster already covers.
 
-**Trying it:** Actions → "Social posting" → Run workflow. "Dry run" (on by default) draws what's due and prints every platform's words without uploading or posting; pick a kind and "Post even if it isn't due" to send one now. Locally, `node tools/social/run.mjs preview --site https://www.indiediscotheque.com/ --kind fresh,chart --out /tmp/social` draws them and prints every caption (needs ffmpeg for the videos). Settings (repository variables): `SOCIAL_FRESH_HOURS`, `SOCIAL_FRESH_PER_DAY`, `SOCIAL_SKIP`, `SOCIAL_PLATFORMS`, `SOCIAL_AUDIO`, `SOCIAL_SECONDS`, `SOCIAL_BUSY_MIN` and the rest at the top of `tools/social/run.mjs`.
+**Trying it:** Actions → "Social posting" → Run workflow. "Dry run" (on by default) draws what's due and prints every platform's words and the post kit without uploading or posting; pick a kind and "Post even if it isn't due" to send one now. Locally, `node tools/social/run.mjs preview --site https://www.indiediscotheque.com/ --kind spotlight,chart --out /tmp/social` draws them and prints everything (needs ffmpeg for the videos).
 
-**What it keeps:** `firetable-social/state.json` in the SFTP user's home on the server (outside the site, never served): what's been posted and where, the queue, the platforms' renewed tokens and 30 days of lookups. Files in `social/` (marked `noindex`) are deleted after 10 days. The first run counts every new release already out as posted, except the newest 3.
-
-**Music rights:** the videos use the 30-second previews Apple and Deezer offer for promotion, credited in the YouTube description. YouTube's Content ID may claim a Short for the label, which usually only means the label earns from it. Instagram can mute a Reel's audio; set `SOCIAL_AUDIO=false` for silent videos, or post TikTok drafts with the platform's licensed sound.
+**What it keeps:** `firetable-social/state.json` in the SFTP user's home on the server (outside the site, never served). It holds what's been posted and where, the queue, the past week's posts (for the budgets), renewed tokens and 30 days of lookups. Files in `social/` (marked `noindex`) are deleted after 10 days. Until a platform has its keys, runs draw nothing; the first run after that counts every new release already out as posted, except the newest 3.
 
 ## link previews
 `index.html` has the room's title, description, canonical address and Open Graph / Twitter tags, so a link pasted into Discord, iMessage or Slack shows the room with `img/og.png` (1200 × 630). Each library page under `/music/` swaps in its own (`tools/plain-pages.mjs`), with the genre's or artist's cover where there is one. The site is `https://www.indiediscotheque.com/` in those tags: change them there if the address changes.
