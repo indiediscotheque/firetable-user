@@ -696,6 +696,7 @@ firetable.actions.editTagsPrompt = function (songid, tag, anchorEl) {
   var popoverEl = document.getElementById('tagEditorPopover');
   if (popoverEl.matches(':popover-open')) popoverEl.hidePopover();
   firetable.tagEditNowPlaying = null;
+  firetable.tagEditTarget = null;
   $('.pvbar.editing').removeClass('editing');
   // anchorEl's own row first: the same track can be in Recent more than once
   var $pvbar = anchorEl ? $(anchorEl).closest('.pvbar') : $();
@@ -1691,6 +1692,13 @@ firetable.ui.setupPlaylistEvents = function () {
     var input = this.querySelector(".tagMachine");
     var tag = readTag(input);
     if (!tag) return;
+    // a song from elsewhere (Discover): its opener saves it
+    var target = firetable.tagEditTarget;
+    if (target) {
+      popoverEl.hidePopover();
+      target.save(tag);
+      return;
+    }
     var np = firetable.tagEditNowPlaying;
     if (np) {
       if (firetable.song && String(firetable.song.cid) === String(np.cid)) {
@@ -1753,7 +1761,7 @@ firetable.ui.setupPlaylistEvents = function () {
 
   // ── Tag editor popover cleanup on auto-dismiss ──
   document.getElementById('tagEditorPopover').addEventListener('toggle', function (e) {
-    if (e.newState === 'closed') firetable.tagEditNowPlaying = null;
+    if (e.newState === 'closed') firetable.tagEditNowPlaying = firetable.tagEditTarget = null;
     if (e.newState === 'closed' && firetable.editingPvbar) {
       firetable.editingPvbar.removeClass('editing');
       firetable.editingPvbar = null;

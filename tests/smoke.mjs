@@ -3202,6 +3202,47 @@ try {
   check(/^radio\|.*Nu-Disco radio/.test(libPages.radio), "genre radio plays (" + libPages.radio + ")");
   check(/^dj1\|.*Friday nights/.test(libPages.dj) && libPages.artist === "Alpha|1" && libPages.year === "1|1", "DJ, artist and year pages; a year listing one song three times shows it once (" + [libPages.dj, libPages.artist, libPages.year].join(" / ") + ")");
   check(/no page for this DJ/.test(libPages.missing), "a DJ without a page says so (" + libPages.missing + ")");
+  const dTags = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
+    const items = () => [...document.querySelectorAll("#dMenu .d-menuitem")].map((e) => e.getAttribute("data-act")).filter(Boolean).join();
+    const out = {};
+    location.hash = "#discover/genres/nu-disco";
+    await until(() => document.querySelector("#dBrowse .d-more"));
+    const row = () => document.querySelector("#dBrowse .d-more").closest(".pvbar");
+    const cid = row().getAttribute("data-cid");
+    row().querySelector(".d-more").click();
+    out.visitor = items();
+    document.body.click();
+    // a mod (or supermod): Edit tags… on every Discover song
+    const was = { uid: ftapi.uid, isMod: ftapi.isMod, editTag: ftapi.actions.editTag };
+    ftapi.uid = "smokeMod";
+    ftapi.isMod = true;
+    const calls = [];
+    ftapi.actions.editTag = (...a) => { calls.push(a.slice(0, 5).join("|")); a[5](null); };
+    row().querySelector(".d-more").click();
+    out.mod = items();
+    document.querySelector('#dMenu [data-act="tags"]').click();
+    await wait(200);
+    out.editor = document.getElementById("tagEditorPopover").matches(":popover-open") && document.getElementById("tagMachine").value;
+    document.getElementById("tagMachine").value = "Fixed Artist - Fixed Title";
+    document.querySelector("#tagEditorForm .tagSave").click();
+    await until(() => document.querySelector('#dBrowse .pvbar[data-cid="' + cid + '"] .d-sheetlink') &&
+      document.querySelector('#dBrowse .pvbar[data-cid="' + cid + '"] .d-sheetlink').textContent === "Fixed Title");
+    const after = document.querySelector('#dBrowse .pvbar[data-cid="' + cid + '"]');
+    out.calls = calls.join();
+    out.cid = cid;
+    out.shown = after.querySelector(".d-sheetlink").textContent + "|" + after.querySelector(".hist-track-artist, .fresh-track-artist").textContent;
+    out.closed = !document.getElementById("tagEditorPopover").matches(":popover-open");
+    Object.assign(ftapi, { uid: was.uid, isMod: was.isMod });
+    ftapi.actions.editTag = was.editTag;
+    return out;
+  });
+  check(!/tags/.test(dTags.visitor) && /,tags$/.test(dTags.mod), "Discover's ⋮ has Edit tags… for mods only (" + dTags.visitor + " / " + dTags.mod + ")");
+  check(/ - /.test(dTags.editor || ""), "it opens the tag editor with the song's tags (" + dTags.editor + ")");
+  check(dTags.calls === "1|" + dTags.cid + "|Fixed Artist - Fixed Title||discover" && dTags.closed,
+    "Save fixes the upload's tags (" + dTags.calls + ")");
+  check(dTags.shown === "Fixed Title|Fixed Artist", "and Discover shows the new tags at once (" + dTags.shown + ")");
   const lit = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };

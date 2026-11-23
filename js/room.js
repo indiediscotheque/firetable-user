@@ -891,6 +891,7 @@ firetable.ui.setupRoomEvents = function () {
     if (!firetable.song || firetable.song.cid == 0) return;
     $('.pvbar.editing').removeClass('editing');
     firetable.editingPvbar = null;
+    firetable.tagEditTarget = null;
     firetable.tagEditNowPlaying = { cid: firetable.song.cid, type: firetable.song.type };
     firetable.ui.openTagEditor(npModBtn, firetable.ui.strip(firetable.song.artist + " - " + firetable.song.title));
   });
