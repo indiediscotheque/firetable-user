@@ -4,7 +4,7 @@
 // policy blocks. Run (needs Java 21 for the emulator):
 //   cd tests && npm ci && npm run smoke
 // Never deployed. CI: .github/workflows/smoke.yml
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync, readdirSync, existsSync } from "fs";
 import { join } from "path";
 import { chromium } from "playwright";
 import { ROOT, DB, policy, config, putAs, serveSite, launchOptions, sleep, openPage, stubAvatars } from "./harness.mjs";
@@ -2441,7 +2441,7 @@ try {
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await new Promise((r) => setTimeout(r, 300));
     const bar = document.getElementById("dMini");
-    const after = { preview: firetable.preview, mode: document.body.classList.contains("ft-discover"), hash: location.hash, playing: firetable.discover.state().playing,
+    const after = { preview: firetable.preview, mode: document.body.classList.contains("ft-discover"), hash: firetable.discover.address(), playing: firetable.discover.state().playing,
       bar: bar.offsetParent !== null && /is-discover/.test(bar.className), stageUp: document.body.classList.contains("pb-elsewhere"),
       tools: ["screenControl", "reloadtrack", "st-cast", "fullscreenBtn", "fire", "grab"].every((id) => document.getElementById(id).closest("#dMini")),
       stageEmpty: getComputedStyle(document.getElementById("stageTopRight")).display === "none" && getComputedStyle(document.getElementById("stageActions")).display === "none",
@@ -2758,17 +2758,17 @@ try {
     out.bar = { labels: [...document.querySelectorAll("#nav-tabs .nt-tab span")].map((s) => s.textContent).join(","), bottom: Math.round(innerHeight - bar.bottom), underPlayer: bar.top >= pb.bottom - 1,
       tall: Math.round(bar.height) >= 56, oldGone: !seen("#modeTabs") };
     await tap("home");
-    out.home = { lit: lit(), hash: location.hash, view: firetable.discover.state().view, rowGone: !seen("#dNav"), search: seen("#dQ") };
+    out.home = { lit: lit(), hash: firetable.discover.address(), view: firetable.discover.state().view, rowGone: !seen("#dNav"), search: seen("#dQ") };
     await tap("discover");
     out.list = { lit: lit(), browse: document.body.classList.contains("nt-browse"), pages: [...document.querySelectorAll("#dNav .d-nav")].filter((b) => seen("#dNav") && b.getBoundingClientRect().height >= 44).length,
       browseHidden: !seen("#dBrowse") };
     document.querySelector('#dNav [data-view="charts"]').click();
     await wait(450);
-    out.page = { lit: lit(), hash: location.hash, browse: document.body.classList.contains("nt-browse"), shown: seen("#dBrowse") };
+    out.page = { lit: lit(), hash: firetable.discover.address(), browse: document.body.classList.contains("nt-browse"), shown: seen("#dBrowse") };
     await tap("discover");
     out.again = { lit: lit(), browse: document.body.classList.contains("nt-browse") };
     await tap("live");
-    out.live = { lit: lit(), hash: location.hash, stage: seen("#djStage"), join: seen("#login") };
+    out.live = { lit: lit(), hash: firetable.discover.address(), stage: seen("#djStage"), join: seen("#login") };
     await tap("library");
     out.library = { lit: lit(), stageGone: !seen("#djStage"), join: seen("#login"), view: firetable.nav.view, section: firetable.nav.mobileSection };
     await tap("live");
@@ -2856,7 +2856,7 @@ try {
     out.nights = [...document.querySelectorAll("#dBrowse .d-night b")].map((e) => e.textContent).join();
     document.querySelector("#dBrowse .d-night").click();
     await until(() => document.querySelectorAll("#dBrowse .ft-rows .pvbar").length === 3);
-    out.night = document.querySelector("#dBrowse .d-pagetext h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length + "|" + location.hash;
+    out.night = document.querySelector("#dBrowse .d-pagetext h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length + "|" + firetable.discover.address();
     localStorage.setItem("ft-crate", "[]");
     document.querySelector("#dBrowse .d-saveall").click();
     out.saved = JSON.parse(localStorage.getItem("ft-crate") || "[]").map((t) => t.t).join();
@@ -2953,7 +2953,7 @@ try {
     q.value = "ital";
     q.dispatchEvent(new Event("input", { bubbles: true }));
     await wait(600);
-    out.hash = location.hash;
+    out.hash = firetable.discover.address();
     out.nights = [...document.querySelectorAll("#dBrowse .d-night b")].map((e) => e.textContent).join();
     q.value = "single";
     q.dispatchEvent(new Event("input", { bubbles: true }));
@@ -3001,10 +3001,10 @@ try {
     const robot = document.querySelector("#thediscovers .pv-dj-avatar");
     if (robot) robot.click();
     await wait(300);
-    out.robot = location.hash;
+    out.robot = firetable.discover.address();
     return out;
   });
-  check(doors.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && /^#discover\/artist\//.test(doors.stageArtist || "") && doors.titleButton === "button",
+  check(doors.artistLinks === "/music/artists/alpha/,/music/artists/beta/" && /^\/music\/artists\//.test(doors.stageArtist || "") && doors.titleButton === "button",
     "in Live, artist names link to their pages and titles are buttons (" + JSON.stringify(doors) + ")");
   check(doors.faces === "uidZZed,generic", "a name-only history line shows that member's face (uid + name), or the generic gray robot bust when unknown (" + doors.faces + ")");
   check(/^Fav One\|.*30 plays/.test(doors.sheet || "") && /playing in the room now/.test(doors.stageSheet || ""), "a title opens its song sheet, with the room's plays; the stage's says it's playing now");
@@ -3036,7 +3036,7 @@ try {
     tag.click();
     await until(() => (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent === "118 BPM" && document.querySelector("#dBrowse .ft-rows .pvbar"));
     out.closed = !document.getElementById("dSheetBox").open;
-    out.hash = location.hash;
+    out.hash = firetable.discover.address();
     out.discover = document.body.classList.contains("ft-discover");
     const lists = [...document.querySelectorAll("#dBrowse .ft-rows")].map((l) => [...l.querySelectorAll(".hist-track-title")].map((e) => e.textContent).join());
     out.lists = lists.join("|");
@@ -3045,21 +3045,21 @@ try {
     document.querySelector("#dBrowse .d-playall").click();
     await wait(200);
     out.playing = firetable.discover.state().list;
-    document.querySelector('#dBrowse .d-headrow a[href="#discover/bpm/119"]').click();
+    document.querySelector('#dBrowse .d-headrow a[href="/#discover/bpm/119"]').click();
     await until(() => (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent === "119 BPM");
-    out.next = location.hash + "|" + [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join() + "|" + !!document.querySelector("#dBrowse .d-empty");
+    out.next = firetable.discover.address() + "|" + [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join() + "|" + !!document.querySelector("#dBrowse .d-empty");
     location.hash = "#discover/bpm/12";
     await wait(300);
-    out.bad = location.hash + "|" + (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent;
+    out.bad = firetable.discover.address() + "|" + (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent;
     return out;
   });
-  check(tempo.tag === "118 BPM|#discover/bpm/118" && tempo.sameFont, "the BPM tag links to its tempo, in the tags' own font (" + JSON.stringify(tempo) + ")");
+  check(tempo.tag === "118 BPM|/#discover/bpm/118" && tempo.sameFont, "the BPM tag links to its tempo, in the tags' own font (" + JSON.stringify(tempo) + ")");
   check(tempo.closed && tempo.hash === "#discover/bpm/118" && tempo.discover, "the tag opens the tempo's page in Discover and closes the sheet (" + tempo.hash + ")");
   check(tempo.lists === "Fav One,Same Tempo|Close Tempo", "the tempo's songs, most played first, then the ones close by; untitled and too-far ones left out (" + tempo.lists + ")");
-  check(tempo.fact === "2 songs played here · 34 plays" && tempo.half === "#discover/bpm/59,#discover/bpm/236", "the tempo's facts, with half and double time (" + tempo.fact + " / " + tempo.half + ")");
+  check(tempo.fact === "2 songs played here · 34 plays" && tempo.half === "/#discover/bpm/59,/#discover/bpm/236", "the tempo's facts, with half and double time (" + tempo.fact + " / " + tempo.half + ")");
   check(tempo.playing === "bpm", "Play all plays the tempo's songs (" + tempo.playing + ")");
   check(/^#discover\/bpm\/119\|Fav One,Close Tempo,Same Tempo\|true$/.test(tempo.next), "Faster steps to the next tempo: nothing at it, the songs close by closest first (" + tempo.next + ")");
-  check(tempo.bad === "#discover/bpm/12|119 BPM", "a tempo out of range isn't a page (" + tempo.bad + ")");
+  check(tempo.bad === "#discover/bpm/119|119 BPM", "a tempo out of range isn't a page: the one showing stays (" + tempo.bad + ")");
 
   console.log("-- Discover: joining opens the sign-in form over the page, and it goes back after");
   const join = await dPage.evaluate(async () => {
@@ -3146,12 +3146,12 @@ try {
     out.rings = [...document.querySelectorAll("#dBrowse .d-mapg.d-tonight")].map((a) => a.style.getPropertyValue("--t")).join();
     out.halo = getComputedStyle(document.querySelector("#dBrowse .d-mapg")).textShadow !== "none";
     out.legend = [...document.querySelectorAll("#dMapLegend > span")].filter((x) => getComputedStyle(x).display !== "none").map((x) => x.textContent).join("|");
-    const before = location.hash;
+    const before = firetable.discover.address();
     document.querySelector('#dBrowse .d-mapg[data-slug="soul-and-randb"]').click();
     await wait(100);
-    out.stayed = location.hash === before && !!document.querySelector("#dBrowse .d-map");
+    out.stayed = firetable.discover.address() === before && !!document.querySelector("#dBrowse .d-map");
     const card = document.getElementById("dMapCard");
-    out.card = (card.querySelector("h3") || {}).textContent + "|" + !!card.querySelector('.d-radio[data-slug="soul-and-randb"]') + "|" + (card.querySelector('a[href="#discover/genres/soul-and-randb"]') ? "open" : "");
+    out.card = (card.querySelector("h3") || {}).textContent + "|" + !!card.querySelector('.d-radio[data-slug="soul-and-randb"]') + "|" + (card.querySelector('a[href="/music/genres/soul-and-randb/"]') ? "open" : "");
     out.picked = document.querySelector("#dBrowse .d-mapg.is-picked").getAttribute("data-slug") + "|" + document.querySelector("#dBrowse .d-mapg.is-picked").getAttribute("aria-current");
     return out;
   });
@@ -3177,9 +3177,9 @@ try {
     out.decade = [...document.querySelectorAll("#dBrowse .d-mapg")].map((a) => a.textContent + (a.classList.contains("d-quiet") ? "(quiet)" : "")).join() + "|" + document.querySelector("#dBrowse .d-gcard .d-gfact").textContent;
     document.querySelector('.d-chip[data-decade=""]').click();
     out.navOn = document.querySelector("#dNav .d-nav.on").getAttribute("data-view");
-    document.querySelector('#dBrowse .d-gcard[href="#discover/genres/nu-disco"]').click();
+    document.querySelector('#dBrowse .d-gcard[href="/music/genres/nu-disco/"]').click();
     await until(() => document.querySelector("#dBrowse .d-pagehead h2"));
-    out.genre = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length + "|" + location.hash;
+    out.genre = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length + "|" + firetable.discover.address();
     out.about = (document.querySelector("#dBrowse .d-about") || {}).textContent;
     await until(() => document.querySelector("#dBrowse .d-ytm"));
     out.ytm = (document.querySelector("#dBrowse .d-ytm") || { getAttribute: () => null }).getAttribute("href");
@@ -3217,7 +3217,7 @@ try {
     out.artist = document.querySelector("#dBrowse .d-pagehead h2").textContent + "|" + document.querySelectorAll("#dBrowse .ft-rows .pvbar").length;
     location.hash = "#discover/years";
     await until(() => document.querySelector("#dBrowse .d-yearrow"));
-    const yr = document.querySelector('#dBrowse .d-yearrow[href="#discover/years/2026"]');
+    const yr = document.querySelector('#dBrowse .d-yearrow[href="/music/years/2026/"]');
     out.yearRow = !!(yr && yr.querySelector(".d-mosaic i[style]")) + "|" + /released in 2026/.test(yr ? yr.textContent : "");
     location.hash = "#discover/years/2026";
     await until(h2("2026"));
@@ -3246,7 +3246,7 @@ try {
     "a long list shows its top 10 and Show all, which opens the rest in place (" + libPages.capped + " / " + libPages.uncapped + ")");
   check(libPages.djTab === "firstHere|Play what they brought here|firstHere,most",
     "a DJ page opens on Brought here first, its first tab, when they have any (" + libPages.djTab + ")");
-  check(libPages.artistLinks === "#discover/artist/alpha,#discover/artist/beta" && libPages.who === "#discover/djs/dj1", "artists and DJs link to their pages (" + libPages.artistLinks + " / " + libPages.who + ")");
+  check(libPages.artistLinks === "/music/artists/alpha/,/music/artists/beta/" && libPages.who === "/music/djs/dj1/", "artists and DJs link to their pages (" + libPages.artistLinks + " / " + libPages.who + ")");
   check(/^(\d+)x\1,\1x\1$/.test(libPages.favFaces) && Number(libPages.favFaces.split("x")[0]) > 10 && Number(libPages.favFaces.split("x")[0]) < 40,
     "faces on a genre's timeline are the timeline's size, linked to a DJ page or not (" + libPages.favFaces + ")");
   check(/^(\d+)x\1\|true\|(\d+)$/.test(libPages.deepFace) && Number(libPages.deepFace.split("x")[0]) < 40 && Number(libPages.deepFace.split("|")[2]) > 40,
@@ -3988,11 +3988,18 @@ try {
   console.log("-- plain pages: the library as ordinary pages, with a sitemap");
   const { execFile } = await import("child_process");
   // not execFileSync: the builder reads config.js from this process's server
-  const out = await new Promise((resolve, reject) => execFile(process.execPath,
-    [join(ROOT, "tools/plain-pages.mjs"), "--site", SITE, "--out", join(ROOT, "music"), "--template", join(ROOT, "index.html")],
+  const buildPages = () => new Promise((resolve, reject) => execFile(process.execPath,
+    [join(ROOT, "tools/plain-pages.mjs"), "--site", SITE, "--out", join(ROOT, "music"), "--template", join(ROOT, "index.html"), "--home", join(ROOT, "music/home.html"), "--sounds", "indie dance, nu-disco"],
     { env: { ...process.env, FIREBASE_DATABASE_URL: DB + "?ns=" + NS }, timeout: 60000 },
     (err, stdout, stderr) => (err ? reject(new Error(err.message + stderr)) : resolve(stdout))));
+  const out = await buildPages();
   check(/plain pages: \d+ pages/.test(out), "the pages are built (" + out.trim() + ")");
+  // each page's day in the sitemap is the day its own content last changed: a second build of the same data changes none
+  const firstMap = readFileSync(join(ROOT, "music/sitemap.xml"), "utf8");
+  const out2 = await buildPages();
+  const told = JSON.parse(readFileSync(join(ROOT, "music/.changed"), "utf8"));
+  check(/, 0 changed/.test(out2) && told.urlList.length === 0 && /^[0-9a-f]{32}$/.test(told.key) && existsSync(join(ROOT, "music", told.key + ".txt")) && readFileSync(join(ROOT, "music/sitemap.xml"), "utf8") === firstMap,
+    "built again from the same data, no page counts as changed and the sitemap's dates stand (" + out2.trim() + ")");
   await plain.exposeFunction("__cspViolation", (v) => violations.push("Plain pages: " + v));
   await plain.addInitScript(() => {
     document.addEventListener("securitypolicyviolation", (e) => window.__cspViolation(e.violatedDirective + " blocked " + e.blockedURI));
@@ -4014,7 +4021,7 @@ try {
     // one of each link-preview tag: the page's own, none left over from the home page
     once: ["<link rel=\"canonical\"", "og:title", "og:url", "og:image\"", "twitter:card", "name=\"description\""].every((t) => raw.split(t).length === 2)
   };
-  check(/^Nu-Disco songs/.test(read.title) && read.canonical && read.h1 && read.rows === 4 && read.ld && read.site,
+  check(/^Best Nu-Disco songs/.test(read.title) && read.canonical && read.h1 && read.rows === 4 && read.ld && read.site,
     "a genre page as sent: the site itself, with the genre's songs already in Discover, and its own title and address (" + JSON.stringify(read) + ")");
   check(read.artist && read.dj, "artists and DJs link to their pages, only where a page exists");
   const home = readFileSync(join(ROOT, "index.html"), "utf8");
@@ -4031,9 +4038,77 @@ try {
     live: !!document.querySelector("#dBrowse .d-radio") && !document.querySelector("#dBrowse[data-prerendered]"),
     h: (document.querySelector("#dBrowse .d-pagetext h2") || {}).textContent
   }));
-  check(live.url === "/#discover/genres/nu-disco" && live.discover && live.tabs && live.live && live.h === "Nu-Disco",
-    "a visitor lands in the real site, on that genre's Discover page (" + JSON.stringify(live) + ")");
+  check(live.url === "/music/genres/nu-disco/" && live.discover && live.tabs && live.live && live.h === "Nu-Disco",
+    "a visitor lands in the real site, on that genre's Discover page, at the page's own address (" + JSON.stringify(live) + ")");
+  // one address: a link in the page opens the next page here, at that page's own address, and Back returns
+  const walk = await plain.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const at = () => location.pathname + location.hash + "|" + ((document.querySelector("#dBrowse .d-pagetext h2, #dBrowse h1") || {}).textContent || "");
+    const out = { links: [...document.querySelectorAll("#dBrowse a.d-alink")].map((a) => a.getAttribute("href")).slice(0, 2).join() };
+    document.querySelector('#dBrowse a.d-alink[href="/music/artists/alpha/"]').click();
+    for (let i = 0; i < 40 && !document.querySelector("#dBrowse .d-sound"); i++) await wait(100);
+    out.artist = at();
+    out.title = document.title;
+    out.sound = [...document.querySelectorAll("#dBrowse .d-sound a")].map((a) => a.textContent + ">" + a.getAttribute("href")).join();
+    out.like = [...document.querySelectorAll("#dBrowse section .d-chips a.d-chip")].map((a) => a.textContent + ">" + a.getAttribute("href")).join();
+    history.back();
+    for (let i = 0; i < 40 && location.pathname !== "/music/genres/nu-disco/"; i++) await wait(100);
+    await wait(300);
+    out.back = at();
+    document.querySelector('#dNav [data-view="home"]').click();
+    await wait(300);
+    out.home = location.pathname + location.hash;
+    // an old link, with its #, becomes the page's address
+    location.hash = "#discover/djs/dj1";
+    await wait(600);
+    out.old = location.pathname + location.hash;
+    return out;
+  });
+  check(walk.artist === "/music/artists/alpha/|Alpha" && walk.back === "/music/genres/nu-disco/|Nu-Disco" && walk.home === "/#discover" && walk.old === "/music/djs/dj1/",
+    "links open pages here at their own addresses, Back returns, Home keeps its #, and an old #discover link becomes the page's address (" + JSON.stringify(walk) + ")");
+  check(/^Alpha: top songs · /.test(walk.title), "the tab's name follows the page (" + walk.title + ")");
+  check(walk.sound === "Nu-Disco>/music/genres/nu-disco/" && walk.like === "Omega>/music/artists/omega/", "an artist's page shows their genres and who they sound like (" + walk.sound + " / " + walk.like + ")");
+  // the same on the page as sent
+  const rawArtist = await (await fetch(SITE + "music/artists/alpha/")).text();
+  const lds = (rawArtist.match(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g) || []).map((x) => JSON.parse(x.replace(/^<script[^>]*>|<\/script>$/g, "")));
+  const graph = (lds.find((x) => x["@graph"] && x["@graph"].some((g) => g["@type"] === "BreadcrumbList")) || {})["@graph"] || [];
+  check(/<title>Alpha: top songs and similar artists · /.test(rawArtist) && /<a class="d-chip" href="\/music\/artists\/omega\/">Omega<\/a>/.test(rawArtist) && /<a class="d-tag" href="\/music\/genres\/nu-disco\/">Nu-Disco<\/a>/.test(rawArtist),
+    "an artist's page as sent: their songs, genres and who they sound like, each a link");
+  check(lds.length >= 2 && graph.some((g) => g["@type"] === "MusicPlaylist" && g.about && g.about["@type"] === "MusicGroup") &&
+    (graph.find((g) => g["@type"] === "BreadcrumbList") || { itemListElement: [] }).itemListElement.map((i) => i.name).join(" > ").endsWith("Library > Artists > Alpha"),
+    "its structured data reads: the site, the page, its trail and its songs (" + graph.map((g) => g["@type"]).join() + ")");
+  // an address with no page built yet: the site itself on that Discover page, not for search engines to keep
+  await openPage(plain, SITE + "music/djs/nobody/");
+  await plain.waitForFunction(() => window.firetable && firetable.discover && firetable.discover.state().view === "djs", null, { timeout: 20000 }).catch(() => {});
+  const unbuilt = await plain.evaluate(() => ({ url: location.pathname + location.hash, at: firetable.discover.address(), robots: [...document.querySelectorAll('meta[name="robots"]')].map((m) => m.content).join(), canonical: !!document.querySelector('link[rel="canonical"]') }));
+  check(unbuilt.url === "/music/djs/nobody/" && unbuilt.at === "#discover/djs/nobody" && unbuilt.robots === "noindex" && !unbuilt.canonical,
+    "an address with no page built yet opens that Discover page, and asks search engines not to keep it (" + JSON.stringify(unbuilt) + ")");
+  check((await fetch(SITE + "music/nothing/here/")).status === 404 && (await fetch(SITE + "music/genres/a/b/c/")).status === 404, "anything else under /music/ is still not found");
+  // the library's own lists stay as they were built, in the site
+  await openPage(plain, SITE + "music/artists/");
+  await plain.waitForFunction(() => document.getElementById("modeTabs"), null, { timeout: 20000 }).catch(() => {});
+  const lists = await plain.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    await wait(800);
+    const out = { artists: location.pathname + location.hash + "|" + (document.querySelector("#dBrowse h1") || {}).textContent + "|" + [...document.querySelectorAll("#dBrowse .d-person b")].map((b) => b.textContent).join() };
+    document.querySelector('#dBrowse .d-letters a[href="/music/artists-a-z/o/"]').click();
+    for (let i = 0; i < 40 && !/Artists: O/.test((document.querySelector("#dBrowse h1") || {}).textContent || ""); i++) await wait(100);
+    out.letter = location.pathname + location.hash + "|" + (document.querySelector("#dBrowse h1") || {}).textContent + "|" + [...document.querySelectorAll("#dBrowse .d-person b")].map((b) => b.textContent).join() + "|" + document.title;
+    return out;
+  });
+  check(lists.artists === "/music/artists/|Artists|Alpha,Omega" && /^\/music\/artists-a-z\/o\/\|Artists: O\|Omega\|Artists: O · /.test(lists.letter),
+    "the list of artists, and the artists by letter, stay as built inside the site (" + JSON.stringify(lists) + ")");
+  // the home page as the deploy sends it: what's new and the ways into the library already in it
+  const homeBuilt = readFileSync(join(ROOT, "music/home.html"), "utf8");
+  check(/id="dBrowse" class="scroll-view" data-prerendered="discover"/.test(homeBuilt) && /href="\/music\/genres\/nu-disco\/"/.test(homeBuilt) && /href="\/music\/charts\/"/.test(homeBuilt) &&
+    !/<body[^>]*ft-discover/.test(homeBuilt) && homeBuilt.split('<link rel="canonical"').length === 2 && homeBuilt.split("<base ").length === 2,
+    "the home page is built with this week's songs and links into the library, its own tags untouched");
+  const feedXml = readFileSync(join(ROOT, "music/charts/feed.xml"), "utf8");
+  check(/<feed xmlns="http:\/\/www\.w3\.org\/2005\/Atom">/.test(feedXml) && /<entry><title>Week 45, 2026/.test(feedXml) && /href="[^"]+\/music\/charts\/week\/2026-W45\/"/.test(feedXml),
+    "the weekly chart has a feed");
   const sitemap = readFileSync(join(ROOT, "music/sitemap.xml"), "utf8");
+  check(sitemap.includes("<loc>" + SITE + "</loc>") && /\/music\/artists-a-z\/a\/<\/loc><lastmod>\d{4}-\d\d-\d\d<\/lastmod>/.test(sitemap) && /<loc>[^<]+\/music\/<\/loc>/.test(sitemap),
+    "the sitemap lists the home page, the library and the artists by letter, each with its day");
   check(/\/music\/themes\/nT1\//.test(sitemap), "theme nights get pages too");
   check(/<loc>[^<]+\/music\/djs\/dj1\/<\/loc>/.test(sitemap) && /\/music\/years\/2026\//.test(sitemap) && /\/music\/charts\/week\/2026-W45\//.test(sitemap),
     "the sitemap lists the DJ, year and chart pages");

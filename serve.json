@@ -3,6 +3,7 @@
     { "source": "/playlists", "destination": "/index.html" },
     { "source": "/history", "destination": "/index.html" },
     { "source": "/cards", "destination": "/index.html" },
-    { "source": "/discover", "destination": "/index.html" }
+    { "source": "/discover", "destination": "/index.html" },
+    { "source": "/music/**", "destination": "/index.html" }
   ]
 }

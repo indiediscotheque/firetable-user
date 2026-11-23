@@ -233,7 +233,7 @@ async function reset(page, mode) {
   }, mode);
   await page.waitForFunction(() => { const f = document.getElementById("pv-full"); return !f || !f.checkVisibility(); }, null, { timeout: 3000 }).catch(() => {});
   const want = mode === "discover" ? "#discover" : "#live";
-  if (await page.evaluate(() => location.hash) !== want) await page.evaluate((h) => { location.hash = h; }, want);
+  if (await page.evaluate(() => firetable.discover.address()) !== want) await page.evaluate((h) => { location.hash = h; }, want);
   await sleep(250);
 }
 
@@ -293,7 +293,7 @@ try {
           const state = await onScreen(page, f.target);
           if (state) why = f.target + " " + state + (f.via ? " after " + f.via.join(" → ") : "");
         }
-        if (!why && f.hash && !(await page.evaluate(() => location.hash)).startsWith(f.hash)) why = "the address is " + await page.evaluate(() => location.hash) + ", not " + f.hash;
+        if (!why && f.hash && !(await page.evaluate(() => firetable.discover.address())).startsWith(f.hash)) why = "the address is " + await page.evaluate(() => firetable.discover.address()) + ", not " + f.hash;
         if (why) failures.push(role + " " + w + ": " + label + ": " + why);
         else if (f.close) for (const c of f.close) await page.locator(c).first().click({ timeout: 1000 }).catch(() => {});
         process.stdout.write(why ? "x" : ".");

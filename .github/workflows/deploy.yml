@@ -59,9 +59,14 @@
 # The library's plain pages (/music/, for search engines) are built here from
 # the public Discover data (tools/plain-pages.mjs), uploaded to music/ (pages
 # no longer built are removed, so a DJ who hides their name drops out), and
-# robots.txt on the server gets a line pointing at music/sitemap.xml. They're
-# rebuilt every Monday after firetable-hostbot's weekly Play history job. If
-# the build fails, the pages already on the server are left as they are.
+# robots.txt on the server gets a line pointing at music/sitemap.xml. The same
+# build fills the home page (index.html) with what's new, this week's chart
+# and links into the library, and writes two feeds. They're rebuilt on every
+# publish and once a day (new releases and the chart change daily; on Mondays
+# that's after firetable-hostbot's weekly Play history job, which is when new
+# artists, DJs and genres get their pages). The addresses whose pages changed
+# are sent to IndexNow (Bing, Yandex, Naver, Seznam). If the build fails, the
+# pages already on the server are left as they are.
 #
 # Manual run: Actions → "Deploy to DreamHost" → Run workflow. "Dry run" lists
 # what would change without uploading anything.
@@ -72,7 +77,7 @@ on:
   push:
     branches: [master]
   schedule:
-    - cron: "43 12 * * 1" # Mondays, after the bot's Play history job (09:17 UTC)
+    - cron: "43 12 * * *" # every day; on Mondays that's after the bot's Play history job (09:17 UTC)
   workflow_dispatch:
     inputs:
       dry_run:
@@ -104,7 +109,7 @@ jobs:
     # lint must pass; the browser tests must pass unless a manual run skipped them
     if: ${{ !cancelled() && needs.lint.result == 'success' && (needs.tests.result == 'success' || needs.tests.result == 'skipped') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     env:
       HOST: ${{ secrets.DREAMHOST_HOST }}
       SFTP_USER: ${{ secrets.DREAMHOST_USER }}
@@ -224,7 +229,8 @@ jobs:
             echo "::warning::No SITE_URL, so the plain pages weren't built."
             exit 0
           fi
-          if node tools/plain-pages.mjs --site "$site" --out music; then
+          # --home: the home page with this week's songs in it; --sounds: what the room plays, in the words people search with
+          if node tools/plain-pages.mjs --site "$site" --out music --home index.html --sounds "alternative dance, synthpop, nu-disco"; then
             # version their stylesheet links like every other page
             [ -f music/.built ] && python3 .github/scripts/cache-bust.py .
           else
@@ -328,7 +334,7 @@ jobs:
           [ "$DRY_RUN" = "true" ] && flags="--dry-run"
           # --delete: pages that weren't built this time go from the server too
           lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; \
-            mirror --reverse --delete --no-perms --parallel=4 $flags --exclude-glob .built ./music/ \"$DEST/music/\""
+            mirror --reverse --delete --no-perms --parallel=8 $flags --exclude-glob .built --exclude-glob .changed ./music/ \"$DEST/music/\""
           echo "Plain pages: $(find music -name index.html | wc -l) pages."
 
       - name: Point robots.txt at the plain pages' sitemap
@@ -352,6 +358,22 @@ jobs:
           printf '\n%s\n' "$line" >> "$work/robots.txt"
           remote "put \"$work/robots.txt\" -o \"$DEST/robots.txt\""
           echo "robots.txt now ends with: $line"
+
+      # IndexNow: one request tells Bing, Yandex, Naver and Seznam which pages
+      # are new or different, so they read them today instead of on their next
+      # pass. The key is public by design (music/<key>.txt, written by the build).
+      - name: Tell search engines which pages changed (IndexNow)
+        if: env.DRY_RUN != 'true'
+        run: |
+          [ -f music/.built ] && [ -s music/.changed ] || { echo "No plain pages this run."; exit 0; }
+          count=$(python3 -c 'import json; print(len(json.load(open("music/.changed"))["urlList"]))')
+          [ "$count" -gt 0 ] || { echo "No page changed since the last publish."; exit 0; }
+          code=$(curl -s -o /dev/null -m 30 -w '%{http_code}' -H 'Content-Type: application/json; charset=utf-8' \
+            --data-binary @music/.changed https://api.indexnow.org/indexnow || true)
+          case "$code" in
+            200|202) echo "IndexNow: $count addresses sent (answered $code)." ;;
+            *) echo "::warning::IndexNow answered $code for $count addresses; search engines will find them from the sitemap." ;;
+          esac
 
       - name: Check the Last.fm proxy
         if: env.DRY_RUN != 'true'

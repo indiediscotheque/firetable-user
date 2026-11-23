@@ -3,20 +3,29 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<title>Indie Discotheque · collaborative radio</title>
-	<meta name="description" content="A live room where DJs take turns playing songs for each other. Listen in, dig through the room's charts and library, or join and DJ." />
+	<!-- The site lives at the root: a library page's address (/music/genres/house/) is this same page, and its files stay where they are -->
+	<base href="/" />
+	<title>Indie Discotheque · alternative dance, synthpop, and nu-disco radio</title>
+	<meta name="description" content="DJs take turns playing alternative dance, synthpop and nu-disco for each other, live, since 2012. Listen in, dig through the charts and new releases, or join and DJ." />
+	<!-- Search results may show a large cover -->
+	<meta name="robots" content="max-image-preview:large" />
 	<!-- Link previews (Discord, iMessage, Slack, search). tools/plain-pages.mjs swaps in each library page's own. -->
 	<link rel="canonical" href="https://www.indiediscotheque.com/" />
 	<meta property="og:site_name" content="Indie Discotheque" />
 	<meta property="og:type" content="website" />
-	<meta property="og:title" content="Indie Discotheque · collaborative radio" />
-	<meta property="og:description" content="A live room where DJs take turns playing songs for each other. Listen in, dig through the room's charts and library, or join and DJ." />
+	<meta property="og:title" content="Indie Discotheque · alternative dance, synthpop, and nu-disco radio" />
+	<meta property="og:description" content="DJs take turns playing alternative dance, synthpop and nu-disco for each other, live, since 2012. Listen in, dig through the charts and new releases, or join and DJ." />
 	<meta property="og:url" content="https://www.indiediscotheque.com/" />
 	<meta property="og:image" content="https://www.indiediscotheque.com/img/og.png" />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta property="og:image:alt" content="The :id: logo and Indie Discotheque" />
 	<meta name="twitter:card" content="summary_large_image" />
+	<!-- What the site is, for search engines (data, not a script that runs). tools/plain-pages.mjs adds each library page's own. -->
+	<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://www.indiediscotheque.com/#site","url":"https://www.indiediscotheque.com/","name":"Indie Discotheque","alternateName":["Indie Disco","indiediscotheque.com"],"description":"A live room where DJs take turns playing alternative dance, synthpop and nu-disco for each other, with the room's charts, new releases and play history since 2012.","inLanguage":"en","publisher":{"@id":"https://www.indiediscotheque.com/#org"}},{"@type":"Organization","@id":"https://www.indiediscotheque.com/#org","name":"Indie Discotheque","url":"https://www.indiediscotheque.com/","logo":{"@type":"ImageObject","url":"https://www.indiediscotheque.com/icons/icon-512.png","width":512,"height":512},"sameAs":["https://www.facebook.com/indiediscotheque","https://soundcloud.com/indiediscotheque","https://www.reddit.com/r/indiedisco/","https://www.last.fm/user/tt_discotheque"]}]}</script>
+	<!-- New releases and the weekly chart as feeds (built with the library pages) -->
+	<link rel="alternate" type="application/atom+xml" title="Indie Discotheque: new releases" href="music/new/feed.xml" />
+	<link rel="alternate" type="application/atom+xml" title="Indie Discotheque: the weekly chart" href="music/charts/feed.xml" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
 	<script src="js/viewport.js?v=01.12.08"></script>
 	<meta name="theme-color" content="#181818" />

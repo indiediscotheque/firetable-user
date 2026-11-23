@@ -50,6 +50,8 @@ export async function serveSite({ csp, configJs }) {
     let file = normalize(join(ROOT, path));
     if (!file.startsWith(ROOT) || /[\\/](tests|node_modules|\.git)([\\/]|$)/.test(file.slice(ROOT.length))) { res.writeHead(404); return res.end(); }
     if (existsSync(file) && statSync(file).isDirectory()) file = join(file, "index.html");
+    // .htaccess: a library address with no page built is the site itself
+    if (!existsSync(file) && /^\/music\/(?:new|charts|genres|djs|years|themes|artists)(?:\/[A-Za-z0-9_-]{1,80}){0,2}\/?$/.test(path)) file = join(ROOT, "index.html");
     if (!existsSync(file)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { ...headers, "Content-Type": TYPES[extname(file)] || "application/octet-stream" });
     res.end(readFileSync(file));
