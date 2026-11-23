@@ -7371,11 +7371,7 @@ body.ft-discover #pe-here { display: none !important; }
     & .pe-flag { color: var(--color-icon); }
 }
 .pe-audNote { margin: 0; padding: var(--pad1) 0; font-size: 0.8125rem; color: var(--color-text-muted); }
-.pe-audLive {
-    white-space: nowrap;
-    color: var(--color-text);
-    & [class*="material-symbols-"] { margin-right: 0.15em; font-size: 0.9rem; vertical-align: -0.15em; color: var(--color-accent); }
-}
+.pe-audRow.is-live .pe-flag { color: var(--color-accent); }
 
 /* Things only members can do */
 #mainGrid.login #thediscovers .histeal { display: none; }

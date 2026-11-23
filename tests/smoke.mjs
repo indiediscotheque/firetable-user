@@ -3456,10 +3456,10 @@ try {
   const beatBody = new URLSearchParams(beat ? beat.body : "");
   check(!!beat && /^[0-9a-f]{32}$/.test(beatBody.get("id") || "") && /^[01]$/.test(beatBody.get("live") || "") && !audCalls.some((c) => c.method === "GET"),
     "a visitor's page sends a heartbeat (its browser's random id, and whether the room is sounding) and asks nothing else (" + JSON.stringify(audCalls) + ")");
-  check(visitorAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1" && visitorAud.flags.slice(0, 2).join("") === "\u{1F1FA}\u{1F1F8}\u{1F1E9}\u{1F1EA}" &&
-    visitorAud.heads.join("|") === "On the radio 6|Guests 3" && /3 visitors on the site without an account · .*1 listening live/.test(visitorAud.note) &&
+  check(visitorAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1|Listening live=1" && visitorAud.flags.slice(0, 2).join("") === "\u{1F1FA}\u{1F1F8}\u{1F1E9}\u{1F1EA}" &&
+    visitorAud.heads.join("|") === "On the radio 6|Visitors 3" && !visitorAud.note &&
     visitorAud.pressable === 0 && / · 6 on the radio/.test(visitorAud.pulse),
-    "a visitor's list shows the radio's listeners merged by country with flags (and those it can't place), then the guests, and the room pulse counts the radio (" + JSON.stringify(visitorAud) + ")");
+    "a visitor's list shows the radio's listeners merged by country with flags (and those it can't place), then the visitors with how many listen live, and the room pulse counts the radio (" + JSON.stringify(visitorAud) + ")");
   // the page closing (or its visitor signing in) says goodbye at once, rather than after two minutes
   const goodbye = await aPage.evaluate(() => {
     let sent = null;
@@ -3483,8 +3483,8 @@ try {
       hidden: box.hidden, rows: [...box.querySelectorAll(".pe-audRow")].map((r) => r.querySelector(".pe-audName").textContent + "=" + r.querySelector(".pe-audN").textContent) };
   }, AUDIENCE);
   check(memberAud.on && memberAud.total === String(memberAud.members + 3 + 6) && memberAud.room === String(memberAud.members) && memberAud.guests === "3" && memberAud.radio === "6" &&
-    /in the room$/.test(memberAud.tips[0]) && memberAud.tips[1] === "3 guests on the site without an account, 1 listening live" && memberAud.tips[2] === "6 people listening on the radio" &&
-    !memberAud.hidden && memberAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1",
+    /in the room$/.test(memberAud.tips[0]) && memberAud.tips[1] === "3 visitors without an account, 1 listening live" && memberAud.tips[2] === "6 people listening on the radio" &&
+    !memberAud.hidden && memberAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1|Listening live=1",
     "a member's people list counts everyone with the room (members, guests, radio, each named for screen readers) and lists the radio by country under the members (" + JSON.stringify(memberAud) + ")");
   await aContext.close();
 
