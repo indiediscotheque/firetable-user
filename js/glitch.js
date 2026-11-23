@@ -18,6 +18,9 @@
  *
  * In the full-screen views (the stage's own full screen and Discover's
  * full-screen player) the cover is shown plain: no effects, no animation.
+ * In the Turntable theme (js/ttskin.js) the screen is a small TV in the room,
+ * so the cover is scaled to fit it (the 500px cover at its own size showed as
+ * a giant crop: the :id: logo, for a track with no artwork).
  *
  * Depends on: p5.js (loaded with the first SoundCloud song, js/lazy.js),
  *   firetable.scImg (set by room.js)
@@ -90,6 +93,21 @@ function fitCanvas() {
 /** Whether a full-screen view is showing the screen: the cover is plain there. */
 function isFullScreenView() {
   return document.body.classList.contains('pv-full-on');
+}
+
+/**
+ * Move the drawing origin to the cover's top-left corner, centred on the
+ * canvas. In the Turntable theme the cover is also scaled to fit the screen.
+ * Call between push() and pop().
+ * @param {p5.Image} img - The cover
+ */
+function placeCover(img) {
+  translate(width / 2, height / 2);
+  if (document.body.classList.contains('tt-skin') && img.width && img.height) {
+    var k = Math.min(width / img.width, height / img.height);
+    scale(k);
+  }
+  translate(-img.width / 2, -img.height / 2);
 }
 
 /**
@@ -306,7 +324,7 @@ class Glitch {
     if (!this.throughFlag) {
       this.restoreClean();
       push();
-      translate((width - this.imgOrigin.width) / 2, (height - this.imgOrigin.height) / 2);
+      placeCover(this.imgOrigin);
       image(this.imgOrigin, 0, 0);
       pop();
       return;
@@ -348,14 +366,14 @@ class Glitch {
 
     // Draw the processed image centered on the canvas
     push();
-    translate((width - this.imgOrigin.width) / 2, (height - this.imgOrigin.height) / 2);
+    placeCover(this.imgOrigin);
     image(this.imgOrigin, 0, 0);
     pop();
 
     // Scatter random rectangular fragments
     this.scatImgs.forEach((obj) => {
       push();
-      translate((width - this.imgOrigin.width) / 2, (height - this.imgOrigin.height) / 2);
+      placeCover(this.imgOrigin);
       if (floor(random(100)) > 80) {
         obj.x = floor(random(-this.imgOrigin.width * 0.3, this.imgOrigin.width * 0.7));
         obj.y = floor(random(-this.imgOrigin.height * 0.1, this.imgOrigin.height));
