@@ -1632,6 +1632,15 @@ html[data-avatars="pixel-art"] {
     --av-y: 50%;
     --av-list-y: 50%;
 }
+/* The generic gray robot bust (img/robot-generic.png, GENERIC_AVATAR_URL: a
+   DJ with no avatar yet) is a robot bust whatever the room's style, so it
+   keeps the robots' framing wherever it's put. */
+[style*="img/robot-generic."] {
+    --av-zoom: 125%;
+    --av-x: 50%;
+    --av-y: 66%;
+    --av-list-y: 72%;
+}
 /* A member's own Bouletmaton, whatever the room's style (js/bouletmaton.js
    marks it .bm-face): the picture is the whole drawing (head to waist), on
    transparent, so the circles frame its whole head (hair, ears, hat). The framing is measured from each one's drawings

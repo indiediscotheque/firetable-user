@@ -27,7 +27,9 @@ const STYLES = ["robohash:set1", "robohash:set2", "robohash:set4", "dicebear:not
 // hats, long hair, the taller hand items and every choice at 1.
 const PEOPLE = [["dj1", "Deejay", "2.3.5.10.8.20.5.30.40.6.12.3.4.7.10.5.2.33.20"], ["OiJ7rcoNaNdvk3KlFGUJx1Fqjer2", "rohn"],
   ["u42", "night_owl", "4.12.9.62.26.54.17.93.96.25.42.17.20.32.31.18.24.32.25"], ["zZ9", "Bea"],
-  ["abc", "x", "1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1"], ["hat5", "Hats", "3.7.2.40.15.33.9.60.80.24.30.10.15.20.19.12.10.5.11"]];
+  ["abc", "x", "1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1"], ["hat5", "Hats", "3.7.2.40.15.33.9.60.80.24.30.10.15.20.19.12.10.5.11"],
+  // no uid: no avatar yet, the generic gray robot bust (img/robot-generic.png), a robot bust in every room
+  [null, "Long Gone DJ"]];
 
 // The places, with the site's classes and sizes. kind "circle" or "stage".
 const PLACES = [
@@ -125,7 +127,7 @@ for (const style of STYLES) {
     firetable.avatarForced = s === "october" ? "robohash:set2" : null;
     document.documentElement.setAttribute("data-avatars", firetable.utilities.avatarKind());
     ftapi.users = {};
-    people.forEach(([uid, name, bm]) => { ftapi.users[uid] = bm ? { username: name, status: true, boulet: bm, bouletOn: true } : { username: name, status: true }; });
+    people.filter(([uid]) => uid).forEach(([uid, name, bm]) => { ftapi.users[uid] = bm ? { username: name, status: true, boulet: bm, bouletOn: true } : { username: name, status: true }; });
   }, [style, PEOPLE]);
   for (const [uid, name, bm] of PEOPLE) {
     // Draw each place empty, photograph it, then with the person's picture

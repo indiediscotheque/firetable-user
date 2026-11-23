@@ -374,6 +374,62 @@ test("who looks like what: robot busts, members' switched-on Bouletmatons, the s
   assert.equal(r.kind, "robohash");
 });
 
+test("no uid, no avatar yet: the generic gray robot bust, framed as a robot bust whatever the room's style", async () => {
+  const r = await run(async () => {
+    const was = { room: firetable.roomAvatarStyle, forced: firetable.avatarForced, kind: document.documentElement.getAttribute("data-avatars") };
+    const at = (room, forced) => { firetable.roomAvatarStyle = room; firetable.avatarForced = forced; return firetable.utilities.avatarURL(null, "Long Gone DJ", "40x40"); };
+    const out = {
+      generic: GENERIC_AVATAR_URL,
+      urls: [at("robohash:set1", null), at("robohash:set4", null), at("dicebear:pixel-art", null), at("bouletmaton", null), at("bouletmaton", "robohash:set2"),
+        firetable.utilities.avatarURL("", "Name"), firetable.utilities.avatarURL(undefined, undefined, "160x160", null, true)],
+      known: firetable.utilities.avatarURL("u1", "Name", "40x40", "robohash:set1", true),
+      card: firetable.utilities.avatarURL(null, "Name", "40x40", "robohash:set4", true)
+    };
+    Object.assign(firetable, { roomAvatarStyle: was.room, avatarForced: was.forced });
+    // the picture: Robohash's size, gray all through, on a transparent background
+    const img = new Image();
+    await new Promise((ok, no) => { img.onload = ok; img.onerror = () => no(new Error("img/robot-generic.png didn't load")); img.src = GENERIC_AVATAR_URL; });
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const g = c.getContext("2d");
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let drawn = 0, coloured = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 8) continue;
+      drawn++;
+      if (d[i] !== d[i + 1] || d[i + 1] !== d[i + 2]) coloured++;
+    }
+    out.size = img.naturalWidth + "x" + img.naturalHeight;
+    out.drawn = drawn / (c.width * c.height);
+    out.coloured = coloured;
+    out.corners = d[3] + d[(c.width - 1) * 4 + 3];
+    // framed as a robot bust in a room of another style
+    const framing = (kind) => {
+      document.documentElement.setAttribute("data-avatars", kind);
+      const el = document.createElement("span");
+      el.className = "ft-avatar";
+      el.style.backgroundImage = "url(" + JSON.stringify(GENERIC_AVATAR_URL) + ")";
+      document.body.appendChild(el);
+      const cs = getComputedStyle(el), f = [cs.getPropertyValue("--av-zoom"), cs.getPropertyValue("--av-x"), cs.getPropertyValue("--av-y")].map((v) => v.trim()).join(" ");
+      el.remove();
+      return f;
+    };
+    out.frames = ["robohash", "notionists", "pixel-art"].map(framing);
+    if (was.kind === null) document.documentElement.removeAttribute("data-avatars"); else document.documentElement.setAttribute("data-avatars", was.kind);
+    return out;
+  });
+  assert.match(r.generic, /\/img\/robot-generic\.png$/);
+  assert.deepEqual(r.urls, r.urls.map(() => r.generic), "whatever the room's style or the season, and any size");
+  assert.match(r.known, /robots\/u1Name\.png\?size=40x40&set=set1$/, "someone with a uid keeps their own robot");
+  assert.match(r.card, /set=set4$/, "a printed card's stamp is drawn as stamped");
+  assert.equal(r.size, "300x300", "Robohash's own size");
+  assert.ok(r.drawn > 0.15 && r.drawn < 0.6, "it's drawn (" + r.drawn + ")");
+  assert.equal(r.coloured, 0, "gray all through");
+  assert.equal(r.corners, 0, "on a transparent background");
+  assert.deepEqual(r.frames, ["125% 50% 66%", "125% 50% 66%", "125% 50% 66%"], "the robots' framing in every room");
+});
+
 test("Bouletmaton: a stand-in at once, swapped for the picture (marked .bm-face) wherever it was put", async () => {
   const r = await run(async () => {
     const was = { room: firetable.roomAvatarStyle, forced: firetable.avatarForced, users: ftapi.users };

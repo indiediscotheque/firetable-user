@@ -140,7 +140,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
   $histItem.find('.histdj').text(data.dj);
   $histItem.find('.pv-dj-avatar')
     .attr({ 'data-avatar-uid': data.djid || null, 'data-avatar-size': '40x40' })
-    .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid || data.dj, data.dj, '40x40') + ')')
+    .css('background-image', 'url(' + firetable.utilities.avatarURL(data.djid, data.dj, '40x40') + ')')
     .attr('aria-label', data.dj);
   $histItem.find('.dj-avatar-tip').attr('label', data.dj);
   $histItem.find('.histdate').text(firetable.utilities.shortDate(data.when));

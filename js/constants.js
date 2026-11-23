@@ -78,6 +78,20 @@ var AVATAR_STYLES = [
 ];
 var DEFAULT_AVATAR_STYLE = AVATAR_STYLES[0].value;
 /**
+ * The generic gray robot bust: whoever has no avatar yet. Faces are made
+ * from uid + name, so a DJ known only by a name (the play history's older
+ * rows, a first DJ nobody here can place now) has none; they all get this
+ * one picture, never someone else's face (helpers.js avatarURL, Discover's
+ * robot()). Made from Robohash's own gray robot parts
+ * (tools/robot-generic.py), so it sits in its picture like every robot bust;
+ * css/looks.css frames it as one whatever the room's style. Next to this
+ * script's js/ folder, so it works from any page.
+ */
+var GENERIC_AVATAR_URL = (function () {
+  var me = typeof document !== "undefined" && document.currentScript && document.currentScript.src;
+  try { return new URL("../img/robot-generic.png", me || document.baseURI).href; } catch (e) { return "img/robot-generic.png"; }
+})();
+/**
  * This site's SoundCloud API proxy (api/soundcloud.php). Handles keyword
  * search, link resolving and playlist import with an OAuth token.
  * Override with ftconfigs.soundcloudProxyURL if it lives elsewhere.

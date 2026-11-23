@@ -141,9 +141,8 @@ firetable.discover = (function () {
   }
   function robot(dj, size) {
     if (!dj) return "";
-    // no uid to make their face from: a plain circle, never someone else's face
-    if (!dj.uid) return '<span class="ft-avatar pv-dj-avatar dj-avatar-tip d-noface" role="img" aria-label="' + esc(dj.name) + '"></span>';
-    return '<span class="ft-avatar pv-dj-avatar dj-avatar-tip" role="img" aria-label="' + esc(dj.name) + '" style="background-image:url(' +
+    // no uid to make their face from: no avatar yet, so the generic gray robot bust (.d-noface), never someone else's face
+    return '<span class="ft-avatar pv-dj-avatar dj-avatar-tip' + (dj.uid ? "" : " d-noface") + '" role="img" aria-label="' + esc(dj.name) + '" style="background-image:url(' +
       esc(firetable.utilities.avatarURL(dj.uid, dj.name, size || "40x40")) + ')"></span>';
   }
   function saveButton(t) {
