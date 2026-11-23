@@ -129,6 +129,16 @@ firetable.actions.renderCardStats = function (data) {
 
   return (
     '<section id="cardStats">' +
+    // the cards come first: search and sort on one row, the numbers folded under Stats
+    // (they stood between the tab and the first card: none showed on a phone)
+    '<div id="cardFilterRow" class="cardFilterRow">' +
+    '<div class="cardFilterControl"><input id="cardFilterText" class="cardFilterInput" type="search" placeholder="Search cards…" aria-label="Filter cards by text" /></div>' +
+    '<div class="cardFilterControl"><select id="cardFilterDj" class="cardFilterSelect" aria-label="Filter cards by DJ"><option value="">All DJs</option>' + djOptions + '</select></div>' +
+    '<div class="cardFilterControl"><select id="cardSortBy" class="cardFilterSelect" aria-label="Sort cards by"><option value="cardnum">Card Number</option><option value="djname">DJ Name</option><option value="temp" title="' + TEMP_MEANS + '">Temp (hotter is rarer)</option><option value="num">Num</option></select></div>' +
+    '</div>' +
+    '<div class="cardStatsMore hist-day-group collapsed">' +
+    '<div class="hist-day-header" role="button" tabindex="0" aria-expanded="false">Stats: ' + firetable.utilities.pluralize(total, 'card', 'cards') + ' from ' + firetable.utilities.pluralize(Object.keys(perDj).length, 'DJ', 'DJs') + '</div>' +
+    '<div class="cardStatsBody">' +
     '<div class="cardStatsSummary">' +
     '<div class="cardStatTile"><span class="cardStatLabel">Total Cards</span><span class="cardStatValue">' + total + '</span></div>' +
     '<div class="cardStatTile"><span class="cardStatLabel">Unique DJs</span><span class="cardStatValue">' + Object.keys(perDj).length + '</span></div>' +
@@ -140,10 +150,7 @@ firetable.actions.renderCardStats = function (data) {
     '<div class="hist-day-header" role="button" tabindex="0" aria-expanded="false">Cards Per DJ</div>' +
     '<div class="hist-day-items cardStatDjList">' + djRows + '</div>' +
     '</div>' +
-    '<div id="cardFilterRow" class="cardFilterRow">' +
-    '<div class="cardFilterControl"><input id="cardFilterText" class="cardFilterInput" type="search" placeholder="Search cards…" aria-label="Filter cards by text" /></div>' +
-    '<div class="cardFilterControl"><select id="cardFilterDj" class="cardFilterSelect" aria-label="Filter cards by DJ"><option value="">All DJs</option>' + djOptions + '</select></div>' +
-    '<div class="cardFilterControl"><select id="cardSortBy" class="cardFilterSelect" aria-label="Sort cards by"><option value="cardnum">Card Number</option><option value="djname">DJ Name</option><option value="temp" title="' + TEMP_MEANS + '">Temp (hotter is rarer)</option><option value="num">Num</option></select></div>' +
+    '</div>' +
     '</div>' +
     '</section>'
   );

@@ -5571,6 +5571,16 @@ dialog::backdrop {
     top: auto;
 }
 
+/* Stats, folded: the tiles, what temp means and Cards per DJ open under it */
+#cardStats .cardStatsBody { display: flex; flex-direction: column; gap: var(--pad2); padding-top: var(--pad2); }
+#cardStats .cardStatsMore.collapsed > .cardStatsBody { display: none; }
+#cardStats .cardFilterRow { padding-top: 0; }
+@media only screen and (max-width: 639px) {
+    /* search on its own row, the two menus sharing the next */
+    #cardStats .cardFilterControl:first-child { flex: 1 1 100%; }
+    #cardStats .cardFilterControl { flex: 1 1 7rem; }
+}
+
 #cardStats .hist-day-items.cardStatDjList {
     display: flex;
     flex-direction: row;
