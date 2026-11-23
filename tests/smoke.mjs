@@ -2076,8 +2076,16 @@ try {
     out.liveTabs = [...document.querySelectorAll("#minimodeoptions .tab")].filter((t) => t.offsetParent)
       .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left).map((t) => t.textContent.trim()).join();
     out.liveLit = !document.body.classList.contains("nt-library") && document.querySelector('#nav-tabs [data-tab="live"]').classList.contains("on");
+    // the stage stays with Chat: Live's other tabs are lists, and get the screen (the bar names the song)
+    const stageAt = () => { const r = document.getElementById("stage").getBoundingClientRect(), t = document.getElementById("minimodeoptions").getBoundingClientRect();
+      return (r.right > 0 && r.left < innerWidth ? "on" : "off") + "|" + Math.round(t.top - document.getElementById("topbar").getBoundingClientRect().bottom); };
+    out.stageChat = stageAt();
+    firetable.nav.mobileSection = "people";
+    firetable.nav.apply();
+    out.stagePeople = stageAt();
     firetable.nav.mobileSection = "view";
     firetable.nav.apply();
+    out.stageList = stageAt() + "|" + (document.querySelector("#dMini .pb-title, #dMini .d-mini-title") || document.getElementById("dMini")).textContent.trim().slice(0, 40);
     const label = document.getElementById("djlistpickerLabel").getBoundingClientRect();
     out.labelHidden = label.width <= 1 && label.height <= 1;
     out.labelledBy = document.getElementById("djlistpicker").getAttribute("aria-labelledby");
@@ -2111,6 +2119,8 @@ try {
     "phone, a member: Playlists is the Library tab; Live keeps Chat, Recent, Fresh, Cards and People (" + JSON.stringify(phoneFix) + ")");
   check(/^−\d+:\d\d$/.test(phoneFix.left) && /^\d+:\d\d$/.test(phoneFix.played), "time left has a minus, time played doesn't (" + phoneFix.played + " / " + phoneFix.left + ")");
   check(phoneFix.first === "mmchat", "Chat is the first phone tab (" + phoneFix.first + ")");
+  check(/^on\|\d{3}$/.test(phoneFix.stageChat) && /^off\|\d$/.test(phoneFix.stagePeople) && /^off\|\d\|\S/.test(phoneFix.stageList),
+    "phone, a member: the stage stays with Chat; Recent, Fresh, Cards and People get the screen, and the bar names the song (" + JSON.stringify([phoneFix.stageChat, phoneFix.stagePeople, phoneFix.stageList]) + ")");
   check(phoneFix.labelHidden && phoneFix.labelledBy === "djlistpickerLabel", "on a phone the DJ playlist's label is for screen readers only, and still names the picker");
   check(phoneFix.btn && phoneFix.armed && phoneFix.afterOne.length === 0 && phoneFix.afterTwo.join() === "!remove dj1",
     "a mod's first tap on the plate's remove asks again; the second removes (" + JSON.stringify(phoneFix) + ")");

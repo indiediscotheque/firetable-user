@@ -1798,6 +1798,25 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
         opacity: 0;
         pointer-events: none;
     }
+    /* Live's other tabs (Recent, Fresh, Cards, People) are lists to read, and
+       the stage and the bar under it held 245px above every one of them while
+       the player bar named the same song again. A member's stage now stays
+       with Chat, the tab Live opens on; on the others it plays on out of
+       sight, as it does behind Library, and the lists get the screen. (A
+       visitor's Live is the stage, so theirs stays; Turntable has its own.)
+       Out of sight it keeps the phone's own width: at 640px it would stop
+       counting as a narrow stage, and the DJs up next and the open spots,
+       which a narrow stage hands to the People tab (ui.js
+       applyDeckPlacement), would go back into it and out of reach. */
+    body:not(.ft-discover):not(.pv-full-on):not(.tt-skin) #mainGrid:is(.mmqueue, .mmusrs):not(.login):not(.pre-auth) #stage {
+        position: fixed !important;
+        left: -10000px;
+        top: 0;
+        width: 100vw;
+        height: 360px;
+        opacity: 0;
+        pointer-events: none;
+    }
     /* Chatting with the keyboard up (ui.js keepFocusedFieldVisible): the
        conversation gets the screen. The stage plays on out of sight, as it
        does behind Library, the bar still names the song, and the tabs along
