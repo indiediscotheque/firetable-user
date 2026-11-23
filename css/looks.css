@@ -3025,6 +3025,24 @@ input.ft-filter {
     container: queuelist / inline-size;
 }
 
+/* Tablets (two columns, 640 to 1023px): the row is a little wider than a
+   phone's, so it kept all six icons and the name was left three letters
+   ("Gli…", "Bab…"). Top and ⋮ stay on the row; ⋮ has the rest. A computer
+   keeps every action on the row at any width. */
+@media only screen and (min-width: 640px) and (max-width: 1023px) {
+    @container queuelist (width < 36rem) {
+        #mainqueue .bottomsongs,
+        #mainqueue .tracklink-btn,
+        #mainqueue .histeal,
+        #mainqueue .deletesong {
+            display: none;
+        }
+        #mainqueue .row-more {
+            display: inline-flex;
+        }
+    }
+}
+
 @container queuelist (width < 28rem) {
     #mainqueue .bottomsongs,
     #mainqueue .tracklink-btn,
