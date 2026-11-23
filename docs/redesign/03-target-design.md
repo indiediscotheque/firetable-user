@@ -7,7 +7,7 @@ What we're building towards. It comes from three rounds of mockups (the canvas "
 - **Round 1** unified Discover and Live into one app with a player bar, but took the DJs off the stage and didn't show the crate. Rejected: the DJs on stage are the room's signature, and crate management is central.
 - **Round 2** put the DJs back and the crate in a permanent side panel, with everything mapped. The review scored it 5/10: the stage shrank (the video about 38% smaller), avatars looked like they were "peeking out from behind a window", 14 regions competed at 1920 wide, gold meant eight things, and the playlist page left the room.
 - **Round 3** refines **today's room** instead of replacing it: the stage keeps its full height with the DJs standing in front, the crate stays under the stage (Playlists · Recent · Fresh · Cards), people stay on the left and chat on the right. Discover gets the same frame and one player. Phones get a bottom tab bar. That's what this plan builds, in the order of [04-step-plan.md](04-step-plan.md).
-- **Round 4** (November 12, 2026) keeps Live exactly as it looks today and spends the design on Discover and phones. The owner turned down a small stage, song-colour tints and name plates in Discover ("heavy and off balance"; people looked like they were all DJing), and the big filled gold buttons. Round 3's Live layout is on hold; its crate tools, menus and import stand.
+- **Round 4** (November 12, 2026) keeps Live exactly as it looks today and spends the design on Discover and phones. The owner turned down a small stage, song-colour tints and name plates in Discover ("heavy and off balance"; people looked like they were all DJing), and the big filled gold buttons. Round 3's Live layout was dropped with Phase 3 (the owner, November 23, 2026); its crate tools, menus and import stand.
 
 ## Round 4: what's current
 
@@ -82,7 +82,7 @@ Material Symbols Outlined, as today, in the subset font (see [01-ground-rules.md
 
 ## The Live room, desktop (1920 and 1440)
 
-**On hold since round 4.** Live keeps today's layout and look. Of this section, only what Phase 1 still lists is built (the Your turn bar, the crate toolbar and rows, Fire's count, slim song lines in chat). **Since 2.3c (November 13, 2026)** the stage's top-right and bottom-left buttons below live in the player bar along the bottom of the site, not on the stage.
+**Dropped with Phase 3 (the owner, November 23, 2026).** Live keeps today's layout and look for good; this section is kept only as the record of round 3's Live boards. Of this section, only what Phase 1 still lists is built (the Your turn bar, the crate toolbar and rows, Fire's count, slim song lines in chat). **Since 2.3c (November 13, 2026)** the stage's top-right and bottom-left buttons below live in the player bar along the bottom of the site, not on the stage.
 
 Board `R3 · Live room · 1920`. Same regions as today at 1024px and up:
 
