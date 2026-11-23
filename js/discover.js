@@ -335,9 +335,12 @@ firetable.discover = (function () {
   }
 
   function chartRows(chart) {
+    // Among songs with the same plays (in a quiet week, most of the chart) the ones
+    // the room fired come first, most fires first; the rest keep the bot's order.
+    // They still share a rank: fires order a tie, they never break it.
     return ranked(((chart && chart.rows) || []).map(function (r) {
       return { type: r.type || 1, cid: r.cid, a: r.a, t: r.t, plays: r.plays, fires: r.fires || 0, mv: r.mv, wks: r.wks, dj: r.dj, djid: r.djid, first: r.first, g: r.g || null };
-    }), "plays");
+    }).sort(function (x, y) { return (y.plays || 0) - (x.plays || 0) || y.fires - x.fires; }), "plays");
   }
   /**
    * Standard competition ranking (redesign step 1.9): songs with the same count
