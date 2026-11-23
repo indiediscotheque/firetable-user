@@ -977,9 +977,9 @@ firetable.discover = (function () {
     var next = (g.next || []).filter(function (k) { return all[k]; });
     return '<div class="d-mapcardin">' + mosaic(g.covers) + '<div class="d-mapcardtext"><h3>' + esc(g.name) + "</h3>" +
       (g.about ? '<p class="d-about">' + esc(g.about) + "</p>" : "") + '<p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
-      (next.length ? '<p class="d-fact">Next door: ' + next.map(function (k) { return '<a class="d-mapnext" href="' + hrefTo("discover/genres/" + k) + '" data-slug="' + esc(k) + '">' + esc(all[k].name) + "</a>"; }).join(", ") + "</p>" : "") +
+      (next.length ? '<p class="d-fact">Next door: ' + next.map(function (k) { return '<a class="d-mapnext" href="' + hrefTo("discover/genres/" + k) + '" data-slug="' + esc(k) + '">' + esc(all[k].name) + "</a>"; }).join(", ") + "</p>" : "") + "</div>" +
       '<div class="d-actions"><button type="button" class="butt d-panelmain d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>" + esc(g.name) + " radio</span></button>" +
-      '<a class="butt graybutt" href="' + hrefTo("discover/genres/" + slug) + '">' + ms("arrow_forward") + "<span>Open " + esc(g.name) + "</span></a></div></div></div>";
+      '<a class="butt graybutt" href="' + hrefTo("discover/genres/" + slug) + '">' + ms("arrow_forward") + "<span>Open " + esc(g.name) + "</span></a></div></div>";
   }
   /** Pick a genre on the map: its card shows under the map, and the page stays. */
   function pickGenre(slug) {

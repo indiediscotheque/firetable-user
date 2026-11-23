@@ -354,7 +354,7 @@ body.ft-discover #discoverPage {
 #dBrowse .d-headrow h1 { margin-right: auto; font-size: 1.2rem; font-weight: 700; }
 #dBrowse .d-pagetext h1 { font-size: 2rem; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; }
 #dBrowse .d-actions a.butt { color: var(--color-on-accent); mix-blend-mode: normal; }
-#dBrowse .d-actions a.butt.graybutt { color: rgba(255, 255, 255, 0.55); text-decoration: none; }
+#dBrowse .d-actions a.butt.graybutt { color: rgba(255, 255, 255, 0.78); text-decoration: none; }
 @media only screen and (max-width: 639px) {
     #dBrowse .d-pagetext h1 { font-size: 1.6rem; }
 }
@@ -499,7 +499,7 @@ section .d-chips a.d-chip {
     overflow-wrap: anywhere;
 }
 .d-actions { display: flex; flex-wrap: wrap; gap: var(--pad2); margin-top: var(--pad2); }
-.d-actions .butt { display: inline-flex; align-items: center; gap: var(--pad1); }
+.d-actions .butt { display: inline-flex; align-items: center; gap: var(--pad1); padding: var(--pad1) var(--pad3); } /* a link gets a button's padding, so the two match */
 .d-actions .butt i { font-size: 1.2rem; }
 .d-panel .d-joinwait { display: inline-flex; align-items: center; justify-content: center; gap: var(--pad1); margin-top: var(--pad2); }
 .d-panel .d-joinwait i { font-size: 1.1rem; }
@@ -619,23 +619,32 @@ section .d-chips a.d-chip {
 .d-mlpick::before { content: ""; width: 0.8rem; height: 0.6rem; border-radius: 3px; background: var(--color-text); }
 .d-mapcard { margin: var(--space-3) 0 var(--space-5); }
 .d-mapcard > .d-fact { margin: 0; }
+/* mosaic beside the words, the radio and Open under the words; on phones the buttons take the card's full width */
 .d-mapcardin {
-    display: flex;
-    gap: var(--space-4);
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "mosaic text" "mosaic acts";
+    grid-template-rows: auto 1fr;
+    column-gap: var(--space-4);
+    align-items: start;
     padding: var(--space-4);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-panel);
     background: var(--color-bg-t1);
 }
-.d-mapcardin .d-mosaic { flex: none; width: 6.5rem; }
-.d-mapcardtext { min-width: 0; }
+.d-mapcardin .d-mosaic { grid-area: mosaic; width: 6.5rem; }
+.d-mapcardtext { grid-area: text; min-width: 0; }
+.d-mapcardin > .d-actions { grid-area: acts; margin-top: 0; }
 .d-mapcardtext h3 { margin: 0 0 var(--space-1); font-size: var(--fs-title); }
 .d-mapcardtext .d-about { margin: 0 0 var(--space-1); }
 .d-mapcardtext .d-fact { margin: 0 0 var(--space-2); }
-.d-mapcardtext .d-actions { margin-top: var(--space-2); }
 @media only screen and (max-width: 639px) {
+    .d-mapcardin { grid-template-areas: "mosaic text" "acts acts"; grid-template-rows: auto auto; }
     .d-mapcardin .d-mosaic { width: 4.5rem; }
+    .d-mapcardin > .d-actions { margin-top: var(--space-2); }
+    /* side by side when both fit, else a full row each; a long name is cut, never wrapped */
+    .d-mapcardin > .d-actions .butt { flex: 1 1 auto; max-width: 100%; min-height: var(--tap-min); justify-content: center; white-space: nowrap; }
+    .d-mapcardin > .d-actions .butt span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 }
 .d-axis {
     position: absolute;
