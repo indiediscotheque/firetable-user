@@ -139,7 +139,7 @@ firetable.audience = (function () {
     };
     byId("numListeners").textContent = m + d.guests + radio;
     set("numRoomListeners", m, plural(m, "member", "members") + " in the room");
-    set("pe-numGuests", d.guests, plural(d.guests, "guest", "guests") + " on the site without an account" + (d.guestsLive ? ", " + d.guestsLive + " listening live" : ""));
+    set("pe-numGuests", d.guests, plural(d.guests, "guest", "guests") + " without an account" + (d.guestsLive ? ", " + d.guestsLive + " listening live" : ""));
     set("numStreamListeners", radio, plural(radio, "person", "people") + " listening on the radio");
     var streamRow = byId("numStreamListeners");
     if (streamRow && streamRow.closest(".listenerType")) streamRow.closest(".listenerType").hidden = !d.stream;
@@ -160,7 +160,7 @@ firetable.audience = (function () {
   }
 
   /**
-   * The radio's listeners by country and the guests, as rows. p is the class
+   * The radio's listeners by country, then the guests and how many of them are listening live, as rows. p is the class
    * prefix: "pe" (the people lists) or "tt" (the Turntable theme).
    * @returns {string} HTML, or "" before the counts arrive
    */
@@ -180,9 +180,9 @@ firetable.audience = (function () {
           : '<p class="pe-audNote">Nobody on the stream right now.</p>');
     }
     html += '<h3 class="' + p + '-group pe-audHead">' + ms("person") + "Guests <span>" + d.guests + "</span></h3>" +
-      '<p class="pe-audNote">' + (d.guests
-        ? plural(d.guests, "visitor", "visitors") + " on the site without an account" + (d.guestsLive ? ' · <span class="pe-audLive">' + ms("headphones") + d.guestsLive + " listening live</span>" : "")
-        : "No visitors without an account right now.") + "</p>";
+      (d.guests ? '<ul class="pe-audList" aria-label="Guests without an account"><li class="pe-audRow is-live">' + ms("headphones", "pe-flag") +
+        '<span class="pe-audName">Listening live</span><span class="pe-audN">' + d.guestsLive + "</span></li></ul>"
+        : '<p class="pe-audNote">No guests right now.</p>');
     return html;
   }
 
