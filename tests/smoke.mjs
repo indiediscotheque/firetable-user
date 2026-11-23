@@ -3308,10 +3308,23 @@ try {
   await qPage.waitForFunction(() => document.querySelector("#deck .spot") && /Smoke|\S/.test(document.getElementById("track").textContent), null, { timeout: 30000 }).catch(() => {});
   await sleep(1500);
   const listenWide = await listenAt(qPage);
+  // who is in the room, in the left column (1024px and up): a visitor's was empty
+  const hereAt = (pg) => pg.evaluate(() => {
+    const box = document.getElementById("pe-here"), head = document.getElementById("topbar").getBoundingClientRect(), stage = document.getElementById("stage").getBoundingClientRect();
+    const rows = [...box.querySelectorAll(".pe-row")], first = rows[0] && rows[0].getBoundingClientRect();
+    return { shown: box.getClientRects().length > 0, rows: rows.length, djsFirst: rows.length > 1 && rows[0].classList.contains("is-dj") && !rows[rows.length - 1].classList.contains("is-dj"),
+      count: (box.querySelector(".pe-count") || {}).textContent || "", pressable: box.querySelectorAll("button, a, [tabindex], [role=button]").length,
+      clear: !!first && first.top >= head.bottom && first.right <= stage.left + 1, pulse: document.getElementById("roomPulse").getClientRects().length > 0 };
+  });
+  const hereWide = await hereAt(qPage);
   await qPage.setViewportSize({ width: 390, height: 844 });
   await sleep(600);
   const listenPhone = await listenAt(qPage);
+  const herePhone = await hereAt(qPage);
   await qContext.close();
+  check(hereWide.shown && hereWide.rows >= 2 && hereWide.djsFirst && Number(hereWide.count) >= 1 && hereWide.pressable === 0 && hereWide.clear && !hereWide.pulse,
+    "a visitor's Live on a computer lists who is in the room in the left column, DJs first, nothing to press, under the header (" + JSON.stringify(hereWide) + ")");
+  check(!herePhone.shown && herePhone.pulse, "on a phone the line of faces above Create account says it instead (" + JSON.stringify(herePhone) + ")");
   check([listenWide, listenPhone].every((l) => l.text === "Listen to the room" && l.sub === "none" && l.inStage && l.lines && l.clearOfDj && l.underSong) && listenPhone.left === 0,
     "Listen to the room is one line under the song, inside the stage and clear of the DJ, on a computer and on a phone (where it lines up with the cover) (" + JSON.stringify({ wide: listenWide, phone: listenPhone }) + ")");
   check(freshBeside.djPicker === "hidden" && freshBeside.clock, "a visitor isn't offered a playlist to DJ from under the stage; the clocks stay (" + freshBeside.djPicker + ")");

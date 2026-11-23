@@ -191,7 +191,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| AU-01 | Welcome and room pulse for visitors | V | `#login` > `#welcomeInfo`, `#roomPulse` (`renderRoomPulse`) | 2.4; ✅ 4.1b ends with the same Join buttons as Discover, which open `#joinBox` |
+| AU-01 | Welcome and room pulse for visitors | V | `#login` > `#welcomeInfo`, `#roomPulse` (`renderRoomPulse`) | 2.4; ✅ 4.1b ends with the same Join buttons as Discover, which open `#joinBox`. Since November 22, 2026, at 1024px and up the left column of a visitor's Live lists who is in the room (`#pe-here`, `renderRoomPeople`: DJs first, names only, nothing to press) and the line of faces steps aside |
 | AU-02 | Create account (email, username, password, terms) | V | `#createscreen`, `#createAccountFormShell`, only in `#joinBox` (`openAuth`) | 2.5 shipped; ✅ 4.1b one form, in the dialog only; since November 22, 2026 its main buttons (Create account, Log in, Send reset link) are dark with gold words like every panel's main action, in sentence case, and the lines under the forms that repeated the tabs are gone |
 | AU-03 | Log in, show password, forgot password | V | `#logscreen`, `#resetscreen`, `.showPass`; in `#joinBox` from the header | 2.5 shipped |
 | AU-04 | Google sign-in (on; Apple won't be offered: the owner, November 22, 2026) | V | `#oauthBox`, `setupProviderSignIn`, `ftconfigs.signInProviders` | keep |

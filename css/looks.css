@@ -7152,6 +7152,69 @@ body.media-off .q-art.no-art {
 }
 #roomPulse .pulse-text { padding-left: 0.5rem; }
 
+/* Who is in the room, in the left column of a visitor's Live on a wide
+   screen (it was empty: the members' people list isn't on the page for them).
+   The line of faces above Create account says the same, so it steps aside. */
+#pe-here { display: none; }
+@media only screen and (min-width: 1024px) {
+    #mainGrid.login:not(.pre-auth) #pe-here:not(:empty) {
+        display: block;
+        grid-area: people;
+        min-height: 0;
+        overflow: auto;
+        padding: var(--topbar-h, 10rem) var(--pad4) var(--pad4);
+    }
+    #mainGrid.login:not(.pre-auth):has(#pe-here:not(:empty)) #roomPulse { display: none; }
+}
+body.ft-discover #pe-here { display: none !important; }
+.pe-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--pad2);
+    padding: var(--pad4) 0 var(--pad2);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.66);
+}
+.pe-count { font-family: var(--font-numbers); font-weight: 400; }
+.pe-list { list-style: none; margin: 0; padding: 0; }
+.pe-row {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    padding: var(--pad1) 0;
+    min-width: 0;
+}
+.pe-row .ft-avatar { flex: none; width: 2rem; height: 2rem; background-size: cover; }
+.pe-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 300;
+}
+.pe-row.is-idle .pe-name { color: var(--color-text-muted); }
+.pe-role { flex: none; font-size: 1.2rem; line-height: 1; color: #43b581; }
+.pe-tag {
+    flex: none;
+    margin-left: auto;
+    padding: 0 var(--pad1);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+}
+.pe-foot {
+    margin-top: var(--pad4);
+    padding-top: var(--pad3);
+    border-top: 1px solid var(--color-border);
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
+
 /* Things only members can do */
 #mainGrid.login #thediscovers .histeal { display: none; }
 

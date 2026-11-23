@@ -412,6 +412,7 @@ firetable.actions.unban = function (userid) {
  */
 firetable.ui.renderRoomPulse = function () {
   var el = document.getElementById("roomPulse");
+  firetable.ui.renderRoomPeople(!!el);
   if (!el) return;
   var people = [];
   for (var uid in ftapi.users || {}) {
@@ -435,6 +436,52 @@ firetable.ui.renderRoomPulse = function () {
   var text = firetable.utilities.pluralize(people.length, "person", "people") + " here now";
   if (djs.length) text += " · DJing: " + djs.join(", ");
   $el.append($faces).append($('<span class="pulse-text"></span>').text(text));
+};
+
+/**
+ * Who is in the room, for a visitor on a wide screen: the left column of Live
+ * is the members' people list, and a visitor's was empty. Names only, nothing
+ * to press: DJs first, then the rest, the bot last.
+ * @param {boolean} visitor - false empties it (a member has the real list)
+ */
+firetable.ui.renderRoomPeople = function (visitor) {
+  var el = document.getElementById("pe-here");
+  if (!el) return;
+  var $el = $(el).empty();
+  if (!visitor) return;
+  var esc = firetable.utilities.htmlEscape;
+  var users = ftapi.users || {};
+  var seen = {};
+  var rows = [];
+  var add = function (id, name, dj) {
+    if (!id || seen[id]) return;
+    seen[id] = true;
+    var u = users[id] || {};
+    var role = u.hostbot ? ["smart_toy", "Room bot"] : u.supermod ? ["local_police", "Supermod"] : u.mod ? ["shield", "Mod"] : null;
+    rows.push({
+      bot: !!u.hostbot,
+      html: '<li class="pe-row' + (dj ? " is-dj" : "") + (u.idle && u.idle.isIdle && !u.hostbot ? " is-idle" : "") + '">' +
+        '<span class="ft-avatar" aria-hidden="true" style="background-image:url(' + esc(firetable.utilities.avatarURL(id, name)) + ')"></span>' +
+        '<span class="pe-name">' + esc(name) + '</span>' +
+        (role ? '<span class="material-symbols-filled pe-role" role="img" title="' + role[1] + '" aria-label="' + role[1] + '">' + role[0] + '</span>' : '') +
+        (dj ? '<span class="pe-tag">DJ</span>' : '') +
+        '</li>'
+    });
+  };
+  for (var k in firetable.tableData || {}) {
+    var dj = firetable.tableData.hasOwnProperty(k) && firetable.tableData[k];
+    if (dj) add(dj.id, dj.name, true);
+  }
+  Object.keys(users)
+    .map(function (id) { return { id: id, name: users[id].username || id }; })
+    .sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; })
+    .forEach(function (u) { add(u.id, u.name, false); });
+  if (!rows.length) return;
+  rows.sort(function (a, b) { return a.bot - b.bot; }); // stable: the bot goes last
+  var count = rows.filter(function (r) { return !r.bot; }).length;
+  $el.html('<h2 class="pe-head">In the room <span class="pe-count">' + count + '</span></h2>' +
+    '<ul class="pe-list">' + rows.map(function (r) { return r.html; }).join("") + '</ul>' +
+    '<p class="pe-foot">Members chat with the room and take a turn on the decks.</p>');
 };
 
 // ─── Login Form Events ──────────────────────────────────────────────────────
