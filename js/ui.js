@@ -1111,7 +1111,7 @@ firetable.nav = {
       } else {
         $g.addClass('mmqueue');
       }
-      // Mini-mode shows all 6 tabs
+      // Live's tabs (Playlists is the bottom tab bar's Library on phones)
       $('#minimodeoptions .tab').removeClass('on');
       if (n.mobileSection === 'people') {
         $('#mmusrs').addClass('on');

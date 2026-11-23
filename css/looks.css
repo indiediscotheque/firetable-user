@@ -1232,8 +1232,9 @@ a.sociallogo[href] {
     grid-area: nav;
 }
 
-/* Phones: six tabs share one fixed row. They size to their labels and the
-   type scales down with the bar's width, so nothing clips or scrolls. */
+/* Phones: Live's five tabs (Playlists is the tab bar's Library) share one
+   fixed row. They size to their labels and the type scales down with the
+   bar's width, so nothing clips or scrolls. */
 @media only screen and (max-width: 639px) {
     #minimodeoptions {
         container-type: inline-size;
@@ -2876,7 +2877,8 @@ input.ft-filter {
 
 .queueFilterRemixOnly,
 .queueFilterBrokenOnly,
-.cr-dupesOnly {
+.cr-dupesOnly,
+.cr-unplayedOnly {
     display: inline-flex;
     align-items: center;
     gap: var(--pad1);
@@ -2896,7 +2898,8 @@ input.ft-filter {
 
 .queueFilterRemixOnly input,
 .queueFilterBrokenOnly input,
-.cr-dupesOnly input {
+.cr-dupesOnly input,
+.cr-unplayedOnly input {
     margin: 0;
     appearance: none;
     -webkit-appearance: none;
@@ -2913,7 +2916,8 @@ input.ft-filter {
 
 .queueFilterRemixOnly input::before,
 .queueFilterBrokenOnly input::before,
-.cr-dupesOnly input::before {
+.cr-dupesOnly input::before,
+.cr-unplayedOnly input::before {
     content: "";
     width: 0.5rem;
     height: 0.5rem;
@@ -2925,7 +2929,8 @@ input.ft-filter {
 
 .queueFilterRemixOnly input:checked,
 .queueFilterBrokenOnly input:checked,
-.cr-dupesOnly input:checked {
+.cr-dupesOnly input:checked,
+.cr-unplayedOnly input:checked {
     border-color: var(--color-accent);
     background-color: var(--color-accent);
 
@@ -2936,7 +2941,8 @@ input.ft-filter {
 
 .queueFilterRemixOnly input:checked::before,
 .queueFilterBrokenOnly input:checked::before,
-.cr-dupesOnly input:checked::before {
+.cr-dupesOnly input:checked::before,
+.cr-unplayedOnly input:checked::before {
     transform: scale(1);
 }
 
@@ -3515,7 +3521,8 @@ input.ft-filter {
     .cr-bulkDanger.confirming { font-size: var(--fs-label); gap: 0.3rem; }
 }
 /* The sorted view's note sits over the list; it doesn't stick, so the swap bar can */
-.cr-sortBar { position: relative; z-index: auto; }
+.cr-sortBar,
+.cr-unplayedBar { position: relative; z-index: auto; }
 #mainqueue.cr-sorted .pvbar { cursor: default; }
 .ft-menu-sep { width: auto; height: 1px; margin: var(--pad1) 0.5rem; border: 0; background: var(--color-border); }
 

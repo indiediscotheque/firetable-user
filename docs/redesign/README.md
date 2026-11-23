@@ -33,28 +33,23 @@ Keep this table current as steps ship (one line per step in [04-step-plan.md](04
 | Phase | Status |
 |---|---|
 | 0 Foundations | done: 0.1 (tokens), 0.2 (the screenshot harness), 0.4 (nothing lost) and 0.6 (accessibility) shipped; 0.3 (the opt-in switch) and 0.5 (icons up front) dropped |
-| 1 Inside today's layout | 1.16 shipped (rename, remove duplicates, export, the duplicates filter and a view-only sort, November 19, 2026; the Not played here yet filter waits); 1.17 shipped (Select several: Top, Bottom, Copy to…, Delete with Undo, November 19, 2026); 1.15 shipped (the rows: number, Title · Artist, Next / Broken / Remix, and Delete and search for another, November 19, 2026); 1.8 superseded; 1.14 and 1.3 dropped; 1.9 moved to Phase 2; 1.5 and 1.10 narrowed by what Phase 2 did (see the step plan's notes) |
+| 1 Inside today's layout | 1.16 shipped (rename, remove duplicates, export, the duplicates filter and a view-only sort, November 19, 2026; Not played here yet, November 23, 2026); 1.17 shipped (Select several: Top, Bottom, Copy to…, Delete with Undo, November 19, 2026); 1.15 shipped (the rows: number, Title · Artist, Next / Broken / Remix, and Delete and search for another, November 19, 2026); 1.1 (today's colours as one palette), 1.2 (the type floor), 1.5 (Fire's count), 1.6 (Grab with Undo), 1.7 (the mod menu), 1.10 (stage states), 1.12 (people and cards), 1.13 (chat and Recent), 1.18 (shortcuts), 1.19 to 1.21 (import: YouTube and SoundCloud, a list of songs, Spotify) shipped, November 20 to 22, 2026; 1.8 superseded; 1.14, 1.3 and 1.11 dropped; 1.9 moved to Phase 2; 1.4 on hold |
 | 2 Discover (round 4) | 2.7 shipped (the sound map with the room's, your and tonight's genres, a genre's card under it; library pages: chips, top 10 then Show all, DJ pages, sets by night, Years with covers; each song once in every list); 2.8 shipped (one song menu: the same items, order and words in every ⋮); 2.6 shipped (New's Show menu; Charts' controls and actions; tied ranks, 1.9); 2.4 shipped (Home leads with New this week, Not played live yet, the top DJs); 2.5 shipped (joining, logging in, the account menu and Account tab); 2.1 and 2.3 shipped (the player bar along the bottom, the On Air card, and the right column for Playlists and Chat); 2.3b shipped (the full-screen player, for TVs and second screens, in Discover and Live, replacing the Now playing tab); 2.3c shipped (the player along the bottom of the whole site with the stage's utilities in it, audio that stays put between Discover and Live, modern buttons and sliders, the chat for members only) |
 | 3 The new room | on hold |
-| 4 Phones | 4.0 skipped and 4.5 covered by the header and account menu while today's tabs stay (the owner, November 20, 2026); 4.3 shipped (56px rows, the rest came with 1.15 to 1.17); 4.6 (the mini player) mostly shipped with 2.3 and 2.3c; 4.1 and 4.2 (the bottom tab bar) wait for a call |
-| 5 Clean-up | 5.3 shipped (Discover always on, November 20, 2026); 5.1, the default switch, dropped |
+| 4 Phones | 4.0 skipped and 4.5 covered by the header and account menu while today's tabs stay (the owner, November 20, 2026); 4.3 shipped (56px rows, the rest came with 1.15 to 1.17); 4.6 (the mini player) shipped with 2.3 and 2.3c; 4.1 (the bottom tab bar, November 20, 2026), 4.4 (Grab and the ⋮ menus as sheets, November 21, 2026) and 4.2 (Live on a phone, the bar as YouTube Music's, November 22, 2026) shipped. Phase 4 is done |
+| 5 Clean-up | 5.3 shipped (Discover always on, November 20, 2026); 5.2 shipped (the ⌃ and a duplicate rule the phone work left dead, November 23, 2026; the switch, Live's tabs and Discover's pages stay for wider screens); 5.1, the default switch, dropped |
 
 Also shipped outside the plan's steps (November 13 to 15, 2026): Play on a speaker or TV (`#st-cast`, ST-08b), tempo pages from a song's BPM tag (DI-28), the "You're not listening live" card on the stage (`#st-notlive`, ST-25), Last.fm scrobbling what each listener hears in Live or Discover, link previews and an offline page (OT-06, PH-02), a lighter first load (Latin font subset, a 42 KB icon font, the emoji data from this site), no jQuery UI (drag rows with touch, a native volume slider), saves that fail say so (OT-07), unit and database-rules tests beside the smoke test, and the live stage for QueUp's screen (`embed/stage/`, OT-08). And on November 21, 2026, at the owner's request, the Turntable theme: an easter egg skin over Live (TT-01 to TT-08), off unless someone goes in, so Live's frozen look is untouched.
 
-## Next, in this order (realigned November 15, 2026)
+## Next (November 23, 2026)
 
-Phase 2's player work is in, plus a stream of owner requests. What isn't in is the safety net Phase 0 promised: controls now move between the stage, the player bar and the full-screen player, or hide in the DOM behind a menu, and only the smoke test's hand-written checks guard them. So:
+Everything in the working order set on November 15, 2026 has shipped: the safety net (0.1, 0.2, 0.4, 0.6, 1.1), New and Charts (2.4, 2.6), the crate (1.15 to 1.17, with Not played here yet), Discover always on (5.3), one song menu (2.8), the library pages and the sound map with tonight's rings (2.7), phones (4.1 to 4.6), Phase 1's Live steps the owner said yes to (1.2, 1.5, 1.6, 1.7, 1.10, 1.12, 1.13, 1.18 to 1.21) and the clean-up (5.2). Spotify import is on (the bot has its keys).
 
-1. ~~0.2 Screenshot harness~~ ✅ and ~~0.4 "Nothing lost"~~ ✅ (`tests/reach.mjs`: where every control lives, checked in CI).
-2. ~~0.6 Accessibility check~~ ✅ (`tests/a11y.mjs`) and ~~0.1 tokens~~ ✅ (type, space, radius, targets and motion on `:root`; colours stay). ~~1.1~~ ✅ (November 22, 2026): today's colours as one palette, every grey from `:root`, checked by `tools/check-colours.mjs`.
-3. ~~2.4 Home leads with new releases~~ ✅ and ~~2.6 New and Charts, with 1.9's tied ranks~~ ✅. New and Charts matter most (the owner, November 15, 2026).
-4. **The crate:** ~~finish 1.16~~ ✅, ~~1.15's rows~~ ✅ and ~~1.17 Select several~~ ✅. The owner started these; each stays in today's skin.
-5. ~~**5.3 Discover always on.**~~ ✅ Every later step now has one way to work instead of two.
-6. ~~**2.8 One song menu everywhere.**~~ ✅ `firetable.songMenu`: one list of items for every song's ⋮.
-7. **2.7 Library pages and the sound map.** The trail on the map waits for the hostbot to put the genre on recent plays.
-8. **Phase 4, phones**, starting with 4.0 (measure), then 4.1, 4.5, 4.3, 4.4; ~~4.2~~ ✅ (the song row at 44px, November 22, 2026) and 4.6 are done.
-9. **Phase 1's Live steps**, one at a time with the owner's yes: 1.6 Grab, 1.19 Import, 1.5 Fire's count, ~~1.11 Your turn~~ (dropped: the bar stays as it was), 1.10 states, 1.18 shortcuts, ~~1.7~~ ✅, 1.12, 1.13, 1.2, ~~1.3~~ (dropped: the button already shows each setting's glyph), 1.4 (on hold: the owner, November 22, 2026). ~~1.20~~ ✅ (with firetable-hostbot#71), ~~1.21~~ ✅ (Spotify, with firetable-hostbot#73; on once the bot has its keys).
-10. **Phase 5:** 5.2 after Phase 4 has been live a few weeks.
+Nothing is queued. What's left waits for the owner:
+- **1.4 The song facts on stage:** on hold (November 22, 2026); the mockup is described in the step.
+- **Phase 3, the new room:** on hold since round 4; the step plan's Phase 3 note says in short what it is and what has already come another way.
+
+New work starts from an owner request, added to the step plan as its own step (or "outside the plan's steps" above) with the inventory rows it touches.
 
 ### Decided (the owner, November 15, 2026)
 

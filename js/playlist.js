@@ -318,7 +318,120 @@ firetable.actions.queueFilterActive = function () {
   return !!(String($("#queueFilter").val() || "").trim() ||
     $("#queueFilterRemixOnly").is(":checked") ||
     $("#queueFilterBrokenOnly").is(":checked") ||
-    $("#cr-dupesOnly").is(":checked"));
+    $("#cr-dupesOnly").is(":checked") ||
+    $("#cr-unplayedOnly").is(":checked"));
+};
+
+// ─── Not played here yet (Show only) ────────────────────────────────────────
+// Whether the room has played a song comes from the play history: the
+// upload's globalTracks entry has a play date, or the song it's linked to
+// (globalSongs, shared by every upload of a recording) has plays. Each song
+// is asked once a session, a few at a time, and only while the filter is on.
+
+var playedHere = {};   // "type:cid" -> true | false (absent: not known yet)
+var playedAsked = {};  // "type:cid" -> true while it's being asked
+var playedFailed = {}; // "type:cid" -> true when the history couldn't say
+var playedQueue = [];
+var playedBusy = 0;
+var PLAYED_AT_ONCE = 12;
+
+/** Has the room played this upload, or another upload of the same song? Resolves true or false. */
+function askPlayedHere(type, cid) {
+  var db = ftapi.db();
+  return db.ref("globalTracks/" + type + cid).once("value").then(function (s) {
+    var u = s.val();
+    if (u && (u.first_play_date || u.last_play_date)) return true;
+    if (!u || !u.song) return false;
+    return db.ref("globalSongs/" + u.song + "/plays").once("value").then(function (p) { return Number(p.val()) > 0; });
+  });
+}
+
+/** What the open playlist's songs need from the history: [{k, type, cid}] not known or being asked. */
+function unplayedTodo() {
+  var list = firetable.queue || {};
+  var seen = {}, todo = [];
+  Object.keys(list).forEach(function (key) {
+    var t = list[key];
+    if (!t || t.cid == null) return;
+    var k = t.type + ":" + t.cid;
+    if (seen[k] || k in playedHere || playedAsked[k] || playedFailed[k]) return;
+    seen[k] = true;
+    todo.push({ k: k, type: t.type, cid: t.cid });
+  });
+  return todo;
+}
+
+/** The bar over the list while Not played here yet is on: how far the check is, then what it found. */
+function renderUnplayedBar() {
+  var on = $("#cr-unplayedOnly").is(":checked");
+  $("#cr-unplayedBar").prop("hidden", !on);
+  if (!on) return;
+  var list = firetable.queue || {};
+  var keys = {};
+  Object.keys(list).forEach(function (key) { var t = list[key]; if (t && t.cid != null) keys[t.type + ":" + t.cid] = true; });
+  var all = Object.keys(keys), known = 0, unplayed = 0, failed = 0;
+  all.forEach(function (k) {
+    if (k in playedHere) { known++; if (!playedHere[k]) unplayed++; } else if (playedFailed[k]) failed++;
+  });
+  var u = firetable.utilities;
+  var text;
+  if (known + failed < all.length) text = "Checking the room's history… " + known + " of " + u.pluralize(all.length, "song", "songs");
+  else if (!all.length) text = "This playlist is empty.";
+  else if (!unplayed) text = "The room has played every song here.";
+  else text = u.pluralize(unplayed, "song", "songs") + " the room hasn't played yet. Play one for the room.";
+  if (failed && known + failed === all.length) text += " (" + failed + " couldn't be checked.)";
+  $("#cr-unplayedBarText").text(text);
+}
+
+var unplayedFrame = 0;
+/** Filter again once a few answers are in (one pass per frame, not one per song). */
+function unplayedRefresh() {
+  if (unplayedFrame) return;
+  unplayedFrame = requestAnimationFrame(function () {
+    unplayedFrame = 0;
+    if (!$("#cr-unplayedOnly").is(":checked")) return;
+    firetable.actions.filterQueue();
+  });
+}
+
+function pumpPlayedHere() {
+  while (playedBusy < PLAYED_AT_ONCE && playedQueue.length && $("#cr-unplayedOnly").is(":checked")) {
+    var job = playedQueue.shift();
+    if (job.k in playedHere) continue;
+    playedBusy++;
+    playedAsked[job.k] = true;
+    (function (job) {
+      askPlayedHere(job.type, job.cid).then(function (played) {
+        playedHere[job.k] = !!played;
+      }, function () {
+        playedFailed[job.k] = true;
+      }).then(function () {
+        delete playedAsked[job.k];
+        playedBusy--;
+        unplayedRefresh();
+        pumpPlayedHere();
+      });
+    })(job);
+  }
+}
+
+/** Ask the history about the open playlist's songs it hasn't answered for yet. */
+firetable.actions.checkPlayedHere = function () {
+  var todo = unplayedTodo();
+  var queued = {};
+  playedQueue.forEach(function (j) { queued[j.k] = true; });
+  todo.forEach(function (j) { if (!queued[j.k]) playedQueue.push(j); });
+  renderUnplayedBar();
+  pumpPlayedHere();
+};
+
+/** Has the room played this song? true, false, or undefined while it isn't known. */
+firetable.actions.playedHere = function (type, cid) { return playedHere[type + ":" + cid]; };
+/** Note a play the room just made, so the filter doesn't wait for the history. */
+firetable.actions.notePlayedHere = function (type, cid) {
+  if (cid == null) return;
+  playedHere[type + ":" + cid] = true;
+  if ($("#cr-unplayedOnly").is(":checked")) unplayedRefresh();
 };
 
 /**
@@ -334,8 +447,11 @@ firetable.actions.filterQueue = function (val, rows) {
   var remixOnly = $("#queueFilterRemixOnly").is(":checked");
   var brokenOnly = $("#queueFilterBrokenOnly").is(":checked");
   var dupesOnly = $("#cr-dupesOnly").is(":checked");
+  var unplayedOnly = $("#cr-unplayedOnly").is(":checked");
   var container = document.getElementById("mainqueue");
   if (!container) return;
+  // the history is asked about songs it hasn't answered for (new ones too)
+  if (unplayedOnly && !rows) firetable.actions.checkPlayedHere();
   var list = rows || container.querySelectorAll(".pvbar");
   // songs in the list more than once (the same type and id, as Remove duplicates counts them)
   var copies = {};
@@ -356,7 +472,8 @@ firetable.actions.filterQueue = function (val, rows) {
     var show = (!textFilter || tags.toLowerCase().indexOf(textFilter) !== -1) &&
       (!remixOnly || /\([^)]*\)/.test(tags)) &&
       (!brokenOnly || row.getAttribute("data-broken") === "1") &&
-      (!dupesOnly || copies[row.getAttribute("data-type") + ":" + row.getAttribute("data-cid")] > 1);
+      (!dupesOnly || copies[row.getAttribute("data-type") + ":" + row.getAttribute("data-cid")] > 1) &&
+      (!unplayedOnly || playedHere[row.getAttribute("data-type") + ":" + row.getAttribute("data-cid")] === false);
     var hidden = row.classList.contains("ft-filtered");
     if (show && hidden) toShow.push(row);
     else if (!show && !hidden) toHide.push(row);
@@ -379,7 +496,10 @@ firetable.actions.filterQueue = function (val, rows) {
 
   var anyRows = container.querySelector(".pvbar") !== null;
   var anyShown = container.querySelector(".pvbar:not(.ft-filtered)") !== null;
-  container.classList.toggle("overFiltered", anyRows && !anyShown);
+  // while the history is still answering, an empty list isn't "nothing matches" yet
+  var checking = unplayedOnly && (playedBusy > 0 || playedQueue.length > 0);
+  container.classList.toggle("overFiltered", anyRows && !anyShown && !checking);
+  if (unplayedOnly) renderUnplayedBar();
 };
 
 // ─── Merge / Copy Lists ──────────────────────────────────────────────────────
@@ -1049,6 +1169,8 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   ftapi.events.on("djListChanged", function () { firetable.ui.markDjList(); });
+  // the room playing a song: it's played here now, whatever the history said
+  ftapi.events.on("newSong", function (s) { if (s && s.cid) firetable.actions.notePlayedHere(s.type, s.cid); });
 
   /** Draw the playlist on screen, in play order or the view-only sort. */
   function renderQueue(okdata, listID) {
@@ -1644,19 +1766,27 @@ firetable.ui.setupPlaylistEvents = function () {
     });
   }
 
-  // ── Show only (#cr-showOnlyMenu): Remixes, Broken and Duplicates, behind one button with a count ──
+  // ── Show only (#cr-showOnlyMenu): Remixes, Broken, Duplicates and Not played here yet, behind one button with a count ──
   var showMenu = document.getElementById("cr-showOnlyMenu");
   var showBtn = document.getElementById("cr-showOnly");
   var renderShowOnly = function () {
-    var n = ["#queueFilterRemixOnly", "#queueFilterBrokenOnly", "#cr-dupesOnly"].filter(function (q) { return $(q).is(":checked"); }).length;
+    var n = ["#queueFilterRemixOnly", "#queueFilterBrokenOnly", "#cr-dupesOnly", "#cr-unplayedOnly"].filter(function (q) { return $(q).is(":checked"); }).length;
     $("#cr-showOnlyCount").text(n || "").prop("hidden", !n);
     if (!showBtn) return;
     showBtn.classList.toggle("is-on", !!n);
     showBtn.setAttribute("aria-label", n ? "Show only (" + n + " on)" : "Show only");
     $("#tip-cr-showOnly").text(n ? "Show only: " + $(".cr-showOnlyBox input:checked + span").map(function () { return this.textContent; }).get().join(", ") : "Show only");
   };
-  $("#queueFilterRemixOnly, #queueFilterBrokenOnly, #cr-dupesOnly").on("change", renderShowOnly);
+  $("#queueFilterRemixOnly, #queueFilterBrokenOnly, #cr-dupesOnly, #cr-unplayedOnly").on("change", renderShowOnly);
   $("#cr-dupesOnly").on("change", function () { firetable.actions.filterQueue(); });
+  $("#cr-unplayedOnly").on("change", function () {
+    if (!this.checked) { playedQueue.length = 0; renderUnplayedBar(); }
+    firetable.actions.filterQueue();
+  });
+  $("#cr-unplayedOff").on("click", function () {
+    $("#cr-unplayedOnly").prop("checked", false).trigger("change");
+    if (showBtn) showBtn.focus();
+  });
   renderShowOnly();
   if (showMenu && showBtn) {
     showMenu.addEventListener("toggle", function (e) {

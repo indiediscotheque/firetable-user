@@ -1179,8 +1179,7 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     body.tt-skin #tt-layout { display: none; }
     html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { align-self: start; z-index: 1; }
     html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid :is(#thehistoryWrap, #cardsWrap, #discover) { margin-top: 2.6rem; }
-    body.tt-skin #tt-brand .tt-socials,
-    body.tt-skin #modeTabs { display: none; }
+    body.tt-skin #tt-brand .tt-socials { display: none; }
     body.tt-skin #tt-exit span { display: none; }
     .tt-lapBody { grid-template-columns: 1fr; }
     .tt-pickGrid { min-height: 0; }

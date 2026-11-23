@@ -512,6 +512,13 @@
 							<button type="button" id="cr-sortBack" class="butt graybutt small">Back to your order</button>
 						</span>
 					</div>
+					<div id="cr-unplayedBar" class="swapBar cr-unplayedBar" role="status" hidden>
+						<i class="material-symbols-outlined" aria-hidden="true">new_releases</i>
+						<span id="cr-unplayedBarText"></span>
+						<span class="swapBarActions">
+							<button type="button" id="cr-unplayedOff" class="butt graybutt small">Show all</button>
+						</span>
+					</div>
 					<div id="mainqueue" class="innr">
 						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:14rem"></div></div>
 						<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2rem;height:2rem;flex-shrink:0;border-radius:3px"></div><div class="skel" style="height:0.75rem;flex:1;max-width:10rem"></div></div>
@@ -863,7 +870,7 @@
 		</div>
 	</div>
 
-	<!-- Show only (#cr-showOnly): the playlist filter's Remixes, Broken and Duplicates -->
+	<!-- Show only (#cr-showOnly): the playlist filter's Remixes, Broken, Duplicates and Not played here yet -->
 	<div id="cr-showOnlyMenu" popover="auto" class="ft-popover">
 		<div id="cr-showOnlyArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box ft-menu cr-showOnlyBox" role="group" aria-labelledby="cr-showOnlyTitle">
@@ -880,6 +887,10 @@
 				<label class="cr-dupesOnly" for="cr-dupesOnly">
 					<input type="checkbox" id="cr-dupesOnly" />
 					<span>Duplicates</span>
+				</label>
+				<label class="cr-unplayedOnly" for="cr-unplayedOnly">
+					<input type="checkbox" id="cr-unplayedOnly" />
+					<span>Not played here yet</span>
 				</label>
 			</div>
 		</div>
