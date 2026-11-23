@@ -33,10 +33,17 @@
  * their DJ playlist if they have none yet. "Step inside" shows Live as
  * visitors see it today (the chat is for members only).
  *
- * Addresses: #discover, #discover/new, #discover/charts,
- * #discover/charts/<week|month|year|all>/<id>, #discover/genres[/<slug>],
- * #discover/djs[/<key>], #discover/years[/<year>], #discover/artist/<slug>,
- * #discover/bpm/<tempo>, #discover/recent, #live.
+ * Addresses. A page of the library has a real one, the same address its page
+ * for search engines is served from (tools/plain-pages.mjs), so a link someone
+ * copies, shares or follows from a search is one address with one preview:
+ *   /music/new/, /music/charts/[<week|month|year>/<id>/ | all-time/],
+ *   /music/genres/[<slug>/], /music/djs/[<key>/], /music/years/[<year>/],
+ *   /music/artists/<slug>/, /music/themes/[<id>/]
+ * and the library's own lists, which the site shows as they were built:
+ *   /music/ (the library), /music/artists/, /music/artists-a-z/<letter>/
+ * The rest keep a #: #discover (Home), #discover/search/<words>,
+ * #discover/bpm/<tempo>, #discover/recent, #live. Every page also answers to
+ * its old #discover/... address, which becomes the real one.
  */
 
 // The YouTube player's own script leaves a fetch it cancelled unhandled when a
@@ -47,12 +54,25 @@ window.addEventListener("unhandledrejection", function (e) {
 });
 
 // A library page from search (/music/..., tools/plain-pages.mjs) is this site
-// with that page already filled in: from here on it's the site at the same
-// Discover page (#discover/...), with nothing reloaded.
+// with that page already filled in: from here on it's the site on the same
+// Discover page, at the same address, with nothing reloaded.
+//
+// A library address with no page built yet (a DJ's first week, this week's
+// chart before the next deploy) is answered with the site itself (.htaccess):
+// it opens that Discover page, and tells search engines not to keep the
+// address until its own page exists.
 (function () {
-  var route = document.querySelector('meta[name="ft-route"]');
-  if (route && location.pathname !== "/") {
-    try { history.replaceState(null, "", "/" + location.search + "#" + route.getAttribute("content")); } catch (e) { /* stays as it is */ }
+  var built = document.querySelector('meta[name="ft-route"]');
+  if (!built && /\/music\//.test(location.pathname)) {
+    var no = document.querySelector('meta[name="robots"]');
+    if (!no) {
+      no = document.createElement("meta");
+      no.name = "robots";
+      document.head.appendChild(no);
+    }
+    no.content = "noindex";
+    var canon = document.querySelector('link[rel="canonical"]');
+    if (canon) canon.parentNode.removeChild(canon);
   }
 })();
 
@@ -159,6 +179,85 @@ firetable.discover = (function () {
       .replace(/ß/g, "ss").replace(/æ/g, "ae").replace(/ø/g, "o").replace(/đ/g, "d").replace(/ł/g, "l")
       .replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
   }
+  // ─── Addresses ──────────────────────────────────────────────────────────
+  // The site's folder ("/"), and the library's under it. A page under
+  // /music/ is still this site: <base href="/"> keeps its files where they are.
+  var SITE_PATH = new URL(".", document.baseURI).pathname;
+  var MUSIC_PATH = SITE_PATH + "music/";
+  var SLUG = /^[a-z0-9_-]{1,80}$/i;
+  /** "discover/genres/house" (an address after #, or made from a path) as {mode, view, sub, period, id}; null when it isn't one. */
+  function parseRoute(h) {
+    if (h === "live") return { mode: "live" };
+    var p = String(h || "").split("/");
+    if (p[0] !== "discover") return null;
+    var view = p[1] || "home";
+    if (VIEW_IDS.indexOf(view) === -1) return null;
+    var r = { mode: "discover", view: view, sub: null, period: null, id: null };
+    if (view === "charts") {
+      if (/^(week|month|year|all)$/.test(p[2] || "")) { r.period = p[2]; r.id = /^[\w-]+$/.test(p[3] || "") ? p[3] : null; }
+    } else if (view === "search") {
+      r.sub = p.slice(2).join("/").slice(0, 100) || null;
+    } else if (view === "genres" || view === "djs" || view === "years" || view === "artist" || view === "themes") {
+      r.sub = SLUG.test(p[2] || "") ? p[2] : null;
+      if (view === "artist" && !r.sub) return null;
+    } else if (view === "bpm") {
+      if (!isTempo(Number(p[2]))) return null;
+      r.sub = String(Number(p[2]));
+    } else if (view === "page") {
+      // one of the library's own lists (PAGES): shown as it was built
+      r.sub = p.slice(2).join("/");
+      if (!PAGES.test(r.sub)) return null;
+    }
+    return r;
+  }
+  // The library's lists with no Discover page of their own: its front page, the artists, and the artists by letter
+  var PAGES = /^(?:library|artists|artists-a-z\/[a-z0-9-]{1,5})$/;
+  /** The library address of a page, or null for the pages that keep a # (Home, search, tempo, Recent plays, Live). */
+  function pathOf(r) {
+    if (!r || r.mode !== "discover") return null;
+    var v = r.view;
+    if (v === "new") return MUSIC_PATH + "new/";
+    if (v === "charts") {
+      if (!r.period || (r.period === "week" && !r.id)) return MUSIC_PATH + "charts/";
+      if (r.period === "all") return MUSIC_PATH + "charts/all-time/";
+      return r.id ? MUSIC_PATH + "charts/" + r.period + "/" + r.id + "/" : null;
+    }
+    if (v === "genres" || v === "djs" || v === "years" || v === "themes") return MUSIC_PATH + v + "/" + (r.sub ? r.sub + "/" : "");
+    if (v === "artist") return r.sub ? MUSIC_PATH + "artists/" + r.sub + "/" : null;
+    if (v === "page") return MUSIC_PATH + (r.sub === "library" ? "" : r.sub + "/");
+    return null;
+  }
+  /** A library address ("/music/genres/house/") as the words after #, or "" when it isn't one. */
+  function routeOfPath(path) {
+    if (String(path).indexOf(MUSIC_PATH) !== 0 || /\.[a-z0-9]+$/i.test(path)) return ""; // not its feeds or sitemap
+    var p = path.slice(MUSIC_PATH.length).replace(/\/+$/, "").split("/");
+    try { p = p.map(decodeURIComponent); } catch (e) { return ""; }
+    if (!p[0]) return "discover/page/library";
+    if (p[0] === "artists") return p[1] ? "discover/artist/" + p[1] : "discover/page/artists";
+    if (p[0] === "artists-a-z") return "discover/page/" + p.join("/");
+    if (p[0] === "charts" && p[1] === "all-time") return "discover/charts/all";
+    return "discover/" + p.join("/");
+  }
+  /** Where a link or the address bar points: its #, else its path. */
+  function routeAt(loc) {
+    var h = "";
+    try { h = decodeURIComponent((loc.hash || "").replace(/^#/, "")); } catch (e) { /* not one of ours */ }
+    return parseRoute(h) || parseRoute(routeOfPath(loc.pathname));
+  }
+  /** The address of a page, from the words after its # ("discover/genres/house"): its library address when it has one. */
+  function urlTo(words) {
+    return pathOf(parseRoute(words)) || SITE_PATH + "#" + words;
+  }
+  /** The same, for an href in markup. */
+  function hrefTo(words) { return esc(urlTo(words)); }
+  /** A link of the site's that opens a Discover page or Live (not one to another site, a file or a new tab). */
+  function routeLink(a) {
+    if (!a || a.target || a.hasAttribute("download") || a.origin !== location.origin) return null;
+    if (a.pathname !== SITE_PATH && a.pathname.indexOf(MUSIC_PATH) !== 0) return null;
+    if (a.pathname === SITE_PATH && !/^#(discover|live)/.test(a.hash)) return null;
+    return routeAt(a);
+  }
+
   // how the history splits "A & B", "A x B", "A vs. B"... into artists
   var ARTIST_SPLIT = /(\s*(?:,|;|\s&\s|\s\+\s|\s+and\s+|\s+x\s+|\s+vs\.?\s+|\s+versus\s+|\s+with\s+|\s+\/\s+|\s+×\s+|、)\s*)/i;
   /** The artist line, with each artist in it linking to their page. */
@@ -167,7 +266,7 @@ firetable.discover = (function () {
     if (!text) return "";
     return text.split(ARTIST_SPLIT).map(function (part, i) {
       if (i % 2 || !part.trim() || !artistSlug(part)) return esc(part);
-      return '<a class="d-alink" href="#discover/artist/' + esc(artistSlug(part)) + '">' + esc(part) + "</a>";
+      return '<a class="d-alink" href="' + hrefTo("discover/artist/" + artistSlug(part)) + '">' + esc(part) + "</a>";
     }).join("");
   }
   /** The artists named in an artist line. */
@@ -198,13 +297,13 @@ firetable.discover = (function () {
   function robotLink(dj, size) {
     if (!dj) return "";
     var key = djKey(dj.uid, dj.name);
-    return key ? '<a class="d-djlink" href="#discover/djs/' + esc(key) + '" title="' + esc(dj.name) + '">' + robot(dj, size) + "</a>" : robot(dj, size);
+    return key ? '<a class="d-djlink" href="' + hrefTo("discover/djs/" + key) + '" title="' + esc(dj.name) + '">' + robot(dj, size) + "</a>" : robot(dj, size);
   }
   /** A name, linking to their DJ page when they have one. */
   function nameLink(dj) {
     if (!dj) return "";
     var key = djKey(dj.uid, dj.name);
-    return key ? '<a class="d-namelink" href="#discover/djs/' + esc(key) + '">' + esc(dj.name) + "</a>" : esc(dj.name);
+    return key ? '<a class="d-namelink" href="' + hrefTo("discover/djs/" + key) + '">' + esc(dj.name) + "</a>" : esc(dj.name);
   }
   function moreButton() {
     return '<button type="button" class="row-icon material-symbols-outlined d-more" title="More" aria-label="More" aria-haspopup="menu">more_vert</button>';
@@ -291,7 +390,7 @@ firetable.discover = (function () {
   }
   /** A heading whose link opens New on one of its filters. */
   function newHead(title, link, filter) {
-    return '<div class="d-head"><h2>' + esc(title) + '</h2><a href="#discover/new" data-newfilter="' + esc(filter) + '">' + esc(link) + "</a></div>";
+    return '<div class="d-head"><h2>' + esc(title) + '</h2><a href="' + hrefTo("discover/new") + '" data-newfilter="' + esc(filter) + '">' + esc(link) + "</a></div>";
   }
   /** Home's lead: the week's most played new release, big, with who found it. */
   function leadCard(t, list, count) {
@@ -302,7 +401,7 @@ firetable.discover = (function () {
         (t.first ? "<span>·</span><span>" + esc(u.shortDate(t.first)) + "</span>" : "") +
         "<span>·</span><span>" + esc(u.pluralize(t.plays, "play", "plays")) + (t.plays === 1 ? " so far" : "") + "</span></p>"
       : '<p class="d-leadfound"><span class="d-tag d-befirst">Be the first</span><span>Nobody has played it here yet</span></p>';
-    var tags = (t.g ? '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(t.g)) + '">' + esc(t.g) + "</a>" : "") + (t.dur ? '<span class="d-tag d-numtag">' + esc(clock(t.dur)) + "</span>" : "") +
+    var tags = (t.g ? '<a class="d-tag" href="' + hrefTo("discover/genres/" + genreSlug(t.g)) + '">' + esc(t.g) + "</a>" : "") + (t.dur ? '<span class="d-tag d-numtag">' + esc(clock(t.dur)) + "</span>" : "") +
       (t.rel ? '<span class="d-tag d-numtag">out ' + esc(u.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime())) + "</span>" : "");
     return '<div class="pvbar d-lead' + (isPlaying(list, 0) ? " previewing" : "") + '"' + rowAttrs(t, list, 0) + ">" +
       '<div class="pv-art discart d-leadart" style="background-image:url(' + esc(artOf(t)) + ')">' +
@@ -322,7 +421,7 @@ firetable.discover = (function () {
       .sort(function (x, y) { return (y.plays || 0) - (x.plays || 0); }).slice(0, 6);
     if (!top.length) return "";
     return "<section>" + head("DJs", "All DJs", "discover/djs") + '<div class="d-djrow">' + top.map(function (d) {
-      return '<a class="d-djtile" href="#discover/djs/' + esc(d.key) + '">' + robot({ uid: d.djid, name: d.name }, "110x110") +
+      return '<a class="d-djtile" href="' + hrefTo("discover/djs/" + d.key) + '">' + robot({ uid: d.djid, name: d.name }, "110x110") +
         '<span class="d-djname">' + esc(d.name) + '</span><span class="d-num">' + esc(firetable.utilities.pluralize(d.plays || 0, "play", "plays")) + "</span></a>";
     }).join("") + "</div></section>";
   }
@@ -382,10 +481,10 @@ firetable.discover = (function () {
     { id: "themes", label: "Theme nights", icon: "nightlife" },
     { id: "recent", label: "Recent plays", icon: "history" }
   ];
-  var VIEW_IDS = VIEWS.map(function (v) { return v.id; }).concat(["artist", "search", "bpm"]);
+  var VIEW_IDS = VIEWS.map(function (v) { return v.id; }).concat(["artist", "search", "bpm", "page"]);
 
   function head(title, link, linkTo) {
-    return '<div class="d-head"><h2>' + esc(title) + "</h2>" + (link ? '<a href="#' + esc(linkTo) + '">' + esc(link) + "</a>" : "") + "</div>";
+    return '<div class="d-head"><h2>' + esc(title) + "</h2>" + (link ? '<a href="' + hrefTo(linkTo) + '">' + esc(link) + "</a>" : "") + "</div>";
   }
   function chips(name, options, on) {
     return '<div class="d-chips" role="group">' + options.map(function (o) {
@@ -432,7 +531,7 @@ firetable.discover = (function () {
   }
 
   function genreLink(g) {
-    return g ? '<a class="d-g" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>" : "";
+    return g ? '<a class="d-g" href="' + hrefTo("discover/genres/" + genreSlug(g)) + '">' + esc(g) + "</a>" : "";
   }
 
   function recentList(tracks, listName, max) {
@@ -483,6 +582,7 @@ firetable.discover = (function () {
     else if (v === "bpm") h = viewTempo(Number(D.sub));
     else if (v === "themes") h = D.sub ? viewNight(D.sub) : viewNights();
     else if (v === "search") h = viewSearch(D.sub || "");
+    else if (v === "page") h = viewPage(D.sub);
     else if (v === "recent") {
       var rt = recentTracks();
       setList("recent", "Recent plays", rt);
@@ -495,6 +595,7 @@ firetable.discover = (function () {
       D.prerendered = false;
     }
     el.innerHTML = h;
+    writeTitle(); // a page's name can arrive with its data
     if (v === "genres" && !D.sub) layoutMap();
     if (v === "djs" && D.sub) drawCards();
     firetable.ui.markSaved();
@@ -562,7 +663,7 @@ firetable.discover = (function () {
     var genres = genreList().slice(0, 12);
     if (genres.length) {
       h += "<section>" + head("Genres", "All genres", "discover/genres") +
-        '<div class="d-chips d-genrechips">' + genres.map(function (g) { return '<a class="d-chip" href="#discover/genres/' + esc(g.slug) + '">' + esc(g.name) + "</a>"; }).join("") + "</div></section>";
+        '<div class="d-chips d-genrechips">' + genres.map(function (g) { return '<a class="d-chip" href="' + hrefTo("discover/genres/" + g.slug) + '">' + esc(g.name) + "</a>"; }).join("") + "</div></section>";
     }
     if (today.length) {
       var d = new Date();
@@ -667,7 +768,7 @@ firetable.discover = (function () {
   }
   function n(x) { return Number(x || 0).toLocaleString("en-US"); }
   function back(to, label) {
-    return '<a class="d-back" href="#' + esc(to) + '">' + ms("arrow_back") + "<span>" + esc(label) + "</span></a>";
+    return '<a class="d-back" href="' + hrefTo(to) + '">' + ms("arrow_back") + "<span>" + esc(label) + "</span></a>";
   }
   function coverOf(key) {
     var i = String(key || "").indexOf("_");
@@ -736,7 +837,7 @@ firetable.discover = (function () {
     if (!dj) return "";
     var key = p.key && (lib("djs") || {})[p.key] ? p.key : djKey(dj.uid, dj.name);
     var inner = robot(dj, "80x80") + '<span class="d-person-text"><b>' + esc(dj.name) + "</b><span>" + fact + "</span>" + (more ? "<span>" + more + "</span>" : "") + "</span>";
-    return key ? '<a class="d-person" href="#discover/djs/' + esc(key) + '">' + inner + "</a>" : '<span class="d-person">' + inner + "</span>";
+    return key ? '<a class="d-person" href="' + hrefTo("discover/djs/" + key) + '">' + inner + "</a>" : '<span class="d-person">' + inner + "</span>";
   }
   /**
    * A library list, ready to show: each song once (the same upload, or the
@@ -786,14 +887,14 @@ firetable.discover = (function () {
         var x = 6 + (g.x == null ? 0.5 : g.x) * 88;
         var y = g.bpm ? 8 + (1 - (g.bpm - lo) / (hi - lo)) * 80 : 48;
         var size = Math.sqrt(weight(g) / top);
-        return '<a role="listitem" class="d-mapg' + (D.mapDecade && !weight(g) ? " d-quiet" : "") + (D.mapPick === g.slug ? " is-picked" : "") + '" href="#discover/genres/' + esc(g.slug) + '" data-slug="' + esc(g.slug) + '"' + (D.mapPick === g.slug ? ' aria-current="true"' : "") + ' data-y="' + y.toFixed(1) + '" style="left:' + x.toFixed(1) + "%;top:" + y.toFixed(1) + "%;--s:" + size.toFixed(2) + '" title="' +
+        return '<a role="listitem" class="d-mapg' + (D.mapDecade && !weight(g) ? " d-quiet" : "") + (D.mapPick === g.slug ? " is-picked" : "") + '" href="' + hrefTo("discover/genres/" + g.slug) + '" data-slug="' + esc(g.slug) + '"' + (D.mapPick === g.slug ? ' aria-current="true"' : "") + ' data-y="' + y.toFixed(1) + '" style="left:' + x.toFixed(1) + "%;top:" + y.toFixed(1) + "%;--s:" + size.toFixed(2) + '" title="' +
           esc(g.name + " · " + n(g.plays) + " plays" + (g.bpm ? " · usually " + g.bpm + " BPM" : "")) + '">' + esc(g.name) + "</a>";
       }).join("") + "</div>";
     // what the marks mean (the room's genre and yours are found after the page draws: mapMarks)
     h += '<p class="d-maplegend" id="dMapLegend"><span class="d-mlsize">Bigger: played here more</span><span class="d-mlroom">The room is playing</span><span class="d-mltonight">Played tonight (brighter: more)</span><span class="d-mlhear">You\'re hearing</span><span class="d-mlpick">Picked: its card is below</span></p>';
     h += '<div class="d-mapcard" id="dMapCard" aria-live="polite">' + mapCard(D.mapPick) + "</div>";
     h += '<div class="d-gcards">' + list.map(function (g) {
-      return '<a class="d-gcard" href="#discover/genres/' + esc(g.slug) + '">' + mosaic(g.covers) +
+      return '<a class="d-gcard" href="' + hrefTo("discover/genres/" + g.slug) + '">' + mosaic(g.covers) +
         '<span class="d-gname">' + esc(g.name) + '</span><span class="d-gfact d-num">' + (D.mapDecade ? esc(n(weight(g))) + " plays in the " + esc(D.mapDecade) + "s" : esc(n(g.songs)) + " songs · " + esc(n(g.plays)) + " plays") + "</span></a>";
     }).join("") + "</div>";
     return h;
@@ -869,9 +970,9 @@ firetable.discover = (function () {
     var next = (g.next || []).filter(function (k) { return all[k]; });
     return '<div class="d-mapcardin">' + mosaic(g.covers) + '<div class="d-mapcardtext"><h3>' + esc(g.name) + "</h3>" +
       (g.about ? '<p class="d-about">' + esc(g.about) + "</p>" : "") + '<p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
-      (next.length ? '<p class="d-fact">Next door: ' + next.map(function (k) { return '<a class="d-mapnext" href="#discover/genres/' + esc(k) + '" data-slug="' + esc(k) + '">' + esc(all[k].name) + "</a>"; }).join(", ") + "</p>" : "") +
+      (next.length ? '<p class="d-fact">Next door: ' + next.map(function (k) { return '<a class="d-mapnext" href="' + hrefTo("discover/genres/" + k) + '" data-slug="' + esc(k) + '">' + esc(all[k].name) + "</a>"; }).join(", ") + "</p>" : "") +
       '<div class="d-actions"><button type="button" class="butt d-panelmain d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>" + esc(g.name) + " radio</span></button>" +
-      '<a class="butt graybutt" href="#discover/genres/' + esc(slug) + '">' + ms("arrow_forward") + "<span>Open " + esc(g.name) + "</span></a></div></div></div>";
+      '<a class="butt graybutt" href="' + hrefTo("discover/genres/" + slug) + '">' + ms("arrow_forward") + "<span>Open " + esc(g.name) + "</span></a></div></div></div>";
   }
   /** Pick a genre on the map: its card shows under the map, and the page stays. */
   function pickGenre(slug) {
@@ -949,7 +1050,7 @@ firetable.discover = (function () {
     var next = (g.next || []).filter(function (k) { return all[k]; });
     if (next.length) {
       h += "<section>" + head("Next door") + '<p class="d-fact">Genres its songs share most</p><div class="d-chips">' +
-        next.map(function (k) { return '<a class="d-chip" href="#discover/genres/' + esc(k) + '">' + esc(all[k].name) + "</a>"; }).join("") + "</div></section>";
+        next.map(function (k) { return '<a class="d-chip" href="' + hrefTo("discover/genres/" + k) + '">' + esc(all[k].name) + "</a>"; }).join("") + "</div></section>";
     }
     return h;
   }
@@ -1030,7 +1131,7 @@ firetable.discover = (function () {
         '<div class="d-stack" role="img" aria-label="' + esc(parts.map(function (x) { return x.g + " " + x.pct + "%"; }).join(", ")) + '">' +
         parts.map(function (x) { return '<i class="d-sw-' + x.k + '" style="flex-grow:' + Math.max(0.5, x.pct) + '" title="' + esc(x.g + " · " + x.pct + "%") + '"></i>'; }).join("") + "</div>" +
         '<ul class="d-stacklegend">' + parts.map(function (x) {
-          var name = x.slug ? '<a href="#discover/genres/' + esc(x.slug) + '">' + esc(x.g) + "</a>" : "<span>" + esc(x.g) + "</span>";
+          var name = x.slug ? '<a href="' + hrefTo("discover/genres/" + x.slug) + '">' + esc(x.g) + "</a>" : "<span>" + esc(x.g) + "</span>";
           return '<li><i class="d-sw-' + x.k + '" aria-hidden="true"></i>' + name + '<span class="d-num">' + esc(x.pct) + "%</span></li>";
         }).join("") + "</ul></div></section>";
     }
@@ -1070,7 +1171,7 @@ firetable.discover = (function () {
         var what = "<span>" + esc(firetable.utilities.pluralize(x.n, "song", "songs") + (x.sets > 1 ? " in " + x.sets + " sets" : "")) + "</span>";
         // a theme night's line opens that night's page
         return night
-          ? '<a class="d-set d-setlink" href="#discover/themes/' + esc(night.id) + '">' + day + '<span class="d-settheme">' + esc(night.theme) + "</span>" + what + "</a>"
+          ? '<a class="d-set d-setlink" href="' + hrefTo("discover/themes/" + night.id) + '">' + day + '<span class="d-settheme">' + esc(night.theme) + "</span>" + what + "</a>"
           : '<div class="d-set">' + day + "<span></span>" + what + "</div>";
       }).join("") + "</div></section>";
     }
@@ -1123,11 +1224,11 @@ firetable.discover = (function () {
     var ai = lib("artistIndex") || {};
     var artists = Object.keys(ai).filter(function (k) { return matches(q, ai[k][0]); }).sort(function (a, b) { return ai[b][1] - ai[a][1]; }).slice(0, 8);
     h += section("Artists", '<div class="d-people">' + artists.map(function (k) {
-      return '<a class="d-person" href="#discover/artist/' + esc(k) + '"><span class="d-person-text"><b>' + esc(ai[k][0]) + "</b><span>" + esc(firetable.utilities.pluralize(ai[k][1], "play", "plays")) + "</span></span></a>";
+      return '<a class="d-person" href="' + hrefTo("discover/artist/" + k) + '"><span class="d-person-text"><b>' + esc(ai[k][0]) + "</b><span>" + esc(firetable.utilities.pluralize(ai[k][1], "play", "plays")) + "</span></span></a>";
     }).join("") + "</div>", artists.length);
     // genres
     var gs = genreList().filter(function (g) { return matches(q, g.name); }).slice(0, 12);
-    h += section("Genres", '<div class="d-chips">' + gs.map(function (g) { return '<a class="d-chip" href="#discover/genres/' + esc(g.slug) + '">' + esc(g.name) + "</a>"; }).join("") + "</div>", gs.length);
+    h += section("Genres", '<div class="d-chips">' + gs.map(function (g) { return '<a class="d-chip" href="' + hrefTo("discover/genres/" + g.slug) + '">' + esc(g.name) + "</a>"; }).join("") + "</div>", gs.length);
     // DJs
     var dall = lib("djs") || {};
     var djs = Object.keys(dall).filter(function (k) { return matches(q, dall[k].name); }).sort(function (a, b) { return (dall[b].plays || 0) - (dall[a].plays || 0); }).slice(0, 8);
@@ -1236,7 +1337,7 @@ firetable.discover = (function () {
     return d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: withYear || d.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined });
   }
   function nightRow(n) {
-    return '<a class="d-night" href="#discover/themes/' + esc(n.id) + '"><b>' + esc(n.theme) + "</b><span>" + esc(nightDate(n) + " · " + firetable.utilities.pluralize(n.n, "song", "songs") +
+    return '<a class="d-night" href="' + hrefTo("discover/themes/" + n.id) + '"><b>' + esc(n.theme) + "</b><span>" + esc(nightDate(n) + " · " + firetable.utilities.pluralize(n.n, "song", "songs") +
       ((n.djs || []).length ? " · " + n.djs.join(", ") : "")) + "</span></a>";
   }
 
@@ -1369,12 +1470,40 @@ firetable.discover = (function () {
     var firstDj = a.firstDj ? djShown(a.firstDjid, a.firstDj) : null;
     var h = '<div class="d-pagehead">' + mosaic(tracks.slice(0, 4).map(function (t) { return t.type + "_" + t.cid; }), true) +
       '<div class="d-pagetext"><h2>' + esc(a.name) + "</h2>" + factChips(facts) +
+      ((a.g || []).length ? '<p class="d-fact d-sound">' + a.g.map(function (g) { return '<a class="d-tag" href="' + hrefTo("discover/genres/" + genreSlug(g)) + '">' + esc(g) + "</a>"; }).join("") + "</p>" : "") +
       (a.first ? '<p class="d-fact">First played here ' + esc(firetable.utilities.shortDate(a.first)) + (firstDj ? " by " + nameLink(firstDj) : "") + "</p>" : "") +
       '<div class="d-actions">' + playAllButton("artist", "Play all") + "</div></div></div>";
     h += "<section>" + head("Most played here") + rankedRows(tracks, "artist") + "</section>";
+    // artists the same DJs play (the weekly play history job works them out)
+    var like = (a.sim || []).filter(function (x) { return x && x.k && x.n; });
+    if (like.length) {
+      h += "<section>" + head("Sounds like") + '<p class="d-fact">Artists the same DJs play</p><div class="d-chips">' +
+        like.map(function (x) { return '<a class="d-chip" href="' + hrefTo("discover/artist/" + x.k) + '">' + esc(x.n) + "</a>"; }).join("") + "</div></section>";
+    }
     var who = (a.djs || []).map(function (p) { return person(p, esc(firetable.utilities.pluralize(p.plays, "play", "plays"))); }).filter(Boolean);
     if (who.length) h += "<section>" + head("Who plays them") + '<div class="d-people">' + who.join("") + "</div></section>";
     return h;
+  }
+
+  // The library's own lists (its front page, every artist, the artists by
+  // letter) are built once a week with the pages for search engines
+  // (tools/plain-pages.mjs). Discover shows them as built: arriving on one, it's
+  // already in the page; from a link, it's read from the same address.
+  var builtPages = {};   // sub -> { html, title } | null (not there) ; undefined while it's read
+  function viewPage(sub) {
+    var got = builtPages[sub];
+    if (got === undefined) {
+      builtPages[sub] = false; // asked
+      var url = pathOf({ mode: "discover", view: "page", sub: sub });
+      fetch(url, { credentials: "same-origin" }).then(function (res) { return res.ok ? res.text() : null; }).then(function (text) {
+        var doc = text ? new DOMParser().parseFromString(text, "text/html") : null;
+        var el = doc && doc.querySelector("#dBrowse[data-prerendered]");
+        builtPages[sub] = el && doc.querySelector('meta[name="ft-route"][content="discover/page/' + sub + '"]') ? { html: el.innerHTML, title: doc.title } : null;
+      }, function () { builtPages[sub] = null; }).then(function () { if (D.view === "page" && D.sub === sub) renderBrowse(); });
+    }
+    if (got) return got.html;
+    if (got === null) return '<div class="d-headrow"><h2>The library</h2></div>' + emptyNote("This page of the library isn't built yet. It's made with the weekly play history update.");
+    return loading();
   }
 
   function viewYears() {
@@ -1387,7 +1516,7 @@ firetable.discover = (function () {
     h += '<div class="d-yearlist">' + ys.map(function (y) {
       var v = all[y] || {};
       var pct = v.songs ? Math.round((v.played / v.songs) * 100) : 0;
-      return '<a class="d-yearrow' + (v.covers && v.covers.length ? " has-covers" : "") + '" href="#discover/years/' + esc(y) + '">' +
+      return '<a class="d-yearrow' + (v.covers && v.covers.length ? " has-covers" : "") + '" href="' + hrefTo("discover/years/" + y) + '">' +
         (v.covers && v.covers.length ? mosaic(v.covers) : "") + '<b class="d-num">' + esc(y) + "</b>" +
         '<span class="d-yeartext"><span>' + esc(n(v.songs)) + " songs released in " + esc(y) + " · " + esc(n(v.played)) + " played here · " + esc(n(v.plays)) + " plays</span>" +
         (v.genre ? "<span>mostly " + esc(v.genre) + "</span>" : "") + "</span>" +
@@ -1433,7 +1562,7 @@ firetable.discover = (function () {
   /** A song's tempo as a tag that opens the songs played here at that tempo. */
   function tempoTag(bpm) {
     if (!isTempo(bpm)) return '<span class="d-tag">' + esc(bpm) + " BPM</span>";
-    return '<a class="d-tag d-bpmtag" href="#discover/bpm/' + bpm + '" title="' + esc("Songs played here at " + bpm + " BPM") + '">' + esc(bpm) + " BPM</a>";
+    return '<a class="d-tag d-bpmtag" href="' + hrefTo("discover/bpm/" + bpm) + '" title="' + esc("Songs played here at " + bpm + " BPM") + '">' + esc(bpm) + " BPM</a>";
   }
   /** The history's song for a tempo's key, as a library row: {type, cid, t, a, plays, first, dj, song}. */
   function tempoSong(key) {
@@ -1487,14 +1616,14 @@ firetable.discover = (function () {
     if (D.mode === "discover" && D.view === "bpm" && Number(D.sub) === n) renderBrowse();
   }
   function tempoLink(n, label) {
-    return isTempo(n) ? '<a href="#discover/bpm/' + n + '">' + esc(label) + "</a>" : "";
+    return isTempo(n) ? '<a href="' + hrefTo("discover/bpm/" + n) + '">' + esc(label) + "</a>" : "";
   }
 
   function viewTempo(bpm) {
     var page = tempoPage(bpm);
     var title = bpm + " BPM";
     var step = function (to, dir, label) {
-      return isTempo(to) ? '<a class="butt graybutt iconbutt" href="#discover/bpm/' + to + '" title="' + esc(label + ": " + to + " BPM") + '" aria-label="' + esc(label + ": " + to + " BPM") + '">' + ms(dir) + "</a>"
+      return isTempo(to) ? '<a class="butt graybutt iconbutt" href="' + hrefTo("discover/bpm/" + to) + '" title="' + esc(label + ": " + to + " BPM") + '" aria-label="' + esc(label + ": " + to + " BPM") + '">' + ms(dir) + "</a>"
         : '<button type="button" class="butt graybutt iconbutt" disabled aria-label="' + esc(label) + '">' + ms(dir) + "</button>";
     };
     var h = '<div class="d-headrow">' + step(bpm - 1, "chevron_left", "Slower") + step(bpm + 1, "chevron_right", "Faster") + '<p class="d-fact">Songs by tempo, from Deezer or set in chat with !bpm</p></div>';
@@ -1758,7 +1887,7 @@ firetable.discover = (function () {
       var now = fullTrack();
       if (!F.open || !now || String(now.cid) !== String(t.cid)) return;
       d = Object.assign({}, d, liveFacts(t));
-      var tags = (d.genres || []).slice(0, 2).map(function (g) { return '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>"; });
+      var tags = (d.genres || []).slice(0, 2).map(function (g) { return '<a class="d-tag" href="' + hrefTo("discover/genres/" + genreSlug(g)) + '">' + esc(g) + "</a>"; });
       if (t.rel) tags.push('<span class="d-tag d-numtag">' + esc(t.rel.slice(0, 4)) + "</span>");
       tags.push('<span class="d-tag">' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + "</span>");
       if (d.bpm) tags.push(tempoTag(d.bpm));
@@ -3228,26 +3357,7 @@ firetable.discover = (function () {
   // ─── Mode and addresses ─────────────────────────────────────────────────
 
   function route() {
-    var h;
-    try { h = decodeURIComponent((location.hash || "").replace(/^#/, "")); } catch (e) { return null; }
-    if (h === "live") return { mode: "live" };
-    var p = h.split("/");
-    if (p[0] !== "discover") return null;
-    var view = p[1] || "home";
-    if (VIEW_IDS.indexOf(view) === -1) return null;
-    var r = { mode: "discover", view: view, sub: null, period: null, id: null };
-    if (view === "charts") {
-      if (/^(week|month|year|all)$/.test(p[2] || "")) { r.period = p[2]; r.id = /^[\w-]+$/.test(p[3] || "") ? p[3] : null; }
-    } else if (view === "search") {
-      r.sub = p.slice(2).join("/").slice(0, 100) || null;
-    } else if (view === "genres" || view === "djs" || view === "years" || view === "artist" || view === "themes") {
-      r.sub = /^[a-z0-9_-]{1,80}$/i.test(p[2] || "") ? p[2] : null;
-      if (view === "artist" && !r.sub) return null;
-    } else if (view === "bpm") {
-      if (!isTempo(Number(p[2]))) return null;
-      r.sub = String(Number(p[2]));
-    }
-    return r;
+    return routeAt(location) || parseRoute((document.querySelector('meta[name="ft-route"]') || {}).content || "");
   }
   function addressFor() {
     if (D.mode === "live") return "#live";
@@ -3258,9 +3368,71 @@ firetable.discover = (function () {
     }
     return "#discover/" + D.view + (D.sub ? "/" + (D.view === "search" ? encodeURIComponent(D.sub) : D.sub) : "");
   }
+  /** The page that's showing, as {mode, view, sub, period, id}. */
+  function current() {
+    return { mode: D.mode, view: D.view, sub: D.sub, period: D.view === "charts" ? D.chart.period : null, id: D.view === "charts" ? D.chart.id : null };
+  }
+  /** This page's address: its own in the library when it has one, else the site's with a #. */
+  function urlFor() {
+    return (D.mode === "discover" && pathOf(current())) || SITE_PATH + addressFor();
+  }
   function writeAddress() {
-    var want = addressFor();
-    if (location.hash !== want) history.replaceState(null, "", want);
+    var want = urlFor();
+    if (location.pathname + location.hash !== want) {
+      var cut = want.indexOf("#");
+      try { history.replaceState(history.state, "", (cut === -1 ? want : want.slice(0, cut)) + location.search + (cut === -1 ? "" : want.slice(cut))); } catch (e) { /* stays as it is */ }
+    }
+    handled = location.href;
+    writeTitle();
+  }
+  // The tab's name follows the page (history, bookmarks, a shared tab). The
+  // page someone arrived on keeps the title it was sent with.
+  var HOME_TITLE = (document.querySelector('meta[name="ft-home-title"]') || {}).content || document.title;
+  var landed = document.querySelector('meta[name="ft-route"]') ? null : false;
+  var handled = location.href;
+  function titleFor() {
+    if (D.mode !== "discover" || D.view === "home") return HOME_TITLE;
+    var room = ftconfigs.roomName || "firetable";
+    var v = D.view, name = "";
+    if (v === "genres" && D.sub) name = ((libData.genres || {})[D.sub] || {}).name ? "Best " + libData.genres[D.sub].name + " songs" : "";
+    else if (v === "djs" && D.sub) name = (libData["dj/" + D.sub] || (libData.djs || {})[D.sub] || {}).name ? (libData["dj/" + D.sub] || libData.djs[D.sub]).name + ", DJ" : "";
+    else if (v === "artist") { name = (libData["artist/" + D.sub] || {}).name || ((libData.artistIndex || {})[D.sub] || [])[0] || ""; if (name) name += ": top songs"; }
+    else if (v === "page") return (builtPages[D.sub] || {}).title || "The library · " + room;
+    else if (v === "years" && D.sub) name = "The best songs of " + D.sub;
+    else if (v === "bpm") name = D.sub + " BPM songs";
+    else if (v === "search") name = D.sub ? "Search: " + D.sub : "Search";
+    else if (v === "charts") name = "Charts";
+    else if (v === "new") name = "New releases";
+    if (!name) name = (VIEWS.filter(function (x) { return x.id === v; })[0] || {}).label || "";
+    return name ? name + " · " + room : HOME_TITLE;
+  }
+  function writeTitle() {
+    var at = location.pathname + location.hash;
+    if (landed === null) landed = at;
+    if (landed === at) return;
+    landed = false;
+    var t = titleFor();
+    if (document.title !== t) document.title = t;
+  }
+  /** Go to a page from its words after # ("discover/djs/matt"), as a link to it would. */
+  function goTo(words) {
+    var r = parseRoute(words);
+    if (!r) return;
+    try { history.pushState(null, "", urlTo(words)); } catch (e) { /* the page still changes */ }
+    openRoute(r);
+  }
+  /** Show the page an address names (a link, Back and Forward, a # typed or set). */
+  function openRoute(r) {
+    closeMenu();
+    applyRoute(r);
+    setMode(r.mode, { remember: true });
+    if (r.mode === "discover") setView(D.view, D.sub);
+  }
+  function onAddress() {
+    if (location.href === handled) return;
+    handled = location.href;
+    var r = route();
+    if (r) openRoute(r);
   }
 
   function setMode(mode, opts) {
@@ -3510,7 +3682,7 @@ firetable.discover = (function () {
     }
     // the full-screen player
     if ((b = t.closest("#fullscreenBtn"))) return F.open ? closeFull() : openFull(b);
-    if (F.open && t.closest("#pv-full a[href^='#discover']")) closeFull(); // an artist, genre or DJ page: show it
+    if (F.open && routeLink(t.closest("#pv-full a[href]"))) closeFull(); // an artist, genre or DJ page: show it
     if ((b = t.closest(".pvf-main"))) return fullMain();
     if ((b = t.closest("#pv-fclose"))) return closeFull();
     if ((b = t.closest(".pvf-morebtn"))) {
@@ -3587,7 +3759,7 @@ firetable.discover = (function () {
     if ((b = t.closest(".d-sheetlink"))) { e.preventDefault(); return openSheet(songFrom(b)); }
     if ((b = t.closest("#thehistory .pv-dj-avatar, #thediscovers .pv-dj-avatar"))) {
       var key = djKey(b.getAttribute("data-avatar-uid"), b.getAttribute("aria-label"));
-      if (key) { location.hash = "#discover/djs/" + key; return; }
+      if (key) return goTo("discover/djs/" + key);
     }
     if ((b = t.closest(".d-ytsearch"))) return searchYouTube(D.sub || "");
     if ((b = t.closest(".d-playall"))) return play(b.getAttribute("data-list"), 0);
@@ -3740,11 +3912,11 @@ firetable.discover = (function () {
     h += act("sheet");
     if (D.signedIn) h += act("add");
     if (url) h += item(I.open.icon, Number(t.type || 1) === MEDIA_YOUTUBE ? "Open on YouTube" : "Open on SoundCloud", 'href="' + esc(url) + '" target="_blank" rel="noopener"');
-    artistsOf(t.a).slice(0, 3).forEach(function (a) { h += item("person", "Go to " + esc(a), 'href="#discover/artist/' + esc(artistSlug(a)) + '"'); });
-    if (t.g) h += item("category", "More " + esc(t.g), 'href="#discover/genres/' + esc(genreSlug(t.g)) + '"');
+    artistsOf(t.a).slice(0, 3).forEach(function (a) { h += item("person", "Go to " + esc(a), 'href="' + hrefTo("discover/artist/" + artistSlug(a)) + '"'); });
+    if (t.g) h += item("category", "More " + esc(t.g), 'href="' + hrefTo("discover/genres/" + genreSlug(t.g)) + '"');
     var dj = t.dj ? djShown(t.djid, t.dj) : null;
     var key = dj && djKey(dj.uid, dj.name);
-    if (key) h += item("headphones", esc(dj.name) + "'s DJ page", 'href="#discover/djs/' + esc(key) + '"');
+    if (key) h += item("headphones", esc(dj.name) + "'s DJ page", 'href="' + hrefTo("discover/djs/" + key) + '"');
     if (url) h += act("copy");
     if (canRetag(t)) h += act("tags");
     m.innerHTML = h;
@@ -3929,7 +4101,7 @@ firetable.discover = (function () {
       dlg.addEventListener("click", function (e) {
         var b;
         if (e.target === dlg || e.target.closest(".closeModal")) return dlg.close();
-        if (e.target.closest("a[href^='#discover']")) return dlg.close();
+        if (routeLink(e.target.closest("a[href]"))) return dlg.close();
         if ((b = e.target.closest(".d-sheetplay"))) {
           dlg.close();
           setList("sheet", "Song", [sheetTrack]);
@@ -3956,7 +4128,7 @@ firetable.discover = (function () {
     if (!dlg.open) dlg.showModal();
     loadDetails(t).then(function (d) {
       if (sheetTrack !== t) return;
-      var tags = (d.genres || []).slice(0, 3).map(function (g) { return '<a class="d-tag" href="#discover/genres/' + esc(genreSlug(g)) + '">' + esc(g) + "</a>"; });
+      var tags = (d.genres || []).slice(0, 3).map(function (g) { return '<a class="d-tag" href="' + hrefTo("discover/genres/" + genreSlug(g)) + '">' + esc(g) + "</a>"; });
       if (t.rel) tags.push('<span class="d-tag d-numtag">' + esc(t.rel.slice(0, 4)) + "</span>");
       if (d.bpm) tags.push(tempoTag(d.bpm));
       tags.push('<span class="d-tag">' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + "</span>");
@@ -4098,7 +4270,9 @@ firetable.discover = (function () {
   function embedDialog() {
     var period = D.chart.period;
     var src = location.origin + "/embed/chart/?period=" + period + (D.chart.id && period !== "all" ? "&id=" + encodeURIComponent(D.chart.id) : "");
-    var code = '<iframe src="' + src + '" width="400" height="640" style="border:0;border-radius:8px" title="' + (ftconfigs.roomName || "Room") + ' chart" loading="lazy"></iframe>';
+    // a line of credit under it, a real link to this chart's page (a link inside the frame doesn't count as one from their site)
+    var code = '<iframe src="' + src + '" width="400" height="640" style="border:0;border-radius:8px" title="' + esc(ftconfigs.roomName || "Room") + ' chart" loading="lazy"></iframe>' +
+      '\n<p style="margin:4px 0 0;font:12px sans-serif"><a href="' + esc(location.origin + (pathOf(current()) || MUSIC_PATH + "charts/")) + '">' + esc(ftconfigs.roomName || "Room") + " chart</a></p>";
     var dlg = document.getElementById("dEmbedBox");
     if (!dlg) {
       dlg = document.createElement("dialog");
@@ -4126,7 +4300,7 @@ firetable.discover = (function () {
   }
 
   function copyLink() {
-    var url = location.href.split("#")[0] + addressFor();
+    var url = location.origin + urlFor();
     var done = function () { firetable.ui.toast("Link copied", "success"); };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { firetable.ui.toast(url); });
     else firetable.ui.toast(url);
@@ -4185,6 +4359,8 @@ firetable.discover = (function () {
     if (filledHtml) {
       document.getElementById("dBrowse").innerHTML = filledHtml;
       D.prerendered = true;
+      var here = route();
+      if (here && here.view === "page") builtPages[here.sub] = { html: filledHtml, title: document.title };
     }
 
     // visitors' Live: the chat, above Fresh
@@ -4396,14 +4572,25 @@ firetable.discover = (function () {
       document.addEventListener("scroll", function () { closeMenu(); }, true);
       // DJ pages, for linking names (a small list); after the page has settled
       setTimeout(function () { lib("djs"); }, 2500);
-      window.addEventListener("hashchange", function () {
-        var r = route();
+      // A link to one of the site's pages opens it here, at its own address,
+      // with nothing reloaded. On window: after every other click handler, where
+      // the browser itself would have followed the link.
+      window.addEventListener("click", function (e) {
+        if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        var a = e.target.closest && e.target.closest("a[href]");
+        // a button written as a link: under <base href="/"> its "#" would leave a library page for the home page
+        if (a && a.getAttribute("href") === "#") return e.preventDefault();
+        var r = routeLink(a);
         if (!r) return;
-        closeMenu();
-        applyRoute(r);
-        setMode(r.mode, { remember: true });
-        if (r.mode === "discover") setView(D.view, D.sub);
+        e.preventDefault();
+        if (a.pathname + a.hash !== location.pathname + location.hash) {
+          try { history.pushState(null, "", a.pathname + a.hash); } catch (err) { /* the page still changes */ }
+        }
+        handled = location.href;
+        openRoute(r);
       });
+      window.addEventListener("popstate", onAddress);
+      window.addEventListener("hashchange", onAddress);
       // (SoundCloud's FINISH reaches onEnded through the widget's own binding, player.js)
       ftapi.events.on("loggedIn", function () { signedIn(true); });
       ftapi.events.on("loggedOut", function () { signedIn(false); });
@@ -4492,7 +4679,7 @@ firetable.discover = (function () {
     /** A member's DJ page address, when they have one (for the room's user card). */
     djPage: function (uid, name) {
       var key = djKey(uid, name);
-      return key ? "#discover/djs/" + key : null;
+      return key ? urlTo("discover/djs/" + key) : null;
     },
     /** Picks changed in the card case: read them again on the next DJ page. */
     forgetFeatured: function (uid) { delete featuredData[uid]; delete featuredAsk[uid]; },
@@ -4511,6 +4698,10 @@ firetable.discover = (function () {
     /** The bottom tab bar follows Live's tabs too (firetable.nav.apply). */
     renderTabs: function () { renderTabs(); },
     /** For tests: what's on screen. */
+    /** The page showing, as the words after # ("#discover/genres/house", "#live"), whatever its address looks like. */
+    address: function () { return addressFor(); },
+    /** Its address in the address bar. */
+    url: function () { return urlFor(); },
     state: function () { return { tab: navTab(), browse: !!D.browse, mode: D.mode, view: D.view, listening: D.listening, playing: P.track && P.track.cid, list: P.list, i: P.i, full: F.open, fullView: fullView() }; }
   };
 })();

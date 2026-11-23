@@ -937,6 +937,8 @@ section .d-chips a.d-chip {
     font-weight: 600;
 }
 .d-numtag { font-family: var(--font-numbers); font-weight: 500; }
+/* An artist's genres, under their name */
+.d-sound { display: flex; flex-wrap: wrap; gap: var(--pad1); }
 .d-hist p {
     display: flex;
     align-items: center;

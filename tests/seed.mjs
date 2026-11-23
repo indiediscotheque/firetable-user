@@ -59,8 +59,11 @@ export const library = (now) => {
     djs: { dj1: { name: "dj1", djid: "dj1", plays: 120, firsts: 30, since: now - 900 * DAY, g: ["Nu-Disco"] } },
     dj: { dj1: { name: "dj1", djid: "dj1", plays: 120, firsts: 30, songs: 80, since: now - 900 * DAY, when: "Friday nights", taste: [{ g: "Nu-Disco", slug: "nu-disco", pct: 70 }],
       most: [row("lib0000001", "Alpha & Beta", "Fav One", 30, { by: 12 })], firstHere: [], similar: [], sets: [{ at: now - DAY, n: 9 }] } },
-    artistIndex: { alpha: ["Alpha", 30] },
-    artist: { alpha: { name: "Alpha", plays: 30, songs: 1, first: now - 400 * DAY, firstDj: "dj1", firstDjid: "dj1", rows: [row("lib0000001", "Alpha & Beta", "Fav One", 30)], djs: [] } },
+    artistIndex: { alpha: ["Alpha", 30], omega: ["Omega", 9] },
+    // g: their genres; sim: who they sound like (the Play history job works both out)
+    artist: { alpha: { name: "Alpha", plays: 30, songs: 1, first: now - 400 * DAY, firstDj: "dj1", firstDjid: "dj1", rows: [row("lib0000001", "Alpha & Beta", "Fav One", 30)], djs: [],
+      g: ["Nu-Disco"], sim: [{ k: "omega", n: "Omega" }] },
+    omega: { name: "Omega", plays: 9, songs: 1, rows: [row("lib0000008", "Omega", "Last One", 9)], djs: [], g: ["Nu-Disco"], sim: [{ k: "alpha", n: "Alpha" }] } },
     years: { 2026: { songs: 100, plays: 50, played: 20, genre: "Nu-Disco" } },
     year: { 2026: { top: [row("lib0000002", "Gamma", "Fav Two", 20)], more: [{ type: 1, cid: "lib0000009", a: "Zed", t: "Unplayed Find", plays: 0 }] } }
   };

@@ -39,7 +39,7 @@
   function show(c) {
     var rows = ((c && c.rows) || []).slice(0, max);
     var page = site + "music/charts/" + (period === "all" ? "all-time" : period + "/" + id) + "/";
-    var open = site + "#discover/charts" + (period === "all" ? "/all" : "/" + period + "/" + id);
+    var open = page; // the chart's own page: the site opens it in Discover
     if (!rows.length) { box.innerHTML = '<p class="e-note">No plays on this chart yet.</p>'; return; }
     box.innerHTML = '<header><a class="e-room" href="' + esc(site) + '" target="_blank" rel="noopener"><img src="../../img/idlogo.png" alt="" width="32" height="16" />' + esc(room) + "</a>" +
       '<h1><a href="' + esc(page) + '" target="_blank" rel="noopener">Room chart</a></h1><p>' + esc(title(c)) + (c.plays ? " · " + esc(plural(c.plays, "play", "plays")) : "") + "</p></header>" +

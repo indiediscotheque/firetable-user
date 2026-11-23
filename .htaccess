@@ -10,6 +10,18 @@ Options -Indexes
   AddType image/webp .webp
 </IfModule>
 
+# A library address with no page of its own yet (a DJ's first week, this
+# week's chart before the next deploy builds it): the site itself, which opens
+# that Discover page (js/discover.js) and asks search engines not to keep the
+# address. Only addresses shaped like the library's; anything else under
+# /music/ that isn't there is still "not found".
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^music/(?:new|charts|genres|djs|years|themes|artists)(?:/[A-Za-z0-9_-]{1,80}){0,2}/?$ index.html [END]
+</IfModule>
+
 # Never serve .htaccess files or the deploy's backup copy
 <FilesMatch "^\.ht">
   Require all denied

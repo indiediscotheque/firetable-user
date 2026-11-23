@@ -53,7 +53,7 @@ const ALLOW = {
 const kind = (target) => target.replace(/\[([\w-]+)="[^"]*"\]/g, "[$1]").replace(/:nth-(child|of-type)\(\d+\)/g, "").replace(/\d+/g, "N");
 
 // ── the views ───────────────────────────────────────────────────────────────
-const hash = (h) => (page) => page.evaluate((x) => { if (location.hash !== x) location.hash = x; }, h);
+const hash = (h) => (page) => page.evaluate((x) => { if (firetable.discover.address() !== x) location.hash = x; }, h);
 const liveTab = (id) => async (page) => { await hash("#live")(page); await page.evaluate((t) => firetable.nav.setMobileTab(t), id); };
 const VIEWS = [
   { name: "d-home", run: hash("#discover") },

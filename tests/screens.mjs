@@ -67,7 +67,7 @@ const liveTab = (id) => async (page) => {
 };
 const hash = (h) => async (page) => go(page, h);
 async function go(page, h) {
-  if (await page.evaluate(() => location.hash) !== h) await page.evaluate((x) => { location.hash = x; }, h);
+  if (await page.evaluate(() => firetable.discover.address()) !== h) await page.evaluate((x) => { location.hash = x; }, h);
 }
 const VIEWS = [
   // Live, under the stage and beside it (at 1024 and up chat and people are always there)
