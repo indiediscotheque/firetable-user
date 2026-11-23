@@ -88,11 +88,11 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| PE-01 | People list with roles (bot, supermod, mod, member), DJs first | All | `#usersbox`, `#usersStats` (`#numListeners`, `#numRoomListeners`, `#numStreamListeners`), `#allUsers` > `#usersDJs`, `#usersBot`, `#usersSuper`, `#usersMod`, `#usersRegular`; `usersChanged`, `userJoined`, `userLeft`, `userChanged` | 1.12 role legend and readable size; stays left at 1024+, a tab on tablets and phones |
+| PE-01 | People list with roles (bot, supermod, mod, member), DJs first | All | `#usersbox`, `#usersStats` (`#numListeners`, `#numRoomListeners`, `#numStreamListeners`), `#allUsers` > `#usersDJs`, `#usersBot`, `#usersSuper`, `#usersMod`, `#usersRegular`; `usersChanged`, `userJoined`, `userLeft`, `userChanged` | 1.12 role legend and readable size; stays left at 1024+, a tab on tablets and phones. Since November 22, 2026 only the bot, mods and supermods have a role icon (after the name, so names line up); a member's row has none |
 | PE-02 | Radio listeners count | All | `#numStreamListeners` | keep |
 | PE-03 | User card (profile, DJ page link, cards they hold, block, deck controls) | All | `#ft-user-tip`, `ui.js` | keep |
 | PE-04 | Block / unblock | M | user card `utt-block-btn`, `/block`, `/unblock`, `blocks/` | keep |
-| PE-05 | Idle state | All | `js/state.js` (idleTracker), `users/<uid>/idle` | keep |
+| PE-05 | Idle state | All | `js/state.js` (idleTracker), `users/<uid>/idle` | keep. Since November 22, 2026 the people list says it in a word at the row's end ("idle", or "away" for a DJ who dropped off) with the name greyed; it was the colour of the member icon alone |
 
 ## CH · Chat
 

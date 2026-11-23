@@ -1346,7 +1346,7 @@ firetable.ui.setupRoomEvents = function () {
           var userId = data[key].id;
           // Look up role icon from live user data
           var userInfo = ftapi.users && ftapi.users[userId];
-          var roleicon = 'person';
+          var roleicon = ''; // only the roles that differ get an icon, as in the people list
           var roleiconclass = 'material-symbols-filled';
           if (userInfo) {
             if (userInfo.mod)      { roleicon = 'shield';       roleiconclass = 'material-symbols-filled-outlined'; }
@@ -1376,7 +1376,7 @@ firetable.ui.setupRoomEvents = function () {
             wlName +
             '</span>' +
             departureBtn +
-            '<span class="' + roleiconclass + ' prsnRole">' + roleicon + '</span>' +
+            (roleicon ? '<span class="' + roleiconclass + ' prsnRole" aria-hidden="true">' + roleicon + '</span>' : '') +
             '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + wlName + ' — profile" style="background-image:url(' +
             firetable.utilities.htmlEscape(firetable.utilities.avatarURL(userId, data[key].name)) +
             ');"></div>' +
@@ -1400,7 +1400,7 @@ firetable.ui.setupRoomEvents = function () {
       var addMeRow = '';
       if (showJoinBtn) {
         var selfData = ftapi.uid && ftapi.users && ftapi.users[ftapi.uid];
-        var selfRoleicon = 'person';
+        var selfRoleicon = '';
         var selfRoleiconclass = 'material-symbols-filled';
         if (selfData) {
           if (selfData.mod)      { selfRoleicon = 'shield';       selfRoleiconclass = 'material-symbols-filled-outlined'; }
@@ -1411,7 +1411,7 @@ firetable.ui.setupRoomEvents = function () {
           '<span class="waitlist-pos">' + countr + '</span>' +
           '<span class="waitlist-name">' + selfName + '</span>' +
           '<button class="iconbutt deckDepartureBtn" disabled title="Step down after your next play"><i class="material-symbols-filled">departure_board</i></button>' +
-          '<span class="' + selfRoleiconclass + ' prsnRole">' + selfRoleicon + '</span>' +
+          (selfRoleicon ? '<span class="' + selfRoleiconclass + ' prsnRole" aria-hidden="true">' + selfRoleicon + '</span>' : '') +
           '<div class="ft-avatar" title="Join the DJ Waitlist"></div>' +
           '</div>';
       }

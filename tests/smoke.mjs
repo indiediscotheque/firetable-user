@@ -1670,11 +1670,14 @@ try {
     const blocks = [...document.querySelectorAll("#chats > .newChat:not(.nowplayn)")].slice(-2);
     const size = (b) => getComputedStyle(b.querySelector(".chatText")).fontSize;
     const role = document.querySelector("#usersbox .prsnRole[title]");
-    return { bot: blocks[0].classList.contains("ch-bot") + "|" + size(blocks[0]), person: blocks[1].classList.contains("ch-bot") + "|" + size(blocks[1]),
+    const members = [...document.querySelectorAll("#usersRegular .prson:not(.ft-skeleton)")];
+    const plain = members.length + "|" + members.filter((m) => m.querySelector(".prsnRole")).length;
+    return { plain, bot: blocks[0].classList.contains("ch-bot") + "|" + size(blocks[0]), person: blocks[1].classList.contains("ch-bot") + "|" + size(blocks[1]),
       role: role ? role.getAttribute("title") + "|" + role.getAttribute("aria-label") : "" };
   });
   check(botLine.bot === "true|13px" && botLine.person === "false|14px", "the room bot's chat lines are quieter than people's (" + JSON.stringify(botLine) + ")");
-  check(/^(Member|Mod|Supermod|Room bot)\|\1$/.test(botLine.role), "the people list names each role icon, for a tooltip and screen readers (" + botLine.role + ")");
+  check(/^(Mod|Supermod|Room bot)\|\1$/.test(botLine.role), "the people list names each role icon, for a tooltip and screen readers (" + botLine.role + ")");
+  check(/^[1-9]\d*\|0$/.test(botLine.plain), "only the bot, mods and supermods have a role icon: no member's row repeats one (" + botLine.plain + ")");
   await put("/cards/cardL/owner", "smoke");
   await page.waitForFunction(() => $('.chat-grab-btn[data-card="cardL"]').attr("data-state") === "mine", null, { timeout: 8000 }).catch(() => {});
   legacy.after = await page.$eval('.chat-grab-btn[data-card="cardL"]', (b) => b.dataset.state).catch(() => "missing");
