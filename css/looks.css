@@ -2786,6 +2786,12 @@ ul.lightrope li {
     padding-top: var(--panel-gap);
 }
 
+/* The list's scrollbar gutter (--scroll-gutter, set in ui.js) trims the right
+   edge, so give up the same strip on the left and the panel sits centred. */
+#queuebox {
+    padding-inline-start: var(--scroll-gutter, 0px);
+}
+
 #queuebox.drop-ready #queuelist {
     position: relative;
 
