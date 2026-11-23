@@ -342,13 +342,28 @@ body.tt-skin .ft-avatar[data-tt=""]::after { background-image: none; }
 /* visitors' Queue and Chat */
 body.tt-skin #mainGrid .tt-guestNote { align-items: center; justify-content: center; gap: 0.75rem; padding: 2rem; text-align: center; color: #ccc; }
 
-/* the DJ playlist picker comes to the Queue tab */
+/* the Queue on the theme's panel: one grey under everything (Live's darker list well
+   and the panel's top gap are dropped), and the toolbar and the songs drawn as the
+   Room tab's cards; the row states (picked, swapping, editing) follow, as they're
+   drawn from these same tokens */
+html body.tt-skin #mainGrid #queuebox {
+    --color-bg-s1: var(--tt-panel);
+    --color-bg-t1: #303030;
+    --color-bg-t2: #3a3a3a;
+    --color-bg: #222;
+    padding-top: 0;
+}
+body.tt-skin #queuebox .queuetop { margin-top: 0.5rem; border: 1px solid var(--tt-line); }
+body.tt-skin #queuebox #queuelist { background-color: transparent; }
+
+/* the DJ playlist picker comes to the Queue tab: a bar across the whole panel, under its tab */
 body.tt-skin #queuebox > #djlistpickerWrap {
     flex: none;
     height: auto;
     display: flex;
     align-items: center;
     gap: 0.4rem;
+    margin-inline-start: calc(-1 * var(--scroll-gutter, 0px));
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--tt-line);
     background: #262626;

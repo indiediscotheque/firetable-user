@@ -94,6 +94,16 @@ const VIEWS = [
     await go(page, "#discover");
     await page.evaluate(() => { firetable.discover.onFailed = () => {}; document.querySelector("#dBrowse .ft-cards .pvbar .d-play").click(); });
   } },
+  // the Turntable theme (js/ttskin.js), with the Queue column beside the room
+  { name: "live-turntable", run: async (page) => {
+    await liveTab("mm-playlists")(page);
+    await page.evaluate(async () => {
+      if (!firetable.tt.isOn()) firetable.tt.enter();
+      for (let i = 0; i < 80 && !document.querySelector("#tt-table .tt-seat"); i++) await new Promise((r) => setTimeout(r, 100));
+      const pick = document.getElementById("tt-picker");
+      if (pick && pick.open) pick.close();
+    });
+  }, after: (role, page) => page.evaluate(() => { if (firetable.tt.isOn()) firetable.tt.leave(); }) },
   { name: "live-notlive", run: (page) => go(page, "#live"),
     after: (role, page) => page.evaluate(() => { const b = document.querySelector("#st-notlive .st-nl-go"); if (b) b.click(); }) },
   // the stage's states, last: changing the decks adds lines to the chat
