@@ -1571,8 +1571,8 @@ firetable.ui.setupRoomEvents = function () {
 /**
  * The stage's states (1.10): with nobody on the decks, "The decks are open"
  * over the deck's own join button; with only the room's bot there, that it keeps the music going
- * until someone hops on; and on "Listen to the room" (audio blocked), who's
- * playing what and how many are here.
+ * until someone hops on. ("Listen to the room", shown while the browser holds
+ * the sound back, is one line: the stage and the bar already say who's playing what.)
  */
 firetable.ui.renderStageState = function () {
   var users = ftapi.users || {};
@@ -1597,11 +1597,6 @@ firetable.ui.renderStageState = function () {
       ? "The decks are open. Hop on and the room plays from your ★ playlist." + (hereText ? " " + hereText + "." : "")
       : state === "bot" ? "The bot keeps the music going until someone hops on." : "");
   }
-  var s = firetable.song;
-  var playing = s && s.cid && s.cid != 0
-    ? (s.djname ? s.djname + " is playing " : "Playing ") + firetable.utilities.decodeEntities(s.title || "")
-    : "";
-  $("#tapToPlaySub").text([playing, hereText].filter(Boolean).join(" · "));
 };
 
 /**

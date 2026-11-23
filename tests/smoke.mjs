@@ -1218,7 +1218,7 @@ try {
   states.listen = await page.evaluate(() => { firetable.ui.renderStageState(); return document.querySelector("#tapToPlay b").textContent + "|" + document.getElementById("tapToPlaySub").textContent; });
   check(/^st-empty\|The decks are open\. Hop on and the room plays from your ★ playlist\./.test(states.open) && states.bot === "st-botonly|The bot keeps the music going until someone hops on." && states.after === "|",
     "the stage says when the decks are open and when the bot is keeping the music going, and nothing otherwise (" + JSON.stringify(states) + ")");
-  check(/^Listen to the room\|.+ is playing .+/.test(states.listen), "audio blocked: Listen to the room, with who's playing what (" + states.listen + ")");
+  check(states.listen === "Listen to the room|", "audio blocked: Listen to the room, and nothing under it (the stage and the bar say who's playing what) (" + states.listen + ")");
 
   console.log("-- Fire's count on its button");
   const fires = await page.evaluate(async () => {
@@ -1432,14 +1432,12 @@ try {
     out.off = !document.body.classList.contains("tt-skin") && getComputedStyle(document.getElementById("tt-room")).display === "none" &&
       document.getElementById("djlistpickerWrap").closest("#themebox") !== null && localStorage.getItem("firetableTurntable") === null;
     out.after = document.getElementById("playerArea") === player && player.getAttribute("src") === src;
-    // and Live's own Listen to the room again: its pill and its second line, none of the theme's
+    // and Live's own Listen to the room again: its pill, on one line, none of the theme's
     document.body.classList.add("media-blocked");
-    document.getElementById("tapToPlaySub").textContent = "someone is playing something";
     const live = getComputedStyle(document.getElementById("tapToPlay"));
     out.liveListen = live.display !== "none" && !/241, 207, 58/.test(live.backgroundImage) && parseFloat(live.borderRadius) > 20 &&
-      getComputedStyle(document.getElementById("tapToPlaySub")).display !== "none";
+      getComputedStyle(document.getElementById("tapToPlaySub")).display === "none";
     out.liveListenInfo = [live.backgroundImage.slice(0, 30), live.borderRadius].join(" | ");
-    document.getElementById("tapToPlaySub").textContent = "";
     document.body.classList.remove("media-blocked");
     out.liveFace = !chatFace || chatFace.style.backgroundImage === liveFace;
     out.noTtFaceInLive = !chatFace || getComputedStyle(chatFace, "::after").content === "none" || getComputedStyle(chatFace, "::after").backgroundImage === "none";
@@ -1470,7 +1468,7 @@ try {
   check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
   check(tt.artTrack, "an art track's cover fills the right screen (one with a flat background of its own too); a video's frame is left as it is");
   check(tt.ledScroll && tt.ledStill, "the songboard scrolls a line too long to fit, a dot column at a time; a short one stays put");
-  check(tt.liveListen, "Back in Live, Listen to the room is Live's own (its pill and its second line) (" + tt.liveListenInfo + ")");
+  check(tt.liveListen, "Back in Live, Listen to the room is Live's own (its pill, on one line) (" + tt.liveListenInfo + ")");
   check(tt.off && tt.liveFace && tt.noTtFaceInLive, "Back to Live: Live as it was, with Live's avatars");
 
   console.log("-- the stage's volume slider (a native range input)");
@@ -3282,6 +3280,33 @@ try {
       rows: document.querySelectorAll("#thediscovers .pvbar").length, loading: document.querySelectorAll("#thediscovers .ft-skeleton").length,
       djPicker: getComputedStyle(document.getElementById("djlistpicker")).visibility, clock: document.getElementById("timr").offsetParent !== null };
   });
+  // Listen to the room (the browser holding the sound back): one line in the stage's lower left, clear of the DJ
+  // (measured in the instant the state is set: the site clears it itself the moment the player gets going)
+  const listenAt = async (pg) => pg.evaluate(() => {
+    document.body.classList.add("media-blocked");
+    const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+    const pill = r("#tapToPlay"), stage = r("#djStage"), dj = r("#deck .spot"), art = r("#albumArt");
+    const out = { text: document.querySelector("#tapToPlay .ttp-text").textContent, sub: getComputedStyle(document.getElementById("tapToPlaySub")).display,
+      inStage: pill.left >= stage.left && pill.right <= stage.right && pill.bottom <= stage.bottom, lines: Math.round(pill.height) <= 44,
+      clearOfDj: pill.right <= dj.left || pill.bottom <= dj.top, underSong: pill.top >= art.bottom, left: Math.round(pill.left - art.left), w: Math.round(pill.width),
+      state: [getComputedStyle(document.getElementById("tapToPlay")).display, document.getElementById("st-notlive").hidden ? "" : "not-live card", document.body.className].join(" | ") };
+    document.body.classList.remove("media-blocked");
+    return out;
+  });
+  // (a visitor's own fresh browser: in this test's, the room's sound was turned off earlier, and then
+  // "You're not listening live" has that corner instead)
+  const qContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const qPage = await qContext.newPage();
+  await openPage(qPage, SITE + "#live");
+  await qPage.waitForFunction(() => document.querySelector("#deck .spot") && /Smoke|\S/.test(document.getElementById("track").textContent), null, { timeout: 30000 }).catch(() => {});
+  await sleep(1500);
+  const listenWide = await listenAt(qPage);
+  await qPage.setViewportSize({ width: 390, height: 844 });
+  await sleep(600);
+  const listenPhone = await listenAt(qPage);
+  await qContext.close();
+  check([listenWide, listenPhone].every((l) => l.text === "Listen to the room" && l.sub === "none" && l.inStage && l.lines && l.clearOfDj && l.underSong) && listenPhone.left === 0,
+    "Listen to the room is one line under the song, inside the stage and clear of the DJ, on a computer and on a phone (where it lines up with the cover) (" + JSON.stringify({ wide: listenWide, phone: listenPhone }) + ")");
   check(freshBeside.djPicker === "hidden" && freshBeside.clock, "a visitor isn't offered a playlist to DJ from under the stage; the clocks stay (" + freshBeside.djPicker + ")");
   check(freshBeside.shown && freshBeside.login && freshBeside.view !== "discover" && freshBeside.rows >= 1 && !freshBeside.loading,
     "a visitor's Fresh, beside the welcome, loads without its tab being chosen (" + JSON.stringify(freshBeside) + ")");
