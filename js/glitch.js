@@ -157,6 +157,9 @@ class Glitch {
 
     /** When false, effects are temporarily paused (shows clean image) */
     this.throughFlag = true;
+
+    /** Whether the image's canvas holds effects rather than the clean cover */
+    this.dirty = false;
   }
 
   /**
@@ -165,16 +168,17 @@ class Glitch {
    * @param {Uint8ClampedArray} srcPixels - Source pixel buffer
    */
   replaceData(destImg, srcPixels) {
-    for (let y = 0; y < destImg.height; y++) {
-      for (let x = 0; x < destImg.width; x++) {
-        let index = (y * destImg.width + x) * this.channelLen;
-        destImg.pixels[index]     = srcPixels[index];     // R
-        destImg.pixels[index + 1] = srcPixels[index + 1]; // G
-        destImg.pixels[index + 2] = srcPixels[index + 2]; // B
-        destImg.pixels[index + 3] = srcPixels[index + 3]; // A
-      }
-    }
-    destImg.updatePixels();
+    // A native copy; the canvas is updated once per frame, after every effect
+    // (updatePixels uploads the whole 500 × 500 cover each time)
+    destImg.pixels.set(srcPixels);
+  }
+
+  /** Put the clean cover back on the image's canvas, if an effect changed it. */
+  restoreClean() {
+    if (!this.dirty) return;
+    this.replaceData(this.imgOrigin, this.copyData);
+    this.imgOrigin.updatePixels();
+    this.dirty = false;
   }
 
   /**
@@ -277,7 +281,7 @@ class Glitch {
    * of a TV-sized screen).
    */
   showPlain() {
-    this.replaceData(this.imgOrigin, this.copyData);
+    this.restoreClean();
     var iw = this.imgOrigin.width, ih = this.imgOrigin.height;
     if (!iw || !ih) return;
     var k = Math.min(width / iw, height / ih);
@@ -290,9 +294,6 @@ class Glitch {
    * Restores original pixels, randomly applies effects, then draws to canvas.
    */
   show() {
-    // Restore pristine pixel data
-    this.replaceData(this.imgOrigin, this.copyData);
-
     // Randomly pause effects for short intervals (creates a "clean" flash)
     let n = floor(random(100));
     if (n > 75 && this.throughFlag) {
@@ -303,12 +304,16 @@ class Glitch {
     }
 
     if (!this.throughFlag) {
+      this.restoreClean();
       push();
       translate((width - this.imgOrigin.width) / 2, (height - this.imgOrigin.height) / 2);
       image(this.imgOrigin, 0, 0);
       pop();
       return;
     }
+
+    // Restore pristine pixel data
+    this.replaceData(this.imgOrigin, this.copyData);
 
     // Apply flow line
     this.flowLineImgs.forEach((v, i, arr) => {
@@ -336,6 +341,11 @@ class Glitch {
       }
     });
 
+    // Send the processed pixels to the image's canvas once (the scattered
+    // fragments below are cut from it too)
+    this.imgOrigin.updatePixels();
+    this.dirty = true;
+
     // Draw the processed image centered on the canvas
     push();
     translate((width - this.imgOrigin.width) / 2, (height - this.imgOrigin.height) / 2);
@@ -361,7 +371,8 @@ class Glitch {
 
 // ─── Only animate while it can be seen ──────────────────────────────────────
 // p5 redraws 60 times a second. The glitch is only visible with a SoundCloud
-// song playing, the video screen down and the tab in front, so pause the draw
+// song playing, the video screen down, the tab in front and Live showing (in
+// Discover the stage is parked out of sight: css/discover.css), so pause the draw
 // loop otherwise (the last frame is never on show while paused). A full-screen
 // view shows the cover plain: drawn once, then the loop rests.
 
@@ -371,13 +382,14 @@ function syncGlitchLoop() {
   if (typeof loop !== 'function' || typeof noLoop !== 'function') return; // p5 not ready yet
   var isSoundCloud = !!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD);
   var screenDown = document.body.classList.contains('screen');
+  var inDiscover = document.body.classList.contains('ft-discover');
   clearTimeout(glitchPauseTimer);
   if (isFullScreenView()) {
     noLoop();
     if (isSoundCloud && typeof redraw === 'function') redraw();
-  } else if (isSoundCloud && screenDown && !document.hidden) {
+  } else if (isSoundCloud && screenDown && !document.hidden && !inDiscover) {
     loop();
-  } else if (document.hidden || !isSoundCloud) {
+  } else if (document.hidden || !isSoundCloud || inDiscover) {
     noLoop();
   } else {
     // Screen is sliding up (2 s): keep animating until it's out of sight

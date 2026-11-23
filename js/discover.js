@@ -2559,6 +2559,8 @@ firetable.discover = (function () {
     tick();
   }
   function tick() {
+    // nothing to see in a hidden tab (the next tick after it's shown catches up)
+    if (document.hidden) return;
     // the stage's own mute (or a key) may have changed it meanwhile
     if (F.open && firetable.utilities.getEffectiveVolume() !== lastVolume) { renderVolume(); renderFull(); }
     if (discoverActive()) {
@@ -4735,9 +4737,16 @@ firetable.discover = (function () {
         barRo.observe(barEl);
         if (tabsEl) barRo.observe(tabsEl);
       }
+      // Home, Charts and Recent show people's names and faces (and hide the
+      // ones who asked): redraw them only when those change, not on every
+      // tab someone hides or shows (idle), which rebuilt every shelf
+      var browseUsers = null;
       ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function () {
         renderFull(); // "N here"
         renderBar();
+        var sig = firetable.utilities.usersSig();
+        if (sig === browseUsers) return;
+        browseUsers = sig;
         if (D.mode === "discover" && /^(home|charts|recent)$/.test(D.view)) renderBrowse();
       }));
       // a play, or its genre arriving a moment later: tonight's rings on the sound map

@@ -777,6 +777,29 @@ firetable.utilities = {
     return hours + ":" + min + ampm;
   },
 
+  // ─── What changed among the people here ──────────────────────────────────
+
+  /**
+   * A short description of the people in the room (ftapi.users), to tell
+   * whether a usersChanged changed anything a view shows. Each person's
+   * fields, or only `fields` when given, never their idle state, which flips
+   * with every tab hidden or shown. Compare it with the last one to skip
+   * redrawing what looks the same.
+   * @param {string[]} [fields] - Only these fields (e.g. ["username"])
+   * @returns {string}
+   */
+  usersSig: function (fields) {
+    var users = ftapi.users;
+    if (!users || typeof users !== "object") return String(users);
+    return Object.keys(users).sort().map(function (uid) {
+      var u = users[uid] || {}, seen = {};
+      (fields || Object.keys(u)).forEach(function (f) {
+        if (f !== "idle" && Object.prototype.hasOwnProperty.call(u, f)) seen[f] = u[f];
+      });
+      return uid + ":" + JSON.stringify(seen);
+    }).join("|");
+  },
+
   // ─── Once per frame ──────────────────────────────────────────────────────
 
   /**
