@@ -3633,6 +3633,34 @@ try {
   await leftOnPage.close();
   check(leftOn.real && leftOn.fetched, "the Turntable theme left on, on this device: it loads with the page (" + JSON.stringify(leftOn) + ")");
 
+  // real visits' reports (js/telemetry.js): an error in the site's own scripts, and how fast the visit felt
+  const telPage = await context.newPage(); // no error listener: this error is on purpose
+  await openPage(telPage, SITE + "#live");
+  await telPage.waitForFunction(() => window.firetable && firetable.utilities && firetable.utilities.oncePerFrame, null, { timeout: 30000 }).catch(() => {});
+  await sleep(1000);
+  await telPage.evaluate(() => {
+    firetable.utilities.oncePerFrame(null)(); // throws in js/helpers.js on the next frame
+    setTimeout(() => firetable.utilities.oncePerFrame(null)(), 50); // the same error again: reported once
+  });
+  await sleep(1200);
+  await telPage.evaluate(() => window.dispatchEvent(new Event("pagehide")));
+  let tel = {};
+  for (let i = 0; i < 30; i++) {
+    const errs = Object.values((await (await fetch(DB + "/clientErrors.json?ns=" + NS)).json()) || {}).filter((e) => /apply/.test(e.m));
+    const vits = Object.values((await (await fetch(DB + "/clientVitals.json?ns=" + NS)).json()) || {}).filter((v) => typeof v.ttfb === "number");
+    tel = { errs: errs.length, err: errs[0], vit: vits[vits.length - 1] };
+    if (tel.err && tel.vit) break;
+    await sleep(300);
+  }
+  await telPage.close();
+  const e0 = tel.err || {}, v0 = tel.vit || {};
+  check(tel.errs === 1 && /^js\/helpers\.js\?v=/.test(e0.f) && e0.l > 0 && e0.c > 0 && e0.p === "/#live" && e0.u === false && /\//.test(e0.b || "") &&
+    typeof e0.at === "number" && /helpers\.js/.test(e0.st || "") && !/127\.0\.0\.1/.test(e0.st || "") && Object.keys(e0).every((k) => /^(m|f|l|c|st|p|b|v|u|at)$/.test(k)),
+    "an error in the site's scripts is reported once, with its file, line and page, and nothing about who (" + JSON.stringify(tel.err) + ")");
+  check(typeof v0.ttfb === "number" && typeof v0.cls === "number" && (v0.view === "live" || v0.view === "discover") && typeof v0.mob === "boolean" && typeof v0.at === "number" &&
+    Object.keys(v0).every((k) => /^(lcp|fcp|ttfb|inp|cls|view|mob|b|v|u|at)$/.test(k)),
+    "how fast the visit felt is reported once the page is hidden or closed (" + JSON.stringify(tel.vit) + ")");
+
   // touch screens: a row's icons and the play button on its small cover have the invisible tap area
   const tContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const tPage = await tContext.newPage();

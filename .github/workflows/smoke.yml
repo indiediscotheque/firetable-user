@@ -101,7 +101,7 @@ jobs:
         run: |
           npm ci --no-audit --no-fund --ignore-scripts
           node tools/flatten-css.mjs
-          node tools/minify.mjs
+          node tools/minify.mjs --maps
 
       - name: Unit tests
         if: ${{ matrix.suite == 'smoke' }}

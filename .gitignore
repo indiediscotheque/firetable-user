@@ -11,3 +11,5 @@ social-out/
 social-preview/
 social-check/
 social-state.json*
+# source maps: the deploy makes them (tools/minify.mjs --maps)
+*.js.map

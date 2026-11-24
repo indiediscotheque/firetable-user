@@ -263,6 +263,18 @@ try {
     new Promise((r, j) => ftapi.actions.editTag(1, "dQw4w9WgXcQ", "New Artist - New Title", "h1", "songHistory", (e) => (e ? j(e) : r()))));
   check(!mod.errors.length, "no page errors for the mod" + (mod.errors.length ? ": " + mod.errors.join("; ") : ""));
 
+  console.log("-- a visitor's browser reports an error and how fast the visit felt (js/telemetry.js)");
+  const vctx = await browser.newContext();
+  await stubAvatars(vctx);
+  const vpage = await vctx.newPage(); // no error listener: this error is on purpose
+  await openPage(vpage, SITE + "#live");
+  await vpage.waitForFunction(() => window.firetable && firetable.utilities && firetable.utilities.oncePerFrame, null, { timeout: 30000 }).catch(() => {});
+  await vpage.evaluate(() => { firetable.utilities.oncePerFrame(null)(); }); // throws in js/helpers.js on the next frame
+  await sleep(800);
+  await vpage.evaluate(() => window.dispatchEvent(new Event("pagehide")));
+  await sleep(1500);
+  await vctx.close();
+
   console.log("-- the writes landed");
   const db = await (await fetch(DB + "/.json?ns=" + NS, { headers: { Authorization: "Bearer owner" } })).json();
   const mine = Object.values(db.chatData || {}).filter((m) => m.id === FAN);
@@ -279,6 +291,8 @@ try {
     presence: me.status === false && typeof me.closed === "number" && typeof me.offlineAt === "number" && typeof me.joined === "number",
     grab: !!(db.grabs && db.grabs.dj1 && Object.values(db.grabs.dj1).some((t) => t[FAN])),
     hidden: db.chatFeed.fother1.hidden === true,
+    reports: Object.values(db.clientErrors || {}).some((e) => /apply/.test(e.m) && /^js\/helpers\.js/.test(e.f) && e.u === false) &&
+      Object.values(db.clientVitals || {}).some((v) => v.view === "live" && typeof v.ttfb === "number"),
     tags: db.songHistory.h1.artist === "New Artist" && db.globalTracks["1dQw4w9WgXcQ"].title === "New Title" && Object.values(db.tagLog || {}).some((t) => t.by === MOD && t.fa === "Old Artist" && t.ft === "Old Title")
   };
   check(Object.values(landed).every(Boolean), "every step's write is in the database (" + JSON.stringify(landed) + ")");
