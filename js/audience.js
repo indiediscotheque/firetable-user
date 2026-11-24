@@ -4,8 +4,9 @@
  * country. Both come from api/audience.php, asked once a minute.
  *
  * - A guest's page sends a heartbeat (a random id kept in this browser, so
- *   tabs count once, and whether the room is sounding on it), and gets the
- *   counts back. Robots and pages nobody is looking at or hearing don't send
+ *   tabs count once, whether the room is sounding on it, and the device's
+ *   time zone, which the server turns into a country), and gets the counts
+ *   back. Robots and pages nobody is looking at or hearing don't send
  *   one, and closing the page or signing in says goodbye.
  * - A member's page only asks for the counts, while it's visible.
  *
@@ -22,6 +23,21 @@ firetable.audience = (function () {
   function byId(id) {
     return document.getElementById(id) || (firetable.$appShell && firetable.$appShell.find("#" + id)[0]) || null;
   }
+  /** The device's time zone ("Europe/Berlin"), for the guest's country; "" if the browser won't say. */
+  function timeZone() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { return ""; }
+  }
+
+  /** "Germany" for "DE", in the page's language when the server didn't name it. */
+  var regionNames = null;
+  function countryName(code, name) {
+    if (name) return name;
+    try {
+      regionNames = regionNames || new Intl.DisplayNames([document.documentElement.lang || "en"], { type: "region" });
+      return regionNames.of(code) || code;
+    } catch (e) { return code; }
+  }
+
   function esc(s) { return firetable.utilities.htmlEscape(String(s)); }
   function ms(name, cls) { return '<span class="material-symbols-outlined' + (cls ? " " + cls : "") + '" aria-hidden="true">' + name + "</span>"; }
 
@@ -61,7 +77,7 @@ firetable.audience = (function () {
     A.busy = true;
     A.live = live;
     var req = asGuest
-      ? fetch(AUDIENCE_URL, { method: "POST", body: new URLSearchParams({ id: guestId(), live: live ? "1" : "0" }), cache: "no-store" })
+      ? fetch(AUDIENCE_URL, { method: "POST", body: new URLSearchParams({ id: guestId(), live: live ? "1" : "0", tz: timeZone() }), cache: "no-store" })
       : fetch(AUDIENCE_URL, { cache: "no-store" });
     req.then(function (r) { return r.ok ? r.json() : null; })
       .then(take)
@@ -80,14 +96,19 @@ firetable.audience = (function () {
   function take(d) {
     if (!d || typeof d.guests !== "number") return;
     var s = d.stream && typeof d.stream.listeners === "number" ? d.stream : null;
+    var places = function (list) {
+      return (Array.isArray(list) ? list : []).filter(function (c) { return c && c.n > 0 && (c.name || /^[A-Z]{2}$/.test(c.code)); })
+        .map(function (c) { var code = /^[A-Z]{2}$/.test(c.code) ? c.code : ""; return { code: code, name: countryName(code, String(c.name || "")), n: c.n | 0 }; });
+    };
     var data = {
       guests: Math.max(0, d.guests | 0),
       guestsLive: Math.max(0, d.guestsLive | 0),
+      guestCountries: places(d.guestCountries),
+      guestsUnplaced: Math.max(0, d.guestsUnplaced | 0),
       stream: s ? {
         listeners: Math.max(0, s.listeners | 0),
         unplaced: Math.max(0, s.unplaced | 0),
-        countries: (Array.isArray(s.countries) ? s.countries : []).filter(function (c) { return c && c.n > 0 && c.name; })
-          .map(function (c) { return { code: /^[A-Z]{2}$/.test(c.code) ? c.code : "", name: String(c.name), n: c.n | 0 }; })
+        countries: places(s.countries)
       } : null
     };
     A.at = Date.now();
@@ -167,21 +188,24 @@ firetable.audience = (function () {
   function section(p) {
     var d = A.data;
     if (!d) return "";
-    var plural = firetable.utilities.pluralize;
     var html = "";
+    var row = function (c) {
+      return '<li class="pe-audRow">' + flag(c.code) + '<span class="pe-audName">' + esc(c.name) + '</span><span class="pe-audN">' + c.n + "</span></li>";
+    };
+    var somewhere = function (n) {
+      return n ? '<li class="pe-audRow is-unplaced">' + flag("") + '<span class="pe-audName">Somewhere</span><span class="pe-audN">' + n + "</span></li>" : "";
+    };
+    var label = function (what, n) { return what + " by country" + (n > 1 ? ", " + n + " countries" : ""); };
     if (d.stream) {
-      var rows = d.stream.countries.map(function (c) {
-        return '<li class="pe-audRow">' + flag(c.code) + '<span class="pe-audName">' + esc(c.name) + '</span><span class="pe-audN">' + c.n + "</span></li>";
-      });
-      if (d.stream.unplaced) rows.push('<li class="pe-audRow is-unplaced">' + flag("") + '<span class="pe-audName">Somewhere</span><span class="pe-audN">' + d.stream.unplaced + "</span></li>");
-      var countries = d.stream.countries.length;
+      var rows = d.stream.countries.map(row).join("") + somewhere(d.stream.unplaced);
       html += '<h3 class="' + p + '-group pe-audHead">' + ms("radio") + "On the radio <span>" + d.stream.listeners + "</span></h3>" +
-        (rows.length ? '<ul class="pe-audList" aria-label="Radio listeners by country' + (countries > 1 ? ", " + countries + " countries" : "") + '">' + rows.join("") + "</ul>"
+        (rows ? '<ul class="pe-audList" aria-label="' + label("Radio listeners", d.stream.countries.length) + '">' + rows + "</ul>"
           : '<p class="pe-audNote">Nobody on the stream right now.</p>');
     }
+    // where the guests are (from their time zones), then how many of them hear the room
     html += '<h3 class="' + p + '-group pe-audHead">' + ms("person") + "Guests <span>" + d.guests + "</span></h3>" +
-      (d.guests ? '<ul class="pe-audList" aria-label="Guests without an account"><li class="pe-audRow is-live">' + ms("headphones", "pe-flag") +
-        '<span class="pe-audName">Listening live</span><span class="pe-audN">' + d.guestsLive + "</span></li></ul>"
+      (d.guests ? '<ul class="pe-audList" aria-label="' + label("Guests", d.guestCountries.length) + '">' + d.guestCountries.map(row).join("") + somewhere(d.guestsUnplaced) +
+        '<li class="pe-audRow is-live">' + ms("headphones", "pe-flag") + '<span class="pe-audName">Listening live</span><span class="pe-audN">' + d.guestsLive + "</span></li></ul>"
         : '<p class="pe-audNote">No guests right now.</p>');
     return html;
   }

@@ -4,16 +4,21 @@
  * the site without an account (guests), and people listening to the radio
  * stream, counted by country.
  *
- *   GET            → {"guests":4,"guestsLive":2,"stream":{"listeners":7,"unplaced":1,
+ *   GET            → {"guests":4,"guestsLive":2,"guestsUnplaced":1,
+ *                      "guestCountries":[{"code":"DE","name":"Germany","n":2},…],
+ *                      "stream":{"listeners":7,"unplaced":1,
  *                      "countries":[{"code":"US","name":"United States","n":3},…]},"updated":"…"}
- *   POST id=ID[&live=1]   a guest's heartbeat (once a minute while the page is open);
- *                          answers like GET
+ *   POST id=ID[&live=1][&tz=Europe/Berlin]   a guest's heartbeat (once a minute
+ *                          while the page is open); answers like GET
  *   POST id=ID&leave=1    the guest closed the page or signed in
  *
  * Guests: each browser sends a random id it made itself. It's kept for
  * GUEST_TTL seconds after its last heartbeat, filed under a keyed hash, with
  * no address (only a keyed hash of one, to cap how many guests one address
  * can add). "live" means the room is sounding on that page, not Discover.
+ * Where a guest is comes from their device's time zone, which PHP's own time
+ * zone data places in a country: only the country is kept, and no address
+ * is looked up anywhere.
  *
  * The stream: Broadcast Pal's api/listeners.php (id-broadcast-pal) already
  * reads Icecast, drops bots and looks up where each listener is. This asks it
@@ -34,6 +39,16 @@ const AUD_MAX_GUESTS = 5000;      // guests kept at all
 const AUD_STREAM_TTL = 60;        // seconds Broadcast Pal's answer is reused
 const AUD_STREAM_STALE = 600;     // an older answer is still used this long when it can't be reached
 const AUD_RATE_LIMIT = [60, 600]; // heartbeats per address per 10 minutes
+// Older time zone names some browsers still send, for servers without PHP's intl
+const AUD_TZ_ALIASES = [
+    'Asia/Calcutta' => 'Asia/Kolkata', 'Europe/Kiev' => 'Europe/Kyiv', 'Asia/Saigon' => 'Asia/Ho_Chi_Minh',
+    'Asia/Katmandu' => 'Asia/Kathmandu', 'Asia/Rangoon' => 'Asia/Yangon', 'America/Buenos_Aires' => 'America/Argentina/Buenos_Aires',
+    'Atlantic/Faeroe' => 'Atlantic/Faroe', 'Pacific/Truk' => 'Pacific/Chuuk', 'America/Godthab' => 'America/Nuuk',
+    'Asia/Dacca' => 'Asia/Dhaka', 'Asia/Thimbu' => 'Asia/Thimphu', 'Asia/Ulan_Bator' => 'Asia/Ulaanbaatar',
+    'America/Indianapolis' => 'America/Indiana/Indianapolis', 'America/Louisville' => 'America/Kentucky/Louisville',
+    'US/Eastern' => 'America/New_York', 'US/Central' => 'America/Chicago', 'US/Mountain' => 'America/Denver',
+    'US/Pacific' => 'America/Los_Angeles', 'Europe/Uzhgorod' => 'Europe/Kyiv', 'Europe/Zaporozhye' => 'Europe/Kyiv',
+];
 const AUD_BOT_AGENTS = '/(bot|crawl|spider|slurp|preview|headless|lighthouse|pagespeed|monitor|uptime|curl|wget|python|java\/|go-http|okhttp|axios|node-fetch|undici)/i';
 
 require __DIR__ . '/common.php';
@@ -55,11 +70,13 @@ proxy_run(function (): void {
 /** Everything the people list shows. */
 function audience_summary(): array
 {
-    [$guests, $live] = count_guests(read_guests());
+    [$guests, $live, $countries, $unplaced] = count_guests(read_guests());
     return [
         'updated' => gmdate('c'),
         'guests' => $guests,
         'guestsLive' => $live,
+        'guestsUnplaced' => $unplaced,
+        'guestCountries' => $countries,
         'stream' => stream_audience(),
     ];
 }
@@ -74,15 +91,16 @@ function record_guest(array $in): void
     if (preg_match(AUD_BOT_AGENTS, (string)($_SERVER['HTTP_USER_AGENT'] ?? ''))) return;
     $leave = ($in['leave'] ?? '') === '1';
     $live = ($in['live'] ?? '') === '1';
+    $cc = tz_country((string)($in['tz'] ?? ''));
     $who = hash_hmac('sha256', 'guest|' . $id, aud_salt());
     $from = substr(hash_hmac('sha256', 'address|' . ($_SERVER['REMOTE_ADDR'] ?? ''), aud_salt()), 0, 16);
 
-    with_guests(function (array $G) use ($who, $from, $leave, $live): array {
+    with_guests(function (array $G) use ($who, $from, $leave, $live, $cc): array {
         if ($leave) {
             unset($G[$who]);
             return $G;
         }
-        $G[$who] = [time(), $live ? 1 : 0, $from];
+        $G[$who] = [time(), $live ? 1 : 0, $from, $cc];
         // one address adds at most AUD_PER_ADDRESS guests: its oldest go first
         $mine = array_filter($G, fn($g) => $g[2] === $from);
         if (count($mine) > AUD_PER_ADDRESS) {
@@ -97,18 +115,58 @@ function record_guest(array $in): void
     });
 }
 
-/** [guests, of them hearing the room] still within AUD_GUEST_TTL. */
+/**
+ * [guests, of them hearing the room, by country, without a country] still
+ * within AUD_GUEST_TTL. Countries as {code, name, n}, the most guests first.
+ */
 function count_guests(array $G): array
 {
     $cut = time() - AUD_GUEST_TTL;
     $n = 0;
     $live = 0;
+    $by = [];
     foreach ($G as $g) {
         if ((int)($g[0] ?? 0) < $cut) continue;
         $n++;
         $live += (int)($g[1] ?? 0);
+        $cc = (string)($g[3] ?? '');
+        if ($cc !== '') $by[$cc] = ($by[$cc] ?? 0) + 1;
     }
-    return [$n, $live];
+    $countries = [];
+    foreach ($by as $cc => $count) $countries[] = ['code' => $cc, 'name' => country_name($cc), 'n' => $count];
+    usort($countries, fn($a, $b) => $b['n'] <=> $a['n'] ?: strcmp($a['name'], $b['name']));
+    return [$n, $live, $countries, $n - array_sum(array_column($countries, 'n'))];
+}
+
+/**
+ * "DE" for "Europe/Berlin": ICU's region for the zone when the server has PHP's
+ * intl (it knows the older names browsers still send, like Asia/Calcutta),
+ * else PHP's own time zone data, through AUD_TZ_ALIASES for those older names.
+ * "" for UTC, Etc/… and anything unknown.
+ */
+function tz_country(string $tz): string
+{
+    if ($tz === '' || strlen($tz) > 64 || !preg_match('#^[A-Za-z]+(/[A-Za-z0-9_+-]+){1,2}$#', $tz)) return '';
+    $cc = '';
+    if (class_exists('IntlTimeZone')) $cc = (string)IntlTimeZone::getRegion($tz);
+    if (!preg_match('/^[A-Z]{2}$/', $cc)) {
+        try {
+            $cc = (string)((new DateTimeZone(AUD_TZ_ALIASES[$tz] ?? $tz))->getLocation()['country_code'] ?? '');
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+    return preg_match('/^[A-Z]{2}$/', $cc) ? $cc : '';
+}
+
+/** "Germany" for "DE" (PHP's intl when the server has it; the page names it otherwise). */
+function country_name(string $cc): string
+{
+    if (class_exists('Locale')) {
+        $name = (string)Locale::getDisplayRegion('-' . $cc, 'en');
+        if ($name !== '' && $name !== $cc) return $name;
+    }
+    return '';
 }
 
 function read_guests(): array
