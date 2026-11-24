@@ -241,10 +241,11 @@ firetable.tt = (function () {
 
   /**
    * One figure, front (f) or back (b), standing on its feet at the bottom
-   * centre of its box. Its head and body are drawn apart, so the head can
-   * rock on the body the way Turntable's did (deepcut draws every avatar as
-   * a head and a body): from the art's own head and body when it has them,
-   * else the whole picture cut at the neck (`neck`, tools/tt-avatars.py).
+   * centre of its box: a head picture on a body picture, each at its own
+   * place, drawn in the order Turntable drew them (the head over the body,
+   * or under it for the few with `u`), so the whole head, and only the head,
+   * rocks and bobs on a body that stays put, as on Turntable and deepcut
+   * (tools/tt-avatars.py).
    */
   function figure(id, side) {
     var a = S.byId[id];
@@ -254,15 +255,12 @@ firetable.tt = (function () {
     var s = a[side];
     el.dataset.av = id;
     el.style.cssText = "--w:" + s.w + "px;--h:" + s.h + "px;--img:url(" + src(id) + ");--sw:" + a.sw + "px;--sh:" + a.sh + "px";
-    // a piece of the sprite: from (x, y) in it, w by h, at (dx, dy) in the figure
-    var part = function (cls, x, w, h, dx, dy, y) {
-      return '<span class="' + cls + '" style="left:' + dx + "px;top:" + dy + "px;width:" + w + "px;height:" + h + "px;background-position:-" + x + "px -" + (y || 0) + 'px"></span>';
+    // a part: from x in the sprite, w by h, at (dx, dy) in the figure
+    var part = function (name) {
+      var p = s[name];
+      return '<span class="tt-' + name + '" style="left:' + p[3] + "px;top:" + p[4] + "px;width:" + p[1] + "px;height:" + p[2] + "px;background-position:-" + p[0] + 'px 0"></span>';
     };
-    el.innerHTML = s.head
-      ? part("tt-body", s.body[0], s.body[1], s.body[2], s.body[3], s.body[4]) + part("tt-head", s.head[0], s.head[1], s.head[2], s.head[3], s.head[4])
-      : s.neck
-        ? part("tt-body", s.x, s.w, s.h - s.neck, 0, s.neck, s.neck) + part("tt-head tt-cut", s.x, s.w, s.neck, 0, 0)
-        : part("tt-whole", s.x, s.w, s.h, 0, 0);
+    el.innerHTML = s.u ? part("head") + part("body") : part("body") + part("head");
     return el;
   }
 

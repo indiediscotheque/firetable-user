@@ -898,9 +898,8 @@ body.tt-skin #screenover { display: none; }
     background-size: var(--sw) var(--sh);
     background-repeat: no-repeat;
 }
-/* a head turns about its middle, as deepcut turns its head pictures */
-.tt-head { transform-origin: 50% 50%; z-index: 1; }
-.tt-whole { transform-origin: 50% 100%; }
+/* a head turns about its picture's middle, as deepcut turns it; the parts stack in the order they're drawn */
+.tt-head { transform-origin: 50% 50%; }
 .tt-crowd { left: 0; top: 0; width: 1468px; height: 620px; z-index: 4; pointer-events: none; }
 .tt-crowd > * { pointer-events: auto; }
 .tt-more {
@@ -920,17 +919,16 @@ body.tt-skin #screenover { display: none; }
 /* Turntable's moves, as deepcut has them (its animations rock, smallrock and bob): keyframes every
    100 ms (bob's 200 and 100), each reached in a straight line from the last, and drawn at 20 frames
    a second (BLACKSWAN_FRAMERATE): two frames a 100 ms, so steps(2) a keyframe and steps(4) a 200 ms one.
-   Only the head moves: a listener who fires rocks it, a DJ who fires small-rocks it, and the DJ
-   playing bobs it (on the song's beat when the room knows it, as Live's DJ does) */
+   Only the whole head moves, its body staying put: a listener who fires rocks it, a DJ who fires
+   small-rocks it, and the DJ playing bobs it (on the song's beat when the room knows it, as Live's DJ does) */
 .tt-listener.tt-fired .tt-head { animation: tt-rock 1.2s steps(2, end) infinite; animation-delay: inherit; }
-.tt-listener.tt-fired .tt-whole { animation: tt-sway 1.2s linear infinite; animation-delay: inherit; }
-.tt-seat.tt-on :is(.tt-head, .tt-whole) { animation: tt-bob 0.6s infinite; }
-body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(--bop); animation-delay: var(--beat-phase); }
+.tt-seat.tt-on .tt-head { animation: tt-bob 0.6s infinite; }
+body.has-beat .tt-seat.tt-on .tt-head { animation-duration: var(--bop); animation-delay: var(--beat-phase); }
 .tt-seat.tt-fired .tt-head { animation: tt-smallrock 1.2s steps(2, end) infinite; }
-.tt-seat.tt-fired .tt-whole { animation: tt-sway 1.2s linear infinite; }
-/* the room's dance mode (Live's, not Turntable's): everyone bobs, the listeners rocking too */
-#tt-room.tt-dance .tt-person .tt-fig { animation: tt-bob 0.6s infinite; }
-#tt-room.tt-dance .tt-listener .tt-head { animation: tt-rock 1.2s steps(2, end) infinite; }
+/* the room's dance mode (Live's, not Turntable's): every head on the floor rocks and every DJ's bobs */
+#tt-room.tt-dance .tt-listener .tt-head { animation: tt-rock 1.2s steps(2, end) infinite; animation-delay: inherit; }
+#tt-room.tt-dance .tt-seat:not(.tt-fired) .tt-head { animation: tt-bob 0.6s infinite; }
+body.has-beat #tt-room.tt-dance .tt-seat:not(.tt-fired) .tt-head { animation-duration: var(--bop); animation-delay: var(--beat-phase); }
 
 @keyframes tt-rock {
     0%, 41.667%, 50%, 91.667%, 100% { transform: none; }
@@ -957,12 +955,6 @@ body.has-beat .tt-seat.tt-on :is(.tt-head, .tt-whole) { animation-duration: var(
     50% { transform: translateY(7px); animation-timing-function: steps(4, end); }
     83.333% { transform: none; animation-timing-function: steps(2, end); }
     100% { transform: none; }
-}
-/* only for a figure with no head to move (none now: every side has its own head, or is cut at the neck) */
-@keyframes tt-sway {
-    0%, 50%, 100% { transform: none; }
-    20%, 30% { transform: rotate(4deg); }
-    70%, 80% { transform: rotate(-4deg); }
 }
 @keyframes tt-arrive { from { opacity: 0; translate: 0 12px; } }
 @keyframes tt-sweep { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(40deg) brightness(1.15); } }
