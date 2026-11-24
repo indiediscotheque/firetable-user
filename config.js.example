@@ -11,6 +11,10 @@ var ftconfigs = {
    defaultAlbumArtUrl: "", // url of an image to use for tracks with no album art. should be a square and at least 500x500 px for best results.
    logoImage: "", // url of an image to use for logo
    facebookURL: "",
+   instagramURL: "https://www.instagram.com/indie_discotheque/", // left out: this default; "" hides it
+   xURL: "https://x.com/id_discotheque", // left out: this default; "" hides it
+   threadsURL: "https://www.threads.com/@indie_discotheque", // left out: this default; "" hides it
+   blueskyURL: "https://bsky.app/profile/indiediscotheque.com", // left out: this default; "" hides it
    soundcloudURL: "",
    redditURL: "",
    lastfmURL: "",
