@@ -1,6 +1,21 @@
 // ESLint for firetable's browser scripts (plain <script> files sharing globals,
 // loaded in the order listed in index.html). Run: npm run lint
 import globals from "globals";
+import { readFileSync } from "fs";
+
+// File and function length (tools/line-limits.mjs, CLAUDE.md "File size"): 500
+// lines of code a file and 80 a function, comments and blank lines not counted.
+// Files already over keep their own cap, which only goes down; their long
+// functions show as warnings (to split when they're next changed).
+const LIMITS = JSON.parse(readFileSync(new URL("./tools/line-limits.json", import.meta.url), "utf8"));
+const COUNTED = { skipBlankLines: true, skipComments: true };
+const sizeRules = Object.entries(LIMITS).filter(([file]) => file !== "//").map(([file, cap]) => ({
+  files: [file],
+  rules: {
+    "max-lines": ["error", { max: Math.max(500, cap.lines || 0), ...COUNTED }],
+    ...(cap.longFunctions ? { "max-lines-per-function": ["warn", { max: 80, ...COUNTED, IIFEs: false }] } : {})
+  }
+}));
 
 // Globals one app file defines and others use
 const appGlobals = {
@@ -48,6 +63,8 @@ export default [
       "no-unreachable": "error",
       "no-self-assign": "error",
       "no-cond-assign": "error",
+      "max-lines": ["error", { max: 500, ...COUNTED }],
+      "max-lines-per-function": ["error", { max: 80, ...COUNTED, IIFEs: false }],
       "no-unused-vars": ["warn", { vars: "local", args: "none", caughtErrors: "none" }]
     }
   },
@@ -57,5 +74,6 @@ export default [
     files: ["sw.js"],
     languageOptions: { ecmaVersion: 2022, sourceType: "script", globals: { ...globals.serviceworker } },
     rules: { "no-undef": "error", "no-unused-vars": ["warn", { args: "none", caughtErrors: "none" }] }
-  }
+  },
+  ...sizeRules
 ];
