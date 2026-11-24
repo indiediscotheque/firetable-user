@@ -1607,8 +1607,8 @@ firetable.ui.setupRoomEvents = function () {
 
 /**
  * The stage's states (1.10): with nobody on the decks, "The decks are open"
- * over the deck's own join button; with only the room's bot there, that it keeps the music going
- * until someone hops on. ("Listen to the room", shown while the browser holds
+ * over the deck's own join button. With only the room's bot there, the stage
+ * says nothing: the bot is just the DJ. ("Listen to the room", shown while the browser holds
  * the sound back, is one line: the stage and the bar already say who's playing what.)
  */
 firetable.ui.renderStageState = function () {
@@ -1619,20 +1619,18 @@ firetable.ui.renderStageState = function () {
   var djs = [];
   var table = firetable.tableData || {};
   for (var k in table) if (table.hasOwnProperty(k) && table[k]) djs.push(table[k]);
-  var people = djs.filter(function (d) { return !(users[d.id] && users[d.id].hostbot); });
   var mine = djs.some(function (d) { return d.id === ftapi.uid; });
-  var state = !djs.length ? "open" : !people.length ? "bot" : null;
+  var state = !djs.length ? "open" : null;
   var stage = document.getElementById("djStage");
   if (stage) {
     stage.classList.toggle("st-empty", state === "open");
-    stage.classList.toggle("st-botonly", state === "bot");
   }
   var box = document.getElementById("st-state");
   if (box) {
     box.hidden = !state || mine;
     $("#st-stateText").text(state === "open"
       ? "The decks are open. Hop on and the room plays from your ★ playlist." + (hereText ? " " + hereText + "." : "")
-      : state === "bot" ? "The bot keeps the music going until someone hops on." : "");
+      : "");
   }
 };
 
