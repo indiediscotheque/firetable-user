@@ -20,6 +20,7 @@ one picture of PAGE fronts each, so a page of the picker is one request.
     python3 tools/tt-avatars.py /tmp/tt-avatars --pages   # only the picker's pages
     python3 tools/tt-avatars.py /tmp/tt-avatars --chins   # measure each front's chin and face again (img/tt/avatars.json)
     python3 tools/tt-avatars.py /tmp/tt-avatars --repack  # only re-pack the sprites, from the parts' places already found
+    python3 tools/tt-avatars.py /tmp/tt-avatars --necks   # only the neck rows of the sides drawn whole
 
 Each front also gets `chin`: how far down the figure (in %) its chin is, where
 a DJ's laptop lid lines up. From the head's own picture when there is one,
@@ -151,17 +152,46 @@ def chin(av, entry):
     im = load(av, "FullFront")
     if im is None:
         return 62
+    n = neck_row(im)
+    return round(min(85, max(40, n / im.height * 100))) if n is not None else 62
+
+
+def neck_row(im):
+    """The row of a whole figure's neck: the narrowest row where necks are (the head's
+    the top half or more), or None for an empty picture."""
     a = np.asarray(im)[:, :, 3] > 40
     rows = [int(r.sum()) for r in a]
     filled = [i for i, n in enumerate(rows) if n]
     if not filled:
-        return 62
+        return None
     top, bottom = filled[0], filled[-1]
     tall = max(1, bottom - top)
-    # the neck: the narrowest row where necks are (the head's the top half or more)
     lo, hi = top + int(tall * 0.45), top + int(tall * 0.78)
-    neck = min(range(lo, hi + 1), key=lambda i: rows[i])
-    return round(min(85, max(40, neck / len(rows) * 100)))
+    return min(range(lo, hi + 1), key=lambda i: rows[i])
+
+
+def necks():
+    """Each side drawn whole gets `neck`, its neck row: the room cuts the picture there,
+    so the head rocks on the body as Turntable's did (its own head and body: deepcut's
+    avatar data has every avatar as a head and a body). From the sprites as they are."""
+    path = os.path.join(ROOT, "img", "tt", "avatars.json")
+    with open(path) as f:
+        manifest = json.load(f)
+    n = 0
+    for rec in manifest:
+        sheet = Image.open(os.path.join(OUT, rec["id"] + ".webp")).convert("RGBA")
+        for side in ("f", "b"):
+            e = rec[side]
+            e.pop("neck", None)
+            if e.get("head"):
+                continue
+            row = neck_row(sheet.crop((e["x"], 0, e["x"] + e["w"], e["h"])))
+            if row:
+                e["neck"] = row
+                n += 1
+    with open(path, "w") as f:
+        json.dump(manifest, f, separators=(",", ":"))
+    print(n, "sides drawn whole, cut at the neck")
 
 
 # id: [x, y, size], for the few whose outline has no neck to find (a whole-body photo, a
@@ -271,6 +301,8 @@ def main():
         return chins()
     if "--repack" in sys.argv:
         return repack()
+    if "--necks" in sys.argv:
+        return necks()
     pages(ids)
     if "--pages" in sys.argv:
         return
@@ -336,8 +368,9 @@ def main():
         rec["f"]["face"] = k["face"] if "face" in k else face(rec["id"], rec["f"])
     with open(path, "w") as f:
         json.dump(manifest, f, separators=(",", ":"))
+    necks()
     split = sum(1 for r in manifest if "head" in r["f"])
-    print(len(manifest), "avatars,", split, "with a head that rocks")
+    print(len(manifest), "avatars,", split, "fronts with their own head and body (the rest cut at the neck)")
 
 
 if __name__ == "__main__":
