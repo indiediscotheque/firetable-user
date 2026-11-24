@@ -139,7 +139,8 @@ jobs:
       # Older iPads (Safari before 16.5, iPadOS 15) can't read CSS nesting: the
       # site is served with its stylesheets flattened (tools/flatten-css.mjs).
       # Then every script and stylesheet is minified (tools/minify.mjs, about
-      # 40% less to download). The source keeps its nesting and stays readable;
+      # 40% less to download), each script with a source map beside it (for the
+      # browser's tools and the hostbot's Site health report; not in git). The source keeps its nesting and stays readable;
       # the browser tests check the source, and the smoke test also checks this
       # build ("smoke (as deployed)" in smoke.yml).
       - uses: actions/setup-node@v7
@@ -151,7 +152,7 @@ jobs:
         run: |
           npm ci --no-audit --no-fund --ignore-scripts
           node tools/flatten-css.mjs
-          node tools/minify.mjs
+          node tools/minify.mjs --maps
 
       - name: Check secrets
         run: |

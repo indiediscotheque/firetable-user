@@ -138,6 +138,15 @@ Broken tracks get a one-tap fix when there's a working copy. Every night the [in
 - Clearing a flag (by hand, or when the checker finds the track plays again) clears its suggestion.
 - **What a list is kept to:** in All Playlists each list can be set to **YouTube Music**, **YouTube videos** or **SoundCloud** (or left at **Any source**), saved in `playlistPrefs/<uid>/format/<listID>` (`js/playlists.js`). A SoundCloud list takes SoundCloud tracks only and a YouTube Music or videos list YouTube tracks only: adding from search, Grab or a Recent row says so instead. Opening a list points Find tracks at its source. The bot's swaps follow it: YouTube Music and Any source lists get YouTube Music audio tracks, a list of videos gets the artist's videos (never audio tracks), and SoundCloud lists are skipped. Needs the hostbot's current `firebase-rules.json`; with older rules the setting doesn't save.
 
+## errors and speed from real visits
+`js/telemetry.js` (loaded right after `config.js`, before the site's own scripts) reports two things straight to the database, with `navigator.sendBeacon` to its REST address (no sign-in, no library):
+- **errors in the site's own scripts** (`clientErrors`): the message, the file with its `?v=` version, line and column, a short stack, the page (the first parts of its address only), the browser's family and version, and whether someone's signed in. At most 5 a visit, each once. Other sites' scripts (the players, browser add-ons) are left out, and so are fetches the site stops on purpose.
+- **how fast the visit felt** (`clientVitals`), once, the first time the page is hidden or closed: largest paint, the slowest response to a tap, click or key, the worst burst of layout shift, first paint and server response (Google's Web Vitals), Live or Discover, phone or computer.
+
+No user id, name or IP address goes with them. Anyone can add a report; only the bot and supermods can read them, and the bot deletes them after two weeks (firetable-hostbot's `firebase-rules.json` and README, "site health"). Every Monday the hostbot's **Site health** workflow groups them and writes a report on its run's page, with each error's line in the source; it fails, so GitHub emails, when an error is in a script that's still live or a vital is poor over 20 or more visits.
+
+The deploy minifies the scripts (below) and gives each a **source map** beside it (`js/chat.js.map`, not in git; `tools/minify.mjs --maps`), so the browser's tools show the readable source, and the Site health report can say which line an error is on.
+
 ## database costs
 The Realtime Database bills every byte it sends, to every browser, so the site asks for as little as it can:
 - **Playlist tracks are saved lean.** A YouTube track doesn't keep its thumbnail or watch page; both are built from its id wherever they're shown (`ftapi.utilities.leanTrack`, the same rules as the hostbot's `lib/tracks.js`). Your open playlist downloads on every visit, so every track counts.
@@ -148,6 +157,8 @@ The Realtime Database bills every byte it sends, to every browser, so the site a
 
 ## checks
 `npm ci && npm run lint` runs ESLint on `js/` (the config lists the globals each script shares). GitHub Actions runs it, plus a PHP syntax check of `api/`, on every pull request and before every deploy. None of these tooling files are deployed.
+
+**Size budget:** `node tools/size-budget.mjs` adds up what the home page downloads from this site before anyone does anything (its own scripts, stylesheets, preloaded fonts and emoji data, and the page), minified and gzipped as the deploy serves it, and fails over the limits in `tools/size-budget.json`. Lint runs it on every pull request. Over it: load the new part on first use (`js/lazy.js`, as the Turntable theme does), or raise the budget in the same pull request and say why (`--write` sets today's sizes plus 5%).
 
 `tests/` holds the browser tests (`.github/workflows/smoke.yml`, on every pull request; reach runs as one job per role). Each serves the site under the real Content-Security-Policy from `.htaccess` (`tests/harness.mjs`) and loads it in Chromium:
 - **unit** (`unit.test.mjs`, `npm run unit`): the site's own functions as the page loads them: escaping, the chat formatter (markup people type never becomes elements), links and inline images, database keys, usernames, tracks, avatars and dates.
