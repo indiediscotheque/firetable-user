@@ -211,7 +211,7 @@
 }
 
 /* ============================================
-   Light mode (js/look.js)
+   Light mode (js/head.js)
    ============================================
 
    The colours that change between the dark site and light mode. In the dark
@@ -231,7 +231,7 @@
    The stage (#stage) and the full-screen player (#pv-full) stay dark in
    light mode: the room's media, a lit stage in a bright room. The rule after
    the light palette gives them the dark one back. The Turntable theme never
-   sees light mode (js/look.js takes it off while the theme is on). */
+   sees light mode (js/head.js takes it off while the theme is on). */
 :root,
 :where(:root[data-look="light"]) :is(#stage, #pv-full) {
     --ink-rgb: 255, 255, 255;
@@ -433,7 +433,7 @@
     --play-edge: rgba(255, 255, 255, 0.12);
 }
 
-/* Switching: each element's own colour transition waits (js/look.js cross-fades the page) */
+/* Switching: each element's own colour transition waits (js/head.js cross-fades the page) */
 .look-switching,
 .look-switching *,
 .look-switching *::before,
@@ -8832,7 +8832,7 @@ body:not(.is-mod) .helpMods { display: none; }
 }
 
 /* ============================================
-   Light mode: its switches (js/look.js, ui.js showLook)
+   Light mode: its switches (js/head.js, ui.js showLook)
    ============================================ */
 
 /* The account menu's Light mode: a small switch at the row's end */
@@ -8868,7 +8868,13 @@ body:not(.is-mod) .helpMods { display: none; }
     .nav-lookSwitch, .nav-lookSwitch::after { transition: none; }
 }
 
-/* The header's sun and moon: the sun warms to gold under the pointer, the moon cools */
+/* The header's sun and moon: what a click gives you, picked here from data-look
+   (js/head.js sets it before the first paint), so it's right before any script runs */
+.nav-lookMoon,
+:root[data-look="light"] .nav-lookSun { display: none; }
+:root[data-look="light"] .nav-lookMoon { display: inline-block; }
+
+/* the sun warms to gold under the pointer, the moon cools */
 #nav-look [class*="material-symbols-"] { transition: color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
 @media (hover: hover) {
     #nav-look:hover [class*="material-symbols-"] { color: var(--color-accent); transform: rotate(-12deg); }

@@ -29,7 +29,7 @@ body.tt-skin {
     background: #000;
 }
 
-/* light mode (js/look.js) isn't this theme's: its sun stays out of the theme's bar */
+/* light mode (js/head.js) isn't this theme's: its sun stays out of the theme's bar */
 body.tt-skin :is(#nav-look, #tip-nav-look) { display: none; }
 
 /* outside the theme (Live, Discover), its pieces stay out of the page's layout */

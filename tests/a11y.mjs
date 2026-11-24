@@ -15,7 +15,7 @@
 // With the emulators already running (a Claude cloud session: start them
 // without the proxy, 01-ground-rules.md):
 //   NO_PROXY="localhost,127.0.0.1,::1" node a11y.mjs
-// Every view is checked in both looks: the dark site and light mode (js/look.js).
+// Every view is checked in both looks: the dark site and light mode (js/head.js).
 // Narrow a run: ROLES=member WIDTHS=390 VIEWS=live-* LOOKS=light  ·  LIST=1 prints every finding
 // Never deployed. CI: .github/workflows/smoke.yml
 import { readFileSync } from "fs";

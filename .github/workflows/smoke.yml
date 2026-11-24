@@ -40,7 +40,7 @@ jobs:
   # Each suite on its own runner, at the same time: one slow suite (or a retry)
   # can't push the others past the time limit, and the whole run is quicker.
   browser:
-    name: ${{ matrix.suite }}${{ matrix.roles && format(' ({0})', matrix.roles) || '' }}
+    name: ${{ matrix.suite }}${{ matrix.roles && format(' ({0})', matrix.roles) || '' }}${{ matrix.looks && format(' ({0})', matrix.looks) || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -56,12 +56,17 @@ jobs:
             roles: dj
           - suite: reach
             roles: mod
+          # the dark site and light mode at the same time, each its own runner
           - suite: a11y
+            looks: dark
+          - suite: a11y
+            looks: light
           - suite: rules
           - suite: avatars
     env:
       SUITE: ${{ matrix.suite }}
       ROLES: ${{ matrix.roles }} # reach only: the roles this job checks (all when empty)
+      LOOKS: ${{ matrix.looks }} # a11y only: dark or light mode (both when empty)
     steps:
       - uses: actions/checkout@v7
         with:

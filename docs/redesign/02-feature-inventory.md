@@ -26,7 +26,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | TB-07 | Reconnecting notice | All | `#reconnecting` (`authReconnected` / `authDisconnected`) | keep, restyle 1.2 |
 | TB-08 | Discover / Live switch | All | `#modeTabs` (built by `discover.js` `build()`), `ft-mode` in storage | keep on computers; on phones the bottom tab bar (4.1) |
 | TB-09 | Search button (opens Discover search, `/` key) | All | `#dSearchOpen` (`discover.js`), `openSearch()` | keep |
-| TB-10 | Light mode (November 24, 2026): the sun and moon in the header, Light mode in the account menu, Settings → Look (Dark, Light, Match this device), the `L` key, `/light` `/dark` `/auto` in chat; kept on the device | All | `#nav-look`, `#nav-acctLook`, `#lookPicker`; `js/look.js` (`ftLook`, `data-look="light"` on `<html>`, `STORAGE.look`); the light palette in `css/looks.css` and `css/discover.css` ("Light mode"). The stage and the full-screen player stay dark; the Turntable theme never turns light | keep |
+| TB-10 | Light mode (November 24, 2026): the sun and moon in the header, Light mode in the account menu, Settings → Look (Dark, Light, Match this device), the `L` key, `/light` `/dark` `/auto` in chat; kept on the device | All | `#nav-look`, `#nav-acctLook`, `#lookPicker`; `js/head.js` (`ftLook`, `data-look="light"` on `<html>`, `STORAGE.look`); the light palette in `css/looks.css` and `css/discover.css` ("Light mode"). The stage and the full-screen player stay dark; the Turntable theme never turns light | keep |
 
 ## ST · The stage (`#stage`, `#djStage`)
 
@@ -278,7 +278,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 |---|---|---|---|
 | PH-01 | Installable app (manifest, icons, Home Screen) | `manifest.webmanifest`, `icons/`, `install.js` | keep |
 | PH-02 | Service worker: push, and an offline page | `sw.js` (since November 15, 2026 its fetch handler serves `offline.html` only when one of the site's own pages can't be reached; nothing else passes through it), `offline.html`, registered by `install.js` | keep; the redesign adds no caching of the app itself |
-| PH-03 | Keyboard stays out of the way (fields scrolled into view), safe areas | `viewport.js`, `keepFocusedFieldVisible`, `env(safe-area-inset-*)` | keep; since November 22, 2026, while the chat box has focus on a phone and the keyboard is up, the stage and the bottom tab bar step aside (`body.kb-chat`, set in `keepFocusedFieldVisible`) so the conversation keeps the screen. The Turntable theme does the same (`css/ttskin.css`): its room steps out of sight, still playing, and its row in the page's grid closes |
+| PH-03 | Keyboard stays out of the way (fields scrolled into view), safe areas | `js/head.js`, `keepFocusedFieldVisible`, `env(safe-area-inset-*)` | keep; since November 22, 2026, while the chat box has focus on a phone and the keyboard is up, the stage and the bottom tab bar step aside (`body.kb-chat`, set in `keepFocusedFieldVisible`) so the conversation keeps the screen. The Turntable theme does the same (`css/ttskin.css`): its room steps out of sight, still playing, and its row in the page's grid closes |
 | PH-04 | Wake lock while on deck | `ftapi.keepAwake` | keep |
 | PH-05 | Media Session (lock-screen controls for Discover) | `mediaSession` | keep |
 

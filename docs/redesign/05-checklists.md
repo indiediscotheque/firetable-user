@@ -51,7 +51,7 @@ Walk these by hand on every step that touches Live, at 1440 and 390 wide, as the
 
 - [ ] 390 × 844 and 360 × 780; landscape (`max-height: 400px`).
 - [ ] Safe areas (`env(safe-area-inset-*)`) at the top and the tab bar.
-- [ ] The keyboard doesn't cover the chat box or a field being typed in (`keepFocusedFieldVisible`, `viewport.js`).
+- [ ] The keyboard doesn't cover the chat box or a field being typed in (`keepFocusedFieldVisible`, `js/head.js`).
 - [ ] The installed app (Home Screen) and the browser both.
 - [ ] Wake lock while on deck still holds.
 

@@ -1,22 +1,24 @@
 /**
- * look.js — light mode.
- *
- * The site is dark; light mode is a choice kept on this device: "dark" (the
- * default), "light", or "auto" (follow the device's own setting). It's read
- * here, in <head>, before the stylesheets paint, so a light page never
- * flashes dark first. It puts data-look="light" on <html>, and css/looks.css
- * and css/discover.css swap their palette under it (the "Light mode" sections).
- *
- * What stays dark in light mode, on purpose: the stage (the song's colours,
- * the screen, the DJs on their name plates) and the full-screen player. They
- * are the room's media, like a lit stage in a bright room. The Turntable
- * theme (js/ttskin.js) is its own world and is never drawn light: while it's
- * on, data-look is taken off and comes back when it goes.
- *
- * Ways to switch: the sun/moon in the header, Light mode in the account
- * menu, Settings → Playback and display → Look, or /light, /dark and /auto
- * in chat. Loaded before storage.js, so it reads localStorage itself.
+ * head.js — what must happen before the first paint, in one small request
+ * (it blocks the page, so it stays short; README "light mode" explains it):
+ * 1. iPhone/iPad viewport: maximum-scale=1 so tapping a field doesn't zoom.
+ * 2. Light mode (ftLook): data-look="light" on <html>, and the color-scheme
+ *    and theme-color metas (before this in <head>), so even the blank page
+ *    before the stylesheets is the right colour. The stage, the full-screen
+ *    player and the Turntable theme stay dark (css/looks.css, js/ttskin.js).
+ * Runs before storage.js, so it reads localStorage itself.
  */
+
+// ── 1. The viewport on iPhone and iPad ──
+(function () {
+  var vp = document.querySelector('meta[name="viewport"]');
+  if (vp && /interactive-widget/.test(vp.getAttribute("content") || "") &&
+      (/iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1))) {
+    vp.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content");
+  }
+})();
+
+// ── 2. Light mode ──
 var ftLook = (function () {
   "use strict";
 
@@ -26,6 +28,8 @@ var ftLook = (function () {
   var root = document.documentElement;
   var media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
   var listeners = [];
+  var scheme = document.querySelector('meta[name="color-scheme"]');
+  var bar = document.querySelector('meta[name="theme-color"]');
 
   function read() {
     var v = null;
@@ -50,7 +54,9 @@ var ftLook = (function () {
     var look = turntable() ? "dark" : wanted();
     if (look === "light") root.setAttribute("data-look", "light");
     else root.removeAttribute("data-look");
-    var bar = document.querySelector('meta[name="theme-color"]');
+    // the browser's own drawing (the blank page before the stylesheets, scrollbars,
+    // form controls) and its bar, in the same look
+    if (scheme) scheme.setAttribute("content", look);
     if (bar) bar.setAttribute("content", BAR[look]);
     for (var i = 0; i < listeners.length; i++) {
       try { listeners[i](wanted(), pref); } catch (e) { /* one control's trouble isn't the page's */ }

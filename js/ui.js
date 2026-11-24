@@ -883,7 +883,7 @@ firetable.ui.initSettings = function () {
 };
 
 /**
- * Light mode on or off (js/look.js keeps the choice on this device). The
+ * Light mode on or off (js/head.js keeps the choice on this device). The
  * Turntable theme has its own look, so there it only says so.
  */
 firetable.ui.toggleLook = function () {
@@ -895,8 +895,9 @@ firetable.ui.toggleLook = function () {
 };
 
 /**
- * Every light mode control shows the state: the header button (its icon is
- * what a click gives you), the account menu's switch and the Settings picker.
+ * Every light mode control shows the state: the header button (pressed, and
+ * its tooltip; CSS shows its sun or moon), the account menu's switch and the
+ * Settings picker.
  * @param {string} look - "light" | "dark": showing now
  * @param {string} pref - "dark" | "light" | "auto": the choice on this device
  */
@@ -904,8 +905,7 @@ firetable.ui.showLook = function (look, pref) {
   var light = look === "light";
   var head = document.getElementById("nav-look");
   if (head) {
-    head.setAttribute("aria-pressed", light ? "true" : "false");
-    head.querySelector("i").textContent = light ? "dark_mode" : "light_mode";
+    head.setAttribute("aria-pressed", light ? "true" : "false"); // its sun or moon is CSS's (data-look)
     var tip = document.getElementById("tip-nav-look");
     if (tip) tip.textContent = light ? "Dark mode" : "Light mode";
   }
@@ -2265,7 +2265,7 @@ firetable.ui.setupMiscEvents = function () {
     firetable.ui.applyScreenSetting();
   });
 
-  // ── Light mode (js/look.js): the header's sun and moon, the account menu, Settings ──
+  // ── Light mode (js/head.js): the header's sun and moon, the account menu, Settings ──
   $('#nav-look').on('click', function () { firetable.ui.toggleLook(); });
   $('#nav-acctLook').on('click', function () { firetable.ui.toggleLook(); }); // a checkbox in the menu: the menu stays open
   $('#lookPicker').on('change', function () { ftLook.set($(this).val()); });

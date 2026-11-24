@@ -21,7 +21,7 @@
 :where(html.room-colors) #themebox {
     background-color: color-mix(in srgb, var(--room-color) 20%, transparent);
 }
-/* Light mode (js/look.js): the stage stays dark, so the song's tint on the
+/* Light mode (js/head.js): the stage stays dark, so the song's tint on the
    strip under it goes over the stage's dark, not the light page behind it */
 :where(html.room-colors[data-look="light"]) #themebox {
     background-color: color-mix(in srgb, var(--room-color) 20%, var(--color-bg-s1));

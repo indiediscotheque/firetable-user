@@ -27,10 +27,11 @@
 	<link rel="alternate" type="application/atom+xml" title="Indie Discotheque: new releases" href="music/new/feed.xml" />
 	<link rel="alternate" type="application/atom+xml" title="Indie Discotheque: the weekly chart" href="music/charts/feed.xml" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-	<script src="js/viewport.js?v=01.12.08"></script>
-	<!-- Light mode (js/look.js): read before the stylesheets paint, so a light page never flashes dark -->
-	<script src="js/look.js?v=01.12.08"></script>
+	<!-- The page's look before anything paints: dark, unless js/head.js finds light mode on (it sets these two) -->
+	<meta name="color-scheme" content="dark" />
 	<meta name="theme-color" content="#181818" />
+	<!-- Before first paint, in one request: the iPhone viewport and light mode (js/head.js) -->
+	<script src="js/head.js?v=01.12.08"></script>
 	<link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=01.12.08" />
 	<!-- Installable web app (Add to Home Screen / Install app) -->
 	<link rel="manifest" href="manifest.webmanifest" />
@@ -78,9 +79,10 @@
 			</div>
 			<div class="flexpacer"></div>
 			<div id="topbarUtils">
-				<!-- Light mode: a toggle for everyone, visitors too (js/look.js; the account menu and Settings have it as well) -->
+				<!-- Light mode: a toggle for everyone, visitors too (js/head.js; the account menu and Settings have it as well).
+				     Its icon is what a click gives you, picked by CSS from data-look, so it's right before any script runs -->
 				<button id="nav-look" type="button" class="header_icon" aria-label="Light mode" aria-pressed="false" style="anchor-name: --tip-nav-look" aria-describedby="tip-nav-look">
-					<i class="material-symbols-outlined" aria-hidden="true">light_mode</i>
+					<i class="material-symbols-outlined nav-lookSun" aria-hidden="true">light_mode</i><i class="material-symbols-outlined nav-lookMoon" aria-hidden="true">dark_mode</i>
 				</button>
 				<span id="tip-nav-look" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-nav-look">Light mode</span>
 				<button id="socialTrigger" type="button" class="header_icon" aria-label="Community" popovertarget="socialPopover" style="anchor-name: --tip-socialTrigger" aria-describedby="tip-socialTrigger">

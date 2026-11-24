@@ -2677,7 +2677,7 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 #dBrowse .pvbar[data-list] .d-play:focus-visible { outline: none; opacity: 1; }
 
 /* ============================================
-   Light mode (js/look.js; the palette is in looks.css)
+   Light mode (js/head.js; the palette is in looks.css)
    ============================================ */
 
 /* The player bar's song colour: the artwork's tone is picked to glow on the

@@ -3956,7 +3956,8 @@ try {
     await wait(150);
     out.on = root.getAttribute("data-look");
     out.pressed = head.getAttribute("aria-pressed");
-    out.icon = head.textContent.trim();
+    out.icon = [...head.querySelectorAll("i")].filter((i) => i.offsetParent !== null).map((i) => i.textContent).join("|");
+    out.scheme = document.querySelector('meta[name="color-scheme"]').content;
     out.stored = localStorage.getItem("firetableLook");
     out.bar = document.querySelector('meta[name="theme-color"]').content;
     out.page = lum(bg(document.body));
@@ -3999,7 +4000,7 @@ try {
     out.back = root.getAttribute("data-look") + ":" + localStorage.getItem("firetableLook") + ":" + document.querySelector('meta[name="theme-color"]').content;
     return out;
   });
-  check(look.start === null && look.pref === "dark" && look.on === "light" && look.pressed === "true" && look.icon === "dark_mode" && look.stored === "light" && look.bar === "#f1eee8",
+  check(look.start === null && look.pref === "dark" && look.on === "light" && look.pressed === "true" && look.icon === "dark_mode" && look.scheme === "light" && look.stored === "light" && look.bar === "#f1eee8",
     "the header's sun turns light mode on, says so, and keeps it on this device (" + JSON.stringify(look) + ")");
   check(look.page > 200 && look.dialogBg > 200 && look.stage < 40, "light mode lights the page and the dialogs; the stage keeps its dark (" + look.page + " / " + look.dialogBg + " / " + look.stage + ")");
   check(look.item === "true" && look.picker === "light" && look.auto === "auto:auto", "the account menu's switch and Settings' Look follow it; Match this device is kept (" + look.item + " / " + look.picker + " / " + look.auto + ")");

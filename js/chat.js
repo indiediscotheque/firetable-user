@@ -1074,7 +1074,7 @@ firetable.ui.setupChatEvents = function () {
           case "light":
           case "dark":
           case "auto":
-            // light mode, the dark site, or the device's own setting (js/look.js): only here, never sent
+            // light mode, the dark site, or the device's own setting (js/head.js): only here, never sent
             ftLook.set(command);
             firetable.actions.localChatResponse(command === "auto" ? "The site now follows this device: " + ftLook.current() + " for now." : (command === "light" ? "Light mode is on." : "Light mode is off.") + " Only you see it, on this device.");
             break;
