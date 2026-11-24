@@ -1325,6 +1325,16 @@ try {
     out.seats = document.querySelectorAll("#tt-table .tt-seat").length;
     out.dj = !!document.querySelector("#tt-table .tt-dj .tt-fig[data-av]");
     out.crowd = document.querySelectorAll("#tt-crowd .tt-listener .tt-fig[data-av]").length;
+    // everyone is a head on a body (the art's own, or the picture cut at the neck): no one drawn whole
+    const figs = [...document.querySelectorAll("#tt-room .tt-fig[data-av]")];
+    out.heads = figs.length > 0 && figs.every((f) => f.querySelector(":scope > .tt-head") && f.querySelector(":scope > .tt-body") && !f.querySelector(".tt-whole"));
+    // a listener who fires rocks their head; their body stays put
+    const fan = document.querySelector("#tt-crowd .tt-listener");
+    fan.classList.add("tt-fired");
+    const anim = (sel) => getComputedStyle(fan.querySelector(sel)).animationName;
+    out.rock = anim(".tt-head") === "tt-rock" && anim(".tt-body") === "none" && !/tt-(sway|rock|bob)/.test(getComputedStyle(fan).animationName + getComputedStyle(fan.querySelector(".tt-fig")).animationName);
+    out.rockInfo = [out.heads, anim(".tt-head"), anim(".tt-body"), getComputedStyle(fan).animationName].join("|");
+    fan.classList.remove("tt-fired");
     out.screen = player.isConnected && document.getElementById("playerArea") === player && player.getAttribute("src") === src;
     // every face here is a Turntable one
     const faces = [...document.querySelectorAll("#chats .ft-avatar[data-avatar-uid]")];
@@ -1502,6 +1512,7 @@ try {
   check(tt.turn && /;ttfm,/.test(tt.stickers), "the turntable.fm logo is a sticker, and a sticker turns by dragging its corner (" + tt.turnInfo + ")");
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
+  check(tt.heads && tt.rock, "everyone is a head on a body, and a fire rocks the head only, as on deepcut (" + tt.rockInfo + ")");
   check(tt.listen, "the sound held back: a plain Turntable Listen button, on the stage's base between the front speakers at the stage's scale, that starts the sound (" + tt.listenInfo + ")");
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
   check(tt.turnBefore && tt.held && tt.turn && tt.turnBack, "a song change moves the spotlight and the nodding head to the DJ now playing (" + [tt.turnBefore, tt.held, tt.turn, tt.turnBack] + ")");

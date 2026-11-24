@@ -899,6 +899,8 @@ body.tt-skin #screenover { display: none; }
     background-repeat: no-repeat;
 }
 .tt-head { transform-origin: 50% 88%; z-index: 1; }
+/* a head cut from the whole picture: it turns on the neck, its bottom edge */
+.tt-head.tt-cut { transform-origin: 50% 100%; }
 .tt-whole { transform-origin: 50% 100%; }
 .tt-crowd { left: 0; top: 0; width: 1468px; height: 620px; z-index: 4; pointer-events: none; }
 .tt-crowd > * { pointer-events: auto; }

@@ -241,8 +241,10 @@ firetable.tt = (function () {
 
   /**
    * One figure, front (f) or back (b), standing on its feet at the bottom
-   * centre of its box. Its head and body are drawn apart when the art has
-   * them, so the head can rock on the body the way Turntable's did.
+   * centre of its box. Its head and body are drawn apart, so the head can
+   * rock on the body the way Turntable's did (deepcut draws every avatar as
+   * a head and a body): from the art's own head and body when it has them,
+   * else the whole picture cut at the neck (`neck`, tools/tt-avatars.py).
    */
   function figure(id, side) {
     var a = S.byId[id];
@@ -252,12 +254,15 @@ firetable.tt = (function () {
     var s = a[side];
     el.dataset.av = id;
     el.style.cssText = "--w:" + s.w + "px;--h:" + s.h + "px;--img:url(" + src(id) + ");--sw:" + a.sw + "px;--sh:" + a.sh + "px";
-    var part = function (cls, x, w, h, dx, dy) {
-      return '<span class="' + cls + '" style="left:' + dx + "px;top:" + dy + "px;width:" + w + "px;height:" + h + "px;background-position:-" + x + 'px 0"></span>';
+    // a piece of the sprite: from (x, y) in it, w by h, at (dx, dy) in the figure
+    var part = function (cls, x, w, h, dx, dy, y) {
+      return '<span class="' + cls + '" style="left:' + dx + "px;top:" + dy + "px;width:" + w + "px;height:" + h + "px;background-position:-" + x + "px -" + (y || 0) + 'px"></span>';
     };
     el.innerHTML = s.head
       ? part("tt-body", s.body[0], s.body[1], s.body[2], s.body[3], s.body[4]) + part("tt-head", s.head[0], s.head[1], s.head[2], s.head[3], s.head[4])
-      : part("tt-whole", s.x, s.w, s.h, 0, 0);
+      : s.neck
+        ? part("tt-body", s.x, s.w, s.h - s.neck, 0, s.neck, s.neck) + part("tt-head tt-cut", s.x, s.w, s.neck, 0, 0)
+        : part("tt-whole", s.x, s.w, s.h, 0, 0);
     return el;
   }
 
