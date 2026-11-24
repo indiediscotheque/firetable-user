@@ -56,11 +56,12 @@ firetable.init = function () {
     { cls: "facebook",   url: ftconfigs.facebookURL },
     { cls: "instagram",  url: ftconfigs.instagramURL },
     { cls: "x",          url: ftconfigs.xURL },
-    { cls: "bluesky",    url: ftconfigs.blueskyURL },
     { cls: "reddit",     url: ftconfigs.redditURL },
-    { cls: "lastfm",     url: ftconfigs.lastfmURL },
+    { cls: "threads",    url: ftconfigs.threadsURL },
     { cls: "discord",    url: ftconfigs.discordURL },
-    { cls: "soundcloud", url: ftconfigs.soundcloudURL }
+    { cls: "soundcloud", url: ftconfigs.soundcloudURL },
+    { cls: "bluesky",    url: ftconfigs.blueskyURL },
+    { cls: "lastfm",     url: ftconfigs.lastfmURL }
   ];
   socialLinks.forEach(function (link) {
     if (link.url) $(".sociallogo." + link.cls).attr("href", link.url);

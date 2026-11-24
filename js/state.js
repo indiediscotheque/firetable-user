@@ -22,6 +22,7 @@ if (typeof ftconfigs === "undefined") {
 // its own (or "" to hide one), so they're live without editing the server's config.js
 [["instagramURL", "https://www.instagram.com/indie_discotheque/"],
   ["xURL", "https://x.com/id_discotheque"],
+  ["threadsURL", "https://www.threads.com/@indie_discotheque"],
   ["blueskyURL", "https://bsky.app/profile/indiediscotheque.com"]].forEach(function (d) {
   if (typeof ftconfigs[d[0]] !== "string") ftconfigs[d[0]] = d[1];
 });
