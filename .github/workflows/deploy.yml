@@ -1,7 +1,8 @@
 # Publish the site to DreamHost whenever master changes.
 #
 # Uploads over SFTP (works with an SFTP-only DreamHost user). Every file type
-# and folder is included, files are sent exactly as they are in git, nothing
+# and folder is included, files are sent as they are in git (the scripts and
+# stylesheets minified, below), nothing
 # on the server is deleted, and config.js, api/soundcloud-config.php,
 # api/lastfm-config.php and api/audience-config.php (which live only on the
 # server) are never touched.
@@ -137,16 +138,20 @@ jobs:
 
       # Older iPads (Safari before 16.5, iPadOS 15) can't read CSS nesting: the
       # site is served with its stylesheets flattened (tools/flatten-css.mjs).
-      # The source keeps its nesting; the browser tests check it with nesting.
+      # Then every script and stylesheet is minified (tools/minify.mjs, about
+      # 40% less to download). The source keeps its nesting and stays readable;
+      # the browser tests check the source, and the smoke test also checks this
+      # build ("smoke (as deployed)" in smoke.yml).
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
 
-      - name: Flatten the stylesheets for older Safari
+      - name: Flatten the stylesheets for older Safari, then minify
         run: |
           npm ci --no-audit --no-fund --ignore-scripts
           node tools/flatten-css.mjs
+          node tools/minify.mjs
 
       - name: Check secrets
         run: |
