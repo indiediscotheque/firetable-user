@@ -61,7 +61,8 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  # write: the post images and videos go on the social-media branch, which GitHub Pages serves
+  contents: write
 
 jobs:
   post:
@@ -77,6 +78,11 @@ jobs:
       SITE_URL: ${{ vars.SITE_URL }}
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
       KIND: ${{ github.event_name == 'workflow_dispatch' && inputs.kind || 'auto' }}
+      # where Instagram, Facebook, Threads and the rest fetch each post's files from:
+      # "pages" (GitHub Pages, the default) or "site" (the website on DreamHost,
+      # whose firewall refuses Meta's servers some of the time)
+      MEDIA_HOST: ${{ vars.SOCIAL_MEDIA_HOST || 'pages' }}
+      PAGES_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
       FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
       # settings (repository variables)
       TZ: ${{ vars.TZ || 'America/Chicago' }}
@@ -222,13 +228,67 @@ jobs:
         if: env.DRY_RUN != 'true'
         run: |
           remote() { lftp -c "open --env-password -u \"$SFTP_USER\" \"sftp://$HOST\"; $1"; }
-          if ls social-out/*.jpg social-out/*.mp4 >/dev/null 2>&1; then
+          if [ "$MEDIA_HOST" = "site" ] && ls social-out/*.jpg social-out/*.mp4 >/dev/null 2>&1; then
             # not for search engines, and no folder listing
             printf 'Options -Indexes\n<IfModule mod_headers.c>\n  Header set X-Robots-Tag "noindex"\n  Header set Access-Control-Allow-Origin "*"\n</IfModule>\n' > social-out/.htaccess
             remote "mirror --reverse --no-perms --parallel=4 --exclude-glob posts.json --exclude-glob .tmp/ ./social-out/ \"$DEST/social/\""
           fi
           [ -f social-state.json ] && remote "put social-state.json -o firetable-social/state.json; chmod 600 firetable-social/state.json"
           true
+
+      # GitHub Pages: the files still needed (the last 10 days', and any still
+      # waiting to post) on the social-media branch, one commit replacing the last,
+      # with copies of the privacy policy and terms (Meta's app settings link to
+      # them). Turn Pages on once: Settings → Pages → Deploy from a branch →
+      # social-media, / (root).
+      - name: Put the files on GitHub Pages
+        if: env.DRY_RUN != 'true' && env.MEDIA_HOST == 'pages'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          echo "SOCIAL_MEDIA_URL=${PAGES_URL}social/" >> "$GITHUB_ENV"
+          ws="$GITHUB_WORKSPACE"
+          dir="$RUNNER_TEMP/pages"
+          git init -q "$dir" && cd "$dir"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          had=""
+          if git fetch -q --depth=1 origin social-media 2>/dev/null; then git checkout -q FETCH_HEAD; had=1; fi
+          mkdir -p social
+          cp "$ws"/social-out/*.jpg "$ws"/social-out/*.mp4 social/ 2>/dev/null || true
+          keep=$(node "$ws/tools/social/run.mjs" keep-media --state "$ws/social-state.json")
+          for f in social/*; do
+            [ -e "$f" ] || continue
+            grep -qxF "$(basename "$f")" <<< "$keep" || rm -f "$f"
+          done
+          # the policy pages, their styles and pictures from the site itself
+          for p in privacy terms; do
+            mkdir -p "$p"
+            sed -e "s#\.\./#${SITE}#g" "$ws/$p/index.html" > "$p/index.html"
+          done
+          printf '<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>Indie Discotheque</title><p>Files for Indie Discotheque&apos;s social posts. The room is at <a href="%s">%s</a>.</p>\n' "$SITE" "$SITE" > index.html
+          touch .nojekyll
+          git add -A
+          if [ -n "$had" ] && git diff --cached --quiet HEAD; then
+            echo "GitHub Pages: nothing new."
+          else
+            # one commit, no history: the branch never grows
+            commit=$(git commit-tree "$(git write-tree)" -m "Social posting files")
+            git push -q -f origin "$commit:refs/heads/social-media"
+            echo "GitHub Pages: $(ls social | wc -l) file(s) on the social-media branch."
+          fi
+          # wait until Pages serves this run's files, so the platforms can fetch them
+          first=$(cd "$ws/social-out" 2>/dev/null && ls *.jpg *.mp4 2>/dev/null | head -1)
+          [ -n "$first" ] || exit 0
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -I -m 15 -w '%{http_code}' "${PAGES_URL}social/$first" || true)
+            if [ "$code" = "200" ]; then echo "GitHub Pages is serving them."; exit 0; fi
+            sleep 15
+          done
+          echo "::warning::GitHub Pages isn't serving ${PAGES_URL}social/$first yet. If Pages isn't on: Settings → Pages → Deploy from a branch → social-media, / (root). The posts wait and are tried again next run."
 
       - name: Post
         env:

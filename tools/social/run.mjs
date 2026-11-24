@@ -20,6 +20,7 @@
 //       draws one of a kind and prints every platform's words and the post kit, posting nothing
 //   node tools/social/run.mjs platforms        which platforms have their keys set
 //   node tools/social/run.mjs old-media --state FILE   files on the server to delete (older than 10 days)
+//   node tools/social/run.mjs keep-media --state FILE  files still needed (the GitHub Pages copy keeps only these)
 //   node tools/social/run.mjs check [DIR]      draw a song and a chart from the site's own images (CI)
 //
 // --dry-run (render and publish) changes nothing anywhere: publish prints
@@ -315,6 +316,15 @@ function platforms() {
   }
 }
 
+/** The files still needed (posted in the last 10 days, or waiting to post): what the media host keeps. */
+function keepMedia() {
+  const state = loadState(arg("state", "social-state.json"));
+  const cutoff = Date.now() - 10 * 86400000;
+  const keep = new Set(state.queue.flatMap((p) => [p.media.video, p.media.image, p.media.story, ...(p.media.slides || []), ...(p.media.glance || [])]).filter(Boolean));
+  for (const m of state.media) if (m.at >= cutoff) keep.add(m.file);
+  for (const f of [...keep].sort()) console.log(f);
+}
+
 function oldMedia() {
   const stateFile = arg("state", "social-state.json");
   const state = loadState(stateFile);
@@ -356,10 +366,10 @@ async function check() {
   if (!argv[1]) rmSync(dir, { recursive: true, force: true });
 }
 
-const COMMANDS = { render, publish, preview, platforms, "old-media": oldMedia, check };
+const COMMANDS = { render, publish, preview, platforms, "old-media": oldMedia, "keep-media": keepMedia, check };
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   if (!COMMANDS[cmd]) {
-    console.error("Usage: node tools/social/run.mjs render|publish|preview|platforms|old-media|check (see the top of this file)");
+    console.error("Usage: node tools/social/run.mjs render|publish|preview|platforms|old-media|keep-media|check (see the top of this file)");
     process.exit(2);
   }
   await Promise.resolve().then(() => COMMANDS[cmd]()).catch((err) => { console.error(err.stack || err.message); process.exit(1); });
