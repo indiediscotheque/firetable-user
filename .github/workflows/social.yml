@@ -1,4 +1,6 @@
-# Social posting (tools/social/): every hour it checks what's due, draws it,
+# Social posting (tools/social/). The room's bot starts it every hour
+# (firetable-hostbot, lib/social.js), since GitHub's own schedule below runs
+# late or gets skipped; that schedule stays as a backup. Each run checks what's due, draws it,
 # puts the files on the site under social/ and posts them, within each
 # platform's budget (a few a day at most; tools/social/run.mjs). In the room's
 # time zone (TZ, default America/Chicago):
