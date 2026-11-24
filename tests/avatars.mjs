@@ -9,7 +9,7 @@
 //   stage:   the drawing stands on the table (its feet at the bottom), fills
 //            the box it's drawn in, and is centred
 // Several members per style (made-up Bouletmatons differ: hats, hands, hair).
-// And the Turntable theme's avatars: every one, both sides, put together whole.
+// And the Turntable theme's avatars: every one, both sides, a head on a body, put together whole.
 // Writes tests/screens/avatars.png, a contact sheet of them all.
 //   cd tests && npm ci && npm run avatars
 // No emulator needed. Robohash and DiceBear pictures come from their servers
@@ -256,42 +256,52 @@ for (const style of STYLES.filter((s) => s !== "october")) {
   }
 }
 
-// The Turntable theme's avatars, every one, front and back: put together from
-// their sprite as js/ttskin.js figure() does (the body, then the head over it, each
-// at its place), they make the whole figure the sprite also holds. (A part out of
-// place, say a body hidden behind its head, leaves a figure without a body.)
-console.log("-- the Turntable theme's avatars: every one, both sides, whole when put together");
+// The Turntable theme's avatars, every one, front and back: each a head picture
+// and a body picture of its own (never one picture cut in two), put together from
+// their sprite as js/ttskin.js figure() does (in their drawing order, each at its
+// place), standing in their box: the feet on its bottom, and the box just round them.
+console.log("-- the Turntable theme's avatars: every one, both sides, a head on a body, put together whole");
 const tt = await page.evaluate(async () => {
   const list = await (await fetch("img/tt/avatars.json")).json();
   const load = (id) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error(id)); i.src = "img/tt/av/" + id + ".webp"; });
   const bad = [];
-  let sides = 0, parts = 0;
+  let sides = 0, under = 0;
   for (const a of list) {
     const img = await load(a.id);
     if (img.naturalWidth !== a.sw || img.naturalHeight !== a.sh) { bad.push(a.id + " sprite size"); continue; }
     for (const side of ["f", "b"]) {
       const s = a[side];
       sides++;
-      const alpha = (draw) => { const c = new OffscreenCanvas(s.w, s.h), x = c.getContext("2d"); draw(x); return x.getImageData(0, 0, s.w, s.h).data; };
-      const whole = alpha((x) => x.drawImage(img, s.x, 0, s.w, s.h, 0, 0, s.w, s.h));
-      let n = 0;
-      for (let k = 3; k < whole.length; k += 4) if (whole[k] > 128) n++;
-      if (n < 200) { bad.push(a.id + side + " no figure"); continue; }
-      if (!s.head) continue;
-      parts++;
-      const got = alpha((x) => ["body", "head"].forEach((p) => { const [px, w, h, dx, dy] = s[p]; x.drawImage(img, px, 0, w, h, dx, dy, w, h); }));
-      let miss = 0, extra = 0;
-      for (let k = 3; k < whole.length; k += 4) { const w = whole[k] > 128, g = got[k] > 128; if (w && !g) miss++; if (g && !w) extra++; }
-      if (miss / n > 0.03 || extra / n > 0.03) bad.push(a.id + side + " (" + (100 * miss / n).toFixed(0) + "% missing, " + (100 * extra / n).toFixed(0) + "% extra)");
+      if (!s.head || !s.body) { bad.push(a.id + side + " not a head and a body"); continue; }
+      if (s.head[0] === s.body[0]) { bad.push(a.id + side + " one picture for both"); continue; }
+      if (s.u) under++;
+      const shown = (parts) => {
+        const c = new OffscreenCanvas(s.w, s.h), x = c.getContext("2d");
+        parts.forEach((p) => { const [px, w, h, dx, dy] = s[p]; x.drawImage(img, px, 0, w, h, dx, dy, w, h); });
+        const d = x.getImageData(0, 0, s.w, s.h).data;
+        let n = 0, top = s.h, bottom = -1, left = s.w, right = -1;
+        for (let k = 3; k < d.length; k += 4) if (d[k] > 0) {
+          const i = (k - 3) / 4, px = i % s.w, py = (i - px) / s.w;
+          if (d[k] > 128) n++;
+          top = Math.min(top, py); bottom = Math.max(bottom, py); left = Math.min(left, px); right = Math.max(right, px);
+        }
+        return { n, top, bottom, left, right };
+      };
+      const head = shown(["head"]), body = shown(["body"]), whole = shown(s.u ? ["head", "body"] : ["body", "head"]);
+      if (head.n < 100) bad.push(a.id + side + " a head that shows nothing");
+      else if (body.n < 3 && body.bottom < 0) bad.push(a.id + side + " a body that shows nothing");
+      else if (whole.n < 200) bad.push(a.id + side + " no figure");
+      else if (whole.bottom !== s.h - 1 || whole.top !== 0 || whole.left !== 0 || whole.right !== s.w - 1)
+        bad.push(a.id + side + " box not round the figure (" + [whole.left, whole.top, whole.right, whole.bottom] + " in " + s.w + "x" + s.h + ")");
     }
   }
-  return { count: list.length, sides, parts, bad };
+  return { count: list.length, sides, under, bad };
 });
 // each sprite's version (its link's ?v=, js/ttskin.js src) is its file's hash, so a rebuilt one is fetched again
 const stale = JSON.parse(readFileSync(join(ROOT, "img/tt/avatars.json"), "utf8"))
   .filter((a) => a.v !== createHash("sha256").update(readFileSync(join(ROOT, "img/tt/av", a.id + ".webp"))).digest("hex").slice(0, 10)).map((a) => a.id);
 check(stale.length === 0, "Turntable avatars: every sprite's version is its file's hash (tools/tt-avatars.py)" + (stale.length ? ": " + stale.slice(0, 20).join(", ") : ""));
-check(tt.count > 600 && tt.bad.length === 0, "Turntable avatars: " + tt.count + " avatars, " + tt.sides + " sides (" + tt.parts + " drawn as a head on a body) all whole" + (tt.bad.length ? ": " + tt.bad.slice(0, 20).join(", ") : ""));
+check(tt.count > 600 && tt.sides === 2 * tt.count && tt.bad.length === 0, "Turntable avatars: " + tt.count + " avatars, " + tt.sides + " sides, each a head picture on a body picture (" + tt.under + " with the head drawn under), standing whole in their box" + (tt.bad.length ? ": " + tt.bad.slice(0, 20).join(", ") : ""));
 
 // The contact sheet: one row per style, each place, two members
 const html = "<!doctype html><meta charset=utf-8><title>Avatars</title><body style='background:#181818;color:#ccc;font:13px sans-serif;margin:16px'>" +

@@ -1339,14 +1339,14 @@ try {
     out.seats = document.querySelectorAll("#tt-table .tt-seat").length;
     out.dj = !!document.querySelector("#tt-table .tt-dj .tt-fig[data-av]");
     out.crowd = document.querySelectorAll("#tt-crowd .tt-listener .tt-fig[data-av]").length;
-    // everyone is a head on a body (the art's own, or the picture cut at the neck): no one drawn whole
+    // everyone is a head on a body, each its own picture (Turntable's and deepcut's parts), in their drawing order
     const figs = [...document.querySelectorAll("#tt-room .tt-fig[data-av]")];
-    out.heads = figs.length > 0 && figs.every((f) => f.querySelector(":scope > .tt-head") && f.querySelector(":scope > .tt-body") && !f.querySelector(".tt-whole"));
+    out.heads = figs.length > 0 && figs.every((f) => f.children.length === 2 && f.querySelector(":scope > .tt-head") && f.querySelector(":scope > .tt-body"));
     // a listener who fires rocks their head; their body stays put
     const fan = document.querySelector("#tt-crowd .tt-listener");
     fan.classList.add("tt-fired");
     const anim = (sel) => getComputedStyle(fan.querySelector(sel)).animationName;
-    out.rock = anim(".tt-head") === "tt-rock" && anim(".tt-body") === "none" && !/tt-(sway|rock|bob)/.test(getComputedStyle(fan).animationName + getComputedStyle(fan.querySelector(".tt-fig")).animationName);
+    out.rock = anim(".tt-head") === "tt-rock" && anim(".tt-body") === "none" && !/tt-(rock|bob)/.test(getComputedStyle(fan).animationName + getComputedStyle(fan.querySelector(".tt-fig")).animationName);
     // as deepcut: drawn at 20 frames a second (stepped), the head turning about its middle
     const headCs = getComputedStyle(fan.querySelector(".tt-head"));
     out.rock = out.rock && /steps\(2/.test(headCs.animationTimingFunction) && headCs.animationDuration === "1.2s" &&
@@ -1362,8 +1362,15 @@ try {
     dj.classList.add("tt-fired");
     const small = djAnim();
     dj.classList.toggle("tt-on", wasOn); dj.classList.toggle("tt-fired", wasFired);
-    out.djMoves = bob === "tt-bob" && small === "tt-smallrock";
-    out.djMovesInfo = bob + "|" + small;
+    // the room's dance mode: heads move, never a whole figure or a body
+    const ttRoom = document.getElementById("tt-room"), wasDance = ttRoom.classList.contains("tt-dance");
+    ttRoom.classList.add("tt-dance");
+    const still = [...ttRoom.querySelectorAll(".tt-fig, .tt-body")].every((e) => getComputedStyle(e).animationName === "none");
+    const danceFan = getComputedStyle(fan.querySelector(".tt-head")).animationName;
+    const danceDj = djAnim();
+    ttRoom.classList.toggle("tt-dance", wasDance);
+    out.djMoves = bob === "tt-bob" && small === "tt-smallrock" && still && danceFan === "tt-rock" && (dj.classList.contains("tt-fired") ? danceDj === "tt-smallrock" : danceDj === "tt-bob");
+    out.djMovesInfo = [bob, small, still, danceFan, danceDj].join("|");
     out.screen = player.isConnected && document.getElementById("playerArea") === player && player.getAttribute("src") === src;
     // every face here is a Turntable one
     const faces = [...document.querySelectorAll("#chats .ft-avatar[data-avatar-uid]")];
@@ -1542,7 +1549,7 @@ try {
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
   check(tt.heads && tt.rock, "everyone is a head on a body, and a fire rocks the head only, as deepcut does (its rock: 20 frames a second, about the head's middle) (" + tt.rockInfo + ")");
-  check(tt.djMoves, "the DJ playing bobs their head and a DJ who fires small-rocks it, as deepcut does (" + tt.djMovesInfo + ")");
+  check(tt.djMoves, "the DJ playing bobs their head and a DJ who fires small-rocks it, as deepcut does, and in dance mode only heads move (" + tt.djMovesInfo + ")");
   check(tt.listen, "the sound held back: a plain Turntable Listen button, on the stage's base between the front speakers at the stage's scale, that starts the sound (" + tt.listenInfo + ")");
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
   check(tt.turnBefore && tt.held && tt.turn && tt.turnBack, "a song change moves the spotlight and the nodding head to the DJ now playing (" + [tt.turnBefore, tt.held, tt.turn, tt.turnBack] + ")");
