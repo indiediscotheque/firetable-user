@@ -28,6 +28,8 @@
 	<link rel="alternate" type="application/atom+xml" title="Indie Discotheque: the weekly chart" href="music/charts/feed.xml" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
 	<script src="js/viewport.js?v=01.12.08"></script>
+	<!-- Light mode (js/look.js): read before the stylesheets paint, so a light page never flashes dark -->
+	<script src="js/look.js?v=01.12.08"></script>
 	<meta name="theme-color" content="#181818" />
 	<link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=01.12.08" />
 	<!-- Installable web app (Add to Home Screen / Install app) -->
@@ -76,6 +78,11 @@
 			</div>
 			<div class="flexpacer"></div>
 			<div id="topbarUtils">
+				<!-- Light mode: a toggle for everyone, visitors too (js/look.js; the account menu and Settings have it as well) -->
+				<button id="nav-look" type="button" class="header_icon" aria-label="Light mode" aria-pressed="false" style="anchor-name: --tip-nav-look" aria-describedby="tip-nav-look">
+					<i class="material-symbols-outlined" aria-hidden="true">light_mode</i>
+				</button>
+				<span id="tip-nav-look" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-nav-look">Light mode</span>
 				<button id="socialTrigger" type="button" class="header_icon" aria-label="Community" popovertarget="socialPopover" style="anchor-name: --tip-socialTrigger" aria-describedby="tip-socialTrigger">
 					<i class="material-symbols-outlined">share</i>
 				</button>
@@ -1170,6 +1177,15 @@
 							<input type="checkbox" id="mediaDisableToggle" name="mediaDisableToggle">
 							<label for="mediaDisableToggle">Disable media playback</label>
 						</div>
+						<div class="settingline densityPicker lookPicker">
+							<label for="lookPicker">Look</label>
+							<select id="lookPicker" aria-describedby="lookHint">
+								<option value="dark">Dark</option>
+								<option value="light">Light</option>
+								<option value="auto">Match this device</option>
+							</select>
+						</div>
+						<p class="settingHint" id="lookHint">Kept on this device. The stage and the full-screen player stay dark either way, and the Turntable theme keeps its own look.</p>
 						<div class="settingline densityPicker">
 							<label for="densityPicker">View density</label>
 							<select id="densityPicker">
@@ -1229,6 +1245,7 @@
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="profile-tab"><i class="material-symbols-outlined" aria-hidden="true">person</i>Profile</button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="account-tab"><i class="material-symbols-outlined" aria-hidden="true">manage_accounts</i>Account and sign-in</button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="settings-tab"><i class="material-symbols-outlined" aria-hidden="true">settings</i>Settings</button>
+			<button type="button" role="menuitemcheckbox" aria-checked="false" class="butt graybutt nav-acctItem" id="nav-acctLook"><i class="material-symbols-outlined" aria-hidden="true">light_mode</i>Light mode<span class="nav-lookSwitch" aria-hidden="true"></span></button>
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" data-acct="mod-tab" id="nav-acctMod" hidden><i class="material-symbols-outlined" aria-hidden="true">shield</i>Mod tools</button>
 			<!-- only in the Turntable theme (js/ttskin.js) -->
 			<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-ttAvatar" hidden><i class="material-symbols-outlined" aria-hidden="true">face</i>Turntable avatar</button>
@@ -1260,6 +1277,7 @@
 					<dt><kbd>Tab</kbd>, then <kbd>←</kbd> <kbd>→</kbd></dt><dd>In Discover, Tab goes from song to song (Enter plays it); the arrows reach its title, artist, menu and Add</dd>
 					<dt><kbd>T</kbd></dt><dd>Selecting songs in a playlist: move them to the top</dd>
 					<dt><kbd>Alt</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Move the focused playlist song up or down</dd>
+					<dt><kbd>L</kbd></dt><dd>Light mode on or off</dd>
 					<dt><kbd>?</kbd></dt><dd>This list</dd>
 				</dl>
 				<p class="helpNote">Keys do nothing while you're typing.</p>
@@ -1268,6 +1286,7 @@
 					<dt><code>/hot</code></dt><dd>Fire the song playing</dd>
 					<dt><code>/block name</code>, <code>/unblock name</code></dt><dd>Stop or start seeing someone's chat</dd>
 					<dt><code>/shrug</code>, <code>/tableflip</code>, <code>/unflip</code>, <code>/storm</code></dt><dd>Say it with feeling</dd>
+					<dt><code>/light</code>, <code>/dark</code>, <code>/auto</code></dt><dd>Light mode, the dark site, or whichever this device is set to (only you see it)</dd>
 					<dt><code>:co</code></dt><dd>Type a colon and two letters for matching emoji: <kbd>↑</kbd> <kbd>↓</kbd> choose, <kbd>Tab</kbd> or <kbd>Enter</kbd> put it in, <kbd>Esc</kbd> closes</dd>
 				</dl>
 				<h3>The bot</h3>

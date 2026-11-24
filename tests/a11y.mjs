@@ -15,7 +15,8 @@
 // With the emulators already running (a Claude cloud session: start them
 // without the proxy, 01-ground-rules.md):
 //   NO_PROXY="localhost,127.0.0.1,::1" node a11y.mjs
-// Narrow a run: ROLES=member WIDTHS=390 VIEWS=live-*  ·  LIST=1 prints every finding
+// Every view is checked in both looks: the dark site and light mode (js/look.js).
+// Narrow a run: ROLES=member WIDTHS=390 VIEWS=live-* LOOKS=light  ·  LIST=1 prints every finding
 // Never deployed. CI: .github/workflows/smoke.yml
 import { readFileSync } from "fs";
 import { createRequire } from "module";
@@ -31,6 +32,7 @@ const list = (v, all) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) 
 const ROLES = list(process.env.ROLES, ["visitor", "member", "mod"]);
 const WIDTHS = list(process.env.WIDTHS, ["390", "1440"]).map(Number);
 const VIEW_FILTER = list(process.env.VIEWS, null);
+const LOOKS = list(process.env.LOOKS, ["dark", "light"]);
 const SIZES = { 390: { width: 390, height: 844 }, 1440: { width: 1440, height: 900 } };
 
 /**
@@ -89,7 +91,8 @@ async function reset(page) {
  * from 24px, or 18.66px bold), as axe-shaped findings. axe's own rule gives up
  * on text that sits straight on the page's background gradient (nearly all of
  * it), so this measures each visible piece of text against its stacked
- * backgrounds, taking the gradient as its lighter colour. Text over a picture
+ * backgrounds, taking the gradient as its lighter colour (its darker one in
+ * light mode, where the words are dark). Text over a picture
  * (a background image on the way down) isn't measured.
  */
 const contrast = (page) => page.evaluate(() => {
@@ -115,6 +118,12 @@ const contrast = (page) => page.evaluate(() => {
     let picture = false;
     for (let a = el; a; a = a.parentElement) {
       const s = getComputedStyle(a);
+      // the stage and the full-screen player stand on a backdrop of their own (a
+      // sibling, not an ancestor), always dark, in light mode too: their --color-bg
+      if (a.id === "stage" || a.id === "pv-full") { layers.push(rgba(s.getPropertyValue("--color-bg").trim())); break; }
+      // the page's gradient at its worst for the text: its lighter end on the dark
+      // site (light words), its darker end in light mode (dark words)
+      if (a === document.body && document.documentElement.getAttribute("data-look") === "light") { layers.push(rgba(s.getPropertyValue("--color-bg-s2").trim())); break; }
       if (a !== document.body && a !== document.documentElement && s.backgroundImage !== "none") { picture = true; break; }
       const bg = rgba(s.backgroundColor);
       if (bg[3] > 0) layers.push(bg);
@@ -166,12 +175,13 @@ const found = {}; // "rule kind" -> { rule, impact, help, where: Set of "view ro
 const small = new Set();
 const failures = [];
 try {
-  for (const role of ROLES) {
+  for (const look of LOOKS) for (const role of ROLES) {
     for (const w of WIDTHS) {
       for (const [k, v] of Object.entries(decks.normal())) await put("/" + k, v);
       const phone = w < 640;
       const context = await browser.newContext({ viewport: SIZES[w] || { width: w, height: 900 }, isMobile: phone, hasTouch: phone });
       await cachePictures(context);
+      if (look !== "dark") await context.addInitScript((l) => { try { localStorage.setItem("firetableLook", l); } catch (e) { /* blocked */ } }, look);
       const page = await context.newPage();
       await useAuthEmulator(page);
       await openPage(page, SITE);
@@ -181,7 +191,7 @@ try {
         await page.waitForFunction(() => document.querySelector("#mainqueue .pvbar"), null, { timeout: 20000 }).catch(() => {});
       }
       await page.evaluate(AXE);
-      process.stdout.write(role + " " + w + ": ");
+      process.stdout.write(look + " " + role + " " + w + ": ");
       for (const v of VIEWS) {
         if (v.who && !v.who.includes(role)) continue;
         await reset(page);
@@ -196,13 +206,13 @@ try {
             for (const n of r.nodes) {
               const key = r.id + " " + kind(n.target.join(" "));
               const f = found[key] = found[key] || { rule: r.id, impact: r.impact, help: r.help, example: n.target.join(" "), where: new Set() };
-              f.where.add(v.name + " " + role + " " + w);
+              f.where.add(v.name + " " + role + " " + w + (look === "dark" ? "" : " " + look));
             }
           }
           (await smallText(page)).forEach((s) => small.add(s));
           process.stdout.write(".");
         } catch (e) {
-          failures.push(role + " " + w + " " + v.name + ": " + e.message.split("\n")[0]);
+          failures.push(look + " " + role + " " + w + " " + v.name + ": " + e.message.split("\n")[0]);
           process.stdout.write("x");
         }
         if (v.after) await v.after(page).catch(() => {});

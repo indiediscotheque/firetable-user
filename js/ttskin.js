@@ -1205,6 +1205,7 @@ firetable.tt = (function () {
       }
       build();
       document.body.classList.add("tt-skin");
+      ftLook.apply(); // the theme is drawn dark whatever the look (js/look.js)
       document.body.setAttribute("data-tt-tab", S.tab);
       document.body.setAttribute("data-tt-sub", S.sub || "front");
       moveDjPicker(true);
@@ -1225,6 +1226,7 @@ firetable.tt = (function () {
       watch(true);
     } else {
       document.body.classList.remove("tt-skin");
+      ftLook.apply(); // light mode comes back, if it's on
       moveDjPicker(false);
       clearInterval(S.timer);
       watch(false);

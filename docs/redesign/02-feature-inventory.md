@@ -26,6 +26,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | TB-07 | Reconnecting notice | All | `#reconnecting` (`authReconnected` / `authDisconnected`) | keep, restyle 1.2 |
 | TB-08 | Discover / Live switch | All | `#modeTabs` (built by `discover.js` `build()`), `ft-mode` in storage | keep on computers; on phones the bottom tab bar (4.1) |
 | TB-09 | Search button (opens Discover search, `/` key) | All | `#dSearchOpen` (`discover.js`), `openSearch()` | keep |
+| TB-10 | Light mode (November 24, 2026): the sun and moon in the header, Light mode in the account menu, Settings → Look (Dark, Light, Match this device), the `L` key, `/light` `/dark` `/auto` in chat; kept on the device | All | `#nav-look`, `#nav-acctLook`, `#lookPicker`; `js/look.js` (`ftLook`, `data-look="light"` on `<html>`, `STORAGE.look`); the light palette in `css/looks.css` and `css/discover.css` ("Light mode"). The stage and the full-screen player stay dark; the Turntable theme never turns light | keep |
 
 ## ST · The stage (`#stage`, `#djStage`)
 

@@ -3944,6 +3944,69 @@ try {
   check(/current password/.test(acct.passMsg) && acct.shortPass === "bad", "changing the password checks what's typed first (" + acct.passMsg + " / " + acct.shortPass + ")");
   check(acct.nextTab === "settings-tab" && /^bad:/.test(acct.nameMsg), "the tabs follow the arrow keys; an empty name change says so (" + acct.nextTab + " / " + acct.nameMsg + ")");
 
+  console.log("-- Light mode: the header's sun and moon, the account menu, Settings, L and /light; the stage stays dark");
+  const look = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const root = document.documentElement;
+    const bg = (el) => getComputedStyle(el).backgroundColor;
+    const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number); return (m[0] * 299 + m[1] * 587 + m[2] * 114) / 1000; };
+    const out = { start: root.getAttribute("data-look"), pref: ftLook.pref() };
+    const head = document.getElementById("nav-look");
+    head.click();
+    await wait(150);
+    out.on = root.getAttribute("data-look");
+    out.pressed = head.getAttribute("aria-pressed");
+    out.icon = head.textContent.trim();
+    out.stored = localStorage.getItem("firetableLook");
+    out.bar = document.querySelector('meta[name="theme-color"]').content;
+    out.page = lum(bg(document.body));
+    out.dialogBg = lum(getComputedStyle(document.getElementById("accountSettingsBox").querySelector(".modalBox")).backgroundColor);
+    // the stage and the full-screen player keep the dark palette
+    out.stage = lum(getComputedStyle(document.getElementById("stage")).getPropertyValue("--color-bg").trim().replace(/^#(..)(..)(..)$/, (m, a, b, c) => "rgb(" + parseInt(a, 16) + "," + parseInt(b, 16) + "," + parseInt(c, 16) + ")"));
+    out.item = document.getElementById("nav-acctLook").getAttribute("aria-checked");
+    out.picker = document.getElementById("lookPicker").value;
+    // Settings' picker: match the device
+    const pick = document.getElementById("lookPicker");
+    pick.value = "auto";
+    pick.dispatchEvent(new Event("change", { bubbles: true }));
+    await wait(100);
+    out.auto = ftLook.pref() + ":" + localStorage.getItem("firetableLook");
+    // L, from anywhere but a text box
+    ftLook.set("light");
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "l", bubbles: true }));
+    await wait(100);
+    out.keyOff = root.getAttribute("data-look") + ":" + ftLook.pref() + ":" + localStorage.getItem("firetableLook");
+    // the account menu's switch keeps the menu open
+    document.getElementById("loggedInUser").click();
+    await wait(200);
+    document.getElementById("nav-acctLook").click();
+    await wait(100);
+    out.menuStays = document.getElementById("nav-accountMenu").matches(":popover-open") + ":" + root.getAttribute("data-look");
+    document.getElementById("nav-accountMenu").hidePopover();
+    // /light and /dark in chat: said only here, never sent
+    const box = document.getElementById("newchat");
+    const said = () => [...document.querySelectorAll("#chats .lcrsp")].map((x) => x.textContent).pop() || "";
+    box.value = "/dark";
+    box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await wait(100);
+    out.slashDark = root.getAttribute("data-look") + ":" + /off/.test(said()) + ":" + box.value;
+    box.value = "/light";
+    box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await wait(100);
+    out.slashLight = root.getAttribute("data-look") + ":" + /on/.test(said());
+    ftLook.set("dark");
+    await wait(100);
+    out.back = root.getAttribute("data-look") + ":" + localStorage.getItem("firetableLook") + ":" + document.querySelector('meta[name="theme-color"]').content;
+    return out;
+  });
+  check(look.start === null && look.pref === "dark" && look.on === "light" && look.pressed === "true" && look.icon === "dark_mode" && look.stored === "light" && look.bar === "#f1eee8",
+    "the header's sun turns light mode on, says so, and keeps it on this device (" + JSON.stringify(look) + ")");
+  check(look.page > 200 && look.dialogBg > 200 && look.stage < 40, "light mode lights the page and the dialogs; the stage keeps its dark (" + look.page + " / " + look.dialogBg + " / " + look.stage + ")");
+  check(look.item === "true" && look.picker === "light" && look.auto === "auto:auto", "the account menu's switch and Settings' Look follow it; Match this device is kept (" + look.item + " / " + look.picker + " / " + look.auto + ")");
+  check(look.keyOff === "null:dark:null" && look.menuStays === "true:light" && look.back === "null:null:#181818",
+    "L turns it off, the menu's switch turns it on with the menu still open, and dark is the default again (" + look.keyOff + " / " + look.menuStays + " / " + look.back + ")");
+  check(look.slashDark === "null:true:" && look.slashLight === "light:true", "/dark and /light in chat switch it and say so, only here (" + look.slashDark + " / " + look.slashLight + ")");
+
   console.log("-- Everyone's avatar style: a supermod picks one for the whole room");
   const avatars = async () => dPage.evaluate(() => ({
     style: firetable.roomAvatarStyle,

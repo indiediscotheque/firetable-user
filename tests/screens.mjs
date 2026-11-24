@@ -16,7 +16,9 @@
 // With BASE, the sheet puts the earlier picture beside each changed one, with
 // the share of pixels that changed and a diff picture (in diff/). Clocks and
 // the times in chat and Recent are masked and the YouTube frame is hidden, so
-// two runs of the same code match; SHOW_VIDEO=1 keeps the frame. Take the before
+// two runs of the same code match; SHOW_VIDEO=1 keeps the frame. LOOK=light takes
+// every picture in light mode (js/look.js); file names stay the same, so put a
+// light run in its own OUT folder (or compare it with a light BASE). Take the before
 // and the after in the same session: whether YouTube's player plays on the
 // machine changes the phone stage's layout.
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "fs";
@@ -154,6 +156,7 @@ try {
       const phone = w < 640;
       const context = await browser.newContext({ viewport: SIZES[w] || { width: w, height: 900 }, deviceScaleFactor: phone ? 2 : 1, isMobile: phone, hasTouch: phone });
       await cachePictures(context);
+      if (process.env.LOOK) await context.addInitScript((look) => { try { localStorage.setItem("firetableLook", look); } catch (e) { /* blocked */ } }, process.env.LOOK);
       const page = await context.newPage();
       const inflight = new Set();
       page.on("request", (r) => { if (PICTURES.test(r.url())) inflight.add(r); });

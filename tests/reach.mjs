@@ -66,6 +66,8 @@ const FEATURES = [
   { row: "TB-04", name: "About", who: ALL, target: "#roomInfo" },
   { row: "TB-05", name: "Mentions inbox", who: IN, via: ["#inboxTrigger"], target: "#inboxList", notFor: ["visitor"], notTarget: "#inboxTrigger" },
   { row: "TB-06", name: "The account menu", who: IN, via: account, target: "#nav-accountMenu" },
+  { row: "TB-10", name: "Light mode (the header's sun)", who: ALL, target: "#nav-look" },
+  { row: "TB-10", name: "Light mode (the account menu)", who: IN, via: account, target: "#nav-acctLook" },
   { row: "TB-08", name: "Discover / Live: to Live", who: ALL, widths: WIDE, mode: "discover", via: ['#modeTabs [data-mode="live"]'], target: "#stage", hash: "#live" },
   { row: "TB-08", name: "Discover / Live: to Discover", who: ALL, widths: WIDE, via: ['#modeTabs [data-mode="discover"]'], target: "#dBrowse", hash: "#discover" },
   // ── phones: the bottom tab bar (NV-01) ──
@@ -84,6 +86,7 @@ const FEATURES = [
   { row: "AU-09", name: "Log out", who: IN, via: account, target: "#nav-logout" },
   { row: "CH-13", name: "Shortcuts and commands", who: IN, via: [...account, "#nav-acctHelp"], target: "#helpBox .helpKeys" },
   { row: "SE-*", name: "Settings", who: IN, via: [...account, '#nav-accountMenu [data-acct="settings-tab"]'], target: "#densityPicker" },
+  { row: "TB-10", name: "Light mode (Settings: Look)", who: IN, via: [...account, '#nav-accountMenu [data-acct="settings-tab"]'], target: "#lookPicker" },
   { row: "MO-05", name: "Mod tools: everyone's avatar style (supermods)", who: ["mod"], via: [...account, '#nav-accountMenu [data-acct="mod-tab"]'], target: "#mo-avatarStyle" },
   { row: "MO-01", name: "Mod tools: suspend a user (supermods)", who: ["mod"], via: [...account, '#nav-accountMenu [data-acct="mod-tab"]'], target: "#supercopSearch" },
 

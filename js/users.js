@@ -817,14 +817,14 @@ firetable.ui.setupAccount = function () {
       btn.setAttribute("aria-expanded", open ? "true" : "false");
       if (!open) return;
       firetable.ui.positionPopover(btn, menu, document.getElementById("nav-accountArrow"), "bottom-end").then(function () {
-        var first = menu.querySelector('[role="menuitem"]:not([hidden])');
+        var first = menu.querySelector('[role^="menuitem"]:not([hidden])');
         if (first) first.focus();
       });
     });
     $(menu).on("keydown", function (e) {
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Home" && e.key !== "End") return;
       e.preventDefault();
-      var items = $(menu).find('[role="menuitem"]:not([hidden])').get();
+      var items = $(menu).find('[role^="menuitem"]:not([hidden])').get();
       var i = items.indexOf(document.activeElement);
       i = e.key === "Home" ? 0 : e.key === "End" ? items.length - 1 : i + (e.key === "ArrowDown" ? 1 : -1);
       items[(i + items.length) % items.length].focus();
