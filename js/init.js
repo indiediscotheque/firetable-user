@@ -54,6 +54,9 @@ firetable.init = function () {
   // Social links — show each icon only if the URL is configured
   var socialLinks = [
     { cls: "facebook",   url: ftconfigs.facebookURL },
+    { cls: "instagram",  url: ftconfigs.instagramURL },
+    { cls: "x",          url: ftconfigs.xURL },
+    { cls: "bluesky",    url: ftconfigs.blueskyURL },
     { cls: "reddit",     url: ftconfigs.redditURL },
     { cls: "lastfm",     url: ftconfigs.lastfmURL },
     { cls: "discord",    url: ftconfigs.discordURL },

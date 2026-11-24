@@ -457,7 +457,7 @@ firetable.tt = (function () {
   }
 
   function socialsHtml() {
-    var links = [["facebookURL", "Facebook", "facebook"], ["discordURL", "Discord", "discord"], ["redditURL", "Reddit", "reddit"], ["lastfmURL", "Last.fm", "lastfm"], ["soundcloudURL", "SoundCloud", "soundcloud"]];
+    var links = [["facebookURL", "Facebook", "facebook"], ["instagramURL", "Instagram", "instagram"], ["xURL", "X", "x"], ["blueskyURL", "Bluesky", "bluesky"], ["discordURL", "Discord", "discord"], ["redditURL", "Reddit", "reddit"], ["lastfmURL", "Last.fm", "lastfm"], ["soundcloudURL", "SoundCloud", "soundcloud"]];
     return '<span class="tt-socials">' + links.filter(function (l) { return ftconfigs[l[0]]; }).map(function (l) {
       // the same marks as the Community menu (#socialPopover)
       var svg = document.querySelector("#socialPopover .sociallogo." + l[2] + " svg");

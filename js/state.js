@@ -18,6 +18,13 @@ if (typeof ftconfigs === "undefined") {
   "facebookURL", "redditURL", "lastfmURL", "discordURL", "soundcloudURL"].forEach(function (k) {
   if (typeof ftconfigs[k] !== "string") ftconfigs[k] = k === "roomName" ? "firetable" : "";
 });
+// The room's own accounts, shown in the Community menu unless config.js sets
+// its own (or "" to hide one), so they're live without editing the server's config.js
+[["instagramURL", "https://www.instagram.com/indie_discotheque/"],
+  ["xURL", "https://x.com/id_discotheque"],
+  ["blueskyURL", "https://bsky.app/profile/indiediscotheque.com"]].forEach(function (d) {
+  if (typeof ftconfigs[d[0]] !== "string") ftconfigs[d[0]] = d[1];
+});
 
 // ─── Application State ──────────────────────────────────────────────────────
 var firetable = {
