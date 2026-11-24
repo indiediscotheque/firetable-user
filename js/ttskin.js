@@ -20,6 +20,10 @@
  * account menu, or Stickers on your seat) are kept at users/<uid>/ttLaptop.
  * Art: the community archive of every Turntable.fm avatar and room asset
  * (github.com/ttdevelopers), built by tools/tt-avatars.py.
+ *
+ * Not in the page's scripts: js/lazy.js loads it the first time someone goes
+ * in (its stand-in for firetable.tt takes the same calls and ways in until
+ * then) and calls init() once it's here.
  */
 firetable.tt = (function () {
   "use strict";
