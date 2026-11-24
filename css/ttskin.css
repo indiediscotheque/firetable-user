@@ -29,6 +29,9 @@ body.tt-skin {
     background: #000;
 }
 
+/* light mode (js/head.js) isn't this theme's: its sun stays out of the theme's bar */
+body.tt-skin :is(#nav-look, #tip-nav-look) { display: none; }
+
 /* outside the theme (Live, Discover), its pieces stay out of the page's layout */
 body:not(.tt-skin) :is(#tt-room, #tt-tabs, #tt-pane, #tt-qhead, .tt-guestNote, #tt-brand, #tt-exit, #tt-layout) { display: none; }
 

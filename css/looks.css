@@ -211,6 +211,238 @@
 }
 
 /* ============================================
+   Light mode (js/head.js)
+   ============================================
+
+   The colours that change between the dark site and light mode. In the dark
+   (the default) every one of these is exactly what the rules used to write
+   out, so the dark site is unchanged; light mode swaps them below.
+
+   - --ink-rgb: see-through tints, hovers and hairlines ("a little lighter"
+     on the dark panels, "a little darker" on the light ones), as
+     rgba(var(--ink-rgb), alpha).
+   - --color-text-wNN: text that was white at NN% on the dark panels. The
+     light ones are solid, picked for contrast on the light panels (a
+     see-through dark ink reads fainter on white than white reads on black).
+   - --field-*: a text box sunk into its panel; --bevel-*: a raised button's
+     lit top edge and its shadowed bottom one.
+   - --shadow-color: what a menu or a dialog casts.
+
+   The stage (#stage) and the full-screen player (#pv-full) stay dark in
+   light mode: the room's media, a lit stage in a bright room. The rule after
+   the light palette gives them the dark one back. The Turntable theme never
+   sees light mode (js/head.js takes it off while the theme is on). */
+:root,
+:where(:root[data-look="light"]) :is(#stage, #pv-full) {
+    --ink-rgb: 255, 255, 255;
+    --color-text-w40: rgba(255, 255, 255, 0.4);
+    --color-text-w47: rgba(255, 255, 255, 0.47);
+    --color-text-w50: rgba(255, 255, 255, 0.5);
+    --color-text-w52: rgba(255, 255, 255, 0.52);
+    --color-text-w55: rgba(255, 255, 255, 0.55);
+    --color-text-w60: rgba(255, 255, 255, 0.6);
+    --color-text-w62: rgba(255, 255, 255, 0.62);
+    --color-text-w66: rgba(255, 255, 255, 0.66);
+    --color-text-w70: rgba(255, 255, 255, 0.7);
+    --color-text-w72: rgba(255, 255, 255, 0.72);
+    --color-text-w78: rgba(255, 255, 255, 0.78);
+    --color-text-w80: rgba(255, 255, 255, 0.8);
+    --color-text-w85: rgba(255, 255, 255, 0.85);
+    --color-text-w90: rgba(255, 255, 255, 0.9);
+    --color-text-w95: rgba(255, 255, 255, 0.95);
+    --field-bg: rgba(0, 0, 0, 0.5);
+    --field-edge-top: rgba(0, 0, 0, 0.85);
+    --field-edge-bottom: rgba(255, 255, 255, 0.15);
+    --bevel-top: rgba(255, 255, 255, 0.15);
+    --bevel-bottom: rgba(0, 0, 0, 0.85);
+    --raise: rgba(255, 255, 255, 0.05);
+    --shadow-color: black;
+    --select-caret: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><polyline points='6 9 12 15 18 9' fill='none' stroke='%23eeeeee' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    --scrim: rgba(0, 0, 0, 0.85);
+    --color-good-text: #b5e8cf; /* "that worked" words on the panels */
+    --color-bad-text: #f2b8ae;  /* "that didn't" words on the panels */
+    --color-online: #43b581;    /* the people list's DJ / here mark */
+    --color-away: #ee9900;      /* idle or ghost */
+    --logo-filter: none;        /* the :id: logo is white */
+    --color-broken-text: #ffb3a8;   /* words on the red "broken" and "gone" tags */
+    --color-danger-soft: #ff8a7a;   /* a menu's red item, a box's red outline */
+    --color-on-accent-mark: #000;   /* words on a small gold mark (the THEME badge, a count) */
+    --scrim-soft: rgba(0, 0, 0, 0.55); /* behind a sheet or a phone's menu */
+    --inverse-bg: #ececef;          /* the one bar drawn the other way round: the crate's Select bar */
+    --inverse-text: #18181b;
+    --inverse-ink-rgb: 0, 0, 0;
+    --inverse-danger: #a3261a;
+    --weight-thin: 300;  /* chat and names: light words look bolder on the dark, so they're thinner there */
+    --weight-hair: 100;
+    --shadow-rgb: 0, 0, 0;
+    --color-gone-bg: #4a211c;       /* behind a "gone" tag in Import */
+    --color-flagged: color-mix(in oklab, var(--color-danger) 55%, white);
+    --scrim-menu: rgb(0 0 0 / 0.5);  /* behind a phone's bottom-sheet menu */
+    --color-handle: var(--color-bg-t3); /* a bottom sheet's grab handle */
+    --color-bar: var(--color-bg-s2); /* the player bar along the bottom */
+    --color-track: var(--color-bg-t3);      /* a progress or volume bar's empty part */
+    --color-track-soft: var(--color-bg-t2); /* a chart bar's empty part */
+    --map-halo: var(--color-bg-s1);  /* the genre map's names: a halo in the page's colour */
+    --lift: none;
+    --color-dialog: var(--color-bg-s2);      /* a dialog's body: sunk on the dark, the brightest paper in light mode */
+    --color-dialog-head: var(--color-bg-t1); /* its title bar */                    /* a picked segment or a white field standing off its tray (light mode only) */
+    --color-play-ink: #111;          /* the icon on the play button (own colour: dark on the white button) */
+    --color-play-hover: #e6e6e6;     /* own colour: the white play button's hover */
+    --play-edge: rgba(255, 255, 255, 0.6);
+    --link-blend: plus-lighter; /* links glow on the dark; on light they'd vanish into it */
+    --hover-mix: white;         /* a filled button's hover: lighter on the dark, deeper on light */
+    --color-danger-hover: #d5513f;
+}
+
+/* The stage and the full-screen player keep the dark site's palette in light
+   mode. :where() keeps this rule's weight at one id, so room-colors.css (the
+   song's colours on #stage, loaded last) still wins for the accent. */
+:where(:root[data-look="light"]) :is(#stage, #pv-full) {
+    color-scheme: dark;
+    --color-bg: #181818;
+    --color-bg-s1: #151515;
+    --color-bg-s2: #111111;
+    --color-bg-t1: #222222;
+    --color-bg-t2: #282828;
+    --color-bg-t3: #2E2E2E;
+    --color-bg-t4: #383838;
+    --color-orange: #cc9933;
+    --color-orange-lite: #eeaa22;
+    --color-orange66: #cc993366;
+    --color-orange33: #cc993333;
+    --color-accent: var(--color-orange);
+    --color-text: #e3e3e3;
+    --color-text-light: #fff;
+    --color-text-soft: #999;
+    --color-text-muted: #999;
+    --color-text-dim: #666;
+    --color-text-subtle: #b3b3b3;
+    --color-icon: #b8b8b8;
+    --color-on-accent: var(--color-bg);
+    --color-danger: #c43;
+    --color-danger-text: #ec7767;
+    --color-success: #43b581;
+    --color-border: #333;
+    --shadow-drop: 0 0.25rem 0.5rem -0.25rem black;
+    --color-tip-bg: initial;   /* the tooltips' own colours again (light mode turns them round) */
+    --color-tip-text: initial;
+    --skel-1: initial;         /* and the loading shimmer's */
+    --skel-2: initial;
+    --skel-3: initial;
+    color: var(--color-text);
+}
+
+/* Light mode: warm paper rather than cold white, so the room's gold still
+   glows. The page is a soft cream; panels and rows rise to white; anything
+   sunk in (a text box, a well) is a shade darker than its panel, as in the
+   dark. The gold is deepened to a bronze so it reads as words on white
+   (6.1:1, 4.7:1 at the page's darkest) and carries white words when it's a fill. */
+:root[data-look="light"] {
+    color-scheme: light;
+
+    --color-bg: #f1eee8;
+    --color-bg-s1: #ebe7e0;
+    --color-bg-s2: #e5e1d9;
+    --color-bg-t1: #f8f6f2;
+    --color-bg-t2: #fdfcfa;
+    --color-bg-t3: #ffffff;
+    --color-bg-t4: #ebe7df; /* hover on raised surfaces: a shade in, not out */
+    --color-orange: #845a02;
+    --color-orange-lite: #744d00;
+    --color-orange66: #845a0266;
+    --color-orange33: #845a0233;
+    --color-accent: var(--color-orange);
+    --color-text: #241f18;
+    --color-text-light: #120e09;
+    --color-text-soft: #645d53;
+    --color-text-muted: #645d53; /* 4.5:1 or better on every panel down to --color-bg-s2 (the page's foot) */
+    --color-text-dim: #948d81;
+    --color-text-subtle: #4a443b;
+    --color-icon: #5c554b;
+    --color-on-accent: #fff; /* white on the bronze: 6.1:1 */
+    --color-danger: #c0392b;
+    --color-danger-text: #b3261e;
+    --color-success: #1d6e4c;
+    --color-border: #ddd7cc;
+    --shadow-drop: 0 0.25rem 0.5rem -0.3rem rgba(70, 50, 20, 0.35);
+
+    --ink-rgb: 60, 44, 20;
+    --color-text-w40: #6e675c;
+    --color-text-w47: #686157;
+    --color-text-w50: #665f55;
+    --color-text-w52: #645d53;
+    --color-text-w55: #625b51;
+    --color-text-w60: #615a50;
+    --color-text-w62: #5f584e;
+    --color-text-w66: #5a5349;
+    --color-text-w70: #514a41;
+    --color-text-w72: #4e473e;
+    --color-text-w78: #443e35;
+    --color-text-w80: #403a31;
+    --color-text-w85: #352f27;
+    --color-text-w90: #2b251e;
+    --color-text-w95: #221d16;
+    --field-bg: rgba(60, 44, 20, 0.045);
+    --field-edge-top: rgba(60, 44, 20, 0.28);
+    --field-edge-bottom: rgba(255, 255, 255, 0.9);
+    --bevel-top: rgba(255, 255, 255, 0.95);
+    --bevel-bottom: rgba(60, 44, 20, 0.22);
+    --raise: rgba(255, 255, 255, 0.75);
+    --shadow-color: rgba(70, 50, 20, 0.3);
+    --select-caret: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><polyline points='6 9 12 15 18 9' fill='none' stroke='%234a443b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    --scrim: rgba(40, 30, 15, 0.45);
+    --color-good-text: #1d6b4a;
+    --color-bad-text: #a8321f;
+    --color-online: #1d6e4c;
+    --color-away: #a35f00;
+    --logo-filter: brightness(0) opacity(0.86); /* the white logo, inked: a soft black on the cream */
+    --hover-mix: black;
+    --color-danger-hover: #a93226;
+    --link-blend: normal;
+    --color-broken-text: #9b2b1a;
+    --color-danger-soft: #b3261e;
+    --color-on-accent-mark: #fff;
+    --scrim-soft: rgba(40, 30, 15, 0.3);
+    --inverse-bg: #2b251d;
+    --inverse-text: #f5f1ea;
+    --inverse-ink-rgb: 255, 255, 255;
+    --inverse-danger: #ff9a8a;
+    --weight-thin: 400;
+    --weight-hair: 300;
+    --shadow-rgb: 70, 50, 20;
+    --color-gone-bg: #f8ded8;
+    --color-flagged: var(--color-danger-text);
+    --scrim-menu: rgba(40, 30, 15, 0.28);
+    --color-handle: #d3ccbf;
+    --color-bar: #fffdf9;
+    --color-track: #d9d2c5;
+    --color-track-soft: #e7e1d6;
+    --map-halo: #f0ece6;
+    --lift: 0 1px 2px rgba(70, 50, 20, 0.16), 0 0 0 1px rgba(70, 50, 20, 0.06);
+    --color-dialog: #fbfaf7;
+    --color-dialog-head: #f3f0ea;
+    /* tooltips are the other way round in light mode: ink on paper reads as part of the page, a dark tip as a note on it */
+    --color-tip-bg: #2b251d;
+    --color-tip-text: #f5f1ea;
+    /* loading shimmer: a warm grey sweep (the dark one runs from panel to raised, which is white on white here) */
+    --skel-1: #e8e3da;
+    --skel-2: #efebe4;
+    --skel-3: #f7f5f1;
+    --color-play-ink: #fff;
+    --color-play-hover: #3b342a;
+    --play-edge: rgba(255, 255, 255, 0.12);
+}
+
+/* Switching: each element's own colour transition waits (js/head.js cross-fades the page) */
+.look-switching,
+.look-switching *,
+.look-switching *::before,
+.look-switching *::after {
+    transition-duration: 0s;
+    transition-delay: 0s;
+}
+
+/* ============================================
    Base / Reset
    ============================================ */
 
@@ -252,12 +484,12 @@ button {
 h2 {
     font-size: 1.2rem;
     font-weight: 700;
-    color: white;
+    color: var(--color-text-light);
 }
 
 a {
     color: var(--color-accent);
-    mix-blend-mode: plus-lighter;
+    mix-blend-mode: var(--link-blend);
     text-decoration: none;
     border-radius: var(--radius-md);
 }
@@ -282,10 +514,10 @@ button {
     padding: var(--pad1) var(--pad3);
     font-family: var(--font-family);
     color: var(--color-text-light);
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--raise);
     border: 1px solid transparent;
-    border-bottom-color: rgba(0, 0, 0, 0.85);
-    border-top-color: rgba(255, 255, 255, 0.15);
+    border-bottom-color: var(--bevel-bottom);
+    border-top-color: var(--bevel-top);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-drop);
 }
@@ -313,7 +545,7 @@ select {
     -moz-appearance: none;
     appearance: none;
     background-color: var(--color-bg-t3);
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><polyline points='6 9 12 15 18 9' fill='none' stroke='%23eeeeee' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-image: var(--select-caret);
     background-repeat: no-repeat;
     background-position: right 0.65rem center;
     background-size: 1rem 1rem;
@@ -345,9 +577,9 @@ select::-ms-expand {
     select::picker(select) {
         background-color: var(--color-bg-t2);
         color: var(--color-text-light);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(var(--ink-rgb), 0.1);
         border-radius: var(--radius-md);
-        box-shadow: 0 0.5rem 2rem -0.25rem black;
+        box-shadow: 0 0.5rem 2rem -0.25rem var(--shadow-color);
         padding: var(--pad1) 0;
     }
 
@@ -375,9 +607,9 @@ select::-ms-expand {
 }
 
 input:not([type="checkbox"]):not([type="radio"]) {
-    background-color: rgba(0, 0, 0, 0.5);
-    border-top-color: rgba(0, 0, 0, 0.85);
-    border-bottom-color: rgba(255, 255, 255, 0.15);
+    background-color: var(--field-bg);
+    border-top-color: var(--field-edge-top);
+    border-bottom-color: var(--field-edge-bottom);
     transform: translateY(-1px);
     box-shadow: none;
 }
@@ -407,7 +639,7 @@ textarea:focus-visible {
    browser's grey/blue box (it's the only press feedback on touch). */
 html {
     touch-action: manipulation;
-    -webkit-tap-highlight-color: rgba(255, 255, 255, 0.08);
+    -webkit-tap-highlight-color: rgba(var(--ink-rgb), 0.08);
 }
 
 code {
@@ -423,11 +655,11 @@ code {
 .skel {
     background: linear-gradient(
         90deg,
-        var(--color-bg-t1) 0%,
-        var(--color-bg-t2) 35%,
-        var(--color-bg-t3) 50%,
-        var(--color-bg-t2) 65%,
-        var(--color-bg-t1) 100%
+        var(--skel-1, var(--color-bg-t1)) 0%,
+        var(--skel-2, var(--color-bg-t2)) 35%,
+        var(--skel-3, var(--color-bg-t3)) 50%,
+        var(--skel-2, var(--color-bg-t2)) 65%,
+        var(--skel-1, var(--color-bg-t1)) 100%
     ) !important;
     background-size: 400% 100% !important;
     animation: skel-shimmer 1.6s ease-in-out infinite;
@@ -447,7 +679,7 @@ code {
 /* Ensure skeleton bars inside .ft-skeleton rows have no shimmer of their own
    (the row container drives the animation via background) */
 .ft-skeleton .skel-bar {
-    background: var(--color-bg-t2);
+    background: var(--skel-2, var(--color-bg-t2));
     border-radius: var(--radius-sm);
     height: 0.75rem;
 }
@@ -511,8 +743,8 @@ button.track-warning {
 
 .utitle {
     font-size: 0.875rem;
-    font-weight: 100;
-    color: rgba(255, 255, 255, 0.4);
+    font-weight: var(--weight-hair);
+    color: var(--color-text-w40);
 }
 
 .notice {
@@ -571,7 +803,7 @@ button.track-warning {
 .tab.on {
     position: relative;
     z-index: 1;
-    color: #ffffff;
+    color: var(--color-text-light);
 
     &::after {
         content: "";
@@ -712,7 +944,7 @@ button.track-warning {
 
 @media (hover: hover) {
     .butt:not(:disabled):hover {
-        background-color: color-mix(in oklab, var(--color-accent) 85%, white);
+        background-color: color-mix(in oklab, var(--color-accent) 85%, var(--hover-mix));
     }
 }
 
@@ -735,19 +967,19 @@ button.track-warning {
 }
 
 .graybutt {
-    color: rgba(255, 255, 255, 0.78);
-    background: rgba(255, 255, 255, 0.07);
+    color: var(--color-text-w78);
+    background: rgba(var(--ink-rgb), 0.07);
 }
 
 @media (hover: hover) {
     .graybutt:not(:disabled):hover {
-        color: #fff;
-        background: rgba(255, 255, 255, 0.13);
+        color: var(--color-text-light);
+        background: rgba(var(--ink-rgb), 0.13);
     }
 }
 
 .graybutt:focus-visible {
-    background: rgba(255, 255, 255, 0.13);
+    background: rgba(var(--ink-rgb), 0.13);
 }
 
 .redbutt {
@@ -757,7 +989,7 @@ button.track-warning {
 
 @media (hover: hover) {
     .redbutt:not(:disabled):hover {
-        background: #d5513f;
+        background: var(--color-danger-hover);
     }
 }
 
@@ -872,7 +1104,7 @@ button.track-warning {
 @media (hover: hover) {
     .row-icon:hover {
         color: var(--color-text-light);
-        background-color: rgba(255, 255, 255, 0.08);
+        background-color: rgba(var(--ink-rgb), 0.08);
     }
 }
 
@@ -930,7 +1162,7 @@ button.track-warning {
 
 @media (hover: hover) {
     .accent:hover {
-        background-color: color-mix(in oklab, var(--color-accent) 82%, white);
+        background-color: color-mix(in oklab, var(--color-accent) 82%, var(--hover-mix));
     }
 }
 
@@ -1013,7 +1245,7 @@ button.track-warning {
     gap: var(--pad1);
     min-width: 0; /* a long theme shrinks instead of widening the grid */
     padding: var(--pad1) var(--pad3);
-    color: #fff;
+    color: var(--color-text-light);
 }
 #roomlogo,
 #topbarUtils { flex-shrink: 0; }
@@ -1037,7 +1269,7 @@ a.sociallogo[href] {
 }
 
 .sociallogo:hover svg {
-    fill: #fff;
+    fill: var(--color-text-light);
 }
 .sociallogo svg {
     width: 1.2rem;
@@ -1053,6 +1285,7 @@ a.sociallogo[href] {
 #roomlogo {
     margin: 0;
     background-image: url(../img/idlogo2.png);
+    filter: var(--logo-filter);
     background-size: contain;
     width: 3rem;
     height: 3rem;
@@ -1106,7 +1339,7 @@ a.sociallogo[href] {
 }
 
 .header_icon:hover [class*="material-symbols-"] {
-    color: white;
+    color: var(--color-text-light);
 }
 
 /* ============================================
@@ -1379,7 +1612,7 @@ a.sociallogo[href] {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: rgba(255, 255, 255, 0.66);
+    color: var(--color-text-w66);
     margin-bottom: 0.1rem;
 
     & [class*="material-symbols-"] {
@@ -1448,13 +1681,13 @@ a.sociallogo[href] {
     padding: 0;
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-w40);
     cursor: pointer;
     border-radius: var(--radius-sm);
     box-shadow: none;
 
-    &:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
-    &.on    { color: white; }
+    &:hover { color: var(--color-text-light); background: rgba(var(--ink-rgb), 0.12); }
+    &.on    { color: var(--color-text-light); }
     & i     { font-size: 0.9rem; pointer-events: none; }
 }
 
@@ -1509,8 +1742,8 @@ button.waitlist-pos {
     }
 
     &:hover {
-        color: #fff;
-        background: rgba(255, 255, 255, 0.12);
+        color: var(--color-text-light);
+        background: rgba(var(--ink-rgb), 0.12);
 
         & .wl-pos-num  { opacity: 0; }
         & .wl-pos-icon { opacity: 1; }
@@ -1554,7 +1787,7 @@ button.waitlist-pos {
 
 .prsnName {
     flex: 1;
-    font-weight: 300;
+    font-weight: var(--weight-thin);
     color: var(--color-text);
     white-space: nowrap;
     overflow: hidden;
@@ -1564,12 +1797,12 @@ button.waitlist-pos {
 
 .prsnRole {
     font-size: 1.2rem;
-    color: #43b581;
+    color: var(--color-online);
     line-height: 1;
 }
 .prson.idle .prsnRole,
 .prson.ghost .prsnRole {
-    color: #ee9900;
+    color: var(--color-away);
 }
 /* The role icon comes after the name, and only the bot, mods and supermods
    have one, so every name starts on the same line of the column. */
@@ -1929,7 +2162,7 @@ html[data-avatars="pixel-art"] {
     padding: var(--pad3);
     background-color: var(--color-bg-t1);
     border-radius: var(--radius-md);
-    box-shadow: 0 0.25rem 1rem -0.25rem black;
+    box-shadow: 0 0.25rem 1rem -0.25rem var(--shadow-color);
 }
 
 .ft-arrow {
@@ -1995,7 +2228,7 @@ html[data-avatars="pixel-art"] {
 .ft-popover-box {
     background-color: var(--color-bg-t1);
     border-radius: var(--radius-md);
-    box-shadow: 0 0.25rem 1rem -0.25rem black;
+    box-shadow: 0 0.25rem 1rem -0.25rem var(--shadow-color);
     padding: var(--pad3);
 }
 
@@ -2184,7 +2417,7 @@ html[data-avatars="pixel-art"] {
 #usersbox > #ondeck {
     padding: var(--pad2) var(--pad3);
     max-width: 100%;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
 
     & .on-deck {
         justify-content: flex-start;
@@ -2270,27 +2503,27 @@ body.dance-mode .dance-start-right {
 
     &:hover .ft-avatar,
     &:focus-visible .ft-avatar {
-        outline: 2px solid rgba(255, 255, 255, 0.15);
+        outline: 2px solid rgba(var(--ink-rgb), 0.15);
         outline-offset: 0;
     }
 }
 
 .ondeck-slot.empty {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(var(--ink-rgb), 0.08);
 
     &::after {
         content: 'add';
         font-family: 'Material Symbols Outlined';
         font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         font-size: 1.1rem;
-        color: rgba(255, 255, 255, 0.3);
+        color: rgba(var(--ink-rgb), 0.3);
     }
 
     &:hover {
-        background: rgba(255, 255, 255, 0.14);
+        background: rgba(var(--ink-rgb), 0.14);
 
         &::after {
-            color: rgba(255, 255, 255, 0.55);
+            color: rgba(var(--ink-rgb), 0.55);
         }
     }
 }
@@ -2509,7 +2742,7 @@ body.screen:not(.yt-stalled) #stageTopRight .graybutt {
     font-size: var(--fs-title);
     white-space: nowrap;
     border-radius: var(--radius-pill);
-    box-shadow: 0 0.5rem 1.5rem -0.5rem black;
+    box-shadow: 0 0.5rem 1.5rem -0.5rem var(--shadow-color);
 }
 
 #tapToPlay [class*="material-symbols-"] {
@@ -2558,7 +2791,7 @@ body.media-blocked #tapToPlay {
     padding: var(--pad1) var(--pad3);
     border-radius: var(--radius-panel);
     background: color-mix(in srgb, var(--color-bg) 85%, transparent);
-    box-shadow: 0 0.5rem 1.5rem -0.5rem black;
+    box-shadow: 0 0.5rem 1.5rem -0.5rem var(--shadow-color);
     text-align: center;
 }
 .st-state[hidden] { display: none; }
@@ -2835,7 +3068,7 @@ ul.lightrope li {
         content: "";
         position: absolute;
         inset: 0;
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: rgba(var(--ink-rgb), 0.1);
         border: 2px dashed var(--color-accent);
         border-radius: var(--radius-md);
     }
@@ -2845,8 +3078,8 @@ ul.lightrope li {
     container: queuetop / inline-size;
     margin-inline-end: var(--scroll-gutter, 0px);
     background-color: var(--color-bg-t1);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(var(--ink-rgb), 0.1);
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.1);
     border-radius: var(--radius-md);
 }
 
@@ -2990,7 +3223,7 @@ input.ft-filter {
     justify-content: center;
     padding: var(--pad2);
     font-style: italic;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-w40);
 }
 #mainqueue.emptyList:before {
     content: "this playlist is empty";
@@ -3025,7 +3258,7 @@ input.ft-filter {
     padding: var(--pad2);
     font-style: italic;
     text-align: center;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-w40);
 }
 #mainqueue.loading:before {
     content: "loading...";
@@ -3047,7 +3280,7 @@ input.ft-filter {
     justify-content: center;
     padding: var(--pad2);
     font-style: italic;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-w40);
 }
 
 #mainqueue [class*="material-symbols-"]:not(.row-icon),
@@ -3212,7 +3445,7 @@ input.ft-filter {
 
 #queuelist .trackDuration {
     margin-left: 0.45em;
-    color: rgba(255, 255, 255, 0.52);
+    color: var(--color-text-w52);
     font-size: 0.82em;
 }
 
@@ -3243,7 +3476,7 @@ input.ft-filter {
     text-overflow: ellipsis;
 }
 #mainqueue .q-title { font-weight: 600; }
-#mainqueue .q-artist { color: rgba(255, 255, 255, 0.6); }
+#mainqueue .q-artist { color: var(--color-text-w60); }
 #mainqueue .q-artist::before { content: " · "; }
 #mainqueue :is(.q-tag, .trackDuration, .pl-from) { flex: none; margin-left: 0; }
 .q-tag {
@@ -3263,7 +3496,7 @@ input.ft-filter {
 #mainqueue.is-djlist .q-next { display: inline-block; }
 .q-broken {
     background: color-mix(in srgb, var(--color-danger) 28%, transparent);
-    color: #ffb3a8;
+    color: var(--color-broken-text);
 }
 .q-remix {
     background: var(--color-bg-t2);
@@ -3370,7 +3603,7 @@ input.ft-filter {
     font-size: var(--fs-title);
 }
 @media (hover: hover) {
-    .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly):hover { background: rgba(255, 255, 255, 0.08); }
+    .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly):hover { background: rgba(var(--ink-rgb), 0.08); }
 }
 @media (pointer: coarse) {
     .cr-showOnlyBox :is(.queueFilterRemixOnly, .queueFilterBrokenOnly, .cr-dupesOnly) { min-height: var(--tap-min); }
@@ -3392,7 +3625,7 @@ input.ft-filter {
     cursor: pointer;
 }
 @media (hover: hover) {
-    .cr-sortOpt:hover { background: rgba(255, 255, 255, 0.08); }
+    .cr-sortOpt:hover { background: rgba(var(--ink-rgb), 0.08); }
 }
 @media (pointer: coarse) {
     .cr-sortOpt { min-height: var(--tap-min); }
@@ -3474,9 +3707,9 @@ input.ft-filter {
     margin: var(--pad2) auto 0;
     padding: var(--pad1) var(--pad1) var(--pad1) var(--pad3);
     border-radius: var(--radius-pill);
-    background: #ececef;
-    color: #18181b;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+    background: var(--inverse-bg);
+    color: var(--inverse-text);
+    box-shadow: 0 6px 24px var(--shadow-color);
     font-size: var(--fs-title);
 }
 .cr-bulk[hidden] { display: none; }
@@ -3489,7 +3722,7 @@ input.ft-filter {
     white-space: nowrap;
     cursor: pointer;
 }
-.cr-bulkAll input { width: 1rem; height: 1rem; margin: 0; accent-color: #18181b; }
+.cr-bulkAll input { width: 1rem; height: 1rem; margin: 0; accent-color: var(--inverse-text); }
 .cr-bulkBtn {
     display: inline-flex;
     align-items: center;
@@ -3506,10 +3739,10 @@ input.ft-filter {
     cursor: pointer;
 }
 .cr-bulkBtn [class*="material-symbols-"] { margin: 0; font-size: 1.15rem; }
-.cr-bulkBtn:hover:not(:disabled) { background: rgba(0, 0, 0, 0.08); }
-.cr-bulkBtn:focus-visible { outline: 2px solid #18181b; outline-offset: 1px; }
+.cr-bulkBtn:hover:not(:disabled) { background: rgba(var(--inverse-ink-rgb), 0.08); }
+.cr-bulkBtn:focus-visible { outline: 2px solid var(--inverse-text); outline-offset: 1px; }
 .cr-bulkBtn:disabled { opacity: 0.4; cursor: default; }
-.cr-bulkDanger { color: #a3261a; }
+.cr-bulkDanger { color: var(--inverse-danger); }
 .cr-bulkDanger.confirming { background: #a3261a; color: #fff; }
 .cr-bulkDone { padding: 0 0.45rem; }
 @media (pointer: coarse) {
@@ -3571,7 +3804,7 @@ input.ft-filter {
     gap: 0;
     padding: var(--pad1);
     background: var(--color-bg-t1);
-    box-shadow: 0 0.25rem 1rem black;
+    box-shadow: 0 0.25rem 1rem var(--shadow-color);
     border-radius: var(--radius-md);
 
     &.show {
@@ -3600,13 +3833,13 @@ input.ft-filter {
 @media (hover: hover) {
     #plAddPopover .butt:hover,
     .ft-menu .butt:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(var(--ink-rgb), 0.08);
     }
 }
 
 #plAddPopover .butt:focus-visible,
 .ft-menu .butt:focus-visible {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(var(--ink-rgb), 0.08);
     outline-offset: -2px;
 }
 
@@ -3624,7 +3857,7 @@ input.ft-filter {
 }
 
 .ft-menu .ft-menu-danger {
-    color: #ff8a7a;
+    color: var(--color-danger-soft);
 }
 
 @media (pointer: coarse) {
@@ -3720,7 +3953,7 @@ input.ft-filter {
     z-index: 15;
     width: calc(100% - 2rem);
     margin: 0.5rem 1rem 0 1rem;
-    box-shadow: 0 0.25rem 0.5rem -0.125rem black;
+    box-shadow: 0 0.25rem 0.5rem -0.125rem var(--shadow-color);
 }
 
 #mergeArrow {
@@ -3837,14 +4070,14 @@ a.importLinkCheck {
     overflow-y: auto;
     overscroll-behavior: contain;
     border-radius: var(--radius-md);
-    box-shadow: 0 0.5rem 2rem -0.5rem black;
+    box-shadow: 0 0.5rem 2rem -0.5rem var(--shadow-color);
 
     .ft-arrow { display: none; }
     .tagPromptBox { width: auto; }
     input.tagMachine { font-size: 1rem; } /* 16px+: iOS doesn't zoom in */
     .butt { min-height: var(--tap-min); }
 
-    &::backdrop { background-color: rgba(0, 0, 0, 0.55); }
+    &::backdrop { background-color: var(--scrim-soft); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -3869,7 +4102,7 @@ a.importLinkCheck {
 }
 
 .tagPromptBox input.tagMachine[aria-invalid] {
-    outline: 2px solid #ff8a7a;
+    outline: 2px solid var(--color-danger-soft);
     outline-offset: 1px;
 }
 
@@ -3952,7 +4185,7 @@ a.importLinkCheck {
     background-color: var(--color-bg-s1);
     border-bottom-left-radius: var(--radius-md);
     border-bottom-right-radius: var(--radius-md);
-    box-shadow: 0 0.25rem 0.75rem -0.33rem black;
+    box-shadow: 0 0.25rem 0.75rem -0.33rem var(--shadow-color);
     transition: background-color 1.5s ease;
 }
 
@@ -4159,10 +4392,10 @@ a.importLinkCheck {
     max-width: 100%;
     min-height: 2rem;
     padding: 0.25rem 0.75rem 0.25rem 0.3rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(var(--ink-rgb), 0.12);
     border-radius: var(--radius-pill);
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
+    background: rgba(var(--ink-rgb), 0.06);
+    color: var(--color-text-light);
     font: inherit;
     font-size: 0.8125rem;
     line-height: 1.2;
@@ -4172,8 +4405,8 @@ a.importLinkCheck {
 }
 #themePill:hover,
 #themePill[aria-expanded="true"] {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(var(--ink-rgb), 0.1);
+    border-color: rgba(var(--ink-rgb), 0.22);
 }
 #themePill:focus-visible {
     outline: 2px solid var(--color-accent);
@@ -4185,7 +4418,7 @@ a.importLinkCheck {
     padding: 0.15rem 0.45rem;
     border-radius: var(--radius-pill);
     background: var(--color-accent);
-    color: #000;
+    color: var(--color-on-accent-mark);
     font-size: 0.625rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -4200,8 +4433,8 @@ a.importLinkCheck {
 }
 #themePill.no-theme #themePillText { color: var(--color-text-muted); }
 #themePill.no-theme .themeLabel {
-    background: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.8);
+    background: rgba(var(--ink-rgb), 0.15);
+    color: var(--color-text-w80);
 }
 
 /* A new theme glows for a moment */
@@ -4292,10 +4525,10 @@ a.importLinkCheck {
 #newchat {
     width: 100%;
     /* Match dark input appearance */
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--field-bg);
     border: 1px solid transparent;
-    border-top-color: rgba(0, 0, 0, 0.85);
-    border-bottom-color: rgba(255, 255, 255, 0.15);
+    border-top-color: var(--field-edge-top);
+    border-bottom-color: var(--field-edge-bottom);
     border-radius: var(--radius-md);
     color: var(--color-text-light);
     padding: var(--pad1) 0.66rem;
@@ -4421,7 +4654,7 @@ a.importLinkCheck {
     order: 3;
     flex: 1;
     height: 1px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
     margin-left: 0;
 }
 
@@ -4461,14 +4694,14 @@ a.importLinkCheck {
     position: relative;
     width: 100%;
     font-size: var(--chat-font, 0.875rem);
-    font-weight: 300;
+    font-weight: var(--weight-thin);
     line-height: 1.4;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--color-text-w80);
 }
 
 .chatText strong {
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--color-text-w95);
 }
 
 .chatText em {
@@ -4533,8 +4766,8 @@ a.importLinkCheck {
 .chat-grab-btn[data-state="pending"],
 .chat-grab-btn[data-state="taken"],
 .chat-grab-btn[data-state="gone"] {
-    color: rgba(255, 255, 255, 0.55);
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-w55);
+    background: rgba(var(--ink-rgb), 0.05);
     border-top-color: transparent;
     border-bottom-color: transparent;
     box-shadow: none;
@@ -4589,8 +4822,8 @@ a.importLinkCheck {
     font-size: 0.66rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.5);
-    background-color: black;
+    color: var(--color-text-w50);
+    background-color: var(--color-bg-s2);
 }
 
 .chatText.hideImg .hideImage {
@@ -4609,7 +4842,7 @@ a.importLinkCheck {
     font-size: var(--fs-micro);
     font-weight: 400;
     line-height: 1;
-    color: rgba(255, 255, 255, 0.47);
+    color: var(--color-text-w47);
     text-align: right;
     white-space: nowrap;
 }
@@ -4654,8 +4887,8 @@ a.importLinkCheck {
 }
 
 .pickerSecSelected {
-    color: #fff;
-    border-bottom: 2px solid #fff;
+    color: var(--color-text-light);
+    border-bottom: 2px solid var(--color-text-light);
 }
 
 #pickerResults span {
@@ -4678,7 +4911,7 @@ a.importLinkCheck {
     bottom: calc(100% + 0.5rem);
     padding: var(--pad3);
     background-color: var(--color-bg-t2);
-    box-shadow: 0 0.25rem 1rem black;
+    box-shadow: 0 0.25rem 1rem var(--shadow-color);
     border-radius: var(--radius-md);
 }
 
@@ -4759,7 +4992,7 @@ img.emoji,
     left: 1.5rem;
     padding: 0.25rem;
     background: var(--color-bg-t1);
-    box-shadow: 0 -0.25rem 0.5rem black;
+    box-shadow: 0 -0.25rem 0.5rem var(--shadow-color);
 }
 
 #atPicker.show {
@@ -4777,7 +5010,7 @@ img.emoji,
 #atPicker .butt[aria-selected="true"],
 #atPicker .butt:focus {
     background-color: var(--color-accent);
-    color: #fff;
+    color: var(--color-text-light);
     outline: none;
 }
 
@@ -4800,7 +5033,7 @@ img.emoji,
     background-color: var(--color-bg-t2);
     border: 1px solid var(--color-bg-t1);
     border-radius: var(--radius-md);
-    box-shadow: 0 0.25rem 1rem black;
+    box-shadow: 0 0.25rem 1rem var(--shadow-color);
 }
 
 #ch-emojiSuggest[hidden] {
@@ -5168,7 +5401,7 @@ img.emoji,
     padding: var(--pad2);
     background: linear-gradient(to top,var(--color-bg), var(--color-bg-t2));
     border-radius: var(--radius-md);
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.25);
+    box-shadow: 0 0.25rem 0.5rem rgba(var(--shadow-rgb), 0.25);
 }
 
 .discart {
@@ -5400,7 +5633,7 @@ img.emoji,
     padding: var(--pad2) 0.75rem;
     font-size: 0.8125rem;
     line-height: 1.4;
-    color: #f2b8ae;
+    color: var(--color-bad-text);
     background-color: color-mix(in srgb, var(--color-danger) 15%, transparent);
     border-left: 3px solid var(--color-danger);
     border-radius: var(--radius-sm);
@@ -5411,7 +5644,7 @@ img.emoji,
 }
 
 .formMessage.is-success {
-    color: #b5e8cf;
+    color: var(--color-good-text);
     background-color: color-mix(in srgb, var(--color-success) 15%, transparent);
     border-left-color: var(--color-success);
 }
@@ -5486,7 +5719,7 @@ img.emoji,
     transform: translateY(-1px);
 }
 .authForm .showPass:hover {
-    color: #fff;
+    color: var(--color-text-light);
 }
 .fieldNote {
     margin: 0;
@@ -5498,10 +5731,10 @@ img.emoji,
     display: none;
 }
 .fieldNote[data-state="bad"] {
-    color: #f2b8ae;
+    color: var(--color-bad-text);
 }
 .fieldNote[data-state="good"] {
-    color: #b5e8cf;
+    color: var(--color-good-text);
 }
 .authForm .fieldLink {
     justify-self: start;
@@ -5521,7 +5754,7 @@ img.emoji,
     margin: 0.15rem 0 0;
 }
 .checkLine[data-state="bad"] {
-    color: #f2b8ae;
+    color: var(--color-bad-text);
 }
 .authForm .formMessage {
     margin: 0;
@@ -5568,7 +5801,7 @@ dialog[open] {
 }
 
 dialog::backdrop {
-    background: rgba(0, 0, 0, 0.85);
+    background: var(--scrim);
 }
 
 .modalBox {
@@ -5576,7 +5809,7 @@ dialog::backdrop {
     flex-direction: column;
     max-width: 100vw;
     max-height: 100dvh;
-    background-color: var(--color-bg-s2);
+    background-color: var(--color-dialog);
     color: var(--color-text);
     overflow: hidden;
     border-radius: 1rem;
@@ -5588,7 +5821,7 @@ dialog::backdrop {
     justify-content: space-between;
     padding: var(--pad3) var(--pad3) var(--pad3) var(--pad4);
     color: var(--color-text-light);
-    background-color: var(--color-bg-t1);
+    background-color: var(--color-dialog-head);
 }
 
 .modalHeader h2 {
@@ -5754,9 +5987,9 @@ dialog::backdrop {
     padding: 0.1rem 0.35rem;
     font-size: 0.7rem;
     font-weight: 700;
-    color: #000;
+    color: var(--color-on-accent-mark);
     background-color: var(--color-accent);
-    mix-blend-mode: plus-lighter;
+    mix-blend-mode: var(--link-blend);
 }
 
 .cardFilterRow {
@@ -5978,7 +6211,7 @@ dialog::backdrop {
 }
 #cardViewLargerModal .cardInfo h3 { font-size: 1.1rem; font-weight: 600; }
 #cardViewLargerModal .cardInfoTrack { margin-top: 0.2rem; color: var(--color-text-light); }
-#cardViewLargerModal .cardInfoMeta { margin-top: 0.2rem; font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); }
+#cardViewLargerModal .cardInfoMeta { margin-top: 0.2rem; font-size: 0.75rem; color: var(--color-text-w60); }
 @keyframes card-pop {
     from { transform: scale(0.94); opacity: 0.4; }
     to { transform: scale(1); opacity: 1; }
@@ -6264,8 +6497,8 @@ input.tagMachine,
     border-radius: var(--radius-pill);
 
     &.is-gone {
-        color: #ffb4a8;
-        background-color: #4a211c;
+        color: var(--color-broken-text);
+        background-color: var(--color-gone-bg);
     }
 }
 
@@ -6428,7 +6661,7 @@ select.im-tag.im-pick {
     color: var(--color-text-subtle);
 
     &.is-error {
-        color: #ffb4a8;
+        color: var(--color-broken-text);
     }
 }
 
@@ -6440,7 +6673,7 @@ select.im-tag.im-pick {
     & .butt {
         min-height: 2.5rem;
         padding: 0 var(--space-5);
-        color: #111; /* own colour: dark text on a light button */
+        color: var(--color-on-accent-mark);
     }
 
     & .butt:disabled {
@@ -6493,7 +6726,7 @@ select.im-tag.im-pick {
     background-color: var(--color-accent);
     margin: 0.625rem;
     padding: 0.5rem;
-    color: #000;
+    color: var(--color-on-accent-mark);
     border-radius: var(--radius-sm);
 }
 
@@ -6517,7 +6750,7 @@ select.im-tag.im-pick {
     border: 0;
     border-left: 3px solid var(--color-accent);
     border-radius: var(--radius-md);
-    box-shadow: 0 0.5rem 1.5rem -0.5rem black;
+    box-shadow: 0 0.5rem 1.5rem -0.5rem var(--shadow-color);
     opacity: 0;
     transform: translateY(0.5rem);
     transition: opacity 180ms ease, transform 180ms ease;
@@ -6615,6 +6848,7 @@ html#about body {
 
         img {
             width: 3rem;
+            filter: var(--logo-filter); /* the white logo, inked in light mode */
         }
     }
 
@@ -6663,8 +6897,8 @@ html#about body {
     letter-spacing: 0;
     line-height: 1.4;
     white-space: nowrap;
-    color: var(--color-text-light);
-    background: var(--color-bg-t2);
+    color: var(--color-tip-text, var(--color-text-light));
+    background: var(--color-tip-bg, var(--color-bg-t2));
     border-radius: var(--radius-sm);
     pointer-events: none;
     z-index: 1000;
@@ -6720,14 +6954,14 @@ html#about body {
     top: 0;
     left: 0;
     z-index: 10001;
-    background-color: var(--color-bg-t3);
-    color: var(--color-text-light);
+    background-color: var(--color-tip-bg, var(--color-bg-t3));
+    color: var(--color-tip-text, var(--color-text-light));
     padding: 0.2rem 0.5rem;
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
     pointer-events: none;
     white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 8px var(--shadow-color);
     visibility: hidden;
     opacity: 0;
     transition: opacity 120ms ease;
@@ -6772,7 +7006,7 @@ html#about body {
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
     min-width: 11rem;
-    box-shadow: 0 2px 8px black;
+    box-shadow: 0 2px 8px var(--shadow-color);
 
     p {
         font-size: 0.75rem;
@@ -6828,13 +7062,13 @@ html#about body {
     left: 0;
     transform: translate(-50%, calc(-100% - 8px));
     z-index: 3;
-    background-color: var(--color-bg-t3);
-    color: var(--color-text-light);
+    background-color: var(--color-tip-bg, var(--color-bg-t3));
+    color: var(--color-tip-text, var(--color-text-light));
     padding: 0.2rem 0.5rem;
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
     white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 8px var(--shadow-color);
     pointer-events: none;
     visibility: hidden;
     opacity: 0;
@@ -6854,7 +7088,7 @@ html#about body {
     width: 0.56rem;
     height: 0.56rem;
     margin-left: -0.28rem;
-    background: var(--color-bg-t3);
+    background: var(--color-tip-bg, var(--color-bg-t3));
     transform: rotate(45deg);
 }
 
@@ -6878,7 +7112,7 @@ html#about body {
     padding: 0;
     background: transparent;
     border: none;
-    color: rgba(255,255,255,0.4);
+    color: var(--color-text-w40);
     cursor: pointer;
     border-radius: var(--radius-sm);
     box-shadow: none;
@@ -6891,14 +7125,14 @@ html#about body {
     }
 
     &:hover {
-        color: #fff;
-        background: rgba(255,255,255,0.1);
+        color: var(--color-text-light);
+        background: rgba(var(--ink-rgb), 0.1);
     }
 }
 
 .utt-icon-btn.is-disabled,
 .utt-icon-btn.is-disabled:hover {
-    color: rgba(255,255,255,0.22);
+    color: rgba(var(--ink-rgb), 0.22);
 }
 
 .utt-icon-btn.is-disabled {
@@ -7099,6 +7333,13 @@ html#about body {
         padding: var(--pad3) var(--pad4);
     }
 
+    /* The logo and the header's buttons share one row in the narrow column
+       (light mode's sun added one): a mouse doesn't need the phone's 40px
+       targets, and the visitor's Join is its word, without the face */
+    #topbarUtils .header_icon { min-width: 2.125rem; }
+    #mainGrid.login #nav-signin { margin-left: var(--pad1); padding: 0 0.625rem; }
+    #mainGrid.login #nav-signin [class*="material-symbols-"] { display: none; }
+
     /* The column is narrow, so the theme takes a full row under the logo */
     #themeSlot {
         order: 1;
@@ -7291,7 +7532,7 @@ body.ft-discover #pe-here { display: none !important; }
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: rgba(255, 255, 255, 0.66);
+    color: var(--color-text-w66);
 }
 .pe-count { font-family: var(--font-numbers); font-weight: 400; }
 .pe-list { list-style: none; margin: 0; padding: 0; }
@@ -7308,10 +7549,10 @@ body.ft-discover #pe-here { display: none !important; }
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 300;
+    font-weight: var(--weight-thin);
 }
 .pe-row.is-idle .pe-name { color: var(--color-text-muted); }
-.pe-role { flex: none; font-size: 1.2rem; line-height: 1; color: #43b581; }
+.pe-role { flex: none; font-size: 1.2rem; line-height: 1; color: var(--color-online); }
 .pe-tag {
     flex: none;
     margin-left: auto;
@@ -7371,7 +7612,7 @@ body.ft-discover #pe-here { display: none !important; }
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 300;
+    font-weight: var(--weight-thin);
 }
 .pe-audN { flex: none; margin-left: auto; font-family: var(--font-numbers); color: var(--color-text-muted); }
 .pe-audRow.is-unplaced {
@@ -7426,7 +7667,7 @@ body.ft-discover #pe-here { display: none !important; }
 /* Open the DJ playlist in Playlists (#162) */
 #djlistOpen {
     flex-shrink: 0;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--color-text-w70);
 }
 #mainGrid.login #djlistOpen,
 #mainGrid.pre-auth #djlistOpen { display: none; }
@@ -7457,7 +7698,7 @@ body.is-mod :is(#thehistory, .ft-rows) :is(.edittags, .flagplay) { display: inli
 .ft-menu-title {
     padding: 0.2rem 0.5rem 0.4rem;
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-text-w60);
     max-width: 16rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -7496,7 +7737,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
     padding: 0 var(--pad3);
     overflow: hidden;
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-text-w60);
     transition: height 150ms ease;
 }
 #typingIndicator.show { height: 1.4rem; }
@@ -7525,7 +7766,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
     padding: 0.15rem;
     font-size: 1rem;
     line-height: 1;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--color-text-w70);
     background: var(--color-bg-t2);
     border: none;
     border-radius: var(--radius-sm);
@@ -7550,8 +7791,8 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
     font: inherit;
     font-size: 0.75rem;
     color: var(--color-text-light);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(var(--ink-rgb), 0.06);
+    border: 1px solid rgba(var(--ink-rgb), 0.08);
     border-radius: var(--radius-pill);
     cursor: pointer;
 }
@@ -7574,7 +7815,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
 }
-.reactPick:hover, .reactPick:focus-visible { background: rgba(255, 255, 255, 0.1); }
+.reactPick:hover, .reactPick:focus-visible { background: rgba(var(--ink-rgb), 0.1); }
 
 /* ─── @mentions inbox (#96) ───────────────────────────────────────────────── */
 #mainGrid.login #inboxTrigger,
@@ -7600,7 +7841,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
 .inboxBox { width: min(22rem, 92vw); max-height: 70vh; overflow: auto; }
 .inboxHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--pad2); }
 .inboxHeadActions { display: flex; align-items: center; gap: var(--pad2); }
-.inboxEmpty { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); }
+.inboxEmpty { font-size: 0.8rem; color: var(--color-text-w60); }
 .inboxItem {
     display: flex;
     gap: var(--pad2);
@@ -7610,7 +7851,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
 .inboxItem.unread { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
 .inboxItem .ft-avatar { width: 2rem; height: 2rem; flex-shrink: 0; background-size: cover; }
 .inboxBody { flex: 1; min-width: 0; }
-.inboxMeta { font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); }
+.inboxMeta { font-size: 0.75rem; color: var(--color-text-w60); }
 .inboxMeta b { color: var(--color-text-light); }
 .inboxText { font-size: 0.85rem; overflow-wrap: anywhere; }
 .inboxText img.emoji { width: 1em; height: 1em; }
@@ -7663,7 +7904,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
     padding: .35rem .5rem; border-radius: var(--radius-md); color: var(--color-text-muted);
     &::-webkit-details-marker { display: none; }
     &::before { content: "help"; font-family: 'Material Symbols Outlined'; font-size: 1.1rem; line-height: 1; }
-    &:hover { color: var(--color-text); background: rgba(255, 255, 255, .05); }
+    &:hover { color: var(--color-text); background: rgba(var(--ink-rgb), .05); }
   }
   &[open] { flex-basis: 100%; order: 3; }
   &[open] summary { color: var(--color-text); }
@@ -7705,14 +7946,14 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
   & + .plx-row::before {
     content: ""; position: absolute; top: 0; left: .5rem; right: .5rem; height: 1px; background: var(--plx-line);
   }
-  &:hover, &:focus-within { background: rgba(255, 255, 255, .04); }
+  &:hover, &:focus-within { background: rgba(var(--ink-rgb), .04); }
   &:hover::before, &:hover + .plx-row::before, &:focus-within::before, &:focus-within + .plx-row::before { opacity: 0; }
   /* the list you DJ from: an accent edge, so it's found at a glance */
   &.is-dj { box-shadow: inset 3px 0 0 var(--color-accent); }
   &.is-new { background: color-mix(in srgb, var(--color-accent) 14%, transparent); }
   &.is-dragging {
     z-index: 1; background: var(--color-bg-t2);
-    box-shadow: 0 .5rem 1.5rem -.25rem black, inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 50%, transparent);
+    box-shadow: 0 .5rem 1.5rem -.25rem var(--shadow-color), inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 50%, transparent);
   }
   &.is-checking .plx-meta { color: var(--color-text); }
 }
@@ -7743,7 +7984,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
   display: flex; flex-wrap: wrap; align-items: center; gap: 0 .6rem; padding: 0 .45rem;
   font-family: var(--font-numbers); font-size: var(--fs-meta); color: var(--color-text-muted);
   white-space: nowrap; min-width: 0;
-  & .plx-flagged { color: color-mix(in oklab, var(--color-danger) 55%, white); }
+  & .plx-flagged { color: var(--color-flagged); }
   & .plx-swaps { color: var(--color-accent); }
   & .plx-tag {
     font-family: var(--font-family); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em;
@@ -7759,7 +8000,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
   background-color: transparent; background-position: right .4rem center; background-size: .85rem;
   border: 1px solid var(--plx-line); box-shadow: none;
   &:hover { color: var(--color-text); border-color: color-mix(in srgb, var(--color-text) 22%, transparent); }
-  &.is-set { color: var(--color-text); background-color: rgba(255, 255, 255, .04); }
+  &.is-set { color: var(--color-text); background-color: rgba(var(--ink-rgb), .04); }
 }
 
 /* ★ / 🎧 / open / ⋮: bare icons; on = filled in the room's accent */
@@ -7768,7 +8009,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
   width: 2rem; height: 2rem; padding: 0; color: var(--color-text-dim);
   background: transparent; border: 0; border-radius: var(--radius-md); box-shadow: none;
   & i { font-size: 1.3rem; }
-  &:hover:not(:disabled), &:focus-visible, &.on { color: var(--color-text-light); background: rgba(255, 255, 255, .07); }
+  &:hover:not(:disabled), &:focus-visible, &.on { color: var(--color-text-light); background: rgba(var(--ink-rgb), .07); }
   &:disabled { opacity: .3; cursor: default; }
   &[aria-pressed="true"] { color: var(--color-accent); }
   &[aria-pressed="true"] i { font-variation-settings: "FILL" 1; }
@@ -8133,7 +8374,7 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
     padding: 0.1rem 0.45rem;
     border-radius: 99px;
     background: var(--color-accent);
-    color: #000;
+    color: var(--color-on-accent-mark);
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -8152,7 +8393,7 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
 .butt.darkbutt {
     color: var(--color-accent);
     background: var(--color-bg-t3);
-    border-top-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(var(--ink-rgb), 0.08);
 }
 @media (hover: hover) {
     .butt.darkbutt:not(:disabled):hover { background: var(--color-bg-t4); }
@@ -8277,8 +8518,8 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
     background: color-mix(in srgb, var(--color-text) 6%, transparent);
     border-left: 3px solid var(--color-border);
 }
-#accountSettingsBox .responseBox[data-state="bad"] { color: #f2b8ae; background: color-mix(in srgb, var(--color-danger) 15%, transparent); border-left-color: var(--color-danger); }
-#accountSettingsBox .responseBox[data-state="good"] { color: #b5e8cf; background: color-mix(in srgb, var(--color-success) 15%, transparent); border-left-color: var(--color-success); }
+#accountSettingsBox .responseBox[data-state="bad"] { color: var(--color-bad-text); background: color-mix(in srgb, var(--color-danger) 15%, transparent); border-left-color: var(--color-danger); }
+#accountSettingsBox .responseBox[data-state="good"] { color: var(--color-good-text); background: color-mix(in srgb, var(--color-success) 15%, transparent); border-left-color: var(--color-success); }
 #accountSettingsBox .grabStatsBox { margin: 0; }
 #accountSettingsBox #avatarPickerSection select { width: 100%; height: 2.75rem; }
 
@@ -8592,4 +8833,56 @@ body:not(.is-mod) .helpMods { display: none; }
         align-items: end;
     }
     .bm-parts { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   Light mode: its switches (js/head.js, ui.js showLook)
+   ============================================ */
+
+/* The account menu's Light mode: a small switch at the row's end */
+#nav-acctLook { justify-content: flex-start; }
+.nav-lookSwitch {
+    position: relative;
+    flex: none;
+    width: 1.875rem;
+    height: 1.125rem;
+    margin-left: auto;
+    border-radius: var(--radius-pill);
+    background: rgba(var(--ink-rgb), 0.18);
+    transition: background-color var(--dur) var(--ease-out);
+
+    &::after {
+        content: "";
+        position: absolute;
+        top: 0.1875rem;
+        left: 0.1875rem;
+        width: 0.75rem;
+        height: 0.75rem;
+        border-radius: 50%;
+        background: var(--color-text-light);
+        transition: transform var(--dur) var(--ease-out), background-color var(--dur) var(--ease-out);
+    }
+}
+#nav-acctLook[aria-checked="true"] .nav-lookSwitch {
+    background: var(--color-accent);
+
+    &::after { transform: translateX(0.75rem); background: var(--color-on-accent); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .nav-lookSwitch, .nav-lookSwitch::after { transition: none; }
+}
+
+/* The header's sun and moon: what a click gives you, picked here from data-look
+   (js/head.js sets it before the first paint), so it's right before any script runs */
+.nav-lookMoon,
+:root[data-look="light"] .nav-lookSun { display: none; }
+:root[data-look="light"] .nav-lookMoon { display: inline-block; }
+
+/* the sun warms to gold under the pointer, the moon cools */
+#nav-look [class*="material-symbols-"] { transition: color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
+@media (hover: hover) {
+    #nav-look:hover [class*="material-symbols-"] { color: var(--color-accent); transform: rotate(-12deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    #nav-look:hover [class*="material-symbols-"] { transform: none; }
 }

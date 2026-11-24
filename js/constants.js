@@ -56,6 +56,7 @@ var STORAGE = {
   ttAvatar:           "firetableTurntableAvatar", // your Turntable avatar, also kept at users/<uid>/ttAvatar
   ttLaptop:           "firetableTurntableLaptop", // your laptop's lid and stickers, also kept at users/<uid>/ttLaptop
   ttLayout:           "firetableTurntableLayout", // the theme's sidebars: "one" or "two"
+  look:               "firetableLook",        // light mode: "light" or "auto" (none: the dark site). js/head.js reads it before this file loads"
   guestId:            "firetableGuestId"          // a visitor's random id, so the people list counts each browser once (js/audience.js)
 };
 

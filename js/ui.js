@@ -883,6 +883,41 @@ firetable.ui.initSettings = function () {
 };
 
 /**
+ * Light mode on or off (js/head.js keeps the choice on this device). The
+ * Turntable theme has its own look, so there it only says so.
+ */
+firetable.ui.toggleLook = function () {
+  var look = ftLook.toggle();
+  if (firetable.tt && firetable.tt.isOn()) {
+    firetable.ui.toast((look === "light" ? "Light mode is on" : "Light mode is off") + ". You'll see it when you leave the Turntable theme.");
+  }
+  return look;
+};
+
+/**
+ * Every light mode control shows the state: the header button (pressed, and
+ * its tooltip; CSS shows its sun or moon), the account menu's switch and the
+ * Settings picker.
+ * @param {string} look - "light" | "dark": showing now
+ * @param {string} pref - "dark" | "light" | "auto": the choice on this device
+ */
+firetable.ui.showLook = function (look, pref) {
+  var light = look === "light";
+  var head = document.getElementById("nav-look");
+  if (head) {
+    head.setAttribute("aria-pressed", light ? "true" : "false"); // its sun or moon is CSS's (data-look)
+    var tip = document.getElementById("tip-nav-look");
+    if (tip) tip.textContent = light ? "Dark mode" : "Light mode";
+  }
+  var item = document.getElementById("nav-acctLook");
+  if (item) {
+    item.setAttribute("aria-checked", light ? "true" : "false");
+    item.querySelector("i").textContent = light ? "light_mode" : "dark_mode";
+  }
+  $("#lookPicker").val(pref);
+};
+
+/**
  * Compact / Cozy / Comfortable spacing for playlists, Recent and chat.
  * @param {string} density - "compact" | "cozy" | "comfortable"
  */
@@ -1885,6 +1920,7 @@ firetable.ui.setupMiscEvents = function () {
     else if ((k === "h" || k === "H") && press("fire")) e.preventDefault();
     else if ((k === "g" || k === "G") && press("grab")) e.preventDefault();
     else if ((k === "m" || k === "M") && press("volstatus")) e.preventDefault();
+    else if (k === "l" || k === "L") { e.preventDefault(); firetable.ui.toggleLook(); }
     else if ((k === "t" || k === "T") && $("#mainqueue").hasClass("cr-selecting") && press("cr-bulkTop")) e.preventDefault();
   });
 
@@ -2228,6 +2264,12 @@ firetable.ui.setupMiscEvents = function () {
     firetable.ui.updateScreenBtn(val);
     firetable.ui.applyScreenSetting();
   });
+
+  // ── Light mode (js/head.js): the header's sun and moon, the account menu, Settings ──
+  $('#nav-look').on('click', function () { firetable.ui.toggleLook(); });
+  $('#nav-acctLook').on('click', function () { firetable.ui.toggleLook(); }); // a checkbox in the menu: the menu stays open
+  $('#lookPicker').on('change', function () { ftLook.set($(this).val()); });
+  ftLook.onChange(firetable.ui.showLook);
 
   // ── View density ──
   $('#densityPicker').on('change', function () {
