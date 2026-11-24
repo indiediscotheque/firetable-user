@@ -1237,11 +1237,11 @@ try {
     "keys: H fires, G grabs, M mutes and ? lists them; in the chat box H is just an h (" + JSON.stringify(hotkeys) + ")");
   await page.keyboard.press("m"); // unmute again
 
-  console.log("-- the stage's states: the decks open, the bot keeping the music going, Listen to the room");
+  console.log("-- the stage's states: the decks open, nothing with only the bot on, Listen to the room");
   const tableBefore = await (await fetch(DB + "/table.json?ns=" + NS)).json();
   const stageState = async () => page.evaluate(() => {
     const box = document.getElementById("st-state");
-    return (document.getElementById("djStage").className.match(/st-(empty|botonly)/) || [""])[0] + "|" + (box.hidden ? "" : document.getElementById("st-stateText").textContent);
+    return (document.getElementById("djStage").className.match(/st-empty/) || [""])[0] + "|" + (box.hidden ? "" : document.getElementById("st-stateText").textContent);
   });
   const states = {};
   await put("/table", null);
@@ -1249,10 +1249,9 @@ try {
   states.open = await stageState();
   await put("/users/smokebot", { username: "smokebot", hostbot: true, status: true });
   await put("/table", { b1: { id: "smokebot", name: "smokebot" } });
-  await page.waitForFunction(() => document.getElementById("djStage").classList.contains("st-botonly"), null, { timeout: 10000 }).catch(() => {});
+  await page.waitForFunction(() => !document.getElementById("djStage").classList.contains("st-empty"), null, { timeout: 10000 }).catch(() => {});
   states.bot = await stageState();
-  // the note floats over the stage: the DJ stands where they always do (it once took room in the
-  // stage's column and lifted the deck by its own height). Shown even where the sound is held back.
+  // with only the bot on, no note: the DJ stands where they always do.
   const deckLift = () => page.evaluate(() => {
     const blocked = document.body.classList.contains("media-blocked");
     document.body.classList.remove("media-blocked");
@@ -1264,14 +1263,14 @@ try {
   const liftBot = await deckLift();
   await put("/table", tableBefore);
   await put("/users/smokebot", null);
-  await page.waitForFunction(() => !/st-(empty|botonly)/.test(document.getElementById("djStage").className), null, { timeout: 10000 }).catch(() => {});
+  await page.waitForFunction(() => !/st-empty/.test(document.getElementById("djStage").className), null, { timeout: 10000 }).catch(() => {});
   states.after = await stageState();
   const liftAfter = await deckLift();
-  check(liftBot.shown && !liftAfter.shown && liftBot.gap === liftAfter.gap,
-    "the bot's note doesn't lift the DJ: the deck sits at the stage's bottom with or without it (" + JSON.stringify({ liftBot, liftAfter }) + ")");
+  check(!liftBot.shown && !liftAfter.shown && liftBot.gap === liftAfter.gap,
+    "no note over the stage with only the bot on, and the deck sits at the stage's bottom either way (" + JSON.stringify({ liftBot, liftAfter }) + ")");
   states.listen = await page.evaluate(() => { firetable.ui.renderStageState(); return document.querySelector("#tapToPlay b").textContent + "|" + document.getElementById("tapToPlaySub").textContent; });
-  check(/^st-empty\|The decks are open\. Hop on and the room plays from your ★ playlist\./.test(states.open) && states.bot === "st-botonly|The bot keeps the music going until someone hops on." && states.after === "|",
-    "the stage says when the decks are open and when the bot is keeping the music going, and nothing otherwise (" + JSON.stringify(states) + ")");
+  check(/^st-empty\|The decks are open\. Hop on and the room plays from your ★ playlist\./.test(states.open) && states.bot === "|" && states.after === "|",
+    "the stage says when the decks are open, and nothing otherwise, the bot on its own included (" + JSON.stringify(states) + ")");
   check(states.listen === "Listen to the room|", "audio blocked: Listen to the room, and nothing under it (the stage and the bar say who's playing what) (" + states.listen + ")");
 
   console.log("-- Fire's count on its button");
