@@ -40,7 +40,7 @@ jobs:
   # Each suite on its own runner, at the same time: one slow suite (or a retry)
   # can't push the others past the time limit, and the whole run is quicker.
   browser:
-    name: ${{ matrix.suite }}${{ matrix.roles && format(' ({0})', matrix.roles) || '' }}${{ matrix.looks && format(' ({0})', matrix.looks) || '' }}
+    name: ${{ matrix.suite }}${{ matrix.roles && format(' ({0})', matrix.roles) || '' }}${{ matrix.looks && format(' ({0})', matrix.looks) || '' }}${{ matrix.built && format(' ({0})', matrix.built) || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -48,6 +48,10 @@ jobs:
       matrix:
         include:
           - suite: smoke
+          # the site as the deploy serves it: stylesheets flattened, scripts and
+          # stylesheets minified (tools/flatten-css.mjs, tools/minify.mjs)
+          - suite: smoke
+            built: as deployed
           - suite: reach
             roles: visitor
           - suite: reach
@@ -91,6 +95,13 @@ jobs:
             echo "Ubuntu's package servers didn't answer (try $try); waiting..."
             sleep $((try * 30))
           done
+
+      - name: Build the site as the deploy does
+        if: ${{ matrix.built }}
+        run: |
+          npm ci --no-audit --no-fund --ignore-scripts
+          node tools/flatten-css.mjs
+          node tools/minify.mjs
 
       - name: Unit tests
         if: ${{ matrix.suite == 'smoke' }}

@@ -12,7 +12,7 @@
 ## Deploy
 `.github/workflows/deploy.yml` uploads everything in the repo except what it lists in two exclude lists (the `skip=` upload line and the `case` line in the remove step). When you add a file that shouldn't be served on the site (docs, tooling), add it to both lists, and to `NOT_DEPLOYED` in `.github/scripts/check-htaccess-scope.py` (the lint check fails otherwise).
 
-The deploy also serves the stylesheets with CSS nesting flattened (`tools/flatten-css.mjs`), for older iPads; the source keeps its nesting.
+The deploy also serves the stylesheets with CSS nesting flattened (`tools/flatten-css.mjs`), for older iPads, then minifies every script and stylesheet (`tools/minify.mjs`); the source keeps its nesting and stays readable. Don't hand-minify source files.
 
 `music/` (the library's plain pages) isn't in git: the deploy builds it with `tools/plain-pages.mjs` and uploads it in its own step, deleting pages no longer built. The main upload skips it.
 
