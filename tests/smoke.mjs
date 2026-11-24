@@ -3499,11 +3499,13 @@ try {
   console.log("-- guests and the radio's listeners by country, in the people lists (api/audience.php)");
   // api/audience.php answered here: a visitor's page sends heartbeats (Playwright's
   // navigator.webdriver is hidden, as it is for people), a member's only asks
-  const AUDIENCE = { updated: "2026-11-23T12:00:00Z", guests: 3, guestsLive: 1,
+  // (guests' countries come from their time zones; one the server didn't name, the page names itself)
+  const AUDIENCE = { updated: "2026-11-23T12:00:00Z", guests: 3, guestsLive: 1, guestsUnplaced: 1,
+    guestCountries: [{ code: "GB", name: "United Kingdom", n: 1 }, { code: "JP", name: "", n: 1 }],
     stream: { listeners: 6, unplaced: 1, countries: [{ code: "US", name: "United States", n: 3 }, { code: "DE", name: "Germany", n: 2 }] } };
   const audCalls = [];
   // (a person's browser: headless Chromium says "HeadlessChrome", which isn't counted)
-  const aContext = await browser.newContext({ viewport: { width: 1280, height: 800 },
+  const aContext = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: "Asia/Tokyo",
     userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" });
   await aContext.addInitScript(() => { Object.defineProperty(Navigator.prototype, "webdriver", { get: () => false }); });
   await aContext.route("**/api/audience.php*", (route) => {
@@ -3528,12 +3530,12 @@ try {
   });
   const beat = audCalls.find((c) => c.method === "POST");
   const beatBody = new URLSearchParams(beat ? beat.body : "");
-  check(!!beat && /^[0-9a-f]{32}$/.test(beatBody.get("id") || "") && /^[01]$/.test(beatBody.get("live") || "") && !audCalls.some((c) => c.method === "GET"),
-    "a visitor's page sends a heartbeat (its browser's random id, and whether the room is sounding) and asks nothing else (" + JSON.stringify(audCalls) + ")");
-  check(visitorAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1|Listening live=1" && visitorAud.flags.slice(0, 2).join("") === "\u{1F1FA}\u{1F1F8}\u{1F1E9}\u{1F1EA}" &&
+  check(!!beat && /^[0-9a-f]{32}$/.test(beatBody.get("id") || "") && /^[01]$/.test(beatBody.get("live") || "") && beatBody.get("tz") === "Asia/Tokyo" && !audCalls.some((c) => c.method === "GET"),
+    "a visitor's page sends a heartbeat (its browser's random id, whether the room is sounding and its time zone, for its country) and asks nothing else (" + JSON.stringify(audCalls) + ")");
+  check(visitorAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1|United Kingdom=1|Japan=1|Somewhere=1|Listening live=1" && visitorAud.flags.slice(0, 2).join("") === "\u{1F1FA}\u{1F1F8}\u{1F1E9}\u{1F1EA}" &&
     visitorAud.heads.join("|") === "On the radio 6|Guests 3" && !visitorAud.note &&
     visitorAud.pressable === 0 && / · 6 on the radio/.test(visitorAud.pulse),
-    "a visitor's list shows the radio's listeners merged by country with flags (and those it can't place), then the guests with how many listen live, and the room pulse counts the radio (" + JSON.stringify(visitorAud) + ")");
+    "a visitor's list shows the radio's listeners merged by country with flags (and those it can't place), then the guests by country (from their time zones) with how many listen live, and the room pulse counts the radio (" + JSON.stringify(visitorAud) + ")");
   // the page closing (or its visitor signing in) says goodbye at once, rather than after two minutes
   const goodbye = await aPage.evaluate(() => {
     let sent = null;
@@ -3558,7 +3560,7 @@ try {
   }, AUDIENCE);
   check(memberAud.on && memberAud.total === String(memberAud.members + 3 + 6) && memberAud.room === String(memberAud.members) && memberAud.guests === "3" && memberAud.radio === "6" &&
     /in the room$/.test(memberAud.tips[0]) && memberAud.tips[1] === "3 guests without an account, 1 listening live" && memberAud.tips[2] === "6 people listening on the radio" &&
-    !memberAud.hidden && memberAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1|Listening live=1",
+    !memberAud.hidden && memberAud.rows.join("|") === "United States=3|Germany=2|Somewhere=1|United Kingdom=1|Japan=1|Somewhere=1|Listening live=1",
     "a member's people list counts everyone with the room (members, guests, radio, each named for screen readers) and lists the radio by country under the members (" + JSON.stringify(memberAud) + ")");
   await aContext.close();
 
