@@ -24,10 +24,13 @@ each part goes, first found wins:
      in drawing order and their offsets) with deepcut's pictures of the parts.
      Fetched once into the second folder (default /tmp/deepcut).
   3. The archive's whole picture, each part found in it.
-  4. The two the archive has no head for (25, a photo with a body and no head,
-     and 1004, no parts at all): the head is cut from the whole picture along
-     its own outline (never a straight line), and the body under it carried up
-     under the head's edge, so a head that moves never shows a hole.
+  4. The one the archive has no parts for at all (1004): the head is cut from
+     the whole picture along its own outline (never a straight line), and the
+     body under it carried up under the head's edge, so a head that moves
+     never shows a hole.
+
+Avatars in RETIRED are left out of the set (the room keeps their place in
+its classics, js/ttskin.js RETIRED, so nobody's own classic changes).
 
 Writes, for each avatar, one sprite img/tt/av/<id>.webp: the front's whole
 picture (the circle avatars' face), then each side's body and head. And
@@ -71,6 +74,9 @@ PAGE, CELL_W, CELL_H = 16, 100, 128  # the picker: 4 x 4 a page, at twice its si
 FRONT_GAP = 36  # clear space after the front: a circle avatar's frame can reach past its edge
 GAP = 2  # transparent pixels between parts, so scaling never bleeds one into the next
 SIDES = (("f", "Front", "front"), ("b", "Back", "back"))
+# left out of the set (keep js/ttskin.js RETIRED the same): 25, a photo of a person's head
+# on a photo of their body, with no head or back of its own in the archive
+RETIRED = {"25"}
 
 
 def version(av):
@@ -241,56 +247,12 @@ def body_under(full, head_mask, rise=8):
     return Image.fromarray(a)
 
 
-def largest(mask):
-    """The biggest piece of a mask (4-connected): a head, without the specks of the body's edge round it."""
-    seen = np.zeros_like(mask)
-    best = np.zeros_like(mask)
-    for y0, x0 in zip(*np.nonzero(mask)):
-        if seen[y0, x0]:
-            continue
-        piece, stack = [], [(y0, x0)]
-        seen[y0, x0] = True
-        while stack:
-            y, x = stack.pop()
-            piece.append((y, x))
-            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
-                if 0 <= yy < mask.shape[0] and 0 <= xx < mask.shape[1] and mask[yy, xx] and not seen[yy, xx]:
-                    seen[yy, xx] = True
-                    stack.append((yy, xx))
-        if len(piece) > best.sum():
-            best = np.zeros_like(mask)
-            ys, xs = zip(*piece)
-            best[list(ys), list(xs)] = True
-    return best
-
-
-def cut_head(full, body=None):
-    """The head cut from the whole picture along its own outline. With a body picture
-    (25: a photo, its head left out of the body), the head is what isn't the body's
-    own pixels; without (1004: a big round head over a little body), it's the picture's top
-    piece once the shirt is taken out, the colour the body shows under the neck."""
+def cut_head(full):
+    """The head cut from the whole picture along its own outline (1004: a big round
+    head over a little body): the picture's top piece once the shirt is taken out,
+    the colour the body shows under the neck."""
     rgba = np.asarray(full).astype(int)
     op = rgba[:, :, 3] > 40
-    if body is not None:
-        bp = match(full, body)[0]
-        laid = Image.new("RGBA", full.size)
-        laid.paste(body, bp)
-        under = np.asarray(laid).astype(int)
-        # the body's own pixels show where it isn't under the head: its neck reaches up behind the chin
-        covered = np.zeros(op.shape, bool)
-        for dy in (-2, -1, 0, 1, 2):  # within a pixel or two: the photo's edges were softened apart
-            for dx in (-2, -1, 0, 1, 2):
-                u = np.roll(under, (dy, dx), axis=(0, 1))
-                covered |= (u[:, :, 3] > 40) & (np.abs(rgba[:, :, :3] - u[:, :, :3]).sum(axis=2) < 40)
-        covered &= under[:, :, 3] > 40
-        # and its neck (the rows where it's under a third of its widest) is all behind the head
-        bw = alpha(body, 40).sum(axis=1)
-        neck_end = bp[1] + int(np.argmax(bw >= bw.max() / 3))
-        covered[:neck_end] = False
-        head = op & ~covered
-        rows = np.nonzero(covered.any(axis=1))[0]
-        head[rows[0] + (rows[-1] - rows[0]) // 3:] = False  # only above the body's shoulders
-        return largest(head), bp
     # the neck: where the figure, narrowing from its widest (the head), first widens again
     widths = op.sum(axis=1)
     neck = int(np.argmax(widths))
@@ -311,23 +273,19 @@ def cut_head(full, body=None):
     grown[:-1] |= keep[1:]
     grown[:, 1:] |= keep[:, :-1]
     grown[:, :-1] |= keep[:, 1:]
-    return keep | (edge & grown & (np.arange(op.shape[0])[:, None] <= neck + 1)), None
+    return keep | (edge & grown & (np.arange(op.shape[0])[:, None] <= neck + 1))
 
 
-def cut_layers(full, body=None):
-    head_mask, bp = cut_head(full, body)
+def cut_layers(full):
+    head_mask = cut_head(full)
     a = np.asarray(full).copy()
     a[~head_mask] = 0
     head = Image.fromarray(a)
-    if body is None:
-        body = body_under(full, head_mask)
-        bp = (0, 0)
+    body = body_under(full, head_mask)
     # each part kept to what it shows, the head over the body
     hb, bb = head.getbbox(), body.getbbox()
-    return [("body", body.crop(bb), bp[0] + bb[0], bp[1] + bb[1]), ("head", head.crop(hb), hb[0], hb[1])]
+    return [("body", body.crop(bb), bb[0], bb[1]), ("head", head.crop(hb), hb[0], hb[1])]
 
-
-# ─── one side of one avatar ──────────────────────────────────────────────────
 
 def sound(layers):
     """Whether a head and body put together make one figure: they meet (within 2 px),
@@ -385,12 +343,7 @@ def side_layers(av, S, s, dc):
         # drawn a little apart from their parts: the parts are what the room drew)
         if got and got[1][0] < 0.12 and got[1][1] < 24 and sound(got[0]):
             return got[0], "the whole picture"
-    full = full or load(av, "FullFront")
-    if body is None:
-        body = load(av, "BodyFront")
-    if av == "25" and body is not None:
-        return cut_layers(full, body), "cut along the head's outline"
-    return cut_layers(full), "cut along the head's outline"
+    return cut_layers(full or load(av, "FullFront")), "cut along the head's outline"
 
 
 def boxed(layers):
@@ -415,10 +368,9 @@ def chin(entry, head):
     return round(min(85, max(40, (dy + bb[1] + (bb[3] - bb[1]) * 0.9) / entry["h"] * 100)))
 
 
-# id: [x, y, size], for the few whose outline has no neck to find (a whole-body photo, a
-# gorilla, a mosquito, Frankenstein, the turkeys), checked by eye on the review sheet
+# id: [x, y, size], for the few whose outline has no neck to find (a gorilla, a mosquito, Frankenstein, the turkeys), checked by eye on the review sheet
 FACE_OVERRIDES = {
-    "23": [108, -6, 78], "25": [62, -6, 76], "129": [-6, -8, 120], "272": [94, 11, 70],
+    "23": [108, -6, 78], "129": [-6, -8, 120], "272": [94, 11, 70],
     "330": [44, -6, 100], "352": [40, 2, 88], "353": [32, -6, 100],
 }
 
@@ -585,7 +537,7 @@ def pages(ids):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    ids = sorted({f[: -len("_FullFront.png")] for f in os.listdir(SRC) if f.endswith("_FullFront.png")}, key=order)
+    ids = sorted({f[: -len("_FullFront.png")] for f in os.listdir(SRC) if f.endswith("_FullFront.png")} - RETIRED, key=order)
     pages(ids)
     if "--pages" in sys.argv:
         return

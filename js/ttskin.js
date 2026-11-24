@@ -46,7 +46,7 @@ firetable.tt = (function () {
     tab: "room",       // queue | room | chat
     layout: "one",     // one sidebar (Queue · Room · Chat) or two (Queue on the left, Room · Chat on the right)
     sub: null,         // the Room tab's page: people | recent | fresh | cards (null: its front)
-    list: null, byId: {}, tiers: {},
+    list: null, byId: {}, tiers: {}, classics: null,
     ready: null,       // the avatars' list, loading
     seats: {}, crowd: {}, // the figures on the stage, by uid
     pick: { tier: "classic", page: 0 },
@@ -136,8 +136,24 @@ firetable.tt = (function () {
       if (mine) return mine;
     }
     if (u && validId(u.ttAvatar)) return u.ttAvatar;
-    var classic = S.tiers.classic || [];
-    return classic.length ? classic[hash(String(uid || "guest")) % classic.length] : (S.list && S.list[0].id);
+    var classic = classics();
+    if (!classic.length) return S.list && S.list[0].id;
+    // the next one along when it lands on one taken out of the set
+    for (var k = hash(String(uid || "guest")) % classic.length; RETIRED.indexOf(classic[k]) !== -1; k = (k + 1) % classic.length) { /* next */ }
+    return classic[k];
+  }
+
+  /**
+   * Avatars taken out of the set (tools/tt-avatars.py RETIRED): someone who
+   * picked one stands as their classic. They keep their place among the
+   * classics someone who hasn't picked is given, so nobody else's changes.
+   */
+  var RETIRED = ["25"];
+  function classics() {
+    var mine = S.tiers.classic || [];
+    if (!mine.length) return [];
+    if (!S.classics) S.classics = mine.concat(RETIRED).sort(function (a, b) { return a - b; });
+    return S.classics;
   }
 
   function myAvatar() {
