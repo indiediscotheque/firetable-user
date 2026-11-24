@@ -1251,10 +1251,24 @@ try {
   await put("/table", { b1: { id: "smokebot", name: "smokebot" } });
   await page.waitForFunction(() => document.getElementById("djStage").classList.contains("st-botonly"), null, { timeout: 10000 }).catch(() => {});
   states.bot = await stageState();
+  // the note floats over the stage: the DJ stands where they always do (it once took room in the
+  // stage's column and lifted the deck by its own height). Shown even where the sound is held back.
+  const deckLift = () => page.evaluate(() => {
+    const blocked = document.body.classList.contains("media-blocked");
+    document.body.classList.remove("media-blocked");
+    const r = Math.round(document.getElementById("djStage").getBoundingClientRect().bottom - document.getElementById("deck").getBoundingClientRect().bottom);
+    const shown = getComputedStyle(document.getElementById("st-state")).display !== "none";
+    document.body.classList.toggle("media-blocked", blocked);
+    return { gap: r, shown };
+  });
+  const liftBot = await deckLift();
   await put("/table", tableBefore);
   await put("/users/smokebot", null);
   await page.waitForFunction(() => !/st-(empty|botonly)/.test(document.getElementById("djStage").className), null, { timeout: 10000 }).catch(() => {});
   states.after = await stageState();
+  const liftAfter = await deckLift();
+  check(liftBot.shown && !liftAfter.shown && liftBot.gap === liftAfter.gap,
+    "the bot's note doesn't lift the DJ: the deck sits at the stage's bottom with or without it (" + JSON.stringify({ liftBot, liftAfter }) + ")");
   states.listen = await page.evaluate(() => { firetable.ui.renderStageState(); return document.querySelector("#tapToPlay b").textContent + "|" + document.getElementById("tapToPlaySub").textContent; });
   check(/^st-empty\|The decks are open\. Hop on and the room plays from your ★ playlist\./.test(states.open) && states.bot === "st-botonly|The bot keeps the music going until someone hops on." && states.after === "|",
     "the stage says when the decks are open and when the bot is keeping the music going, and nothing otherwise (" + JSON.stringify(states) + ")");

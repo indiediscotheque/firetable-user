@@ -2125,7 +2125,8 @@ html[data-avatars="pixel-art"] {
 /* ============================================
    The Stage
    ============================================ */
-#djStage > div:not(#screenBox):not(#stageBackdrop):not(#ft-eq):not(#stageActions):not(#stageTopRight):not(#ondeck) {
+/* (not #st-state: in the flow it would lift the deck by its own height) */
+#djStage > div:not(#screenBox):not(#stageBackdrop):not(#ft-eq):not(#stageActions):not(#stageTopRight):not(#ondeck):not(#st-state) {
     position: relative;
     z-index: 2;
 }
