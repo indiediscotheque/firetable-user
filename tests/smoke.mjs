@@ -1363,12 +1363,12 @@ try {
     const small = djAnim();
     dj.classList.toggle("tt-on", wasOn); dj.classList.toggle("tt-fired", wasFired);
     // the room's dance mode: heads move, never a whole figure or a body
-    const room = document.getElementById("tt-room"), wasDance = room.classList.contains("tt-dance");
-    room.classList.add("tt-dance");
-    const still = [...room.querySelectorAll(".tt-fig, .tt-body")].every((e) => getComputedStyle(e).animationName === "none");
+    const ttRoom = document.getElementById("tt-room"), wasDance = ttRoom.classList.contains("tt-dance");
+    ttRoom.classList.add("tt-dance");
+    const still = [...ttRoom.querySelectorAll(".tt-fig, .tt-body")].every((e) => getComputedStyle(e).animationName === "none");
     const danceFan = getComputedStyle(fan.querySelector(".tt-head")).animationName;
     const danceDj = djAnim();
-    room.classList.toggle("tt-dance", wasDance);
+    ttRoom.classList.toggle("tt-dance", wasDance);
     out.djMoves = bob === "tt-bob" && small === "tt-smallrock" && still && danceFan === "tt-rock" && (dj.classList.contains("tt-fired") ? danceDj === "tt-smallrock" : danceDj === "tt-bob");
     out.djMovesInfo = [bob, small, still, danceFan, danceDj].join("|");
     out.screen = player.isConnected && document.getElementById("playerArea") === player && player.getAttribute("src") === src;
