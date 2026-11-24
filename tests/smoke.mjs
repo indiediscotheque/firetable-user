@@ -1316,7 +1316,7 @@ try {
     await wait(200);
     localStorage.removeItem("firetableTurntableAvatar");
     delete ftapi.users.smoke.ttAvatar;
-    out.cssBefore = { inPage: !!document.getElementById("tt-css"), fetched: performance.getEntriesByType("resource").some((e) => /ttskin\.css|img\/tt\/|Doto-/.test(e.name)) };
+    out.cssBefore = { inPage: !!document.getElementById("tt-css"), fetched: performance.getEntriesByType("resource").some((e) => /ttskin\.(css|js)|img\/tt\/|Doto-/.test(e.name)), stub: firetable.tt.isOn() === false && typeof firetable.tt._coverBox === "undefined" };
     const player = document.getElementById("playerArea"), src = player.getAttribute("src");
     ftapi.events.emit("newChat", { chatID: "smktt" + Date.now(), feedID: "f", id: "dj1", name: "dj1", txt: "tt test", time: Date.now() });
     await wait(200);
@@ -1535,7 +1535,7 @@ try {
     ["firetableTurntableAvatar", "firetableTurntableLaptop", "firetableTurntableLayout"].forEach((k) => localStorage.removeItem(k));
     return out;
   });
-  check(!tt.cssBefore.inPage && !tt.cssBefore.fetched, "nothing of the theme (its stylesheet, pictures or font) is fetched until someone goes in (" + JSON.stringify(tt.cssBefore) + ")");
+  check(!tt.cssBefore.inPage && !tt.cssBefore.fetched && tt.cssBefore.stub, "nothing of the theme (its script, stylesheet, pictures or font) is fetched until someone goes in (" + JSON.stringify(tt.cssBefore) + ")");
   check(tt.on && tt.room, "/turntable in chat turns the Turntable theme on, and the room fills the stage");
   check(tt.picker && tt.required && tt.chosen, "the first time in, an avatar is picked (every one unlocked), and kept");
   check(tt.seats === 4 && tt.dj && tt.crowd > 0, "the DJs stand at their laptops and everyone else on the floor (" + tt.seats + " seats, " + tt.crowd + " on the floor)");
@@ -3606,6 +3606,32 @@ try {
   check(side.head <= 64 && side.inRow && side.clear >= 0 && side.player <= 56 && side.page >= 150 && side.wide <= 0,
     "a phone on its side: the Discover | Live switch is in the header's row, the stage ends above the bar under it, the player bar is slim, Discover's page has 150px or more (" + JSON.stringify(side) + ")");
   await lPage.close();
+
+  // the Turntable theme isn't in the page's scripts (js/lazy.js stands in for it): the Konami code in Live loads it
+  const ttLoaded = (p) => p.evaluate(() => ({ real: typeof firetable.tt._coverBox === "function",
+    fetched: performance.getEntriesByType("resource").some((e) => /js\/ttskin\.js/.test(e.name)) }));
+  const kmPage = await context.newPage();
+  await openPage(kmPage, SITE + "#live");
+  await kmPage.waitForFunction(() => document.getElementById("roomlogo") && firetable.tt, null, { timeout: 30000 }).catch(() => {});
+  await sleep(500);
+  const konamiBefore = await ttLoaded(kmPage);
+  await kmPage.evaluate(() => { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); });
+  for (const k of ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"]) await kmPage.keyboard.press(k);
+  await kmPage.waitForFunction(() => typeof firetable.tt._coverBox === "function", null, { timeout: 15000 }).catch(() => {});
+  const konamiAfter = await ttLoaded(kmPage);
+  await kmPage.evaluate(() => { if (firetable.tt.isOn()) firetable.tt.leave(); localStorage.removeItem("firetableTurntable"); });
+  await kmPage.close();
+  check(!konamiBefore.real && !konamiBefore.fetched && konamiAfter.real && konamiAfter.fetched,
+    "the Turntable theme's script loads only when someone goes in: not with the page, then with the Konami code in Live (" + JSON.stringify({ before: konamiBefore, after: konamiAfter }) + ")");
+  // on a device where it was left on, it comes with the page
+  const leftOnPage = await context.newPage();
+  await leftOnPage.addInitScript(() => { try { localStorage.setItem("firetableTurntable", "1"); } catch (e) { /* storage blocked */ } });
+  await openPage(leftOnPage, SITE + "#live");
+  await leftOnPage.waitForFunction(() => window.firetable && firetable.tt && typeof firetable.tt._coverBox === "function", null, { timeout: 30000 }).catch(() => {});
+  const leftOn = await ttLoaded(leftOnPage);
+  await leftOnPage.evaluate(() => { if (firetable.tt.isOn()) firetable.tt.leave(); localStorage.removeItem("firetableTurntable"); });
+  await leftOnPage.close();
+  check(leftOn.real && leftOn.fetched, "the Turntable theme left on, on this device: it loads with the page (" + JSON.stringify(leftOn) + ")");
 
   // touch screens: a row's icons and the play button on its small cover have the invisible tap area
   const tContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
