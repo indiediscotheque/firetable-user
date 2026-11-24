@@ -1,0 +1,59 @@
+{
+  "//": "Files over 500 lines of code, and functions over 80: today's sizes, which may only go down (node tools/line-limits.mjs; --write after making one smaller)",
+  "js/cards.js": {
+    "lines": 883,
+    "longFunctions": 1
+  },
+  "js/chat.js": {
+    "lines": 1170,
+    "longFunctions": 3
+  },
+  "js/discover.js": {
+    "lines": 4090,
+    "longFunctions": 6
+  },
+  "js/firetable.js": {
+    "lines": 1359,
+    "longFunctions": 2
+  },
+  "js/flame.js": {
+    "longFunctions": 1
+  },
+  "js/helpers.js": {
+    "lines": 732,
+    "longFunctions": 1
+  },
+  "js/import.js": {
+    "lines": 756
+  },
+  "js/init.js": {
+    "longFunctions": 1
+  },
+  "js/playlist.js": {
+    "lines": 1997,
+    "longFunctions": 3
+  },
+  "js/playlists.js": {
+    "lines": 516,
+    "longFunctions": 1
+  },
+  "js/room.js": {
+    "lines": 1334,
+    "longFunctions": 5
+  },
+  "js/search.js": {
+    "longFunctions": 2
+  },
+  "js/ttskin.js": {
+    "lines": 1364,
+    "longFunctions": 3
+  },
+  "js/ui.js": {
+    "lines": 1884,
+    "longFunctions": 4
+  },
+  "js/users.js": {
+    "lines": 894,
+    "longFunctions": 3
+  }
+}

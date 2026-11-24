@@ -162,6 +162,8 @@ The Realtime Database bills every byte it sends, to every browser, so the site a
 
 **jQuery only shrinks:** new code uses the browser's own DOM, and code that's being changed anyway drops its jQuery as it goes (CLAUDE.md, "jQuery"). `node tools/jquery-budget.mjs` counts each script's jQuery against `tools/jquery-baseline.json` and fails when one uses more, or uses less without the baseline being lowered too (`--write`). Lint runs it on every pull request.
 
+**File and function size:** ESLint's `max-lines`: 500 lines of code a file and 80 a function, comments and blank lines not counted. The files already over keep today's size as their own cap, and their number of long functions too (`tools/line-limits.json`); `node tools/line-limits.mjs` (lint) fails when either grows, or shrinks without the record being lowered (`--write`). New features go in files of their own (CLAUDE.md, "File size").
+
 `tests/` holds the browser tests (`.github/workflows/smoke.yml`, on every pull request; reach runs as one job per role). Each serves the site under the real Content-Security-Policy from `.htaccess` (`tests/harness.mjs`) and loads it in Chromium:
 - **unit** (`unit.test.mjs`, `npm run unit`): the site's own functions as the page loads them: escaping, the chat formatter (markup people type never becomes elements), links and inline images, database keys, usernames, tracks, avatars and dates.
 - **smoke** (`smoke.mjs`, `npm run smoke`): the site against a local database emulator. Fails on page errors or anything the policy blocks, and checks the song and theme show, YouTube's player loads, the stage effects load on first use, the service worker receives a push, and much more.
