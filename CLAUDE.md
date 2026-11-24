@@ -18,5 +18,12 @@ Lint fails when what the home page loads first grows past `tools/size-budget.jso
 
 `music/` (the library's plain pages) isn't in git: the deploy builds it with `tools/plain-pages.mjs` and uploads it in its own step, deleting pages no longer built. The main upload skips it.
 
+## jQuery
+The site's scripts use jQuery in about 1,270 places. It stays until that's zero, but only shrinks:
+- New code uses the browser's own DOM: `document.querySelector`/`querySelectorAll`, `classList`, `addEventListener`, `element.hidden`, `textContent`, `insertAdjacentHTML` with escaped values (`firetable.utilities.htmlEscape`), `fetch`. No new `$(…)`, `$.…` or jQuery plugins, in new files or old ones.
+- A function you're changing anyway drops its jQuery in the same change when that's straightforward and the tests cover it. Don't convert code you aren't otherwise touching, and never in a sweeping rewrite.
+- Lint enforces it (`tools/jquery-budget.mjs` against `tools/jquery-baseline.json`): a script with more jQuery than its baseline fails, and so does one with less until the baseline is lowered with it (`node tools/jquery-budget.mjs --write`, committed in the same pull request).
+- When the count reaches zero, take jQuery's `<script>` out of `index.html` and its address out of the CSP in `.htaccess`.
+
 ## Redesign
 The redesign plan in `docs/redesign/` is closed (November 23, 2026): every step shipped or was dropped, and nothing is queued. Don't take work from `04-step-plan.md` or offer its dropped steps (Phase 3, 1.4 and the rest) again. It stays as the record of what changed and why. For any new design work, still read `01-ground-rules.md` first, keep every feature in `02-feature-inventory.md`, and work in small steps on top of what exists, never a rewrite. `docs/` is never deployed.

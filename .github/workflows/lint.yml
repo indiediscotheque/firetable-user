@@ -1,10 +1,11 @@
 # Checks every pull request (and master, before each deploy): ESLint on the site's scripts, that the
 # stylesheets flatten for older Safari and every script and stylesheet minifies
 # (what the deploy serves), that the first load stays within its size budget
-# (tools/size-budget.mjs), a PHP syntax
+# (tools/size-budget.mjs), that no script uses more jQuery than before
+# (tools/jquery-budget.mjs), a PHP syntax
 # check on the API proxies, and that the CSP in .htaccess covers every
 # published path. Run the same locally with:
-#   npm ci && npm run lint && node tools/flatten-css.mjs --check && node tools/minify.mjs --check && node tools/size-budget.mjs && node tools/check-colours.mjs && node tools/share-cards.mjs --check && node --test tools/social/social.test.mjs && node tools/social/run.mjs check && php -l api/*.php && python3 .github/scripts/check-htaccess-scope.py
+#   npm ci && npm run lint && node tools/flatten-css.mjs --check && node tools/minify.mjs --check && node tools/size-budget.mjs && node tools/jquery-budget.mjs && node tools/check-colours.mjs && node tools/share-cards.mjs --check && node --test tools/social/social.test.mjs && node tools/social/run.mjs check && php -l api/*.php && python3 .github/scripts/check-htaccess-scope.py
 
 name: Lint
 
@@ -48,6 +49,10 @@ jobs:
       # what the home page loads first, minified and gzipped, against tools/size-budget.json
       - name: First load within its size budget
         run: node tools/size-budget.mjs
+
+      # jQuery only shrinks: no script may use it more than tools/jquery-baseline.json says
+      - name: No new jQuery
+        run: node tools/jquery-budget.mjs
 
       - name: Greys come from the palette
         run: node tools/check-colours.mjs
