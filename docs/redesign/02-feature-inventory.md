@@ -62,10 +62,10 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| NP-01 | Title and artist (artist links to Discover) | All | `#track`, `#artist`, `newSong` | 1.4 hierarchy; stays top-left of the stage |
-| NP-02 | Plays here · all versions | All | `#playStats` > `#playCount` (`tagUpdate`) | 1.4 |
-| NP-03 | First played … by …, last played … by … | All | `#firstPlay`, `#lastPlay` | 1.4 |
-| NP-04 | Tempo (BPM) | All | `#npBpm` | 1.4 |
+| NP-01 | Title and artist (artist links to Discover) | All | `#track`, `#artist`, `newSong` | keep (1.4 dropped); stays top-left of the stage |
+| NP-02 | Plays here · all versions | All | `#playStats` > `#playCount` (`tagUpdate`) | keep (1.4 dropped) |
+| NP-03 | First played … by …, last played … by … | All | `#firstPlay`, `#lastPlay` | keep (1.4 dropped) |
+| NP-04 | Tempo (BPM) | All | `#npBpm` | keep (1.4 dropped) |
 | NP-05 | Album art thumbnail | All | `#albumArt` | keep (used on narrow layouts) |
 | NP-06 | Progress bar | All | `#prgbar` > `#prgbarbar` | keep (1.8 superseded; the stage's bottom edge only if the owner asks) |
 | NP-07 | Time: elapsed (`#timrUp`) and remaining (`#timr`, shown as −m:ss since November 15, 2026) | All | `room.js` `newSong` countdown | ✗ 1.8 superseded: −m:ss time left with "Time played" / "Time left" tooltips (November 15, 2026); the player bar leaves time out on the room's song |
