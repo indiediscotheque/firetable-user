@@ -3666,8 +3666,13 @@ try {
   await kmPage.waitForFunction(() => document.getElementById("roomlogo") && firetable.tt, null, { timeout: 30000 }).catch(() => {});
   await sleep(500);
   const konamiBefore = await ttLoaded(kmPage);
-  // entered from the chat box, which keeps what was in it
-  await kmPage.click("#newchat");
+  // entered from the chat box, which keeps what was in it (this page is a visitor's: the room's panels in, as a member's)
+  await kmPage.waitForFunction(() => firetable.$appShell !== undefined, null, { timeout: 30000 }).catch(() => {});
+  await kmPage.evaluate(() => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    $("#mainGrid").removeClass("login pre-auth");
+    document.getElementById("newchat").focus();
+  });
   await kmPage.keyboard.type("hi");
   for (const k of ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"]) await kmPage.keyboard.press(k);
   await kmPage.waitForFunction(() => typeof firetable.tt._coverBox === "function", null, { timeout: 15000 }).catch(() => {});
