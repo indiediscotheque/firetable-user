@@ -2562,6 +2562,21 @@ try {
   check(playing.after.notLive.notInDiscover, "the not-live card is Live's only (" + JSON.stringify(playing.after.notLive) + ")");
   check(playing.after.avatar.drawn > 0 && playing.after.avatar.asked >= playing.after.avatar.drawn, "the DJ on the stage is never drawn past the picture asked for (" + JSON.stringify(playing.after.avatar) + ")");
 
+  console.log("-- the bar's volume: a slider with none of a text field's padding");
+  // (with it, the thumb stopped a quarter of the way in from each end, and a
+  // click a quarter of the way along meant silence)
+  const pvVol = dPage.locator("#pv-vol");
+  const volBox = await pvVol.boundingBox();
+  const volWas = await pvVol.inputValue();
+  const volAt = {};
+  for (const f of [0.25, 0.75]) {
+    await dPage.mouse.click(volBox.x + volBox.width * f, volBox.y + volBox.height / 2);
+    volAt[f] = Number(await pvVol.inputValue());
+  }
+  await pvVol.evaluate((s, v) => { s.value = v; s.dispatchEvent(new Event("input", { bubbles: true })); }, volWas);
+  check(Math.abs(volAt[0.25] - 25) <= 5 && Math.abs(volAt[0.75] - 75) <= 5 && volBox.height <= 6,
+    "a click on the bar's volume sets the volume under the pointer, on a track as thin as drawn (" + JSON.stringify({ volAt, volBox }) + ")");
+
   console.log("-- Discover: the player bar says what it plays, Discover or the room, and switches between them");
   const bar = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
