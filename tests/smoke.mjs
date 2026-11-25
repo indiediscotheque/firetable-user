@@ -1798,6 +1798,58 @@ try {
   check(sug.escaped && !sug.escaped.shown && sug.stayedClosed && sug.clicked && sug.clicked.value === "moo :cow: and :fire :sob: " && sug.focus === "newchat",
     "Escape closes them for that word, and a click picks one and keeps typing in the box (" + JSON.stringify({ clicked: sug.clicked && sug.clicked.value, focus: sug.focus }) + ")");
 
+  console.log("-- the chat box: one field, its send button");
+  const composer = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const box = document.getElementById("newchat"), send = document.getElementById("chatSend");
+    const sent = [], real = ftapi.actions.sendChat, wasDisabled = box.disabled;
+    ftapi.actions.sendChat = (t) => sent.push(t);
+    box.disabled = false;
+    const set = (v) => { box.value = v; box.dispatchEvent(new Event("input", { bubbles: true })); };
+    const mid = (el) => { const r = el.getBoundingClientRect(); return (r.top + r.bottom) / 2; };
+    const out = {};
+    try {
+      // one line: the text and both buttons share a centre line, at the buttons' height
+      set("");
+      const form = document.getElementById("newchatForm"), emoji = document.getElementById("pickEmoji");
+      out.centred = [box, emoji, send].map((el) => Math.round(Math.abs(mid(el) - mid(form)))).join();
+      out.heights = [box, emoji, send].map((el) => Math.round(el.getBoundingClientRect().height)).join();
+      out.idle = getComputedStyle(send).backgroundColor;
+      send.click();
+      out.emptySent = sent.length;
+      set("from the button");
+      out.ready = getComputedStyle(send).backgroundColor;
+      box.focus();
+      send.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+      send.click();
+      await wait(50);
+      out.sent = sent.slice();
+      out.after = box.value;
+      out.focus = document.activeElement && document.activeElement.id;
+      // with :emoji suggestions open, the button sends what's written
+      box.focus();
+      set("moo :co");
+      for (let i = 0; i < 50 && document.getElementById("ch-emojiSuggest").hidden; i++) await wait(50);
+      out.suggestOpen = !document.getElementById("ch-emojiSuggest").hidden;
+      send.click();
+      await wait(50);
+      out.sent2 = sent[sent.length - 1];
+      out.suggestAfter = !document.getElementById("ch-emojiSuggest").hidden;
+    } finally {
+      ftapi.actions.sendChat = real;
+      set("");
+      box.disabled = wasDisabled;
+      box.blur();
+    }
+    return out;
+  });
+  check(composer.centred === "0,0,0" && composer.heights === "36,36,36",
+    "the chat box's text sits centred between the emoji and send buttons, all one height (" + JSON.stringify(composer) + ")");
+  check(composer.emptySent === 0 && composer.idle !== composer.ready && composer.sent.join() === "from the button" && composer.after === "" && composer.focus === "newchat",
+    "the send button is quiet and does nothing with an empty box, then sends what's written as Enter does, empties the box and keeps it focused (" + JSON.stringify(composer) + ")");
+  check(composer.suggestOpen && composer.sent2 === "moo :co" && !composer.suggestAfter,
+    "with :emoji suggestions open, the send button sends what's written and closes them (" + JSON.stringify(composer) + ")");
+
   console.log("-- a printed card: GRAB, then YOURS / GRABBED BY / GONE");
   await put("/cards", { cardA: { owner: false, cardnum: 1 }, cardB: { owner: false, cardnum: 2 }, cardC: { owner: false, cardnum: 3 } });
   await put("/users/bot", { username: "hostbot", hostbot: true });
