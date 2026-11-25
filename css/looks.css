@@ -1542,8 +1542,10 @@ a.sociallogo[href] {
    is left out, and each says more on hover) */
 #usersStats.is-on { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.75rem; }
 #usersStats.is-on .listenerType:not([hidden]) { display: inline-flex; gap: 0.3em; white-space: nowrap; }
+/* the counts are in the words' own type, at their size: a second typeface
+   for one digit read as a smaller, odd one out */
 #usersStats #numListeners,
-#usersStats .listenerType span:first-child { font-family: var(--font-numbers); font-weight: 400; color: var(--color-text); }
+#usersStats .listenerType span:first-child { font-variant-numeric: tabular-nums; color: var(--color-text); }
 
 #allUsers {
     display: flex;
@@ -1822,7 +1824,7 @@ button.waitlist-pos {
     letter-spacing: 0.06em;
     color: var(--color-text-muted);
     & [class*="material-symbols-"] { font-size: 1rem; }
-    & .pe-count { font-family: var(--font-numbers); font-weight: 400; letter-spacing: 0; }
+    & .pe-count { font-variant-numeric: tabular-nums; font-weight: 400; letter-spacing: 0; }
     &[hidden] { display: none; }
 }
 #allUsers > #pe-djHead { padding-top: 0; }
@@ -1862,13 +1864,14 @@ button.waitlist-pos {
     gap: var(--pad2);
     margin-left: auto;
     padding-left: var(--pad1);
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     line-height: 1;
     color: var(--color-text-muted);
     & [class*="material-symbols-"] { font-size: 1.1rem; }
 }
+/* plays and times in the row's own type; equal-width digits keep the column straight */
 .pe-plays,
-.pe-away { font-family: var(--font-numbers); }
+.pe-away { font-variant-numeric: tabular-nums; }
 .pe-away:empty { display: none; }
 .pe-now { color: var(--color-accent); }
 .pe-fire { color: var(--color-accent); }
@@ -7592,7 +7595,7 @@ body.ft-discover #pe-here { display: none !important; }
     letter-spacing: 0.06em;
     color: var(--color-text-w66);
 }
-.pe-count { font-family: var(--font-numbers); font-weight: 400; }
+.pe-count { font-variant-numeric: tabular-nums; font-weight: 400; }
 .pe-list { list-style: none; margin: 0; padding: 0; }
 .pe-row {
     display: flex;
@@ -7646,7 +7649,7 @@ body.ft-discover #pe-here { display: none !important; }
     letter-spacing: 0.06em;
     color: var(--color-text-muted);
     & [class*="material-symbols-"] { font-size: 1rem; }
-    & > span:last-child { font-family: var(--font-numbers); font-weight: 400; }
+    & > span:last-child { font-variant-numeric: tabular-nums; font-weight: 400; letter-spacing: 0; }
 }
 .pe-audList { list-style: none; margin: 0; padding: 0; }
 .pe-audRow {
@@ -7672,7 +7675,7 @@ body.ft-discover #pe-here { display: none !important; }
     white-space: nowrap;
     font-weight: var(--weight-thin);
 }
-.pe-audN { flex: none; margin-left: auto; font-family: var(--font-numbers); color: var(--color-text-muted); }
+.pe-audN { flex: none; margin-left: auto; font-variant-numeric: tabular-nums; color: var(--color-text-muted); }
 .pe-audRow.is-unplaced {
     & .pe-audName { color: var(--color-text-muted); }
     & .pe-flag { color: var(--color-icon); }
