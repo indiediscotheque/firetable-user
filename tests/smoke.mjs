@@ -200,6 +200,21 @@ try {
     "a preview plays over the room: the room keeps its player, at a fifth of the volume (" + JSON.stringify(over) + ")");
   check(over.skipped || (!over.after.active && over.after.roomVol === 60 && over.saved === "0"), "stopping it brings the room back up; the setting is remembered");
   check(!loaded("p5.min.js"), "the album-art glitch's p5.js isn't loaded with the page");
+  // a preview starts a quarter of the way in, once its length is known, and only once
+  const quarter = await page.evaluate(() => {
+    const seeks = [];
+    const yt = (d) => ({ getDuration: () => d, seekTo: (s) => seeks.push(s) });
+    firetable.media.quarterFor = "q1";
+    firetable.media.toQuarter(yt(200), "another");
+    firetable.media.toQuarter(yt(200), "q1");
+    firetable.media.toQuarter(yt(200), "q1"); // played again after buffering: stays where it is
+    firetable.media.quarterFor = "q2";
+    firetable.media.toQuarter(yt(0), "q2"); // its length isn't known yet: it waits
+    const waiting = firetable.media.quarterFor;
+    firetable.media.quarterFor = null;
+    return { seeks: seeks.join(), waiting };
+  });
+  check(quarter.seeks === "50" && quarter.waiting === "q2", "a preview starts a quarter of the way into the song, once (" + JSON.stringify(quarter) + ")");
 
   console.log("-- the song's tempo leads the plays line");
   await put("/tagUpdate", { cid: youtubeSong.cid, adamData: { track_name: "Smoke Song", artist: "Smoke Artist", playcount: 67 } });
@@ -4221,7 +4236,20 @@ try {
     firetable.discover.onFailed = skip;
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await wait(200);
-    out.liveHome = inLive() && document.getElementById("cr-playHere").hidden;
+    out.liveHome = inLive();
+    // Live's Play: the playlist as 30-second previews, one after another; again stops them
+    const lp = document.getElementById("cr-playHere");
+    out.livePlay = !lp.hidden && /Preview this playlist/.test(lp.getAttribute("aria-label") || "");
+    const order = Object.keys(ftapi.queue).sort(ftapi.utilities.compareKeys);
+    lp.click();
+    await wait(200);
+    out.runFirst = firetable.preview === order[0] && lp.classList.contains("on");
+    ftapi.events.emit("previewEnded", order[0]); // as its 30 seconds end
+    await wait(200);
+    out.runNext = firetable.preview === order[1];
+    lp.click();
+    await wait(200);
+    out.runStopped = !firetable.preview && !lp.classList.contains("on");
     return out;
   });
   check(member.moved && !member.tools.length && member.toolsShown && member.bar, "the Playlists tab is Live's own playlist panel, every tool with it, and no second Play / Shuffle / DJ row above it (" + JSON.stringify(member) + ")");
@@ -4231,7 +4259,9 @@ try {
   check(member.playHere && member.playHereTop, "Play here, before the picker, plays the playlist from the top (" + JSON.stringify(member) + ")");
   check(member.shuffleOn && member.shuffled && member.shuffleBack && member.shuffleOff,
     "the player's Shuffle: Next plays songs not heard yet until there are none, Previous goes back, and it turns off (" + JSON.stringify(member) + ")");
-  check(member.backOnChat && member.inAgain && member.liveHome, "Chat and Live get Live its panel back (without Play here), and Playlists takes it again (" + JSON.stringify(member) + ")");
+  check(member.backOnChat && member.inAgain && member.liveHome, "Chat and Live get Live its panel back, and Playlists takes it again (" + JSON.stringify(member) + ")");
+  check(member.livePlay && member.runFirst && member.runNext && member.runStopped,
+    "in Live, Play previews the playlist a song at a time, on to the next as each ends, and stops on a second tap (" + JSON.stringify(member) + ")");
   check(member.first && member.done && /First in/.test(member.note || "") && member.undone && member.fire,
     "Play it in the room puts the song first in the DJ playlist, says so, and Undo takes it out; listening in, Fire is in the bar (" + JSON.stringify(member) + ")");
 
