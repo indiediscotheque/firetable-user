@@ -507,6 +507,44 @@ try {
   await put("/queues/smoke/k5", null);
   await page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
 
+  console.log("-- the end of a set: Step down after this song in a track's ⋮, a line under it, one mark a list");
+  const markSetEnd = (key) => page.evaluate((key) => {
+    document.querySelector('#mainqueue .pvbar[data-key="' + key + '"] .row-more').click();
+    const item = document.querySelector('#trackMenuPopover [data-act="busstop"]');
+    const out = { shown: !item.hidden, label: item.textContent.trim() };
+    if (out.shown) item.click();
+    else document.getElementById("trackMenuPopover").hidePopover();
+    return out;
+  }, key);
+  const redraw = () => page.evaluate(() => ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val(), "0")));
+  let mk = await markSetEnd("k2");
+  await sleep(800);
+  q = await listNow();
+  check(mk.shown && mk.label === "departure_board Step down after this song" && q.k2.busStop === true && !q.k1.busStop && !q.k4.busStop,
+    "your DJ playlist's track menu marks a track as your set's last (" + JSON.stringify(mk) + ")");
+  await redraw();
+  const line = await page.evaluate(() => {
+    const row = document.querySelector('#mainqueue .pvbar[data-key="k2"]');
+    return { cls: row.classList.contains("is-busstop"), shadow: getComputedStyle(row).boxShadow, tag: getComputedStyle(row.querySelector(".listwords"), "::after").content,
+      others: document.querySelectorAll("#mainqueue .pvbar.is-busstop").length, end: firetable.setEnd.find(firetable.queue) };
+  });
+  check(line.cls && /inset/.test(line.shadow) && line.tag === '"Last song"' && line.others === 1 && line.end.key === "k2" && line.end.songs === 2,
+    "a line and a Last song tag under it, and the set's length counts playable songs (" + JSON.stringify(line) + ")");
+  mk = await markSetEnd("k4");
+  await sleep(800);
+  q = await listNow();
+  check(q.k4.busStop === true && !q.k2.busStop, "marking another track moves the end of the set: one mark a list");
+  await redraw();
+  mk = await markSetEnd("k4");
+  await sleep(800);
+  q = await listNow();
+  check(mk.label === "departure_board Don't end my set here" && !Object.values(q).some((t) => t.busStop), "on the marked track the item takes the mark off");
+  await page.evaluate(() => document.getElementById("mainqueue").classList.remove("is-djlist")); // as on a list you don't DJ from
+  mk = await markSetEnd("k1");
+  check(!mk.shown, "not on a list you don't DJ from");
+  await page.evaluate(() => firetable.ui.markDjList());
+  await redraw();
+
   console.log("-- the playlist's tools: two rows, a ⋮ menu for the list, Show only for the filters");
   const tools = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -862,7 +900,7 @@ try {
     if (realClip) Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: realClip } });
     return out;
   });
-  check(oneMenu.crate === "sheet,add,open,copy,tags,swaptags,swap,bottom,delsearch,delete" && oneMenu.recent === "sheet,open,copy,tags,flag" && oneMenu.words && oneMenu.mods === "sheet,open,copy,|Mods:,tags,flag",
+  check(oneMenu.crate === "sheet,add,open,copy,tags,swaptags,swap,bottom,busstop,delsearch,delete" && oneMenu.recent === "sheet,open,copy,tags,flag" && oneMenu.words && oneMenu.mods === "sheet,open,copy,|Mods:,tags,flag",
     "a playlist row's ⋮ and Recent's ⋮ come from the one song menu, in its order and words (" + JSON.stringify(oneMenu) + ")");
   check(oneMenu.copyShown && /^https:\/\/www\.youtube\.com\/watch\?v=finevideo01\|Link copied/.test(oneMenu.copied) && oneMenu.sheet === "Track|Fine",
     "a playlist row's ⋮: Copy the song's link, and About this song opens the song's sheet (" + JSON.stringify(oneMenu) + ")");

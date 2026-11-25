@@ -158,6 +158,22 @@ try {
     await ftapi.actions.dismissSwap(ref, key, "aaaaaaaaaaa");
     ftapi.actions.unflagTrack(key);
   });
+  await step(fan, "playlists: end your set on a track, move the mark, take it off (js/set-end.js)", async () => {
+    for (const id of [window.__list, "0"]) { // a playlist and the default list (queues/)
+      ftapi.queueRef = ftapi.lookup.listRef(id);
+      const read = async () => (await ftapi.queueRef.once("value")).val() || {};
+      firetable.queue = await read();
+      const keys = Object.keys(firetable.queue);
+      await firetable.setEnd.mark(keys[0], true);
+      firetable.queue = await read();
+      await firetable.setEnd.mark(keys[1], true); // moves it: one mark a list
+      firetable.queue = await read();
+      const marked = Object.keys(firetable.queue).filter((k) => firetable.queue[k].busStop);
+      if (marked.join() !== keys[1]) throw new Error(id + ": marked " + marked.join());
+      await firetable.setEnd.mark(keys[1], false);
+    }
+    ftapi.queueRef = ftapi.lookup.listRef(window.__list);
+  });
   await step(fan, "import a list of songs: ask the room's bot, then take the job back (1.20)", async () => {
     const I = firetable.importer;
     I.open();

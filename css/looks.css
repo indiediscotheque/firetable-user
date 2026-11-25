@@ -3581,6 +3581,29 @@ input.ft-filter {
     color: var(--color-orange-lite);
 }
 #mainqueue.is-djlist .q-next { display: inline-block; }
+
+/* The last song of your set (js/set-end.js): a line under it and a tag, on
+   your DJ playlist in your play order. Drawn with shadows, not borders or
+   anything outside the row (it clips), so the row keeps its exact height
+   for the long-list blocks above. */
+#mainqueue.is-djlist:not(.cr-sorted) .pvbar.is-busstop {
+    box-shadow: inset 0 -2px 0 var(--color-accent), 0 3px 0 var(--color-accent);
+
+    & .listwords::after {
+        content: "Last song";
+        flex: none;
+        margin-left: var(--pad2);
+        padding: 0.1rem 0.4rem;
+        border-radius: var(--radius-pill);
+        font-size: var(--fs-micro);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+        color: var(--color-orange-lite);
+    }
+}
 .q-broken {
     background: color-mix(in srgb, var(--color-danger) 28%, transparent);
     color: var(--color-broken-text);
