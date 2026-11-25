@@ -595,6 +595,7 @@ firetable.ui.renderInbox = function () {
       .appendTo($body);
     $('<div class="inboxText"></div>').html(firetable.ui.formatChatText(String(m.txt || ""))).appendTo($body);
     $('<div class="inboxActions"></div>')
+      .append('<button type="button" class="butt graybutt small inboxGo" title="Show it in the chat">Show</button>')
       .append('<button type="button" class="butt graybutt small inboxReply">Reply</button>')
       .append('<button type="button" class="row-icon material-symbols-outlined inboxDelete" title="Delete" aria-label="Delete">close</button>')
       .appendTo($row);
@@ -1439,23 +1440,17 @@ firetable.ui.setupChatEvents = function () {
     firetable.ui.positionPopover(inboxTrigger, inboxPop, document.getElementById('inboxArrow'), 'bottom');
     firetable.actions.markInboxRead();
   });
-  firetable.ui.openInbox = function () {
-    if (ftapi.uid && !inboxPop.matches(':popover-open')) inboxPop.showPopover();
-  };
-  // A tapped push notification opens the app at #mentions: show the inbox
-  // once signed in (and its mentions have loaded), then drop the #.
-  // A card notice opens it at #cards: show the card case.
-  var wantsInbox = location.hash === '#mentions';
+  // A tapped mention notification opens the app at #mentions/<id>: Live, at
+  // that message in the chat once you're signed in and it has loaded (js/lazy.js).
+  ftapi.events.on('chatHistoryLoaded', firetable.mentionJump.resume);
+  ftapi.events.on('loggedIn', firetable.mentionJump.resume);
+  // A card notice opens it at #cards: show the card case once signed in.
   var wantsCards = location.hash === '#cards';
-  if (wantsInbox || wantsCards) history.replaceState(null, '', location.pathname + location.search);
+  if (wantsCards) history.replaceState(null, '', location.pathname + location.search);
   ftapi.events.on('loggedIn', function () {
-    if (wantsCards) {
-      wantsCards = false;
-      setTimeout(function () { firetable.nav.setView('cards'); }, 800);
-    }
-    if (!wantsInbox) return;
-    wantsInbox = false;
-    setTimeout(firetable.ui.openInbox, 800);
+    if (!wantsCards) return;
+    wantsCards = false;
+    setTimeout(function () { firetable.nav.setView('cards'); }, 800);
   });
   $(inboxPop).on('click', '.inboxReply', function () {
     var id = $(this).closest('.inboxItem').attr('data-id');

@@ -7937,6 +7937,24 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
 .inboxText { font-size: 0.85rem; overflow-wrap: anywhere; }
 .inboxText img.emoji { width: 1em; height: 1em; }
 .inboxActions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+/* a row takes you to its message in the room's chat (js/mention-jump.js) */
+.inboxItem[data-id] { cursor: pointer; }
+.inboxItem[data-id]:hover { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+/* the message a tapped mention took you to, lit for a moment */
+.chatText.mentionFlash {
+    border-radius: var(--radius-sm);
+    animation: mention-flash 2.4s ease-out both;
+}
+@keyframes mention-flash {
+    0%, 35% {
+        background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+        box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--color-accent) 30%, transparent);
+    }
+    100% { background: transparent; box-shadow: 0 0 0 0.25rem transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .chatText.mentionFlash { animation-timing-function: steps(1, end); }
+}
 
 /* ─── Grab stats in Profile (#47) ─── */
 .grabStatsBox {
