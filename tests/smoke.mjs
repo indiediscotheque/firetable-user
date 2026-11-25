@@ -1805,6 +1805,7 @@ try {
     const sent = [], real = ftapi.actions.sendChat, wasDisabled = box.disabled;
     ftapi.actions.sendChat = (t) => sent.push(t);
     box.disabled = false;
+    send.style.transition = "none"; // its colours fade (140ms): read where they land, not mid-fade
     const set = (v) => { box.value = v; box.dispatchEvent(new Event("input", { bubbles: true })); };
     const mid = (el) => { const r = el.getBoundingClientRect(); return (r.top + r.bottom) / 2; };
     const out = {};
@@ -1837,6 +1838,7 @@ try {
       out.suggestAfter = !document.getElementById("ch-emojiSuggest").hidden;
     } finally {
       ftapi.actions.sendChat = real;
+      send.style.transition = "";
       set("");
       box.disabled = wasDisabled;
       box.blur();
