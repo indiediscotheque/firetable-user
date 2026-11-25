@@ -1864,7 +1864,9 @@ firetable.discover = (function () {
 
   function renderSide() {
     var el = document.getElementById("dSide");
-    if (!el) return;
+    // Live's panel and chat come over only while Discover is on screen: drawn in
+    // Live (a refresh signs in after setMode), they'd vanish into its hidden column
+    if (!el || D.mode !== "discover") { queue.back(); chatBack(); renderBar(); renderFull(); firetable.ui.markSaved(); return; }
     if (D.sideTab !== "list" && !(D.sideTab === "chat" && D.signedIn)) D.sideTab = "list";
     // the chat's tab: only its tabs change, so the chat keeps its place
     if (D.sideTab === "chat" && D.signedIn && el.querySelector(".d-chathost #actualChat")) {
