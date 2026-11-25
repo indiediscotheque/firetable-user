@@ -318,15 +318,32 @@ body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
     cursor: pointer;
 }
 .tt-guest:hover, .tt-guest:focus-visible { background: #343434; }
-/* only someone gone from the room (a DJ still on deck) dims, as in Live; idle people don't */
+/* only someone gone from the room (a DJ still on deck) dims, as in Live; someone away only greys their name */
 .tt-guest.tt-gone { opacity: 0.66; }
 .tt-gname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* status (js/people.js), as Live's list has it: the face's dot green here, orange away, and
+   from five minutes on how long (js/people.js ticks it once a minute) */
+.tt-pres {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: var(--color-online);
+    box-shadow: 0 0 0 2px var(--tt-panel);
+}
+.tt-guest:hover .tt-pres, .tt-guest:focus-visible .tt-pres { box-shadow: 0 0 0 2px #343434; }
+.tt-guest.tt-idle .tt-pres { background: var(--color-away); }
+.tt-guest.tt-idle .tt-gname { color: var(--tt-muted); }
+.tt-away { margin-left: auto; padding-left: 0.4rem; color: var(--tt-muted); font: 400 0.75rem/1 var(--tt-font); font-variant-numeric: tabular-nums; }
+.tt-away:empty { display: none; }
 .tt-face, body.tt-skin .ft-avatar[data-tt]::after {
     background: #1c1c1c var(--tt-face, none) no-repeat;
     background-size: var(--tt-fsize, cover);
     background-position: var(--tt-fpos, center);
 }
-.tt-face { flex: none; width: 1.75rem; height: 1.75rem; border-radius: 50%; box-shadow: 0 0 0 1px #444; }
+.tt-face { position: relative; flex: none; width: 1.75rem; height: 1.75rem; border-radius: 50%; box-shadow: 0 0 0 1px #444; }
 .tt-b { font-size: 0.95rem; color: var(--tt-muted); }
 .tt-bmod { color: #5fb760; }
 .tt-bawe { color: var(--tt-gold); }
@@ -782,6 +799,7 @@ body.tt-skin #screenover { display: none; }
 .tt-plate b { font-weight: 700; }
 .tt-plays { font-weight: 400; opacity: 0.85; }
 .tt-plays::before { content: " · "; }
+.tt-seat.tt-idle .tt-plays::after { content: " · away"; }
 .tt-seat.tt-on .tt-plate, .tt-seat:hover .tt-plate, .tt-seat:focus-within .tt-plate { opacity: 1; }
 .tt-empty { z-index: 4; }
 /* a DJ's menu, under their laptop (deepcut's: a dark list, their name in gold) */
@@ -894,6 +912,22 @@ body.tt-skin #screenover { display: none; }
     background: radial-gradient(ellipse, rgba(227, 191, 35, 0.55), transparent 70%);
     z-index: -1;
 }
+/* someone away dozes where they stand, DJ or not: "z z Z" drifting up over their head */
+.tt-listener.tt-idle::before, .tt-seat.tt-idle .tt-dj::before {
+    content: "z z Z";
+    position: absolute;
+    left: 58%;
+    top: -4px;
+    z-index: 1;
+    color: #fff;
+    font: italic 700 22px/1 var(--tt-font);
+    letter-spacing: 1px;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+    pointer-events: none;
+    animation: tt-doze 3.2s ease-in-out infinite;
+    animation-delay: inherit;
+}
 .tt-fig { position: relative; display: block; width: var(--w); height: var(--h); }
 .tt-fig > span {
     position: absolute;
@@ -959,6 +993,7 @@ body.has-beat #tt-room.tt-dance .tt-seat:not(.tt-fired) .tt-head { animation-dur
     83.333% { transform: none; animation-timing-function: steps(2, end); }
     100% { transform: none; }
 }
+@keyframes tt-doze { 0% { opacity: 0; translate: 0 8px; } 30%, 65% { opacity: 0.9; } 100% { opacity: 0; translate: 10px -16px; } }
 @keyframes tt-arrive { from { opacity: 0; translate: 0 12px; } }
 @keyframes tt-sweep { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(40deg) brightness(1.15); } }
 @keyframes tt-twinkle { 50% { opacity: 0.7; } }
@@ -1219,5 +1254,7 @@ body.has-beat #tt-room.tt-dance .tt-seat:not(.tt-fired) .tt-head { animation-dur
 
 @media (prefers-reduced-motion: reduce) {
     body.tt-skin #tt-room *,
-    body.tt-skin #tt-room *::after { animation: none !important; transition: none !important; }
+    body.tt-skin #tt-room *::after,
+    body.tt-skin #tt-room .tt-idle::before,
+    body.tt-skin #tt-room .tt-idle .tt-dj::before { animation: none !important; transition: none !important; }
 }

@@ -77,6 +77,21 @@ firetable.people = (function () {
     return !p.ghost && !u.hostbot && !!(u.idle && u.idle.isIdle);
   }
 
+  /**
+   * Someone's status, by the same rule as their row here (for the Turntable
+   * theme and the profile card): {away, since, time, label}. `time` is "12m"
+   * from five minutes on; `label` is what to say ("Here", "Away for 12m",
+   * "Not on the site" for a DJ who dropped off).
+   */
+  function status(uid) {
+    var u = ftapi.users && ftapi.users[uid];
+    if (!u) return { gone: true, away: false, since: 0, time: "", label: "Not on the site" };
+    var away = isIdle({ user: u });
+    var since = away ? +u.idle.since || 0 : 0;
+    var time = since ? awayFor(since) : "";
+    return { gone: false, away: away, since: since, time: time, label: away ? "Away" + (time ? " for " + time : "") : "Here" };
+  }
+
   /** What a DJ's row says at its end: playing or next, leaving, and plays this turn. */
   function djMeta(p) {
     var html = "";
@@ -195,12 +210,13 @@ firetable.people = (function () {
     if (firetable.ui.tooltip && firetable.ui.tooltip.refreshUserTip) firetable.ui.tooltip.refreshUserTip();
   }
 
-  /** Once a minute: how long each idle person has been away. */
+  /** Once a minute: how long each idle person has been away (here, and in the Turntable theme's list). */
   function tick() {
     if (document.hidden) return;
     var list = byId("allUsers");
-    if (!list) return;
-    Array.prototype.forEach.call(list.querySelectorAll(".pe-away[data-since]"), function (el) {
+    var els = [].slice.call(document.querySelectorAll(".pe-away[data-since]"));
+    if (list && !list.isConnected) els = els.concat([].slice.call(list.querySelectorAll(".pe-away[data-since]")));
+    els.forEach(function (el) {
       var away = awayFor(+el.getAttribute("data-since"));
       if (el.textContent !== away) el.textContent = away;
       if (away) el.title = "Away for " + away;
@@ -223,6 +239,7 @@ firetable.people = (function () {
       document.addEventListener("visibilitychange", tick);
     },
     render: render,
+    status: status,
     /** For tests: "12m" for a time `ms` ago. */
     awayFor: awayFor
   };
