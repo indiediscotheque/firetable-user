@@ -895,7 +895,7 @@ function buildQueueItemHTML(key, track, isPreview, pos) {
 
   var picked = !!(firetable.queueSel && firetable.queueSel[key]);
   return (
-    '<div class="pvbar' + (isPreview ? ' previewing' : '') + (swap ? ' has-swap' : '') + (picked ? ' is-picked' : '') + '" id="pvbar' + key + '"' +
+    '<div class="pvbar' + (isPreview ? ' previewing' : '') + (swap ? ' has-swap' : '') + (picked ? ' is-picked' : '') + (track.busStop ? ' is-busstop' : '') + '" id="pvbar' + key + '"' +
     ' data-key="' + key + '" data-type="' + track.type + '"' +
     ' data-cid="' + firetable.utilities.htmlEscape(String(track.cid)) + '"' +
     ' data-tags="' + safeTrackName + '" data-broken="' + (track.flagged ? '1' : '0') + '"' +

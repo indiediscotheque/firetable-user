@@ -9,6 +9,8 @@
  *   - in a while: !removeafter 30m (finishing the song playing then)
  *   - your own number of songs or minutes
  *   - stay on, when there's a bus to cancel: !dontremoveme
+ * It also says where your set ends, when you've marked a song in your DJ
+ * playlist for that (js/set-end.js).
  * A mod's choice for someone else ends with their name (!removeafter 3 Bea).
  * The bot owns table/ and waitlist/, so all of it is a bot command
  * (firetable-hostbot lib/bus.js); the seat it saves (removeAfter, busSongs,
@@ -104,6 +106,12 @@ firetable.busMenu = (function () {
     }).join("") + "</div>";
   }
 
+  /** Where your set ends, if you marked a track in your DJ playlist and it's the list on screen (js/set-end.js). */
+  function setEnd() {
+    var q = document.getElementById("mainqueue");
+    return !!firetable.setEnd && !!q && q.classList.contains("is-djlist") && firetable.setEnd.find(firetable.queue);
+  }
+
   /** The menu's contents, for this person as they are now. */
   function render() {
     var at = seatOf(who.uid);
@@ -112,6 +120,8 @@ firetable.busMenu = (function () {
     var first = at.playing ? "After this song" : who.self ? "After my next song" : "After their next song";
     var html = '<div class="ft-menu-title" id="busMenuTitle">' + esc(title) + "</div>";
     if (now) html += '<p class="bus-now">' + esc((who.self ? "You're stepping down " : who.name + " steps down ") + now + ".") + "</p>";
+    var end = who.self && setEnd();
+    if (end) html += '<p class="bus-now">' + esc("Your set ends with " + end.name + (end.songs > 1 ? ", " + end.songs + " songs from now." : ", your next song.")) + "</p>";
     html += '<button type="button" role="menuitem" class="butt graybutt" data-bus="s:1"><i class="material-symbols-outlined">departure_board</i> ' + first + "</button>";
     html += chips("After", SONGS.map(function (n) { return ["s:" + n, n + " songs"]; }));
     html += chips("In", TIMES.map(function (t) { return ["m:" + t[0], t[1]]; }));
