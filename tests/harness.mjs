@@ -90,9 +90,15 @@ export async function openPage(page, url, { timeout = 60000 } = {}) {
   }
 }
 
-/** Chromium options: through the HTTPS proxy when there is one (CDN files), never for the local servers. */
-export const launchOptions = () =>
-  process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: "127.0.0.1,localhost" } } : {};
+/**
+ * Chromium options: through the HTTPS proxy when there is one (CDN files), never for the local servers.
+ * `hosts` are made-up names that also mean this computer (http://live.test:<port>/), for what the
+ * site only does away from 127.0.0.1 (js/analytics.js).
+ */
+export const launchOptions = ({ hosts = [] } = {}) => ({
+  ...(hosts.length ? { args: ["--host-resolver-rules=" + hosts.map((h) => "MAP " + h + " 127.0.0.1").join(", ")] } : {}),
+  ...(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: ["127.0.0.1", "localhost", ...hosts].join(",") } } : {})
+});
 
 /**
  * A real account in the auth emulator (made, or reused from an earlier run);
