@@ -4,7 +4,7 @@
 // TikTok, YouTube and Pinterest rank on the words in a caption as much as its
 // tags. Never deployed (tools/).
 
-// the room's 33 genres (discover/lib/genres), most specific tag first
+// the room's 32 genres (discover/lib/genres), most specific tag first
 export const GENRES = {
   "Nu-Disco": { phrase: "nu-disco", tags: ["NuDisco", "Disco", "DanceMusic"] },
   "Disco": { phrase: "disco", tags: ["Disco", "DiscoMusic", "DanceMusic"] },
@@ -28,7 +28,6 @@ export const GENRES = {
   "Dream Pop": { phrase: "dream pop", tags: ["DreamPop", "IndieMusic"] },
   "Chillwave": { phrase: "chillwave", tags: ["Chillwave", "DreamPop"] },
   "Downtempo": { phrase: "downtempo", tags: ["Downtempo", "Chillout"] },
-  "Ambient": { phrase: "ambient", tags: ["AmbientMusic", "Ambient"] },
   "New Wave": { phrase: "new wave", tags: ["NewWave", "80sMusic"] },
   "Post-Punk & Darkwave": { phrase: "post-punk", tags: ["PostPunk", "Darkwave", "Coldwave"] },
   "Psych": { phrase: "psych", tags: ["Psychedelic", "PsychRock"] },
@@ -45,7 +44,7 @@ export const GENRES = {
 const APPLE = {
   "Dance": "EDM", "Electronic": "Electronic", "House": "House", "Techno": "Techno", "Disco": "Disco", "Pop": "Pop", "Alternative": "Indie",
   "Indie Pop": "Indie Pop", "Indie Rock": "Indie Rock", "Rock": "Rock", "R&B/Soul": "Soul & R&B", "Hip-Hop/Rap": "Hip Hop", "Jazz": "Jazz & Swing",
-  "Ambient": "Ambient", "Downtempo": "Downtempo", "Funk": "Funk", "New Wave": "New Wave", "Synth-Pop": "Synthpop", "Electronica": "Electronica"
+  "Ambient": "Downtempo", "Downtempo": "Downtempo", "Funk": "Funk", "New Wave": "New Wave", "Synth-Pop": "Synthpop", "Electronica": "Electronica"
 };
 
 /** The room's genre name for a song: its own tag, else Apple's mapped onto the room's. */
