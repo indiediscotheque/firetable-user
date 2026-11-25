@@ -1338,9 +1338,6 @@ firetable.ui.setupRoomEvents = function () {
   ftapi.events.on("waitlistChanged", function (data) {
     firetable.waitlistData = data;
 
-    // Restore any users previously hidden due to waitlist
-    $('#allUsers .prson[data-waitlist-hidden]').show().removeAttr('data-waitlist-hidden');
-
     var html = '';
     var hasEntries = false;
     var selfInWaitlist = false;
@@ -1388,8 +1385,7 @@ firetable.ui.setupRoomEvents = function () {
             ');"></div>' +
             '</div>';
 
-          // Hide this user from the regular user list
-          $('#user' + userId).attr('data-waitlist-hidden', '1').hide();
+          // (their row leaves the people list: js/people.js draws it without the waitlist)
           countr++;
         }
       }
@@ -1423,11 +1419,13 @@ firetable.ui.setupRoomEvents = function () {
       }
       $wl.html(wlLabel + html + addMeRow).addClass('has-entries');
     } else {
+      // Nobody waiting: one line, and Hop on only for someone who can (a
+      // DJ already on the decks had a greyed-out button that did nothing)
       $wl.html(
         wlLabel +
         '<div class="waitlist-empty">' +
-        '<span class="waitlist-empty-msg">Less than 4 DJs = no need to wait!</span>' +
-        (ftapi.uid && !selfInWaitlist ? '<button class="butt graybutt small wlAddMeBtn"' + (isSelfOnDeck ? ' disabled' : '') + '>Hop on <span class="material-symbols-filled">queue_music</span></button>' : '') +
+        '<span class="waitlist-empty-msg">' + (Object.keys(firetable.tableData || {}).length < 4 ? 'Less than 4 DJs = no need to wait!' : 'The decks are full. Nobody is waiting yet.') + '</span>' +
+        (showJoinBtn ? '<button class="butt graybutt small wlAddMeBtn">Hop on <span class="material-symbols-filled">queue_music</span></button>' : '') +
         '</div>'
       ).removeClass('has-entries');
     }
@@ -1500,7 +1498,6 @@ firetable.ui.setupRoomEvents = function () {
       ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
     });
 
-    if (firetable.ui && firetable.ui.syncGhostUsers) firetable.ui.syncGhostUsers();
     if (firetable.ui && firetable.ui.renderRoomPulse) firetable.ui.renderRoomPulse();
     // Re-render the waitlist UI so the Play button reflects updated deck membership
     if (firetable.waitlistData !== undefined) {

@@ -10,7 +10,8 @@
  *   one, and closing the page or signing in says goodbye.
  * - A member's page only asks for the counts, while it's visible.
  *
- * Shown in the people list's header (#usersStats) and under it (#pe-audience),
+ * Shown in the people list's header (#usersStats) and under the members
+ * (#pe-audience; the members' own rows are js/people.js),
  * in a visitor's list (#pe-here, users.js) and the Turntable theme's People
  * (ttskin.js, on "audienceChanged").
  */
@@ -151,19 +152,20 @@ firetable.audience = (function () {
     var plural = firetable.utilities.pluralize;
     var m = members();
     var radio = d.stream ? d.stream.listeners : 0;
-    var set = function (id, n, label) {
+    // each count in words; one that's none is left out (the total still adds up)
+    var set = function (id, n, label, shown) {
       var el = byId(id);
       if (!el) return;
       el.textContent = n;
       var row = el.closest(".listenerType");
-      if (row) { row.title = label; row.setAttribute("aria-label", label); row.setAttribute("role", "img"); }
+      if (row) { row.title = label; row.setAttribute("aria-label", label); row.setAttribute("role", "img"); row.hidden = !shown; }
     };
     byId("numListeners").textContent = m + d.guests + radio;
-    set("numRoomListeners", m, plural(m, "member", "members") + " in the room");
-    set("pe-numGuests", d.guests, plural(d.guests, "guest", "guests") + " without an account" + (d.guestsLive ? ", " + d.guestsLive + " listening live" : ""));
-    set("numStreamListeners", radio, plural(radio, "person", "people") + " listening on the radio");
-    var streamRow = byId("numStreamListeners");
-    if (streamRow && streamRow.closest(".listenerType")) streamRow.closest(".listenerType").hidden = !d.stream;
+    set("numRoomListeners", m, plural(m, "member", "members") + " in the room", true);
+    set("pe-numGuests", d.guests, plural(d.guests, "guest", "guests") + " without an account" + (d.guestsLive ? ", " + d.guestsLive + " listening live" : ""), d.guests > 0);
+    set("numStreamListeners", radio, plural(radio, "person", "people") + " listening on the radio", radio > 0);
+    var word = byId("pe-guestWord");
+    if (word) word.textContent = d.guests === 1 ? "guest" : "guests";
   }
 
   /** "🇺🇸" from "US" (Windows draws the letters, so emojify swaps in Twemoji's picture). */
@@ -196,17 +198,19 @@ firetable.audience = (function () {
       return n ? '<li class="pe-audRow is-unplaced">' + flag("") + '<span class="pe-audName">Somewhere</span><span class="pe-audN">' + n + "</span></li>" : "";
     };
     var label = function (what, n) { return what + " by country" + (n > 1 ? ", " + n + " countries" : ""); };
-    if (d.stream) {
+    // a group with nobody in it is left out: an empty heading and "No guests
+    // right now." took four lines to say nothing
+    if (d.stream && d.stream.listeners) {
       var rows = d.stream.countries.map(row).join("") + somewhere(d.stream.unplaced);
       html += '<h3 class="' + p + '-group pe-audHead">' + ms("radio") + "On the radio <span>" + d.stream.listeners + "</span></h3>" +
-        (rows ? '<ul class="pe-audList" aria-label="' + label("Radio listeners", d.stream.countries.length) + '">' + rows + "</ul>"
-          : '<p class="pe-audNote">Nobody on the stream right now.</p>');
+        (rows ? '<ul class="pe-audList" aria-label="' + label("Radio listeners", d.stream.countries.length) + '">' + rows + "</ul>" : "");
     }
     // where the guests are (from their time zones), then how many of them hear the room
-    html += '<h3 class="' + p + '-group pe-audHead">' + ms("person") + "Guests <span>" + d.guests + "</span></h3>" +
-      (d.guests ? '<ul class="pe-audList" aria-label="' + label("Guests", d.guestCountries.length) + '">' + d.guestCountries.map(row).join("") + somewhere(d.guestsUnplaced) +
-        '<li class="pe-audRow is-live">' + ms("headphones", "pe-flag") + '<span class="pe-audName">Listening live</span><span class="pe-audN">' + d.guestsLive + "</span></li></ul>"
-        : '<p class="pe-audNote">No guests right now.</p>');
+    if (d.guests) {
+      html += '<h3 class="' + p + '-group pe-audHead">' + ms("person") + "Guests <span>" + d.guests + "</span></h3>" +
+        '<ul class="pe-audList" aria-label="' + label("Guests", d.guestCountries.length) + '">' + d.guestCountries.map(row).join("") + somewhere(d.guestsUnplaced) +
+        '<li class="pe-audRow is-live">' + ms("headphones", "pe-flag") + '<span class="pe-audName">Listening live</span><span class="pe-audN">' + d.guestsLive + "</span></li></ul>";
+    }
     return html;
   }
 

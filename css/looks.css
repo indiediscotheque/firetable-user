@@ -1533,22 +1533,17 @@ a.sociallogo[href] {
 
 #usersStats .listenerType {
     display: none;
-    align-items: center;
-    font-size: 0.875rem;
-    font-weight: 700;
+    align-items: baseline;
+    font-size: 0.75rem;
 }
 
-#usersStats [class*="material-symbols-"] {
-    font-size: 1rem;
-    color: var(--color-text-muted);
-}
-
-/* Shown once js/audience.js has the counts: everyone, then members in the
-   room, guests on the site and radio listeners (each says so on hover) */
-#usersStats.is-on { display: flex; flex-wrap: wrap; }
-#usersStats.is-on .listenerType:not([hidden]) { display: inline-flex; gap: 0.2rem; }
+/* Shown once js/audience.js has the counts: everyone, then who that is in
+   words (members here, guests on the site, radio listeners; one that's none
+   is left out, and each says more on hover) */
+#usersStats.is-on { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.75rem; }
+#usersStats.is-on .listenerType:not([hidden]) { display: inline-flex; gap: 0.3em; white-space: nowrap; }
 #usersStats #numListeners,
-#usersStats .listenerType span { font-family: var(--font-numbers); font-weight: 400; }
+#usersStats .listenerType span:first-child { font-family: var(--font-numbers); font-weight: 400; color: var(--color-text); }
 
 #allUsers {
     display: flex;
@@ -1595,13 +1590,18 @@ a.sociallogo[href] {
     }
 }
 
+/* Nobody waiting: the note and Hop on share one line (the button only for
+   someone who can hop on) */
 .waitlist-empty {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--pad3);
-    padding: var(--pad2) 0;
+    min-height: 1.75rem;
     color: var(--color-text-muted);
     font-size: 0.8rem;
+
+    & .wlAddMeBtn { flex: none; }
 }
 
 .waitlist-label {
@@ -1804,24 +1804,82 @@ button.waitlist-pos {
 .prson.ghost .prsnRole {
     color: var(--color-away);
 }
-/* The role icon comes after the name, and only the bot, mods and supermods
-   have one, so every name starts on the same line of the column. */
+
+/* ── The members' list (js/people.js) ──────────────────────────────────────
+   The DJs in deck order under "On the decks", then everyone else. A row is
+   the face (with a dot: green here, orange away), the name, the role icon
+   (the bot, mods and supermods only, so every name starts on the same
+   line), "you" on your own, and at its end what the person is up to. */
+#allUsers > .pe-groupHead {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--pad1);
+    margin: 0;
+    padding: var(--pad4) 0 var(--pad2);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    & [class*="material-symbols-"] { font-size: 1rem; }
+    & .pe-count { font-family: var(--font-numbers); font-weight: 400; letter-spacing: 0; }
+    &[hidden] { display: none; }
+}
+#allUsers > #pe-djHead { padding-top: 0; }
+#allUsers .prson { position: relative; }
 #allUsers .prson .prsnNameRole { flex: 0 1 auto; }
-#allUsers .prson .prsnRole { order: 1; flex: none; }
-/* Idle: the name greys (and the role icon turns orange). A DJ who dropped
-   off also greys, and says "away" so it isn't read as idle. */
+/* presence is the dot's colour, on every face; the role icon only says the role */
+#allUsers .prson .prsnRole { order: 1; flex: none; font-size: 1.05rem; color: var(--color-icon); }
+.pe-dot {
+    position: absolute;
+    left: 1.5rem;
+    bottom: var(--pad1);
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--color-online);
+    box-shadow: 0 0 0 2px var(--color-bg);
+    pointer-events: none;
+}
+.prson.idle .pe-dot { background: var(--color-away); }
+/* Idle: the name greys. A DJ who dropped off the site also greys, and says
+   "away" so it isn't read as idle. */
 #allUsers .prson.idle .prsnName,
 #allUsers .prson.ghost .prsnName { color: var(--color-text-muted); }
-#allUsers .prson.ghost::after {
-    content: "away";
-    order: 2;
-    margin-left: auto;
-    padding-right: var(--pad1);
-    font-size: 0.625rem;
+.pe-you {
+    order: 1;
+    flex: none;
+    font-size: var(--fs-label);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-text-muted);
 }
+.pe-meta {
+    order: 2;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    margin-left: auto;
+    padding-left: var(--pad1);
+    font-size: 0.75rem;
+    line-height: 1;
+    color: var(--color-text-muted);
+    & [class*="material-symbols-"] { font-size: 1.1rem; }
+}
+.pe-plays,
+.pe-away { font-family: var(--font-numbers); }
+.pe-away:empty { display: none; }
+.pe-now { color: var(--color-accent); }
+.pe-fire { color: var(--color-accent); }
+.pe-next,
+.pe-gone {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.prson.is-playing .prsnName { font-weight: 500; }
 
 .imptcon {
     display: none;
@@ -7619,7 +7677,6 @@ body.ft-discover #pe-here { display: none !important; }
     & .pe-audName { color: var(--color-text-muted); }
     & .pe-flag { color: var(--color-icon); }
 }
-.pe-audNote { margin: 0; padding: var(--pad1) 0; font-size: 0.8125rem; color: var(--color-text-muted); }
 .pe-audRow.is-live {
     & .pe-flag { color: var(--color-accent); }
     /* under the guests' countries, a line apart */

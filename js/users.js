@@ -12,7 +12,7 @@
  * - Grab current song to a playlist
  * - Unban
  * - ftapi events: loggedIn, loggedOut, authReconnected, authDisconnected,
- *   userBanned, userUnbanned, userJoined, userLeft, userChanged, usersChanged
+ *   userBanned, userUnbanned, usersChanged (the people list itself is js/people.js)
  */
 
 firetable.actions = firetable.actions || {};
@@ -929,153 +929,20 @@ firetable.ui.setupAccount = function () {
 // ─── User Event Binding ──────────────────────────────────────────────────────
 
 /**
- * Build a user-list HTML string for a user object (used by userJoined / userChanged).
- * @param {Object} data - User data from ftapi
- * @returns {string} Inner HTML for the user row
- */
-function buildUserHTML(data) {
-  var blockcon = data.blocked ? "block" : "";
-
-  if (!data.username) data.username = data.userid;
-  // An icon only for the roles that differ: on every member's row it was noise.
-  // Each is named, for the icon's tooltip and for screen readers (1.12).
-  var roleicon = "";
-  var roleiconclass = "material-symbols-filled";
-  var rolename = "";
-  if (data.mod) { roleicon = "shield"; roleiconclass = "material-symbols-filled"; rolename = "Mod"; }
-  if (data.supermod) { roleicon = "local_police"; roleiconclass = "material-symbols-filled"; rolename = "Supermod"; }
-  if (data.hostbot) { roleicon = "smart_toy"; roleiconclass = "material-symbols-filled"; rolename = "Room bot"; }
-
-  return '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + firetable.utilities.htmlEscape(data.username) + ' — profile" style="background-image:url(' + firetable.utilities.htmlEscape(firetable.utilities.avatarURL(data.userid, data.username)) + ');">' +
-         '<span class="material-symbols-outlined blockon">' + blockcon + '</span>' +
-         '</div>' +
-         (roleicon ? '<span class="' + roleiconclass + ' prsnRole" role="img" title="' + rolename + '" aria-label="' + rolename + '">' + roleicon + '</span>' : '') +
-         '<div class="prsnNameRole">' +
-         '<span class="prsnName">' + firetable.utilities.htmlEscape(data.username) + '</span>' +
-         '</div>';
-}
-
-/**
- * Determine which user list section a user belongs to.
- * @param {Object} data - User data
- * @returns {string} jQuery selector for the container
- */
-function getUserDestination(data) {
-  if (data.hostbot) return "#usersBot";
-  if (data.supermod) return "#usersSuper";
-  if (data.mod) return "#usersMod";
-  return "#usersRegular";
-}
-
-/**
- * Persist minimal role metadata so ghost deck users keep the correct icon.
- * This is needed because disconnected deck users disappear from ftapi.users.
- */
-function rememberGhostRole(data) {
-  if (!data || !data.userid) return;
-  firetable.ghostRoleCache = firetable.ghostRoleCache || {};
-  firetable.ghostRoleCache[data.userid] = {
-    mod: !!data.mod,
-    supermod: !!data.supermod,
-    hostbot: !!data.hostbot,
-    avatarStyle: data.avatarStyle || null
-  };
-}
-
-/**
- * Set up all ftapi user-related event handlers.
+ * Set up the ftapi user-related event handlers.
  * Called once from firetable.ui.init().
  */
-/**
- * Reconcile "fake/ghost" (disconnected-but-on-deck) entries in the user list.
- * - Adds ghost user to user list for any deck DJ not currently in ftapi.users.
- * - Removes ghost users from user list for any user is now online again or has left the deck.
- * Safe to call any time tableData or ftapi.users may have changed.
- */
-firetable.ui.syncGhostUsers = function () {
-  // Remove ghost rows for users who are back online or off the deck
-  $("#allUsers .prson.ghost").each(function () {
-    var uid = $(this).data("userid");
-    var onDeck = false;
-    if (firetable.tableData) {
-      for (var k in firetable.tableData) {
-        if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === uid) { onDeck = true; break; }
-      }
-    }
-    if (!onDeck || (ftapi.users && ftapi.users[uid])) $(this).remove();
-  });
-
-  // Insert ghost users for deck DJs not currently in the user list
-  if (!firetable.tableData) return;
-  for (var k in firetable.tableData) {
-    if (!firetable.tableData.hasOwnProperty(k)) continue;
-    var dj = firetable.tableData[k];
-    if (ftapi.users && ftapi.users[dj.id]) continue; // live user, not a ghost
-    if ($("#user" + dj.id).length) continue; // already in list (ghost or live)
-    var roleCache = (firetable.ghostRoleCache && firetable.ghostRoleCache[dj.id]) || {};
-    var ghostData = {
-      userid: dj.id,
-      username: dj.name,
-      mod: !!roleCache.mod,
-      supermod: !!roleCache.supermod,
-      hostbot: !!roleCache.hostbot,
-      avatarStyle: roleCache.avatarStyle || null
-    };
-    var $el = $("<div></div>")
-      .addClass("prson ghost")
-      .attr("id", "user" + dj.id)
-      .attr("data-userid", dj.id)
-      .html(buildUserHTML(ghostData));
-    $("#usersRegular").append($el);
-  }
-};
-
 firetable.ui.setupUserEvents = function () {
 
   // guests and the radio's listeners by country, beside the members (js/audience.js)
   firetable.audience.start();
 
-  // ── Auth state events (already bound in init.js, but user-list events here) ──
+  // the members' list itself: DJs first, then everyone else (js/people.js)
+  firetable.people.start();
 
-  // Single joins/leaves/changes need no work of their own: Firebase follows
-  // each one with "usersChanged", which rebuilds the list (once per frame).
-  // Only remember roles, so a DJ who drops off still shows the right icon.
-  ftapi.events.on("userJoined", rememberGhostRole);
-  ftapi.events.on("userChanged", rememberGhostRole);
-
-  // Several updates can land at once (presence, idle, blocks); rebuild the
-  // list at most once per frame, with the latest data.
+  // Several updates can land at once (presence, idle, blocks): follow them
+  // at most once per frame, with the latest data.
   ftapi.events.on("usersChanged", firetable.utilities.oncePerFrame(function (okdata) {
-    // Rebuild the user list sections from scratch — handles the timing case
-    // where a user joins while #appShell is detached (login screen).
-    $("#usersBot, #usersSuper, #usersMod, #usersRegular").empty();
-    if (okdata) {
-      // Track which IDs are on the waitlist so we skip them
-      var waitlistIds = {};
-      if (firetable.waitlistData) {
-        for (var wk in firetable.waitlistData) {
-          if (firetable.waitlistData.hasOwnProperty(wk)) {
-            waitlistIds[firetable.waitlistData[wk].id] = true;
-          }
-        }
-      }
-      for (var uid in okdata) {
-        if (!okdata.hasOwnProperty(uid)) continue;
-        var data = okdata[uid];
-        data.userid = uid;
-        rememberGhostRole(data);
-        if (ftapi.blockedUsers && ftapi.blockedUsers[uid]) data.blocked = true;
-        if (waitlistIds[uid]) continue;
-        var isIdle = (data.idle && data.idle.isIdle && !data.hostbot) ? "idle" : "";
-        var $el = $("<div></div>")
-          .addClass("prson" + (data.blocked ? " blockd" : "") + (isIdle ? " " + isIdle : ""))
-          .attr("id", "user" + uid)
-          .attr("data-userid", uid)
-          .html(buildUserHTML(data));
-        $(getUserDestination(data)).append($el);
-      }
-    }
-
     // Update own display name and avatar if it was showing UID
     if (ftapi.uid && ftapi.users[ftapi.uid] && ftapi.users[ftapi.uid].username) {
       var ownUsername = ftapi.users[ftapi.uid].username;
@@ -1095,8 +962,6 @@ firetable.ui.setupUserEvents = function () {
     var count = okdata ? Object.keys(okdata).length : 0;
     $("#label1 .count").text(" (" + count + ")");
     firetable.debug && console.log('users:', okdata);
-    // Re-insert any ghost deck users that were cleared by the full rebuild
-    firetable.ui.syncGhostUsers();
     firetable.ui.renderRoomPulse();
   }));
 
