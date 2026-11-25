@@ -1174,35 +1174,50 @@ body.ft-discover #dSide #actualChat {
    controls (a Discover song can be paused, skipped and moved through; the
    room can only be listened to or left, and has the stage's Fire, Grab,
    Link, Skip and Mod tools, moved here from the stage).
+
+   One layout for every state (November 24, 2026), so nothing moves when what
+   it plays changes: the song at the left; play in the bar's exact middle,
+   previous and next either side of it and the times outside those; at the
+   right the song's own actions, the other source, a hairline, then the tools
+   in one order with the volume and full screen always in the same place.
+   Progress is a line along the bar's top edge, as YouTube Music's is: a
+   song that can be moved through fills it and can be dragged; the room live
+   in Live, which the stage already times, is a whole line of its colour.
    ============================================ */
 .pb {
     /* the playing song's artwork colour (renderBar sets --pb-art), else the accent */
     --pb-tone: var(--pb-art, var(--color-accent));
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(16rem, 1.15fr) minmax(0, 1fr);
+    /* its top edge (a line of the song's colour) and, in light mode, the shadow it casts up the page */
+    --pb-edge: 0 0 transparent;
+    --pb-lift: 0 0 transparent;
+    /* the sides are equal, so the middle is the bar's middle; the right side
+       never gives up its buttons (a narrow window moves the middle instead) */
+    grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
     grid-template-areas: "now mid side";
     align-items: center;
     gap: var(--pad3);
-    min-height: 4.75rem;
+    min-height: 4.5rem;
     padding: var(--pad2) var(--pad4) calc(var(--pad2) + env(safe-area-inset-bottom, 0px));
     background: var(--color-bar);
     border-top: 1px solid var(--color-border);
+    box-shadow: var(--pb-edge), var(--pb-lift);
     z-index: 41;
     transition: background-color 0.4s ease-out, box-shadow 0.4s ease-out;
 }
 .pb.is-onair, .pb.is-quiet { --pb-tone: var(--color-text-muted); }
-/* sounding: a thin edge and a faint wash in the artwork's colour */
+/* sounding: a faint wash in the artwork's colour, and its edge */
 .pb.is-discover:not(.is-paused), .pb.is-live {
+    --pb-edge: inset 0 2px 0 var(--pb-tone);
     background-color: color-mix(in srgb, var(--pb-tone) 9%, var(--color-bar));
-    box-shadow: inset 0 2px 0 var(--pb-tone);
 }
 @media (prefers-reduced-motion: reduce) { .pb { transition: none; } }
 .pb-host { display: contents; }
 .pb-host:empty { display: none; }
 
 /* left: the song */
-.pb-now { grid-area: now; display: flex; align-items: center; gap: var(--pad3); min-width: 0; }
+.pb-now { grid-area: now; display: flex; align-items: center; gap: var(--pad3); min-width: 0; max-width: 32rem; }
 .pb-art {
     position: relative;
     flex: none;
@@ -1285,8 +1300,10 @@ body.ft-discover #dSide #actualChat {
 .pb.is-quiet .pb-title { color: var(--color-text); font-weight: 400; }
 .pb-keep { display: flex; flex: none; align-items: center; gap: var(--pad1); }
 
-/* the bar's buttons: today's raised shape, 36px */
+/* the bar's buttons: 36px, quiet until pointed at (play is the one that stands out) */
 .pb .iconbutt { width: 2.25rem; height: 2.25rem; min-height: 2.25rem; }
+.pb .graybutt:where(:not(.on)) { color: var(--color-text-w70); } /* one that's on keeps its own colour */
+.pb-transport .graybutt { color: var(--color-text-w90); }
 .pb .iconbutt [class*="material-symbols-"] { font-size: 1.3rem; }
 .pb .is-saved, .pb .d-toroom.is-done { color: var(--color-accent); }
 .d-acts .d-toroom { flex: 1 1 100%; justify-content: center; }
@@ -1302,9 +1319,17 @@ body.ft-discover #dSide #actualChat {
 .pb:not(.is-room) :is(#pv-livekeep, #pv-liveacts) { display: none; }
 .pb:not(.is-member) #pv-livekeep { display: none; }
 
-/* middle: transport and time */
-.pb-mid { grid-area: mid; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; min-width: 0; }
-.pb-transport { display: flex; align-items: center; justify-content: center; gap: var(--pad2); }
+/* middle: play in the bar's middle, previous and next either side, the times
+   outside those (elapsed left, length right); the progress is the bar's top edge */
+.pb-mid {
+    grid-area: mid;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--pad2);
+    min-width: 0;
+}
+.pb-transport { grid-column: 2; grid-row: 1; display: flex; align-items: center; justify-content: center; gap: var(--pad2); }
 .pb .pb-main {
     width: 2.6rem;
     height: 2.6rem;
@@ -1318,14 +1343,9 @@ body.ft-discover #dSide #actualChat {
     .pb .pb-main:not(:disabled):hover { background: var(--color-play-hover); transform: scale(1.04); }
 }
 .pb.is-discover:not(.is-paused) .pb-main, .pb.is-live .pb-main { background: color-mix(in oklab, var(--pb-tone) 14%, var(--color-text-light)); }
-.pb .pb-small { width: 2rem; height: 2rem; min-height: 2rem; }
-.pb .pb-small [class*="material-symbols-"] { font-size: 1.1rem; }
+/* its three parts are placed one by one: the times in the middle's row, the track on the bar's edge */
 .pb-time {
-    display: flex;
-    align-items: center;
-    gap: var(--pad2);
-    width: 100%;
-    max-width: 38rem;
+    display: contents;
     color: var(--color-text-muted);
     font-family: var(--font-numbers);
     font-size: var(--fs-micro);
@@ -1333,10 +1353,41 @@ body.ft-discover #dSide #actualChat {
 }
 .pb-at, .pb-len { flex: none; min-width: 2.6rem; }
 .pb-at { text-align: right; }
+.pb-mid .pb-at { grid-column: 1; grid-row: 1; }
+.pb-mid .pb-len { grid-column: 3; grid-row: 1; }
 .pb-track { position: relative; flex: 1; display: flex; align-items: center; height: 1rem; }
-.pb-track .d-bar { flex: 1; height: 4px; }
-.pb-track .d-bar i { background: var(--pb-tone); transition: width 0.45s linear, background-color 0.4s ease-out; }
+/* the bar's own track: the whole top edge, 3px drawn in 15px to aim at (5px drawn when pointed at) */
+.pb-mid .pb-track { position: absolute; z-index: 2; top: -7px; right: 0; left: 0; height: 15px; }
+.pb-mid .pb-track .d-bar { height: 3px; border-radius: 0; }
+.pb-track .d-bar { position: relative; flex: 1; height: 4px; overflow: visible; transition: height var(--dur-fast) var(--ease-out); }
+.pb-track .d-bar i { position: relative; border-radius: inherit; background: var(--pb-tone); transition: width 0.45s linear, background-color 0.4s ease-out; }
 .pb.is-paused .pb-track .d-bar i, .pb.is-onair .pb-track .d-bar i { background: var(--color-text-muted); }
+/* where a click would go (js/scrub.js sets --scrub-x under the pointer): a paler stretch of the track */
+.pb-track .d-bar::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--scrub-x, 0);
+    border-radius: inherit;
+    background: rgba(var(--ink-rgb), 0.22);
+}
+/* the handle: there when the track is pointed at, focused or dragged */
+.pb-track .d-bar i::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -0.375rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background: var(--color-text-light);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    transform: translateY(-50%) scale(0);
+    transition: transform var(--dur-fast) var(--ease-out);
+}
+.pb-track.is-scrubbing .d-bar i { transition: none; }
+.pb-track.is-scrubbing .d-bar i::after,
+.pb-track:has(:is(#pv-seek, #pv-fseek):focus-visible) .d-bar i::after { transform: translateY(-50%) scale(1); }
 #pv-seek, #pv-fseek {
     position: absolute;
     inset: 0;
@@ -1352,30 +1403,83 @@ body.ft-discover #dSide #actualChat {
    not half a thumb's width to one side of it */
 #pv-seek::-webkit-slider-thumb, #pv-fseek::-webkit-slider-thumb { -webkit-appearance: none; width: 1px; height: 1rem; border: 0; }
 #pv-seek::-moz-range-thumb, #pv-fseek::-moz-range-thumb { width: 1px; height: 1rem; border: 0; }
-#pv-seek:disabled, #pv-fseek:disabled { cursor: default; }
+/* the room's song can't be moved through: a click there is a click on the bar */
+#pv-seek:disabled, #pv-fseek:disabled { cursor: default; pointer-events: none; }
 .pb-track:has(:is(#pv-seek, #pv-fseek):focus-visible) { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 2px; }
+.pb-mid .pb-track:has(#pv-seek:focus-visible) { outline: 0; }
+.pb-mid .pb-track:has(#pv-seek:focus-visible) .d-bar { height: 5px; box-shadow: 0 0 0 2px var(--color-accent); }
 @media (hover: hover) {
     .pb-track:has(:is(#pv-seek, #pv-fseek):not(:disabled)):hover .d-bar { height: 6px; }
+    .pb-mid .pb-track:has(#pv-seek:not(:disabled)):hover .d-bar { height: 5px; }
+    .pb-track:has(:is(#pv-seek, #pv-fseek):not(:disabled)):hover .d-bar i::after { transform: translateY(-50%) scale(1); }
 }
-@media (prefers-reduced-motion: reduce) { .pb-track .d-bar i { transition: none; } }
+/* a finger gets more to aim at */
+@media (pointer: coarse) {
+    .pb-mid .pb-track { top: -12px; height: 25px; }
+}
+/* the time under the pointer (js/scrub.js) */
+.pb-tip {
+    position: absolute;
+    bottom: calc(100% + 0.125rem);
+    z-index: 3;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-tip-bg, var(--color-bg-t2));
+    color: var(--color-tip-text, var(--color-text-light));
+    font-family: var(--font-numbers);
+    font-size: var(--fs-micro);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+    white-space: nowrap;
+    box-shadow: 0 0.25rem 0.75rem -0.25rem rgba(0, 0, 0, 0.5);
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { .pb-track .d-bar, .pb-track .d-bar i, .pb-track .d-bar i::after { transition: none; } }
 /* Live, the bar on the room's song: the stage right above already shows its
-   time played, time left and progress, so the bar leaves them out */
+   time played, time left and progress, so the bar leaves them out (the owner,
+   November 15, 2026). Its edge is a whole line of the song's colour. */
 body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
+/* wherever the track is on the edge it is the edge: the whole line is only for the room live in Live */
+@media only screen and (min-width: 640px) {
+    .pb.is-discover:not(.is-paused), body.ft-discover .pb.is-live { --pb-edge: 0 0 transparent; }
+}
 
-/* right: actions, the other source, volume, Now playing */
+/* right: the song's own actions and the other source, a hairline, then the
+   player's tools in one order whatever plays: screen (Live) · reload · cast ·
+   volume · full screen. The last three never move. */
 .pb-side { grid-area: side; display: flex; align-items: center; justify-content: flex-end; gap: var(--pad2); min-width: 0; }
 .pb-acts { display: flex; align-items: center; gap: var(--pad1); }
-.pb .pb-stepin { gap: var(--pad1); white-space: nowrap; }
+/* the way to the other place (Step inside, Listen in, Back to it): one dark chip with gold words */
+.pb .pb-stepin {
+    gap: var(--pad1);
+    height: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0 var(--pad2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-t1);
+    box-shadow: none;
+    color: var(--color-accent);
+    font-size: var(--fs-micro);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
 .pb .pb-stepin i { font-size: 1.05rem; }
+@media (hover: hover) {
+    .pb .pb-stepin:hover { background: var(--color-bg-t2); border-color: var(--color-bg-t3); color: var(--color-accent); }
+}
 .pb-switch:empty { display: none; }
 .pb-other {
     display: flex;
     align-items: center;
     gap: var(--pad2);
     max-width: 15rem;
-    height: auto;
-    min-height: 2.5rem;
-    padding: 0.2rem var(--pad2) 0.2rem 0.2rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0 var(--pad2) 0 0.1875rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-bg-t1);
@@ -1387,7 +1491,7 @@ body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
     letter-spacing: 0;
     cursor: pointer;
 }
-.pb-other .d-mini-art { width: 2rem; height: 2rem; }
+.pb-other .d-mini-art { width: 1.75rem; height: 1.75rem; }
 .pb-other .d-mini-text { max-width: 9rem; }
 .pb-other .d-mini-text b, .pb-other .d-mini-text span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pb-other .d-mini-text b i { display: inline-block; margin-right: 0.3rem; vertical-align: 1px; }
@@ -1402,7 +1506,8 @@ body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
 .pb-vol { display: flex; align-items: center; gap: var(--pad1); }
 #pv-vol, #pv-fvol {
     --pct: 50%;
-    width: 6rem;
+    /* the bar's: 3rem in a 1024px window, its full 6rem from about 1220px */
+    width: clamp(3rem, (100vw - 56rem) * 0.3, 6rem);
     height: 4px;
     margin: 0;
     appearance: none;
@@ -1414,10 +1519,18 @@ body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
 #pv-vol::-webkit-slider-thumb, #pv-fvol::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--color-text-light); border: 0; }
 #pv-vol::-moz-range-thumb, #pv-fvol::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--color-text-light); border: 0; }
 #pv-vol:focus-visible, #pv-fvol:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
+/* pointed at, the volume fills in the song's colour */
+@media (hover: hover) {
+    .pb-vol:hover :is(#pv-vol, #pv-fvol) { background: linear-gradient(90deg, var(--pb-tone) var(--pct), var(--color-track) var(--pct)); }
+}
 .pb-line { display: none; }
-/* the stage's screen, reload and full screen, moved in from the stage (placeStage) */
+/* the stage's screen, reload, cast and full screen, moved in from the stage
+   (placeStage), with a Discover song's own reload where the room's is */
 .pb-tools { display: flex; align-items: center; gap: var(--pad1); }
 .pb-tools .ft-tip { position: fixed; }
+/* a hairline between the song's actions and the player's tools */
+.pb-tools:not(.pb-fs)::before { content: ""; flex: none; width: 1px; height: 1.25rem; margin: 0 var(--pad1); background: var(--color-border); }
+.pb.is-quiet .pb-tools::before { display: none; }
 .pb:not(.is-room) #reloadtrack { display: none; }      /* a Discover song has its own reload */
 body.ft-discover .pb #screenControl { display: none; }  /* the stage's screen: Live's, and the full player's */
 #reloadtrack.on i, #reloadtrack.working i { animation: pb-spin 1s linear infinite; }
@@ -1560,10 +1673,12 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
 /* 1024 to 1439: the other source shrinks to its cover and dot, Step inside to its icon */
 @media only screen and (max-width: 1439px) {
     .pb { padding-inline: var(--pad3); gap: var(--pad2); }
-    .pb-other { padding: 0.2rem; }
+    .pb-side { gap: var(--pad1); }
+    .pb-tools:not(.pb-fs)::before { margin: 0; }
+    .pb-mid .pb-at, .pb-mid .pb-len { min-width: 2.25rem; }
+    .pb-other { padding: 0 0.1875rem; }
     .pb-otherdo { display: none; }
     .pb .pb-stepin span { display: none; }
-    #pv-vol { width: 4.5rem; }
 }
 
 /* ── The right column and the full-screen player's side ── */
@@ -1695,6 +1810,10 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
     .pb-vol #pv-vol { display: none; }
     .pb-acts .d-more, .pb-acts .pb-open { display: none; }
 }
+/* the narrowest tablets: the edge shows how far along; the times are in the full-screen player */
+@media only screen and (max-width: 799px) {
+    .pb-mid .pb-at, .pb-mid .pb-len, .pb-tools:not(.pb-fs)::before { display: none; }
+}
 /* phones: one row (cover, song, keep, play, open); the rest is in the full-screen player */
 @media only screen and (max-width: 639px) {
     .pb { min-height: 4rem; gap: var(--pad2); padding: var(--pad2) var(--pad2) calc(var(--pad2) + env(safe-area-inset-bottom, 0px)); }
@@ -1702,6 +1821,7 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
     .pb-line i { background: var(--pb-tone); }
     .pb-art { width: 3rem; height: 3rem; }
     .pb-now { gap: var(--pad2); }
+    .pb-mid { column-gap: 0; } /* only play is here: nothing either side of it to space */
     /* Live on a phone (4.2): the song row's buttons (Fire, Grab, play) are 44px */
     .pb .iconbutt, .pb .iconbutt.pb-main { width: var(--tap-stage); height: var(--tap-stage); min-height: var(--tap-stage); }
     /* (the song's two lines and the tap that opens the player are for every width: with .pb-title above) */
@@ -2689,14 +2809,10 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
    the Live/Discover mark and to show as the thin edge and the progress. */
 :root[data-look="light"] .pb {
     --pb-tone: color-mix(in oklab, var(--pb-art, var(--color-accent)) 62%, #1c1408);
-    box-shadow: 0 -0.25rem 1rem -0.5rem rgba(var(--shadow-rgb), 0.18);
+    --pb-lift: 0 -0.25rem 1rem -0.5rem rgba(var(--shadow-rgb), 0.18);
 }
 :root[data-look="light"] .pb.is-onair,
 :root[data-look="light"] .pb.is-quiet { --pb-tone: var(--color-text-muted); }
-:root[data-look="light"] .pb.is-discover:not(.is-paused),
-:root[data-look="light"] .pb.is-live {
-    box-shadow: inset 0 2px 0 var(--pb-tone), 0 -0.25rem 1rem -0.5rem rgba(var(--shadow-rgb), 0.18);
-}
 
 /* Google's button on a white panel: Google's light-theme outline */
 :root[data-look="light"] .d-join .d-google { box-shadow: inset 0 0 0 1px #747775; } /* own colour: Google's own outline */

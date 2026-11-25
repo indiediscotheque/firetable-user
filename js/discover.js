@@ -2624,9 +2624,11 @@ firetable.discover = (function () {
   // in it too, in Discover and Live, and the stage is left to the DJs. The
   // screen and the cast button go into the full-screen player while it's open
   // (its Video is the stage's screen down; on phones it's the only player with
-  // room for the cast button).
+  // room for the cast button). In the bar they keep one order, with a Discover
+  // song's own reload (#pv-dtools) where the room's is, and the volume before
+  // full screen: screen · reload · cast · volume · full screen.
   var STAGE_TOOLS = [["screenControl", "screenControlTip", "pv-tools", "pv-fscreen"], ["reloadtrack", "tip-reloadtrack", "pv-tools", null],
-    ["st-cast", "tip-st-cast", "pv-tools", "pv-fscreen"], ["fullscreenBtn", "tip-fullscreenBtn", "pv-tools", null]];
+    ["st-cast", "tip-st-cast", "pv-cast", "pv-fscreen"], ["fullscreenBtn", "tip-fullscreenBtn", "pv-fs", null]];
   // Where the stage's buttons are: in the bar along the bottom, or in the
   // full-screen player while it's open. The stage keeps none.
   var stageAt = "stage";
@@ -2832,16 +2834,16 @@ firetable.discover = (function () {
     // transport
     var tr = document.getElementById("pv-transport");
     var idx = P.i, total = list ? list.tracks.length : 0;
-    var mainLabel, mainIcon;
+    var mainLabel = "Play", mainIcon = "play_arrow";
     if (kind === "discover" || kind === "pick") { mainIcon = P.paused || kind === "pick" ? "play_arrow" : "pause"; mainLabel = mainIcon === "pause" ? "Pause" : "Play"; }
     else if (kind === "live") { mainIcon = "stop"; mainLabel = "Stop listening to the room"; }
-    else if (kind === "onair") { mainIcon = "play_arrow"; mainLabel = "Listen in to the room"; }
-    else { mainIcon = "play_arrow"; mainLabel = "Play"; }
+    else if (kind === "onair") mainLabel = "Listen in to the room";
     var disc = kind === "discover" || kind === "pick";
     tr.innerHTML = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous" aria-label="Previous"' + (idx <= 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
       '<button type="button" class="butt iconbutt pb-main d-big" title="' + mainLabel + '" aria-label="' + mainLabel + '"' + (kind === "quiet" ? " disabled" : "") + ">" + ms(mainIcon, true) + "</button>" +
-      (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next" aria-label="Next"' + (idx >= total - 1 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" +
-        '<button type="button" class="butt graybutt iconbutt d-reload pb-small" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>" : "");
+      (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next" aria-label="Next"' + (idx >= total - 1 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" : "");
+    // a Discover song's reload: among the tools, where the room's own reload is
+    document.getElementById("pv-dtools").innerHTML = disc ? '<button type="button" class="butt graybutt iconbutt d-reload" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>" : "";
 
     // progress: a Discover song can be moved through; the room can't
     var seekEl = document.getElementById("pv-seek");
@@ -4489,10 +4491,11 @@ firetable.discover = (function () {
       '<input type="range" id="pv-seek" min="0" max="1" step="1" value="0" aria-label="Seek" /></span><span id="dLen" class="pb-len"></span></div></div>' +
       '<div class="pb-side"><div class="pb-acts"><span class="pb-host" id="pv-liveacts"></span><span class="pb-host" id="pv-dacts"></span></div>' +
       '<div class="pb-switch" id="pv-switch"></div>' +
+      // the stage's screen, reload, cast and full screen (placeStage moves them in), around a Discover song's reload and the volume
+      '<div class="pb-tools"><span class="pb-host" id="pv-tools"></span><span class="pb-host" id="pv-dtools"></span><span class="pb-host" id="pv-cast"></span></div>' +
       '<div class="pb-vol"><button type="button" class="butt graybutt iconbutt d-mute" aria-label="Mute">' + ms("volume_up") + "</button>" +
       '<input type="range" id="pv-vol" min="0" max="100" step="5" value="50" aria-label="Volume" /></div>' +
-      // the stage's screen, reload and full screen (placeStage moves them in)
-      '<div class="pb-tools"><span class="pb-host" id="pv-tools"></span></div></div>' +
+      '<div class="pb-tools pb-fs"><span class="pb-host" id="pv-fs"></span></div></div>' +
       '<span id="pv-announce" class="sr-only" aria-live="polite"></span></div>';
   }
 
