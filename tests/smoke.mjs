@@ -4237,19 +4237,22 @@ try {
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await wait(200);
     out.liveHome = inLive();
-    // Live's Play: the playlist as 30-second previews, one after another; again stops them
+    // Live's Play: a 30-second preview of the top song, then the room again (not on to the next song)
     const lp = document.getElementById("cr-playHere");
-    out.livePlay = !lp.hidden && /Preview this playlist/.test(lp.getAttribute("aria-label") || "");
+    out.livePlay = !lp.hidden && /Preview the top song/.test(lp.getAttribute("aria-label") || "");
     const order = Object.keys(ftapi.queue).sort(ftapi.utilities.compareKeys);
     lp.click();
     await wait(200);
     out.runFirst = firetable.preview === order[0] && lp.classList.contains("on");
-    ftapi.events.emit("previewEnded", order[0]); // as its 30 seconds end
-    await wait(200);
-    out.runNext = firetable.preview === order[1];
-    lp.click();
+    lp.click(); // Stop
     await wait(200);
     out.runStopped = !firetable.preview && !lp.classList.contains("on");
+    lp.click();
+    await wait(200);
+    firetable.actions.pview(order[0], false, ftapi.queue[order[0]].type); // as its 30 seconds end: the room comes back
+    firetable.media.previewEnded(order[0]);
+    await wait(200);
+    out.runEnds = !firetable.preview && !lp.classList.contains("on");
     return out;
   });
   check(member.moved && !member.tools.length && member.toolsShown && member.bar, "the Playlists tab is Live's own playlist panel, every tool with it, and no second Play / Shuffle / DJ row above it (" + JSON.stringify(member) + ")");
@@ -4260,8 +4263,8 @@ try {
   check(member.shuffleOn && member.shuffled && member.shuffleBack && member.shuffleOff,
     "the player's Shuffle: Next plays songs not heard yet until there are none, Previous goes back, and it turns off (" + JSON.stringify(member) + ")");
   check(member.backOnChat && member.inAgain && member.liveHome, "Chat and Live get Live its panel back, and Playlists takes it again (" + JSON.stringify(member) + ")");
-  check(member.livePlay && member.runFirst && member.runNext && member.runStopped,
-    "in Live, Play previews the playlist a song at a time, on to the next as each ends, and stops on a second tap (" + JSON.stringify(member) + ")");
+  check(member.livePlay && member.runFirst && member.runStopped && member.runEnds,
+    "in Live, Play previews the top song, Stop ends it, and when it ends the room is back, not the next song (" + JSON.stringify(member) + ")");
   check(member.first && member.done && /First in/.test(member.note || "") && member.undone && member.fire,
     "Play it in the room puts the song first in the DJ playlist, says so, and Undo takes it out; listening in, Fire is in the bar (" + JSON.stringify(member) + ")");
 

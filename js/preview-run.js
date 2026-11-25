@@ -1,79 +1,61 @@
 /**
- * preview-run.js — the crate's Play button in Live: the playlist as previews.
+ * preview-run.js — the crate's Play button in Live: a preview of the top song.
  *
  * In Live the room is playing, so Play (#cr-playHere, before the picker)
- * doesn't take over: it plays the playlist on screen as 30-second previews,
- * one song after another in play order, each from a quarter of the way in
- * (PREVIEW_FROM, js/player.js), the way a song's own play button previews it.
- * The room comes back after each, as after any preview, and for good at the
- * end of the list. The button again stops it; so does previewing another
- * song, switching playlist or going to Discover.
+ * doesn't take over: it previews the playlist's top song (the one the room
+ * plays first when you DJ) for 30 seconds from a quarter of the way in
+ * (PREVIEW_FROM, js/player.js), the way a song's own play button previews
+ * it, and then the room's audio comes back. It doesn't go on to the next
+ * song. The button says Stop meanwhile, and stops it early.
  *
  * In Discover the same button plays the playlist in full, in Discover's
  * player (js/discover-queue.js): this file draws it only while it's in Live.
  */
 firetable.previewRun = (function () {
   "use strict";
-  var run = null; // { list: the playlist, id: the key previewing now, at: its place in it }
+  var playing = null; // the key this button is previewing, or null
 
   function btn() { return document.getElementById("cr-playHere"); }
   function inDiscover() { return document.body.classList.contains("d-queue-here"); }
 
-  /** The playlist on screen, in play order (not the view's sort). */
-  function keys() {
+  /** The playlist's top song, in play order (not the view's sort), or null. */
+  function top() {
     var q = ftapi.queue || {};
-    return Object.keys(q).sort(ftapi.utilities.compareKeys).filter(function (k) { return q[k] && q[k].cid != null; });
+    return Object.keys(q).sort(ftapi.utilities.compareKeys).filter(function (k) { return q[k] && q[k].cid != null; })[0] || null;
   }
 
-  /** The button, as Live has it: Play the previews, or Stop them. */
+  /** Is this button's preview still the one playing? (Another preview, or its end, takes over.) */
+  function ours() {
+    return !!playing && (firetable.preview === playing || (firetable.overlayPreview && firetable.overlayPreview.active()));
+  }
+
+  /** The button, as Live has it: Play the top song's preview, or Stop it. */
   function draw() {
     var b = btn();
     if (!b || inDiscover()) return;
-    var label = run ? "Stop the previews" : "Preview this playlist: 30 seconds of each song";
+    if (playing && !ours()) playing = null;
+    var label = playing ? "Stop the preview" : "Preview the top song: 30 seconds, then back to the room";
     b.hidden = false;
-    b.disabled = !run && !keys().length;
+    b.disabled = !playing && !top();
     b.title = label;
     b.setAttribute("aria-label", label);
-    b.classList.toggle("on", !!run);
-    b.querySelector("i").textContent = run ? "stop" : "play_arrow";
+    b.classList.toggle("on", !!playing);
+    b.querySelector("i").textContent = playing ? "stop" : "play_arrow";
   }
 
-  /** Preview the song after the one that just played (the first, to start). */
-  function next() {
-    var all = keys();
-    var i = run.id ? all.indexOf(run.id) + 1 : 0;
-    if (run.id && i === 0) i = run.at; // it left the list meanwhile: the one now in its place
-    var key = all[i];
-    if (!key) return stop();
-    run.id = key;
-    run.at = i;
-    firetable.actions.pview(key, false, ftapi.queue[key].type);
-    var row = document.getElementById("pvbar" + key);
-    if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
-    draw();
-  }
+  function type(key) { return ftapi.queue && ftapi.queue[key] ? ftapi.queue[key].type : MEDIA_YOUTUBE; }
 
-  function start() {
-    if (firetable.overlayPreview && firetable.overlayPreview.active()) firetable.overlayPreview.stop();
-    run = { list: String(firetable.viewListID || "0"), id: null, at: 0 };
-    next();
-  }
-
-  /** Stop: the preview playing now too, when it's still ours (the room comes back). */
+  /** Stop the preview, when it's still this button's (the room comes back). */
   function stop() {
-    var was = run;
-    run = null;
+    if (ours()) firetable.actions.pview(playing, false, type(playing));
+    playing = null;
     draw();
-    if (!was || !was.id) return;
-    if (firetable.preview === was.id || (firetable.overlayPreview && firetable.overlayPreview.active())) {
-      firetable.actions.pview(was.id, false, ftapi.queue && ftapi.queue[was.id] ? ftapi.queue[was.id].type : MEDIA_YOUTUBE);
-    }
   }
 
-  /** Forget the run without touching what plays (someone chose something else). */
+  /** Forget it without touching what plays (another song's preview took over). */
   function drop() {
-    if (!run) return;
-    run = null;
+    if (!playing) return;
+    playing = null;
     draw();
   }
 
@@ -81,19 +63,20 @@ firetable.previewRun = (function () {
   if (b) {
     b.addEventListener("click", function () {
       if (inDiscover()) return; // Discover's: js/discover-queue.js
-      if (run) stop();
-      else start();
+      if (ours()) return stop();
+      var key = top();
+      if (!key) return;
+      playing = key;
+      firetable.actions.pview(key, false, type(key));
+      draw();
     });
   }
   // a song's own preview takes over (capture: before the row's handler starts it)
   var rows = document.getElementById("mainqueue");
   if (rows) rows.addEventListener("click", function (e) { if (e.target.closest && e.target.closest(".previewicon")) drop(); }, true);
-  ftapi.events.on("previewEnded", function (id) { if (run && id === run.id) next(); });
-  // another playlist on screen ends it; a change to this one (a song added, moved) doesn't
-  ftapi.events.on("playlistChanged", function (data, listID) {
-    if (run && listID != null && String(listID) !== run.list) stop();
-    draw();
-  });
+  // its 30 seconds are up: the room is back, and so is Play
+  ftapi.events.on("previewEnded", function (id) { if (id === playing) drop(); });
+  ftapi.events.on("playlistChanged", draw);
 
-  return { draw: draw, stop: stop, drop: drop, running: function () { return !!run; } };
+  return { draw: draw, stop: stop, drop: drop, running: function () { return !!playing; } };
 })();
