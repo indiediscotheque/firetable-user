@@ -1413,11 +1413,11 @@ firetable.tt = (function () {
     var users = ftapi.users || {}, me = ftapi.uid && users[ftapi.uid], them = users[d.id] || {};
     var self = d.id === ftapi.uid, entry = null, t = firetable.tableData || {};
     for (var k in t) if (Object.prototype.hasOwnProperty.call(t, k) && t[k] && t[k].id === d.id) entry = t[k];
-    var leaving = !!(entry && entry.removeAfter);
+    var leaving = !!firetable.people.bus(entry); // after the next song, a number of songs or a time
     var items = [];
     if (self) {
       items.push(["stickers", "Laptop stickers"]);
-      items.push(["bus", leaving ? "Stay after this song" : "Step down after this song"]);
+      items.push(["bus", leaving ? "Stay on (cancel the bus)" : "Step down after this song"]);
       items.push(["stepdown", "Step down", "Tap again to step down"]);
       return items;
     }

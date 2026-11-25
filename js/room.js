@@ -338,7 +338,7 @@ firetable.ui.setupRoomEvents = function () {
         if (!data.hasOwnProperty(key)) continue;
         var dj = data[key];
         if (dj.id === ftapi.uid) isSelfOnDeck = true;
-        allDjs.push({ tableKey: key, id: dj.id, name: dj.name, plays: dj.plays, removeAfter: dj.removeAfter });
+        allDjs.push({ tableKey: key, id: dj.id, name: dj.name, plays: dj.plays, removeAfter: !!firetable.people.bus(dj), bus: firetable.people.bus(dj, true) });
       }
 
       // Seats can shift mid-song (a DJ joins or leaves before the spotlight).
@@ -393,11 +393,11 @@ firetable.ui.setupRoomEvents = function () {
             delete _pendingDeparture[djId];
           }
           var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + djDisplayName + ' step down after their next play';
-          var departureTitleOn  = isSelf ? "Don't step down after your next play" : "Don't have " + djDisplayName + ' step down after their next play';
+          var departureTitleOn  = isSelf ? (activeEntry.bus ? "You're stepping down " + activeEntry.bus + '. Tap to stay' : "Don't step down after your next play") : "Don't have " + djDisplayName + ' step down after their next play';
           var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
           departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + tableKey + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
         } else if (activeEntry.removeAfter) {
-          departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down after this song">departure_board</span>';
+          departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down ' + firetable.utilities.htmlEscape(activeEntry.bus) + '">departure_board</span>';
         } else {
           departureIndicator = '';
         }
@@ -1359,10 +1359,10 @@ firetable.ui.setupRoomEvents = function () {
           if (isSelf) selfInWaitlist = true;
           var isHostbot = !!(userInfo && userInfo.hostbot);
           var showDeparture = isSelf && !isHostbot;
-          var removeAfterValue = data[key].removeAfter;
+          var removeAfterValue = !!firetable.people.bus(data[key]);
           var wlName = firetable.utilities.htmlEscape(data[key].name);
           var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + wlName + ' step down after their next play';
-          var departureTitleOn  = isSelf ? "Don't step down after your next play" : "Don't have " + wlName + ' step down after their next play';
+          var departureTitleOn  = isSelf ? "You're stepping down " + firetable.people.bus(data[key]) + '. Tap to stay' : "Don't have " + wlName + ' step down after their next play';
           var departureBtn = showDeparture
             ? '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="' + (removeAfterValue ? departureTitleOn : departureTitleOff) + '"><i class="material-symbols-filled">departure_board</i></button>'
             : '';
