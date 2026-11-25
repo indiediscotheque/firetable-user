@@ -1,9 +1,9 @@
 {
   "name": "firetable-user-tests",
   "private": true,
-  "description": "Browser tests for the site, never deployed: unit tests of its own functions, a smoke test against a local database emulator, and its reads and writes against the hostbot's real database rules, all in Chromium under the real Content-Security-Policy from .htaccess.",
+  "description": "Browser tests for the site, never deployed: unit tests of its own functions and of its analytics tag, a smoke test against a local database emulator, and its reads and writes against the hostbot's real database rules, all in Chromium under the real Content-Security-Policy from .htaccess.",
   "scripts": {
-    "unit": "node --test unit.test.mjs",
+    "unit": "node --test unit.test.mjs analytics.test.mjs",
     "smoke": "firebase emulators:exec --only database --project demo-smoke \"node smoke.mjs\"",
     "rules": "firebase emulators:exec --only database,auth --project demo-rules \"node rules.mjs\"",
     "screens": "firebase emulators:exec --only database,auth --project demo-screens \"node screens.mjs\"",
