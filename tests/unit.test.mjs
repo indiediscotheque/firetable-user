@@ -686,7 +686,7 @@ test("the people header and the waitlist's card say only what there is", async (
     const shell = firetable.$appShell[0];
     document.getElementById("mainGrid").appendChild(shell); // the waitlist's card is drawn in the page
     const byId = (id) => document.getElementById(id);
-    const shown = () => [...byId("usersStats").querySelectorAll(".listenerType")].filter((t) => !t.hidden).map((t) => t.textContent.replace(/\s+/g, " ").trim()).join(", ");
+    const shown = () => [...byId("usersStats").querySelectorAll(".listenerType")].filter((t) => !t.hidden).map((t) => t.querySelector("i").textContent + " " + t.querySelector("span").textContent + " (" + t.title + ")").join(", ");
     const heads = () => [...byId("pe-audience").querySelectorAll(".pe-audHead")].map((h) => h.textContent.replace(/^(radio|person)/, "")).join(", ");
     const out = {};
     firetable.audience.take({ guests: 0, guestsLive: 0, stream: { listeners: 1, unplaced: 0, countries: [{ code: "US", name: "United States", n: 1 }] } });
@@ -713,9 +713,9 @@ test("the people header and the waitlist's card say only what there is", async (
     shell.remove();
     return out;
   });
-  assert.equal(r.radioOnly, "0 here, 1 on the radio / On the radio 1", "no guests: no guests count and no empty Guests group");
-  assert.equal(r.guestOnly, "0 here, 1 guest / Guests 1", "nobody on the radio: no radio count or group; one guest is \"1 guest\"");
-  assert.equal(r.neither, "0 here /  / true", "neither: only the members");
+  assert.equal(r.radioOnly, "room 0 (0 members in the room), radio 1 (1 person listening on the radio) / On the radio 1", "no guests: no guests count and no empty Guests group");
+  assert.equal(r.guestOnly, "room 0 (0 members in the room), person 1 (1 guest without an account, 1 listening live) / Guests 1", "nobody on the radio: no radio count or group");
+  assert.equal(r.neither, "room 0 (0 members in the room) /  / true", "neither: only the members");
   assert.equal(r.canHop, "Less than 4 DJs = no need to wait!|on", "someone who can hop on is offered it");
   assert.equal(r.onDeck, "Less than 4 DJs = no need to wait!|", "a DJ on the decks isn't shown a greyed-out Hop on");
   assert.equal(r.full, "The decks are full. Nobody is waiting yet.|on", "four DJs: the note doesn't say there's no wait");

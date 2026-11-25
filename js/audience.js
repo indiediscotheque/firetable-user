@@ -152,7 +152,7 @@ firetable.audience = (function () {
     var plural = firetable.utilities.pluralize;
     var m = members();
     var radio = d.stream ? d.stream.listeners : 0;
-    // each count in words; one that's none is left out (the total still adds up)
+    // each count beside its icon, named on hover; one that's none is left out (the total still adds up)
     var set = function (id, n, label, shown) {
       var el = byId(id);
       if (!el) return;
@@ -164,8 +164,6 @@ firetable.audience = (function () {
     set("numRoomListeners", m, plural(m, "member", "members") + " in the room", true);
     set("pe-numGuests", d.guests, plural(d.guests, "guest", "guests") + " without an account" + (d.guestsLive ? ", " + d.guestsLive + " listening live" : ""), d.guests > 0);
     set("numStreamListeners", radio, plural(radio, "person", "people") + " listening on the radio", radio > 0);
-    var word = byId("pe-guestWord");
-    if (word) word.textContent = d.guests === 1 ? "guest" : "guests";
   }
 
   /** "🇺🇸" from "US" (Windows draws the letters, so emojify swaps in Twemoji's picture). */

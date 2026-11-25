@@ -1533,19 +1533,24 @@ a.sociallogo[href] {
 
 #usersStats .listenerType {
     display: none;
-    align-items: baseline;
-    font-size: 0.75rem;
+    align-items: center;
+    font-size: 0.8125rem;
 }
 
-/* Shown once js/audience.js has the counts: everyone, then who that is in
-   words (members here, guests on the site, radio listeners; one that's none
-   is left out, and each says more on hover) */
-#usersStats.is-on { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.75rem; }
-#usersStats.is-on .listenerType:not([hidden]) { display: inline-flex; gap: 0.3em; white-space: nowrap; }
-/* the counts are in the words' own type, at their size: a second typeface
-   for one digit read as a smaller, odd one out */
+#usersStats [class*="material-symbols-"] {
+    font-size: 1rem;
+    color: var(--color-text-muted);
+}
+
+/* Shown once js/audience.js has the counts: everyone, then who that is,
+   each beside its icon (members here, guests on the site, radio listeners;
+   one that's none is left out, and each says what it is on hover) */
+#usersStats.is-on { display: flex; flex-wrap: wrap; }
+#usersStats.is-on .listenerType:not([hidden]) { display: inline-flex; gap: 0.2rem; }
+/* the counts are in the heading's own type: a second typeface for one
+   digit read as a smaller, odd one out */
 #usersStats #numListeners,
-#usersStats .listenerType span:first-child { font-variant-numeric: tabular-nums; color: var(--color-text); }
+#usersStats .listenerType span { font-variant-numeric: tabular-nums; color: var(--color-text); }
 
 #allUsers {
     display: flex;

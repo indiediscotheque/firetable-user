@@ -370,10 +370,16 @@
 		<div id="usersbox" role="region" aria-label="DJs and people">
 			<div id="usersStats">
 				<h2><span id="numListeners"></span> People</h2>
-				<!-- who that is, in words (a count of none is left out: js/audience.js) -->
-				<div class="listenerType"><span id="numRoomListeners"></span> here</div>
-				<div class="listenerType"><span id="pe-numGuests"></span> <span id="pe-guestWord">guests</span></div>
-				<div class="listenerType"><span id="numStreamListeners"></span> on the radio</div>
+				<!-- who that is: members here, guests, radio listeners (a count of none is left out: js/audience.js) -->
+				<div class="listenerType">
+					<i class="material-symbols-outlined" aria-hidden="true">room</i> <span id="numRoomListeners"></span>
+				</div>
+				<div class="listenerType">
+					<i class="material-symbols-outlined" aria-hidden="true">person</i> <span id="pe-numGuests"></span>
+				</div>
+				<div class="listenerType">
+					<i class="material-symbols-outlined" aria-hidden="true">radio</i> <span id="numStreamListeners"></span>
+				</div>
 			</div>
 			<div id="allUsersWrap" class="scroll-view">
 				<div id="usersWaitlist"></div>
