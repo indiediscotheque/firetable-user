@@ -246,3 +246,25 @@ firetable.busMenu = (function () {
   };
   return stub;
 })();
+
+/*
+ * Songs the room played lately, marked in your playlist (js/recent-plays.js,
+ * loaded once you're signed in: only members have playlists). Until then
+ * nothing is marked.
+ */
+firetable.recentPlays = (function () {
+  "use strict";
+  var stub = {
+    /** Load it, then follow what the room played lately. */
+    watch: function () {
+      return ftLazy.own("recent-js", "js/recent-plays.js").then(function () {
+        if (firetable.recentPlays === stub) throw new Error("js/recent-plays.js didn't load");
+        return firetable.recentPlays.watch();
+      }).catch(function (err) {
+        console.error("[firetable] songs played lately:", err);
+      });
+    }
+  };
+  if (window.ftapi && ftapi.events) ftapi.events.on("loggedIn", function () { firetable.recentPlays.watch(); });
+  return stub;
+})();

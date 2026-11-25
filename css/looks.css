@@ -3425,6 +3425,8 @@ input.ft-filter {
     #mainqueue :is(.q-num, .q-remix, .trackDuration, .pl-from) {
         display: none;
     }
+    /* played lately: the icon only (its words are its label) */
+    #mainqueue .q-recentText { display: none; }
 
     #mainqueue .q-name {
         min-width: 5.5rem;
@@ -3581,6 +3583,21 @@ input.ft-filter {
     color: var(--color-orange-lite);
 }
 #mainqueue.is-djlist .q-next { display: inline-block; }
+
+/* A song the room played in the last few hours (js/recent-plays.js): the bot
+   skips it on your turn until its hours are up, so it says so, and Next moves
+   to the song that will really play. */
+.q-recent {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+    background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+    color: var(--color-orange-lite);
+    cursor: help;
+
+    & .material-symbols-outlined { font-size: 1.2em; line-height: 1; }
+}
+#mainqueue.is-djlist .pvbar.not-next .q-next { display: none; }
 
 /* The last song of your set (js/set-end.js): a line under it and a tag, on
    your DJ playlist in your play order. Drawn with shadows, not borders or
