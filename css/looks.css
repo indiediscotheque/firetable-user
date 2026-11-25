@@ -4414,20 +4414,30 @@ a.importLinkCheck {
 }
 #queuebox .st-djIcon { display: none; }
 
-/* The crate's picker says when the list it shows is the one you DJ from */
+/* The crate's DJ switch, beside its picker (js/dj-switch.js): "DJ list" on
+   the list you DJ from, "DJ from this" on any other, a tap to make it so */
 .cr-djtag {
     display: inline-flex;
     flex: none;
     align-items: center;
     gap: 0.2rem;
+    min-height: 0;
+    margin: 0;
     padding: 0.1rem var(--pad2) 0.1rem var(--pad1);
     border: 1px solid var(--color-border);
     border-radius: 999px;
+    background: none;
+    font: inherit;
     font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.03em;
     white-space: nowrap;
-    color: var(--color-text-light);
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+.cr-djtag.on { color: var(--color-accent); border-color: color-mix(in srgb, var(--color-accent) 45%, transparent); cursor: default; }
+@media (hover: hover) {
+    .cr-djtag:not(.on):hover { color: var(--color-text-light); border-color: var(--color-text-muted); }
 }
 .cr-djtag[hidden] { display: none; }
 /* a phone keeps the row for the playlist's name, and so does a small computer
@@ -4443,6 +4453,17 @@ a.importLinkCheck {
         clip-path: inset(50%);
         white-space: nowrap;
     }
+}
+/* ...and so does Discover's column, where Play here comes before the picker */
+body.d-queue-here .cr-djtag { padding: 0.15rem; }
+body.d-queue-here .cr-djtag:not(.on) { border-color: transparent; }
+body.d-queue-here .cr-djtag > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 .cr-djtag [class*="material-symbols-"] { font-size: 0.95rem; }
 

@@ -873,7 +873,17 @@ try {
     ftapi.selectedListThing = "elsewhere";
     firetable.ui.markDjList();
     out.notDj = tags("k1");
-    out.status.tagOff = tag.hidden;
+    // on any other list it's a switch: "DJ from this", and a tap makes it the DJ list
+    out.status.tagOff = !tag.hidden && tag.getAttribute("aria-pressed") === "false" && tag.querySelector("span").textContent;
+    const realSwitch = ftapi.actions.switchDjList, stageWas = document.getElementById("djlistpicker").value;
+    const me = ftapi.users[ftapi.uid] || {}, meWas = me.selectedList;
+    let switched = null;
+    ftapi.actions.switchDjList = (id) => { switched = id; };
+    tag.click();
+    ftapi.actions.switchDjList = realSwitch;
+    document.getElementById("djlistpicker").value = stageWas;
+    me.selectedList = meWas;
+    out.status.switched = switched === document.getElementById("listpicker").value;
     ftapi.selectedListThing = realDj;
     firetable.ui.markDjList();
     // ⋮ → Delete and search for another
@@ -896,7 +906,8 @@ try {
   check(rowLook.delsearch === "k2|Daft Punk - One More Time|1", "the row's ⋮ has Delete and search for another (" + rowLook.delsearch + ")");
   check(/^rgba\(0, 0, 0, 0\)\|rgba\(0, 0, 0, 0\)\|none$/.test(rowLook.status.box) && rowLook.status.hugs && rowLook.status.beside && rowLook.status.select === "SELECT",
     "under the stage, the playlist you DJ from reads as a status: no box, as wide as its name, still the same select (" + JSON.stringify(rowLook.status) + ")");
-  check(rowLook.status.tag === "DJ list" && rowLook.status.tagOff, "the crate's picker says DJ list while it shows the list you DJ from, and only then (" + JSON.stringify(rowLook.status) + ")");
+  check(rowLook.status.tag === "DJ list" && rowLook.status.tagOff === "DJ from this" && rowLook.status.switched,
+    "the crate's DJ switch says DJ list on the list you DJ from, DJ from this on another, and a tap makes that one the DJ list (" + JSON.stringify(rowLook.status) + ")");
 
   console.log("-- one song menu: the same items, words and order in each ⋮");
   const oneMenu = await page.evaluate(async () => {
@@ -4153,6 +4164,29 @@ try {
     document.querySelector("#dMini .d-next").click();
     await wait(200);
     out.nextPlays = firetable.discover.state().playing === "plB000002" && rowsNow()[1].classList.contains("d-playing") && !rowsNow()[0].classList.contains("d-playing");
+    // Play here, before the picker: the playlist from the top
+    const playHere = document.getElementById("cr-playHere");
+    out.playHere = !playHere.hidden && playHere.offsetParent !== null && !!playHere.closest("#listpickerWrap");
+    playHere.click();
+    await wait(200);
+    out.playHereTop = firetable.discover.state().list === "playlist" && firetable.discover.state().playing === "plA000001";
+    // the player's Shuffle: Next picks songs not heard yet, then there's none; Previous goes back
+    document.querySelector("#dMini .d-shuffle").click();
+    await wait(100);
+    out.shuffleOn = document.querySelector("#dMini .d-shuffle").getAttribute("aria-pressed") === "true";
+    const heard = [firetable.discover.state().playing];
+    for (let n = 0; n < 2; n++) {
+      document.querySelector("#dMini .d-next").click();
+      await wait(200);
+      heard.push(firetable.discover.state().playing);
+    }
+    out.shuffled = new Set(heard).size === 3 && document.querySelector("#dMini .d-next").disabled;
+    document.querySelector("#dMini .d-prev").click();
+    await wait(200);
+    out.shuffleBack = firetable.discover.state().playing === heard[1];
+    document.querySelector("#dMini .d-shuffle").click();
+    await wait(100);
+    out.shuffleOff = document.querySelector("#dMini .d-shuffle").getAttribute("aria-pressed") === "false";
     // Chat takes the column; Live gets its panel back
     document.querySelector('#dSide [data-sidetab="chat"]').click();
     await wait(100);
@@ -4187,14 +4221,17 @@ try {
     firetable.discover.onFailed = skip;
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await wait(200);
-    out.liveHome = inLive();
+    out.liveHome = inLive() && document.getElementById("cr-playHere").hidden;
     return out;
   });
   check(member.moved && !member.tools.length && member.toolsShown && member.bar, "the Playlists tab is Live's own playlist panel, every tool with it, and no second Play / Shuffle / DJ row above it (" + JSON.stringify(member) + ")");
   check(member.rows === "One,Two,Three" && member.next && member.filtered === "Two", "it lists the DJ playlist with Next, and Live's filter filters it (" + JSON.stringify(member) + ")");
   check(member.topped === "Three,One,Two" && member.dragged === "One,Two,Three", "Send to top moves a song up; dragging a row saves the order (" + JSON.stringify(member) + ")");
   check(member.playingRow && member.nextPlays, "a song's play button plays it in the bar, marked in the list, and Next goes on through the playlist (" + JSON.stringify(member) + ")");
-  check(member.backOnChat && member.inAgain && member.liveHome, "Chat and Live get Live its panel back, and Playlists takes it again (" + JSON.stringify(member) + ")");
+  check(member.playHere && member.playHereTop, "Play here, before the picker, plays the playlist from the top (" + JSON.stringify(member) + ")");
+  check(member.shuffleOn && member.shuffled && member.shuffleBack && member.shuffleOff,
+    "the player's Shuffle: Next plays songs not heard yet until there are none, Previous goes back, and it turns off (" + JSON.stringify(member) + ")");
+  check(member.backOnChat && member.inAgain && member.liveHome, "Chat and Live get Live its panel back (without Play here), and Playlists takes it again (" + JSON.stringify(member) + ")");
   check(member.first && member.done && /First in/.test(member.note || "") && member.undone && member.fire,
     "Play it in the room puts the song first in the DJ playlist, says so, and Undo takes it out; listening in, Fire is in the bar (" + JSON.stringify(member) + ")");
 

@@ -1728,6 +1728,29 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
 /* Playlists (members): Live's own panel, moved in (js/discover-queue.js),
    with the decks below */
 .d-sidequeue { display: flex; flex-direction: column; overflow: hidden; }
+/* Play here, before the picker: play/pause is the one light button */
+.cr-playhere {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--color-text-light);
+    color: var(--color-play-ink);
+    border-top-color: var(--play-edge);
+}
+.cr-playhere[hidden] { display: none; }
+.cr-playhere [class*="material-symbols-"] { font-size: 1.5rem; }
+.cr-playhere:disabled { opacity: 0.4; }
+@media (hover: hover) {
+    .cr-playhere:not(:disabled):hover { background: var(--color-play-hover); }
+}
+/* the player's Shuffle (js/discover-shuffle.js), lit while on */
+.d-shuffle.on { color: var(--pb-tone, var(--color-accent)); }
 .d-queuehost { flex: 1; min-height: 0; display: flex; }
 body.ft-discover #dSide #queuebox {
     display: flex !important;

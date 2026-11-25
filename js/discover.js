@@ -2130,15 +2130,23 @@ firetable.discover = (function () {
 
   // ─── Playlists (members) ────────────────────────────────────────────────
   // Live's own playlist panel, moved into the Playlists tab (js/discover-queue.js):
-  // everything Live does with a playlist, with Discover's Play, Shuffle play,
-  // DJ from this playlist and the decks beside it.
+  // everything Live does with a playlist, with Play here and the decks beside it.
   var queue = firetable.discoverQueue({
     esc: esc, ms: ms, setList: setList, deckState: deckState,
     lists: function () { return lists; },
     player: function () { return P; },
     active: function () { return discoverActive(); },
     play: function (list, i) { play(list, i); },
+    playAll: function (list) { shuffle.playAll(list); },
     togglePause: function () { togglePause(); }
+  });
+  // Shuffle, a setting of the player for whatever list plays (js/discover-shuffle.js)
+  var shuffle = firetable.discoverShuffle({
+    ms: ms, store: store, announce: function (m) { announce(m); },
+    lists: function () { return lists; },
+    player: function () { return P; },
+    play: function (list, i) { play(list, i); },
+    render: function () { renderBar(); renderFull(); }
   });
   function djList() { return queue.djList(); }
 
@@ -2285,6 +2293,7 @@ firetable.discover = (function () {
     setSrc("discover");
     // the same song picked up where it waited is the same listen
     if (!(P.track && String(P.track.cid) === String(t.cid) && startAt)) P.play++;
+    shuffle.played(listName, t, P.list === listName && P.track);
     P.track = t; P.list = listName; P.i = i; P.paused = false; P.len = t.dur || 0; P.at = startAt || 0;
     setTimeout(mapMarks, 0); // the genre you're hearing, on the sound map
     firetable.preview = "discover";
@@ -2395,7 +2404,7 @@ firetable.discover = (function () {
     if (!list) return;
     // back, a few seconds in: the start of this song (as every player does)
     if (by < 0 && P.at > 3 && discoverActive()) { P.play++; return seek(0); } // a new listen
-    var i = P.i + by;
+    var i = shuffle.step(P.i, by);
     if (i < 0 || i >= list.tracks.length) {
       if (by > 0) { // the end of the list
         P.paused = true;
@@ -2728,17 +2737,17 @@ firetable.discover = (function () {
 
     // transport
     var tr = document.getElementById("pv-transport");
-    var idx = P.i, total = list ? list.tracks.length : 0;
+    var idx = P.i;
     var mainLabel = "Play", mainIcon = "play_arrow";
     if (kind === "discover" || kind === "pick") { mainIcon = P.paused || kind === "pick" ? "play_arrow" : "pause"; mainLabel = mainIcon === "pause" ? "Pause" : "Play"; }
     else if (kind === "live") { mainIcon = "stop"; mainLabel = "Stop listening to the room"; }
     else if (kind === "onair") mainLabel = "Listen in to the room";
     var disc = kind === "discover" || kind === "pick";
-    tr.innerHTML = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous" aria-label="Previous"' + (idx <= 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
+    tr.innerHTML = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous" aria-label="Previous"' + (shuffle.before(idx) < 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
       '<button type="button" class="butt iconbutt pb-main d-big" title="' + mainLabel + '" aria-label="' + mainLabel + '"' + (kind === "quiet" ? " disabled" : "") + ">" + ms(mainIcon, true) + "</button>" +
-      (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next" aria-label="Next"' + (idx >= total - 1 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" : "");
+      (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next" aria-label="Next"' + (shuffle.after(idx) < 0 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" : "");
     // a Discover song's reload: among the tools, where the room's own reload is
-    document.getElementById("pv-dtools").innerHTML = disc ? '<button type="button" class="butt graybutt iconbutt d-reload" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>" : "";
+    document.getElementById("pv-dtools").innerHTML = disc ? shuffle.button() + '<button type="button" class="butt graybutt iconbutt d-reload" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>" : "";
 
     // progress: a Discover song can be moved through; the room can't
     var seekEl = document.getElementById("pv-seek");
@@ -2933,7 +2942,7 @@ firetable.discover = (function () {
     if (kind === "discover" || kind === "pick") {
       var t = P.track;
       var list = lists[P.list];
-      var next = list && list.tracks[P.i + 1];
+      var next = list && list.tracks[shuffle.after(P.i)];
       if (next) out += line("pvf-playnext", "Next", next, "Play now");
       if (t && P.inRoom && String(P.inRoom.cid) === String(t.cid)) out += '<p class="pvf-line pvf-note" id="pv-toRoomNote">' + toRoomNote(t, firetable.saved.where(t.type, t.cid)) + "</p>";
       if (s) out += line("d-listen", '<i class="d-dot" aria-hidden="true"></i>The room', s, "Listen in");
@@ -3054,11 +3063,10 @@ firetable.discover = (function () {
     else if (kind === "live") { mainIcon = "stop"; mainLabel = "Stop listening to the room"; }
     else if (kind === "onair") { mainIcon = "play_arrow"; mainLabel = "Listen in to the room"; }
     else { mainIcon = "play_arrow"; mainLabel = "Play"; }
-    var total = lists[P.list] ? lists[P.list].tracks.length : 0;
-    tr = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous (Shift + ←)" aria-label="Previous"' + (P.i <= 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
+    tr = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous (Shift + ←)" aria-label="Previous"' + (shuffle.before(P.i) < 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
       '<button type="button" class="butt iconbutt pvf-main d-big" title="' + mainLabel + ' (Space)" aria-label="' + mainLabel + '"' + (kind === "quiet" ? " disabled" : "") + ">" + ms(mainIcon, true) + "</button>" +
-      (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next (Shift + →)" aria-label="Next"' + (P.i >= total - 1 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" +
-        '<button type="button" class="butt graybutt iconbutt d-reload pb-small" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>"
+      (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next (Shift + →)" aria-label="Next"' + (shuffle.after(P.i) < 0 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" +
+        shuffle.button("pb-small") + '<button type="button" class="butt graybutt iconbutt d-reload pb-small" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>"
         : room ? '<button type="button" class="butt graybutt iconbutt pvf-reloadroom pb-small" title="Reload the room\'s audio (if it stalls)" aria-label="Reload the room\'s audio">' + ms("refresh") + "</button>" : "");
     redraw(document.getElementById("pv-ftransport"), tr);
     var seekEl = document.getElementById("pv-fseek");
@@ -3672,7 +3680,7 @@ firetable.discover = (function () {
     if ((b = t.closest(".pb-joinfire"))) return showSignIn("create");
     if ((b = t.closest(".pb-savelive"))) return liveTrack() && save(liveTrack(), b);
     // the playlist panel
-    if ((b = t.closest(".pl-shuffle"))) return shufflePlay(b.getAttribute("data-list"));
+    if ((b = t.closest(".pl-shuffle"))) return shuffle.start(b.getAttribute("data-list"));
     if ((b = t.closest(".pl-cratetop"))) {
       var cr = crate();
       var moved = cr.splice(Number(b.getAttribute("data-i")), 1);
@@ -3708,7 +3716,7 @@ firetable.discover = (function () {
       if (key) return goTo("discover/djs/" + key);
     }
     if ((b = t.closest(".d-ytsearch"))) return searchYouTube(D.sub || "");
-    if ((b = t.closest(".d-playall"))) return play(b.getAttribute("data-list"), 0);
+    if ((b = t.closest(".d-playall"))) return shuffle.playAll(b.getAttribute("data-list"));
     if ((b = t.closest(".d-saveall"))) return saveAll(b.getAttribute("data-list"));
     if (t.closest(".d-pickcards")) {
       // the card case is in Live
@@ -3819,16 +3827,6 @@ firetable.discover = (function () {
     e.preventDefault();
     var to = stops[at + (e.key === "ArrowRight" ? 1 : -1)];
     if (to) to.focus();
-  }
-
-  /** Play a list in a shuffled order, here only: the list itself keeps its order. */
-  function shufflePlay(name) {
-    var list = lists[name];
-    if (!list || !list.tracks.length) return;
-    var all = list.tracks.slice();
-    for (var i = all.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var x = all[i]; all[i] = all[j]; all[j] = x; }
-    setList("shuffle", list.label + " · shuffled", all);
-    play("shuffle", 0);
   }
 
   /** A genre's radio: its favorites, new finds and deep cuts, shuffled. */
