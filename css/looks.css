@@ -4895,6 +4895,8 @@ a.importLinkCheck {
 .chatText .inlineImage {
     display: block;
     max-width: 100%;
+    max-height: min(20rem, 50vh);
+    border-radius: var(--radius-sm, 0.25rem);
 }
 
 .chatText .hideImage {

@@ -196,12 +196,50 @@ test("chat: image links become inline images only with Show images on", async ()
   assert.deepEqual(sneaky.handlers, []);
 });
 
-test("imageLinkUrl: http(s) images only", async () => {
+test("chatImages.src: http(s) images and known image hosts only", async () => {
   const r = await run(() => [
-    "https://x.test/a.JPG", "http://x.test/b.gif?x=1", "https://x.test/c.png#f", "https://x.test/d.webp",
-    "javascript:alert(1)//.png", "data:image/png;base64,AAAA", "ftp://x.test/e.png", "not a url", ""
-  ].map((u) => firetable.utilities.imageLinkUrl(u)));
-  assert.deepEqual(r, ["https://x.test/a.JPG", "http://x.test/b.gif?x=1", "https://x.test/c.png#f", null, null, null, null, null, null]);
+    "https://x.test/a.JPG", "http://x.test/b.gif?x=1", "https://x.test/c.png#f", "https://x.test/d.webp", "https://x.test/e.avif",
+    "https://imgur.com/AbC1234", "https://i.imgur.com/AbC1234.gifv", "https://imgur.com/a/AbC1234",
+    "https://giphy.com/gifs/cat-dance-xT9IgG50Fb7Mi0prBC", "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif",
+    "https://pbs.twimg.com/media/Fab123?format=jpg&name=small", "https://pbs.twimg.com/media/Fab123",
+    "javascript:alert(1)//.png", "data:image/png;base64,AAAA", "ftp://x.test/e.png", "https://x.test/page", "not a url", ""
+  ].map((u) => firetable.chatImages.src(u)));
+  assert.deepEqual(r, [
+    "https://x.test/a.JPG", "http://x.test/b.gif?x=1", "https://x.test/c.png#f", "https://x.test/d.webp", "https://x.test/e.avif",
+    "https://i.imgur.com/AbC1234.jpg", "https://i.imgur.com/AbC1234.gif", null,
+    "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif", "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif",
+    "https://pbs.twimg.com/media/Fab123?format=jpg&name=small", null,
+    null, null, null, null, null, null
+  ]);
+});
+
+test("chat: a hosted image links to the page posted, shows the picture, and loads privately", async () => {
+  const r = await chat("look https://imgur.com/AbC1234", true);
+  assert.deepEqual(r.imgs, ["https://i.imgur.com/AbC1234.jpg"]);
+  assert.equal(r.links[0].href, "https://imgur.com/AbC1234");
+  assert.match(r.html, /referrerpolicy="no-referrer"/);
+  assert.match(r.html, /loading="lazy"/);
+  assert.match(r.html, /alt="Image from imgur.com"/);
+});
+
+test("chatImages.setEnabled: turns links already in chat into pictures and back", async () => {
+  const r = await run(() => {
+    const shell = firetable.$appShell && firetable.$appShell[0]; // set aside while logged out
+    const box = document.getElementById("actualChat") || shell.querySelector("#actualChat");
+    const line = document.createElement("div");
+    line.className = "chatText";
+    line.innerHTML = firetable.ui.textToLinks("https://x.test/cat.png https://x.test/page");
+    box.appendChild(line);
+    const was = firetable.showImages;
+    firetable.chatImages.setEnabled(true);
+    const on = [line.querySelectorAll("img").length, line.querySelectorAll("a").length];
+    firetable.chatImages.setEnabled(false);
+    const off = [line.querySelectorAll("img").length, line.querySelector("a").textContent];
+    firetable.chatImages.setEnabled(was);
+    line.remove();
+    return { on, off };
+  });
+  assert.deepEqual(r, { on: [1, 2], off: [0, "https://x.test/cat.png"] });
 });
 
 test("strip: drops tags and decodes entities", async () => {

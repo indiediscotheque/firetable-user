@@ -624,20 +624,6 @@ firetable.utilities = {
   },
 
   /**
-   * Return the normalized URL if `raw` is an http(s) link to a .jpg/.jpeg/
-   * .gif/.png image, otherwise null. URL() percent-encodes quotes and spaces,
-   * so the result is safe to put in an attribute.
-   * @param {string} raw
-   * @returns {string|null}
-   */
-  imageLinkUrl: function (raw) {
-    var u;
-    try { u = new URL(String(raw || "")); } catch (e) { return null; }
-    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
-    return /\.(?:jpe?g|gif|png)$/i.test(u.pathname) ? u.href : null;
-  },
-
-  /**
    * Decode HTML entities ("&amp;" → "&", "&#39;" → "'") without treating
    * anything as markup: a <textarea> parses its content as plain text, so no
    * elements are created and nothing loads or runs. Track names are stored as
