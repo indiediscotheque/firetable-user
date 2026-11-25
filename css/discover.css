@@ -253,6 +253,9 @@ body.ft-discover #discoverPage {
    behind the first DJ's face like a strike-through */
 #dBrowse .d-rowlist .hist-entry::before { content: none; }
 /* .d-noface: a DJ with no avatar yet, drawn as the generic gray robot bust (js/discover.js robot()) */
+/* A date ("Mar 19, 2018") needs more room than the timeline's time column, or
+   it runs under the DJ's face on the line */
+#dBrowse .d-rowlist:has(.d-date) { --hist-time-w: 5.75rem; }
 .hist-timestamp.d-rank {
     color: var(--color-text-light);
     font-size: var(--fs-title);
@@ -440,6 +443,9 @@ body.ft-discover #discoverPage {
     }
     /* a rank needs less room than a time or a date */
     #dBrowse .d-rowlist:has(.d-rank) { --hist-time-w: 2.5rem; }
+    /* a phone keeps the narrow column and puts a past year on a second line */
+    #dBrowse .d-rowlist:has(.d-date) { --hist-time-w: 3.5rem; }
+    #dBrowse .d-rowlist .hist-timestamp.d-date { white-space: normal; line-height: 1.2; }
     /* the chart's controls: Share as its icon, so the three sit on one row */
     #dBrowse .d-chartacts { margin-left: 0; flex-wrap: nowrap; }
     #dBrowse .d-chartacts .d-share { padding-inline: var(--pad2); }
