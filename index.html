@@ -344,13 +344,17 @@
 			</div>
 			<div id="typingIndicator" aria-live="polite"></div>
 			<div id="chatbottom">
-				<button class="butt graybutt iconbutt" id="pickEmoji" aria-label="Emoji" style="anchor-name: --tip-pickEmoji" aria-describedby="tip-pickEmoji">
-					<i class="material-symbols-outlined"> insert_emoticon </i>
-				</button>
-				<span id="tip-pickEmoji" role="tooltip" class="ft-tip" style="position-anchor: --tip-pickEmoji">Emoji</span>
 				<form id="newchatForm" autocomplete="off">
+					<button type="button" class="butt iconbutt" id="pickEmoji" aria-label="Emoji" style="anchor-name: --tip-pickEmoji" aria-describedby="tip-pickEmoji">
+						<i class="material-symbols-outlined"> insert_emoticon </i>
+					</button>
+					<span id="tip-pickEmoji" role="tooltip" class="ft-tip" style="position-anchor: --tip-pickEmoji">Emoji</span>
 					<textarea maxlength="240" autocomplete="off" name="newchat" placeholder="Chat a thing"
 						id="newchat" tabindex="0" rows="1" enterkeyhint="send" aria-autocomplete="list" aria-controls="ch-emojiSuggestList"></textarea>
+					<button type="submit" class="butt iconbutt" id="chatSend" aria-label="Send" style="anchor-name: --tip-chatSend" aria-describedby="tip-chatSend">
+						<i class="material-symbols-outlined"> arrow_upward </i>
+					</button>
+					<span id="tip-chatSend" role="tooltip" class="ft-tip" style="position-anchor: --tip-chatSend">Send</span>
 				</form>
 				<div id="emojiPicker">
 					<div id="pickerNav"></div>
@@ -1656,6 +1660,7 @@
 	<script type="text/javascript" src="js/chat-lines.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/chat-images.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/chat.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/chat-send.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/install.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/cast.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/push.js?v=01.12.08"></script>
