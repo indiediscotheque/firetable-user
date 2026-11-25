@@ -1079,7 +1079,6 @@ firetable.ui.setupPlaylistEvents = function () {
     var $menu = $(trackMenuEl);
     $menu.find('[data-act="open"]').attr('href', $link.attr('href') || '#');
     $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
-    $menu.find('.ft-menu-open-logo').html('<i class="material-symbols-outlined">open_in_new</i>');
     $menu.find('[data-act="swap"]').prop('hidden', !$p.hasClass('has-swap'));
     $menu.find('[data-act="swaptags"]').prop('hidden', String($p.attr('data-tags') || '').indexOf(' - ') < 1);
     $menu.find('[data-act="copy"]').prop('hidden', !/^https?:/.test($link.attr('href') || ''));

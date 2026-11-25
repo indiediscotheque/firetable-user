@@ -1223,7 +1223,7 @@ firetable.songMenu = {
   /** One item of a song menu. */
   item: function (act, it) {
     if (act === "open") {
-      return '<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><span class="ft-menu-open-logo" aria-hidden="true"></span> <span class="ft-menu-open-label">Open track</span></a>';
+      return '<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><i class="material-symbols-outlined">' + it.icon + '</i> <span class="ft-menu-open-label">Open track</span></a>';
     }
     return '<button type="button" role="menuitem" class="butt graybutt' + (it.danger ? " ft-menu-danger" : "") + '" data-act="' + act + '"' +
       (it.popup ? ' aria-haspopup="menu"' : "") + (act === "swap" || act === "copy" ? " hidden" : "") + ">" +
