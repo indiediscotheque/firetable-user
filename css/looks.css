@@ -614,6 +614,18 @@ input:not([type="checkbox"]):not([type="radio"]) {
     box-shadow: none;
 }
 
+/* A slider isn't a text field: none of the field's box. (With its side
+   padding the thumb stops short of both ends of the track, and a click lands
+   on a different value than the one under the pointer.) The :not()s only
+   match the rules above in weight; each slider's own rule sets its size. */
+input[type="range"]:not([type="checkbox"]):not([type="radio"]) {
+    height: auto;
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    transform: none;
+}
+
 input[type="checkbox"],
 input[type="radio"] {
     margin-right: var(--pad1);
