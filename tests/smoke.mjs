@@ -3391,6 +3391,12 @@ try {
     out.deepFace = faces().join() + "|" + /img\/robot-generic\.png/.test((document.querySelector("#dBrowse .hist-entry .d-noface") || { style: {} }).style.backgroundImage || "") + "|" + Math.round(document.querySelector("#dBrowse .hist-track-title").getBoundingClientRect().width);
     document.querySelector('.d-chip[data-gtab="newHere"]').click();
     out.newHere = [...document.querySelectorAll("#dBrowse .hist-track-title")].map((e) => e.textContent).join();
+    // a first-play date ("Mar 19, 2018") ends before the DJ's face on the line
+    const dated = document.querySelector("#dBrowse .hist-timestamp.d-date");
+    const face = dated && dated.parentElement.querySelector(".d-djlink, .dj-avatar-tip");
+    const ink = dated && document.createRange();
+    if (ink) ink.selectNodeContents(dated);
+    out.dateClear = dated ? dated.textContent + "|" + (ink.getBoundingClientRect().right <= face.getBoundingClientRect().left) : "none";
     document.querySelector("#dBrowse .d-radio").click();
     await wait(200);
     out.radio = firetable.discover.state().list + "|" + (document.getElementById("pv-src") || {}).textContent;
@@ -3437,6 +3443,7 @@ try {
   check(libPages.decade === "Nu-Disco,Soul & R&B(quiet)|100 plays in the 2020s" && libPages.about === "Disco's grooves rebuilt with modern synths.",
     "the sound map by decade, and a genre's line (" + libPages.decade + " / " + libPages.about + ")");
   check(libPages.ytm === "https://music.youtube.com/playlist?list=PLsmokeNuDisco", "a genre page links to its YouTube Music playlist (" + libPages.ytm + ")");
+  check(/, \d{4}\|true$/.test(libPages.dateClear), "a dated row's first-play date clears the DJ's face (" + libPages.dateClear + ")");
   check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
   check(libPages.sets === "12 songs in 2 sets" && libPages.chips >= 4, "a DJ's sets on one night are one line, and the page's facts are chips (" + libPages.sets + " / " + libPages.chips + ")");
   check(libPages.yearRow === "true|true", "the Years list shows each year's covers and says they're its releases (" + libPages.yearRow + ")");

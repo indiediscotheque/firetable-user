@@ -333,7 +333,7 @@ firetable.discover = (function () {
   /** A song as a Recent row on the timeline. */
   function row(t, list, i, meta) {
     var playing = isPlaying(list, i);
-    return '<div class="hist-entry"><span class="hist-timestamp' + (meta.rank ? " d-rank" : "") + '">' + esc(meta.stamp || "") + "</span>" +
+    return '<div class="hist-entry"><span class="hist-timestamp' + (meta.rank ? " d-rank" : meta.dated ? " d-date" : "") + '">' + esc(meta.stamp || "") + "</span>" +
       (meta.dj ? robotLink(meta.dj) : '<span class="ft-avatar pv-dj-avatar dj-avatar-tip d-nobody" aria-hidden="true"></span>') +
       '<div class="pvbar' + (playing ? " previewing" : "") + '"' + rowAttrs(t, list, i) + ">" +
       '<div class="pv-art histart" style="background-image:url(' + esc(artOf(t)) + ')"><button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, i) + '">' + (isSounding(list, i) ? "pause" : "play_arrow") + "</button></div>" +
@@ -836,7 +836,7 @@ firetable.discover = (function () {
   function datedRows(tracks, listName) {
     if (!tracks.length) return emptyNote("Nothing here yet.");
     return capped(listName, tracks.length, tracks.map(function (t, i) {
-      return row(t, listName, i, { stamp: t.first ? firetable.utilities.shortDate(t.first) : "", dj: djShown(t.djid, t.dj), right: '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" });
+      return row(t, listName, i, { stamp: t.first ? firetable.utilities.shortDate(t.first) : "", dated: true, dj: djShown(t.djid, t.dj), right: '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" });
     }).join(""));
   }
   function person(p, fact, more) {
