@@ -302,7 +302,7 @@ body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
 .tt-group span { color: #a3a3a3; }
 .tt-people ul { list-style: none; margin: 0; padding: 0; }
 /* the radio's listeners by country and the guests (js/audience.js) */
-.tt-people .pe-audRow, .tt-people .pe-audNote { padding-left: 0.9rem; padding-right: 0.9rem; color: var(--tt-text); }
+.tt-people .pe-audRow { padding-left: 0.9rem; padding-right: 0.9rem; color: var(--tt-text); }
 .tt-people .pe-audN, .tt-people .is-unplaced .pe-audName { color: var(--tt-muted); }
 .tt-guest {
     display: flex;

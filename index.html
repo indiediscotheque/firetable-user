@@ -369,7 +369,8 @@
 
 		<div id="usersbox" role="region" aria-label="DJs and people">
 			<div id="usersStats">
-				<h2><span id="numListeners"></span> People</h2>
+				<h2><i class="material-symbols-outlined" aria-hidden="true">groups</i> <span id="numListeners"></span> <span class="sr-only">People</span></h2>
+				<!-- who that is: members here, guests, radio listeners (a count of none is left out: js/audience.js) -->
 				<div class="listenerType">
 					<i class="material-symbols-outlined" aria-hidden="true">room</i> <span id="numRoomListeners"></span>
 				</div>
@@ -392,7 +393,10 @@
 							<span class="prsnName"></span>
 						</div>
 					</div>
+					<!-- the DJs in deck order, then everyone else; the headings show once there are DJs (js/people.js) -->
+					<h3 id="pe-djHead" class="pe-groupHead" hidden><span class="material-symbols-outlined" aria-hidden="true">headphones</span>On the decks <span class="pe-count"></span></h3>
 					<div id="usersDJs"></div>
+					<h3 id="pe-floorHead" class="pe-groupHead" hidden><span class="material-symbols-outlined" aria-hidden="true">group</span>On the floor</h3>
 					<div id="usersBot"></div>
 					<div id="usersSuper"></div>
 					<div id="usersMod"></div>
@@ -1646,6 +1650,7 @@
 	<script type="text/javascript" src="js/import.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/users.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/audience.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/people.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/avatar-builder.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/room.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/ui.js?v=01.12.08"></script>

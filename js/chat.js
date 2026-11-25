@@ -28,9 +28,8 @@ firetable.actions.syncFireReactionButtons = function () {
   var userHasFire = !!(ftapi.uid && firetable.fireReactors && firetable.fireReactors[ftapi.uid]);
   $("#fire").toggleClass("on", userHasFire);
   if (firetable.tt) firetable.tt.fires(); // the Turntable theme's Awesome, meter and dancers
-  if (userHasFire) {
-    $("#cloud_with_rain").removeClass("on");
-  }
+  if (userHasFire) $("#cloud_with_rain").removeClass("on");
+  ftapi.events.emit("firesChanged"); // the people list marks who fired this song (js/people.js)
 };
 
 firetable.actions.updateFireReactionDisplay = function () {

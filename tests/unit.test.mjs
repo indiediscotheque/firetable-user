@@ -631,6 +631,96 @@ test("the emoji picker's search: by the emoji or its words, headers hidden, all 
   assert.ok(r.headsBack > 0);
 });
 
+test("the people list: DJs in deck order (playing, next, plays, leaving), then the rest by name; away times, fires, you", async () => {
+  const r = await run(() => {
+    const byId = (id) => document.getElementById(id) || firetable.$appShell.find("#" + id)[0];
+    const was = { users: ftapi.users, table: firetable.tableData, wait: firetable.waitlistData, song: firetable.song, limit: firetable.playlimit, fires: firetable.fireReactors, uid: ftapi.uid };
+    const now = Date.now() + (ftapi.serverTimeOffset || 0);
+    ftapi.users = { zed: { username: "Zed" }, amy: { username: "amy", idle: { isIdle: true, since: now - 47 * 60000 } },
+      bob: { username: "Bob", mod: true, idle: { isIdle: true, since: now - 60000 } }, bot: { username: "hostbot", hostbot: true, idle: { isIdle: true, since: 5 } },
+      d1: { username: "Dee" }, d2: { username: "Duo", supermod: true }, w1: { username: "Wes" } };
+    firetable.tableData = [{ name: "Dee", id: "d1", plays: 1 }, { name: "Duo", id: "d2", plays: 2, removeAfter: true }, { name: "gone", id: "g1", plays: 0 }];
+    firetable.waitlistData = [{ name: "Wes", id: "w1" }];
+    firetable.song = { cid: "x", djid: "d1" };
+    firetable.playlimit = 2;
+    firetable.fireReactors = { zed: true, d1: true };
+    ftapi.uid = "amy";
+    firetable.people.render();
+    const says = (el) => el.getAttribute("aria-label") || el.textContent;
+    const row = (el) => el.id.slice(4) + ":" + el.querySelector(".prsnName").textContent + "[" + [...el.classList].filter((c) => c !== "prson").join(",") + "]" +
+      (el.querySelector(".pe-meta") ? " " + [...el.querySelector(".pe-meta").children].map(says).join(",") : "");
+    const rows = (id) => [...byId(id).children].map(row);
+    const out = {
+      djs: rows("usersDJs"), bot: rows("usersBot"), supers: rows("usersSuper"), mods: rows("usersMod"), members: rows("usersRegular"),
+      heads: [byId("pe-djHead").hidden, byId("pe-djHead").textContent.replace(/^headphones/, ""), byId("pe-floorHead").hidden].join("|"),
+      you: [...byId("allUsers").querySelectorAll(".pe-you")].map((y) => y.closest(".prson").id).join(","),
+      dots: byId("allUsers").querySelectorAll(".prson:not(.ghost) .pe-dot").length + "|" + byId("allUsers").querySelectorAll(".prson.ghost .pe-dot").length,
+      roles: [...byId("allUsers").querySelectorAll(".prsnRole")].map((i) => i.closest(".prson").id.slice(4) + "=" + i.title).join(","),
+      away: [now - 4 * 60000, now - 5 * 60000, now - 3 * 3600000, now - 2 * 86400000, 0].map(firetable.people.awayFor).join("|")
+    };
+    // nobody DJing: one plain list, no headings
+    firetable.tableData = null;
+    firetable.people.render();
+    out.noDjs = byId("pe-djHead").hidden + "|" + byId("pe-floorHead").hidden + "|" + rows("usersSuper").join() + "|" + byId("usersDJs").children.length;
+    ftapi.users = was.users; firetable.tableData = was.table; firetable.waitlistData = was.wait; firetable.song = was.song;
+    firetable.playlimit = was.limit; firetable.fireReactors = was.fires; ftapi.uid = was.uid;
+    firetable.people.render();
+    return out;
+  });
+  assert.deepEqual(r.djs, ["d1:Dee[is-dj,is-playing] Playing now,1/2", "d2:Duo[is-dj] Next,Steps down after their next play,2/2", "g1:gone[ghost,is-dj] 0/2,away"],
+    "the DJs lead in deck order: who's playing, who's next, who steps down, each one's plays; a DJ who dropped off says away");
+  assert.deepEqual(r.bot, ["bot:hostbot[]"], "the bot is never idle");
+  assert.deepEqual(r.supers, [], "a DJ isn't listed twice");
+  assert.deepEqual(r.mods, ["bob:Bob[idle] "], "away under five minutes: the dot, no time");
+  assert.deepEqual(r.members, ["amy:amy[idle,is-me] 47m", "zed:Zed[] Fired this song"], "the rest by name whatever its case, with how long away and who fired; nobody from the waitlist");
+  assert.equal(r.heads, "false|On the decks 3/4|false", "both groups are named once there are DJs");
+  assert.equal(r.you, "useramy", "your own row says so");
+  assert.equal(r.dots, "6|0", "everyone here has a presence dot; a DJ who dropped off has none");
+  assert.equal(r.roles, "d2=Supermod,bot=Room bot,bob=Mod", "only the bot, mods and supermods have a role icon, named");
+  assert.equal(r.away, "|5m|3h|2d|", "away times start at five minutes");
+  assert.equal(r.noDjs, "true|true|d2:Duo[]|0", "with nobody DJing it's one list with no headings");
+});
+
+test("the people header and the waitlist's card say only what there is", async () => {
+  const r = await run(() => {
+    const shell = firetable.$appShell[0];
+    document.getElementById("mainGrid").appendChild(shell); // the waitlist's card is drawn in the page
+    const byId = (id) => document.getElementById(id);
+    const shown = () => [...byId("usersStats").querySelectorAll(".listenerType")].filter((t) => !t.hidden).map((t) => t.querySelector("i").textContent + " " + t.querySelector("span").textContent + " (" + t.title + ")").join(", ");
+    const heads = () => [...byId("pe-audience").querySelectorAll(".pe-audHead")].map((h) => h.textContent.replace(/^(radio|person)/, "")).join(", ");
+    const out = {};
+    firetable.audience.take({ guests: 0, guestsLive: 0, stream: { listeners: 1, unplaced: 0, countries: [{ code: "US", name: "United States", n: 1 }] } });
+    out.radioOnly = shown() + " / " + heads();
+    firetable.audience.take({ guests: 1, guestsLive: 1, guestCountries: [{ code: "GB", name: "", n: 1 }], stream: { listeners: 0, unplaced: 0, countries: [] } });
+    out.guestOnly = shown() + " / " + heads();
+    firetable.audience.take({ guests: 0, guestsLive: 0, stream: null });
+    out.neither = shown() + " / " + heads() + " / " + byId("pe-audience").hidden;
+
+    const was = { table: firetable.tableData, wait: firetable.waitlistData, uid: ftapi.uid };
+    const card = () => byId("usersWaitlist").querySelector(".waitlist-empty-msg").textContent + "|" + [...byId("usersWaitlist").querySelectorAll(".wlAddMeBtn")].map((b) => (b.disabled ? "off" : "on")).join();
+    ftapi.uid = "me";
+    firetable.tableData = [{ name: "a", id: "a", plays: 0 }];
+    ftapi.events.emit("waitlistChanged", null);
+    out.canHop = card();
+    firetable.tableData = [{ name: "me", id: "me", plays: 0 }];
+    ftapi.events.emit("waitlistChanged", null);
+    out.onDeck = card();
+    firetable.tableData = ["a", "b", "c", "d"].map((n) => ({ name: n, id: n, plays: 0 }));
+    ftapi.events.emit("waitlistChanged", null);
+    out.full = card();
+    ftapi.uid = was.uid; firetable.tableData = was.table;
+    ftapi.events.emit("waitlistChanged", was.wait || null);
+    shell.remove();
+    return out;
+  });
+  assert.equal(r.radioOnly, "room 0 (0 members in the room), radio 1 (1 person listening on the radio) / On the radio 1", "no guests: no guests count and no empty Guests group");
+  assert.equal(r.guestOnly, "room 0 (0 members in the room), person 1 (1 guest without an account, 1 listening live) / Guests 1", "nobody on the radio: no radio count or group");
+  assert.equal(r.neither, "room 0 (0 members in the room) /  / true", "neither: only the members");
+  assert.equal(r.canHop, "Less than 4 DJs = no need to wait!|on", "someone who can hop on is offered it");
+  assert.equal(r.onDeck, "Less than 4 DJs = no need to wait!|", "a DJ on the decks isn't shown a greyed-out Hop on");
+  assert.equal(r.full, "The decks are full. Nobody is waiting yet.|on", "four DJs: the note doesn't say there's no wait");
+});
+
 test("no page errors while the site loaded and ran these", () => {
   assert.deepEqual(errors, []);
 });

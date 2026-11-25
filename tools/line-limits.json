@@ -5,7 +5,7 @@
     "longFunctions": 1
   },
   "js/chat.js": {
-    "lines": 1170,
+    "lines": 1169,
     "longFunctions": 3
   },
   "js/discover.js": {
@@ -38,7 +38,7 @@
     "longFunctions": 1
   },
   "js/room.js": {
-    "lines": 1334,
+    "lines": 1331,
     "longFunctions": 5
   },
   "js/search.js": {
@@ -53,7 +53,7 @@
     "longFunctions": 4
   },
   "js/users.js": {
-    "lines": 894,
+    "lines": 799,
     "longFunctions": 3
   }
 }
