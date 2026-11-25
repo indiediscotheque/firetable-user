@@ -332,7 +332,7 @@ firetable.tt = (function () {
   '<div class="tt-snag" role="group" aria-label="This song">' +
             '<button type="button" id="tt-grab" class="tt-chip" aria-label="Grab: add to your playlist" title="Grab: add to your playlist">' + ms("favorite", "material-symbols-filled") + "<span>Grab</span></button>" +
             '<button type="button" id="tt-grabPick" class="tt-chip tt-chipIcon" aria-label="Choose the playlist" title="Choose the playlist">' + ms("arrow_drop_down") + "</button>" +
-            '<button type="button" id="tt-link" class="tt-chip tt-chipIcon" aria-label="Song link" title="Song link">' + ms("link") + "</button>" +
+            '<button type="button" id="tt-link" class="tt-chip tt-chipIcon" aria-label="Open the song" title="Open the song">' + ms("open_in_new") + "</button>" +
           "</div>" +
           "</div>" +
           '<button type="button" class="tt-vote tt-awesome" id="tt-awesome" aria-label="Awesome! (Fire)" title="Awesome! (Fire)">' + ms("thumb_up", "material-symbols-filled") + '<span class="tt-count" id="tt-count" aria-hidden="true" hidden></span></button>' +
