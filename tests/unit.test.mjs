@@ -793,3 +793,36 @@ test("chat lines: a heading between two days, a flame on the bot's fire lines, q
 test("no page errors while the site loaded and ran these", () => {
   assert.deepEqual(errors, []);
 });
+
+// ─── The Turntable theme's Konami code ──────────────────────────────────────
+
+test("Konami code: heard in the chat box too, and its \"b\" and \"a\" don't stay there as text", async () => {
+  const r = await run(() => {
+    const box = document.createElement("textarea");
+    document.body.appendChild(box);
+    box.value = "hi";
+    box.focus();
+    box.setSelectionRange(2, 2);
+    let done = 0;
+    const heard = ftLazy.konami(() => { done++; });
+    const press = (key) => {
+      const e = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+      box.addEventListener("keydown", heard, { once: true });
+      box.dispatchEvent(e);
+      if (!e.defaultPrevented && key.length === 1) { // what the browser would type
+        const at = box.selectionStart;
+        box.value = box.value.slice(0, at) + key + box.value.slice(at);
+        box.setSelectionRange(at + 1, at + 1);
+      }
+    };
+    const code = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+    code.forEach(press);
+    const first = { done, value: box.value };
+    ["ArrowUp", "b", "a"].forEach(press); // not the code: typed as usual
+    const after = { done, value: box.value };
+    box.remove();
+    return { first, after };
+  });
+  assert.deepEqual(r.first, { done: 1, value: "hi" });
+  assert.deepEqual(r.after, { done: 1, value: "hiba" });
+});
