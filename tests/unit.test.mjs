@@ -594,6 +594,65 @@ test("the bus in words: after this song, after a number of songs, at a time (the
   assert.deepEqual(r, ["", "", "", "after next play", "after this song", "after 3 more songs", "after this song and 2 more", "after this song and 1 more", true]);
 });
 
+test("the bus menu: loads on first use, offers a song, a few or a while, and sends the bot's own commands", async () => {
+  const r = await run(async () => {
+    const sent = [];
+    const was = { send: ftapi.actions.sendBotCommand, uid: ftapi.uid, users: ftapi.users, table: firetable.tableData, wait: firetable.waitlistData, song: firetable.song };
+    const loadedBefore = !!document.querySelector('script[src*="bus-menu.js"]');
+    ftapi.actions.sendBotCommand = (c) => { sent.push(c); return Promise.resolve(); };
+    ftapi.uid = "me";
+    ftapi.users = { me: { username: "Me" }, bea: { username: "Bea" } };
+    firetable.tableData = [{ id: "me", name: "Me", plays: 1, busSongs: 3 }, { id: "bea", name: "Bea", plays: 0 }];
+    firetable.waitlistData = [];
+    firetable.song = { djid: "me", cid: "x" };
+    const btn = document.createElement("button");
+    document.body.appendChild(btn);
+    const menu = () => document.getElementById("busMenu");
+    const items = () => [...menu().querySelectorAll("button[data-bus]")].map((b) => b.textContent.trim());
+    const out = {};
+    await firetable.busMenu.open(btn, "me");
+    out.loaded = !loadedBefore && !!document.querySelector('script[src*="bus-menu.js"]');
+    out.open = menu().matches(":popover-open");
+    out.title = menu().querySelector(".ft-menu-title").textContent;
+    out.now = menu().querySelector(".bus-now").textContent;
+    out.mine = items();
+    menu().querySelector('[data-bus="s:3"]').click();
+    out.closed = !menu().matches(":popover-open");
+    for (const pick of ["m:30", "s:1", "stay"]) {
+      firetable.busMenu.open(btn, "me");
+      menu().querySelector('[data-bus="' + pick + '"]').click();
+    }
+    firetable.busMenu.open(btn, "me");
+    menu().querySelector(".bus-own-n").value = "90";
+    menu().querySelector(".bus-own").requestSubmit();
+    out.tooMany = menu().matches(":popover-open") && sent.length === 4 && menu().querySelector(".bus-own-n").getAttribute("aria-invalid");
+    menu().querySelector(".bus-own-unit").value = "minutes";
+    menu().querySelector(".bus-own").requestSubmit();
+    firetable.busMenu.open(btn, "bea");
+    out.theirTitle = menu().querySelector(".ft-menu-title").textContent;
+    out.theirs = items();
+    menu().querySelector('[data-bus="s:2"]').click();
+    out.sent = sent;
+    out.commands = [firetable.busMenu.command({ songs: 1 }), firetable.busMenu.command({ songs: 4 }, "Bea Smith"), firetable.busMenu.command({ minutes: 45 }), firetable.busMenu.command({ stay: true }, "Bea")];
+    btn.remove();
+    Object.assign(ftapi, { uid: was.uid, users: was.users });
+    ftapi.actions.sendBotCommand = was.send;
+    firetable.tableData = was.table; firetable.waitlistData = was.wait; firetable.song = was.song;
+    return out;
+  });
+  assert.equal(r.loaded, true, "js/bus-menu.js is loaded the first time, not with the page");
+  assert.equal(r.open, true);
+  assert.equal(r.title, "Catch the bus");
+  assert.equal(r.now, "You're stepping down after this song and 2 more.");
+  assert.deepEqual(r.mine, ["departure_board After this song", "2 songs", "3 songs", "5 songs", "15 min", "30 min", "1 hr", "2 hrs", "close Stay on (cancel the bus)"]);
+  assert.equal(r.closed, true, "a choice closes it");
+  assert.equal(r.tooMany, "true", "more than 50 songs: not sent, the menu stays open and the box says so");
+  assert.equal(r.theirTitle, "Send Bea home");
+  assert.deepEqual(r.theirs, ["departure_board After their next song", "2 songs", "3 songs", "5 songs", "15 min", "30 min", "1 hr", "2 hrs"], "not on a bus: nothing to cancel");
+  assert.deepEqual(r.sent, ["!removeafter 3", "!removeafter 30m", "!removeafter", "!dontremoveme", "!removeafter 90m", "!removeafter 2 Bea"]);
+  assert.deepEqual(r.commands, ["!removeafter", "!removeafter 4 Bea Smith", "!removeafter 45m", "!dontremoveme Bea"]);
+});
+
 test("usersSig: changes with what's shown of the people here, not with idle", async () => {
   const r = await run(() => {
     const was = ftapi.users;

@@ -387,13 +387,9 @@ firetable.ui.setupRoomEvents = function () {
         var departureIndicator;
         if (showDeparture) {
           var djDisplayName = firetable.utilities.htmlEscape(djName);
-          var hasPending = _pendingDeparture.hasOwnProperty(djId);
-          var removeAfterValue = hasPending ? _pendingDeparture[djId] : activeEntry.removeAfter;
-          if (hasPending && !!activeEntry.removeAfter === !!_pendingDeparture[djId]) {
-            delete _pendingDeparture[djId];
-          }
-          var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + djDisplayName + ' step down after their next play';
-          var departureTitleOn  = isSelf ? (activeEntry.bus ? "You're stepping down " + activeEntry.bus + '. Tap to stay' : "Don't step down after your next play") : "Don't have " + djDisplayName + ' step down after their next play';
+          var removeAfterValue = activeEntry.removeAfter; // any bus: the next song, a few more or a time
+          var departureTitleOff = isSelf ? 'Catch the bus: after this song, a few more, or in a while' : 'Have ' + djDisplayName + ' step down after their next play';
+          var departureTitleOn  = isSelf ? "You're stepping down " + activeEntry.bus + ': tap to change or stay' : "Don't have " + djDisplayName + ' step down after their next play';
           var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
           departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + tableKey + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
         } else if (activeEntry.removeAfter) {
@@ -465,17 +461,9 @@ firetable.ui.setupRoomEvents = function () {
     // Only your own departure button is drawn. The bot keeps its own copy of
     // the deck (and the rules only let the bot write table/), so this always
     // goes through a bot command.
+    // It opens the bus menu (js/bus-menu.js): after this song, a few more, or in a while.
     $("#deck").off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
-      var $btn = $(this);
-      var userId = $btn.attr('data-userid');
-      if (userId !== ftapi.uid) return;
-      var newIsOn = !$btn.hasClass('on');
-      $btn.toggleClass('on', newIsOn);
-      $btn.attr('title', newIsOn
-        ? 'You are taking the bus after your next play'
-        : 'You will not be taking the bus after your next play');
-      _pendingDeparture[userId] = newIsOn ? true : null;
-      ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
+      if (this.getAttribute('data-userid') === ftapi.uid) firetable.busMenu.open(this, ftapi.uid);
     });
     // One stray tap on a phone shouldn't pull a DJ off the stage: the first tap
     // turns the button into "Tap to …", the second (within 4s) does it.
@@ -1361,8 +1349,8 @@ firetable.ui.setupRoomEvents = function () {
           var showDeparture = isSelf && !isHostbot;
           var removeAfterValue = !!firetable.people.bus(data[key]);
           var wlName = firetable.utilities.htmlEscape(data[key].name);
-          var departureTitleOff = isSelf ? 'Step down after your next play' : 'Have ' + wlName + ' step down after their next play';
-          var departureTitleOn  = isSelf ? "You're stepping down " + firetable.people.bus(data[key]) + '. Tap to stay' : "Don't have " + wlName + ' step down after their next play';
+          var departureTitleOff = isSelf ? 'Catch the bus: after your next song, a few more, or in a while' : 'Have ' + wlName + ' step down after their next play';
+          var departureTitleOn  = isSelf ? "You're stepping down " + firetable.people.bus(data[key]) + ': tap to change or stay' : "Don't have " + wlName + ' step down after their next play';
           var departureBtn = showDeparture
             ? '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="' + (removeAfterValue ? departureTitleOn : departureTitleOff) + '"><i class="material-symbols-filled">departure_board</i></button>'
             : '';
@@ -1432,7 +1420,6 @@ firetable.ui.setupRoomEvents = function () {
 
   // ── DJ Table ──
   var _disarmRemove = null; // the timer that puts an armed remove / step-down button back
-  var _pendingDeparture = {}; // userId -> true|null while bot command is in-flight
 
   // What the deck and the waitlist show of the people in the room: whether
   // each DJ, each waiting person and you are here, and what they are (roles,
@@ -1488,12 +1475,7 @@ firetable.ui.setupRoomEvents = function () {
       if (name) ftapi.actions.sendBotCommand('!remove ' + name); // mod-only on the bot side
     });
     $('#usersWaitlist').off('click.departure').on('click.departure', '.deckDepartureBtn', function () {
-      var $btn = $(this);
-      if ($btn.attr('data-userid') !== ftapi.uid) return; // only drawn for yourself
-      var newIsOn = !$btn.hasClass('on');
-      $btn.toggleClass('on', newIsOn);
-      $btn.attr('title', newIsOn ? "Don't step down after your next play" : 'Step down after your next play');
-      ftapi.actions.sendBotCommand(newIsOn ? '!removeafter' : '!dontremoveme');
+      if (this.getAttribute('data-userid') === ftapi.uid) firetable.busMenu.open(this, ftapi.uid); // only drawn for yourself
     });
 
     if (firetable.ui && firetable.ui.renderRoomPulse) firetable.ui.renderRoomPulse();

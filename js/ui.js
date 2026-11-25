@@ -1567,7 +1567,7 @@ firetable.ui.tooltip = (function () {
       // Mods can act on someone of lower rank (#121); the bot checks rank too
       var rank = function (u) { return !u ? 0 : u.supermod ? 2 : u.mod ? 1 : 0; };
       var outranks = rank(userData) < rank(ownUser);
-      var departureScheduled = !!firetable.people.bus(dj.entry);
+      var departureScheduled = !!leaving;
       $userTip.toggleClass('can-add-to-deck', isMod && !isSelf && !isDj);
       $userTip.toggleClass('can-remove-from-deck', isMod && !isSelf && isDj && rank(userData) <= rank(ownUser));
       $userTip.toggleClass('can-step-down', isSelf && isDj);
@@ -1578,8 +1578,8 @@ firetable.ui.tooltip = (function () {
       $userTip.find('.utt-stepdown-btn')
         .attr('title', onWaitlist ? 'Leave the waitlist' : 'Step down from deck');
       $userTip.find('.utt-bus-btn').attr('title', isSelf
-        ? (departureScheduled ? "Don't step down after your next play" : 'Take the bus (step down after next play)')
-        : (departureScheduled ? "Don't send " + name + ' home after their next play' : 'Send ' + name + ' home after their next play'));
+        ? (departureScheduled ? "You're stepping down " + leaving + ': change or stay' : 'Catch the bus: after this song, a few more, or in a while')
+        : (departureScheduled ? name + ' steps down ' + leaving + ': change or let them stay' : 'Send ' + name + ' home: after a song or more, or in a while'));
       $userTip.find('.utt-deck-btn')
         .removeClass('is-disabled')
         .attr('aria-disabled', 'false')
@@ -1629,12 +1629,11 @@ firetable.ui.tooltip = (function () {
         }
       })
       .on('click', '[data-action="toggle-bus"]', function () {
-        var isDepartureOn = $userTip.hasClass('departure-on');
-        var uid = $userTip.attr('data-for');
-        var other = uid && uid !== ftapi.uid && ftapi.users[uid] && ftapi.users[uid].username;
-        firetable.actions.toggleBus(!isDepartureOn, other);
-        $userTip.toggleClass('departure-on', !isDepartureOn);
+        // the bus menu (js/bus-menu.js), where the card was opened from
+        var uid = userTipEl.getAttribute('data-for');
+        var anchor = _currentAnchorEl && _currentAnchorEl.isConnected ? _currentAnchorEl : this;
         userTipEl.hidePopover();
+        firetable.busMenu.open(anchor, uid, uid !== ftapi.uid && ftapi.users[uid] ? ftapi.users[uid].username : '');
       })
       .on('click', '[data-action="step-down"]', function () {
         firetable.actions.stepDown();

@@ -9,7 +9,8 @@
  *
  * The site's own scripts load the same way (ftLazy.own): the Turntable theme
  * (js/ttskin.js), an easter egg, comes the first time someone goes in. Until
- * then firetable.tt is the stand-in at the end of this file.
+ * then firetable.tt is the stand-in at the end of this file. So do going to
+ * an @mention (js/mention-jump.js) and the bus menu (js/bus-menu.js).
  */
 
 var ftLazy = (function () {
@@ -214,5 +215,34 @@ firetable.mentionJump = (function () {
     var row = e.target.closest && e.target.closest("#inboxList .inboxItem[data-id]");
     if (row && (e.target.closest(".inboxGo") || !e.target.closest("button, a"))) firetable.mentionJump.show(row.getAttribute("data-id"));
   });
+  return stub;
+})();
+
+/*
+ * The bus menu (js/bus-menu.js, loaded the first time a bus button is
+ * tapped): when to step down, after a song or more or in a while. If it
+ * can't load, the button does what it always did: the bus after the next
+ * song, or off it.
+ */
+firetable.busMenu = (function () {
+  "use strict";
+  var stub = {
+    /**
+     * @param {Element} anchor - the bus button
+     * @param {string} [uid] - whose bus (yours when left out)
+     * @param {string} [name] - their name, a mod's for someone else
+     */
+    open: function (anchor, uid, name) {
+      return ftLazy.own("bus-js", "js/bus-menu.js").then(function () {
+        if (firetable.busMenu === stub) throw new Error("js/bus-menu.js didn't load");
+        return firetable.busMenu.open(anchor, uid, name);
+      }).catch(function (err) {
+        console.error("[firetable] the bus menu:", err);
+        var self = !uid || uid === ftapi.uid;
+        var on = !!(firetable.people && firetable.people.bus(firetable.ui.djStatus(uid || ftapi.uid).entry));
+        firetable.actions.toggleBus(!on, self ? "" : name);
+      });
+    }
+  };
   return stub;
 })();
