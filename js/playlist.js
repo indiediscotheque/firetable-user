@@ -934,10 +934,10 @@ function buildQueueItemHTML(key, track, isPreview, pos) {
 firetable.ui.markDjList = function () {
   var me = window.ftapi && ftapi.users && ftapi.users[ftapi.uid];
   var dj = String((window.ftapi && ftapi.selectedListThing) || (me && me.selectedList) || "0");
-  var shown = String(firetable._queueList != null ? firetable._queueList : ($("#listpicker").val() || "0"));
-  $("#mainqueue").toggleClass("is-djlist", dj === shown);
-  // ...and the crate's picker says so, so it isn't mistaken for the stage's
-  $("#cr-djTag").prop("hidden", dj !== shown);
+  var shown = String(firetable._queueList != null ? firetable._queueList : (document.getElementById("listpicker").value || "0"));
+  document.getElementById("mainqueue").classList.toggle("is-djlist", dj === shown);
+  // ...and the crate's DJ switch beside its picker says so (js/dj-switch.js)
+  firetable.ui.drawDjSwitch(dj === shown);
 };
 
 /** Track count (and flagged count) in the playlist picker, after the name (#210, #226). */

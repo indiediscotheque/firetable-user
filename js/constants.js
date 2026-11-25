@@ -18,6 +18,8 @@ var DEFAULT_VOLUME = 80;
 var IDLE_TIMEOUT = 5 * 60000;
 /** How long a track preview plays before auto-stopping (ms) — 30 seconds */
 var PREVIEW_DURATION = 30 * 1000;
+/** Where a preview starts: a quarter of the way into the song, past the intro */
+var PREVIEW_FROM = 0.25;
 /** 16:9 aspect ratio used for the YouTube player sizing */
 var ASPECT_RATIO = 16 / 9;
 /** Default brand colour (firetable orange) */

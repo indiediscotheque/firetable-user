@@ -14,8 +14,8 @@
  *   - a song's play button plays it here, in the bar (the whole song, then the
  *     rest of the playlist), where Live plays a 30-second preview; a search
  *     result in Find tracks plays here the same way
- *   - Play (from the top) and Shuffle play (the playlist keeps its order)
- *   - DJ from this playlist, and where you stand on the decks
+ *   - where you stand on the decks, under the list (which list you DJ from
+ *     is Live's own: the DJ list tag by the picker, and All playlists)
  *   - the song playing here, and the songs saved this visit, are marked
  *
  * discover.js makes the one there is with firetable.discoverQueue(deps): deps
@@ -115,10 +115,10 @@ firetable.discoverQueue = (function () {
 
   // ─── Discover's part ────────────────────────────────────────────────────
 
-  /** The Playlists tab: Discover's bar, Live's panel, the decks. */
+  /** The Playlists tab: Live's panel, the decks. */
   function html(tabs) {
     return '<div class="d-sidebody d-sidequeue" data-tab="list">' + tabs +
-      '<div class="d-plbar" id="pv-plbar"></div><div class="d-queuehost"></div><div class="pl-deck" id="pv-deckline"></div></div>';
+      '<div class="d-queuehost"></div><div class="pl-deck" id="pv-deckline"></div></div>';
   }
 
   /** Show it in #dSide (drawn by discover.js with html()). */
@@ -127,20 +127,11 @@ firetable.discoverQueue = (function () {
     refresh();
   }
 
-  /** The bar and the decks, after any change to the list, the seats or what plays. */
+  /** The decks, after any change to the list, the seats or what plays. */
   function refresh() {
     var all = sync();
-    var listID = viewList(), isDj = listID === djList();
-    var bar = document.getElementById("pv-plbar");
-    if (bar) {
-      var dj = isDj ? "You DJ from this playlist" : "DJ from this playlist";
-      bar.innerHTML = '<button type="button" class="butt darkbutt small d-playall" data-list="' + LIST + '" title="Play it here, from the top"' + (all.length ? "" : " disabled") + ">" + ms("play_arrow", true) + "<span>Play</span></button>" +
-        '<button type="button" class="butt graybutt iconbutt small pl-shuffle" data-list="' + LIST + '" title="Shuffle play (the playlist keeps its order)" aria-label="Shuffle play"' + (all.length ? "" : " disabled") + ">" + ms("shuffle") + "</button>" +
-        '<button type="button" class="butt graybutt iconbutt small pl-dj' + (isDj ? " on" : "") + '" aria-pressed="' + isDj + '" title="' + dj + '" aria-label="' + dj + '">' + ms("headphones", isDj) + "</button>" +
-        '<span class="d-plhint">' + ms("play_arrow") + " on a song plays it here</span>";
-    }
     var deck = document.getElementById("pv-deckline");
-    if (deck) deck.innerHTML = deckLine(isDj, all.length);
+    if (deck) deck.innerHTML = deckLine(viewList() === djList(), all.length);
     mark();
   }
 
@@ -153,20 +144,6 @@ firetable.discoverQueue = (function () {
     if (!n) return "";
     return '<button type="button" class="butt darkbutt d-joinwait">' + ms("queue_music") + "<span>" + (d.open ? "Hop on the decks" : "Join the waitlist") + "</span></button>" +
       '<p class="d-fact d-center">' + (d.open ? "A spot is open. The room plays this list, from the top." : "You'll take the decks when a spot opens.") + "</p>";
-  }
-
-  /** Make the playlist on screen the one the room plays from when you DJ (as All Playlists does). */
-  function djFrom() {
-    var id = viewList();
-    if (djList() === id) return;
-    ftapi.actions.switchDjList(id);
-    var pick = document.getElementById("djlistpicker");
-    if (pick) pick.value = id;
-    if (ftapi.users && ftapi.users[ftapi.uid]) ftapi.users[ftapi.uid].selectedList = id;
-    if (firetable.ui.renderPlaylistIndex) firetable.ui.renderPlaylistIndex();
-    if (firetable.ui.markDjList) firetable.ui.markDjList();
-    firetable.ui.toast("You DJ from " + firetable.utilities.listName(id) + " now", "success");
-    refresh();
   }
 
   // ─── Playing here ───────────────────────────────────────────────────────
@@ -239,6 +216,8 @@ firetable.discoverQueue = (function () {
     deps = d;
     esc = d.esc;
     ms = d.ms;
-    return { html: html, show: show, back: back, here: here, refresh: refresh, mark: mark, djList: djList, djFrom: djFrom };
+    // the decks line says which list you DJ from
+    ftapi.events.on("djListChanged", function () { if (here()) refresh(); });
+    return { html: html, show: show, back: back, here: here, refresh: refresh, mark: mark, djList: djList };
   };
 })();

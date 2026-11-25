@@ -1725,26 +1725,11 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
     .pl-row:hover .pl-acts, .pl-row:focus-within .pl-acts { opacity: 1; }
 }
 
-/* Playlists (members): Live's own panel, moved in (js/discover-queue.js), with
-   Discover's Play, Shuffle play and DJ from this playlist above it and the decks below */
+/* Playlists (members): Live's own panel, moved in (js/discover-queue.js),
+   with the decks below */
 .d-sidequeue { display: flex; flex-direction: column; overflow: hidden; }
-.d-plbar { display: flex; flex: none; align-items: center; gap: var(--pad2); padding: var(--pad2) var(--pad3) 0; }
-.d-plbar .butt { display: inline-flex; align-items: center; gap: 0.25rem; }
-.d-plbar .butt i { font-size: 1.1rem; }
-.d-plbar .pl-dj.on { color: var(--color-accent); }
-.d-plhint {
-    flex: 1;
-    min-width: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.15rem;
-    color: var(--color-text-muted);
-    font-size: var(--fs-meta);
-    white-space: nowrap;
-    overflow: hidden;
-}
-.d-plhint i { font-size: 1rem; }
+/* the player's Shuffle (js/discover-shuffle.js), lit while on */
+.d-shuffle.on { color: var(--pb-tone, var(--color-accent)); }
 .d-queuehost { flex: 1; min-height: 0; display: flex; }
 body.ft-discover #dSide #queuebox {
     display: flex !important;

@@ -23,7 +23,7 @@ const appGlobals = {
   player: "writable", chatScroll: "readonly", chatPinned: "writable", $playlistItemTemplate: "writable",
   // constants.js
   MEDIA_YOUTUBE: "readonly", MEDIA_SOUNDCLOUD: "readonly", DEFAULT_VOLUME: "readonly",
-  IDLE_TIMEOUT: "readonly", PREVIEW_DURATION: "readonly", ASPECT_RATIO: "readonly",
+  IDLE_TIMEOUT: "readonly", PREVIEW_DURATION: "readonly", PREVIEW_FROM: "readonly", ASPECT_RATIO: "readonly",
   COLOR_ORANGE: "readonly", STORAGE: "readonly", AVATAR_BASE_URL: "readonly",
   AVATAR_STYLES: "readonly", DEFAULT_AVATAR_STYLE: "readonly", GENERIC_AVATAR_URL: "readonly", Bouletmaton: "readonly",
   SC_API_PROXY_URL: "readonly", SC_RESOLVE_URL: "readonly", SC_PROXY_URL: "readonly",
@@ -34,7 +34,7 @@ const appGlobals = {
   // seasons.js
   AVATAR_SEASONS: "readonly", LIGHTS_MONTHS: "readonly", SNOW_MONTHS: "readonly",
   // other app files
-  ytAPI: "readonly", setup: "readonly", ftLazy: "readonly", ftLook: "readonly",
+  ytAPI: "readonly", setup: "readonly", ftLazy: "readonly", ftLook: "readonly", keepFocusOut: "readonly",
   // third-party libraries
   firebase: "readonly", twemoji: "readonly", linkifyStr: "readonly", FloatingUIDOM: "readonly",
   SC: "readonly", YT: "readonly"
