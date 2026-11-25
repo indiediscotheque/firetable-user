@@ -1525,9 +1525,15 @@ a.sociallogo[href] {
     color: var(--color-text-muted);
 }
 
+/* the total leads, beside its icon like the three counts that add up to it,
+   and a little heavier ("People" stays for screen readers) */
 #usersStats h2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
     padding: 0.2rem 0;
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
     color: inherit;
 }
 
@@ -1541,6 +1547,8 @@ a.sociallogo[href] {
     font-size: 1rem;
     color: var(--color-text-muted);
 }
+/* the crowd is drawn smaller in its box than the pin, person and radio */
+#usersStats h2 [class*="material-symbols-"] { font-size: 1.25rem; }
 
 /* Shown once js/audience.js has the counts: everyone, then who that is,
    each beside its icon (members here, guests on the site, radio listeners;

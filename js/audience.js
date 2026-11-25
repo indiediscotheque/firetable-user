@@ -160,7 +160,9 @@ firetable.audience = (function () {
       var row = el.closest(".listenerType");
       if (row) { row.title = label; row.setAttribute("aria-label", label); row.setAttribute("role", "img"); row.hidden = !shown; }
     };
-    byId("numListeners").textContent = m + d.guests + radio;
+    var total = byId("numListeners");
+    total.textContent = m + d.guests + radio;
+    if (total.parentElement) total.parentElement.title = plural(m + d.guests + radio, "person", "people") + " with the room";
     set("numRoomListeners", m, plural(m, "member", "members") + " in the room", true);
     set("pe-numGuests", d.guests, plural(d.guests, "guest", "guests") + " without an account" + (d.guestsLive ? ", " + d.guestsLive + " listening live" : ""), d.guests > 0);
     set("numStreamListeners", radio, plural(radio, "person", "people") + " listening on the radio", radio > 0);
