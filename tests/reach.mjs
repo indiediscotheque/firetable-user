@@ -262,14 +262,14 @@ try {
       else {
         await logInAs(page, people[role].email, PASSWORD, people[role].uid);
         await page.waitForFunction(() => ftapi.users && Object.keys(ftapi.users).length > 3 && document.querySelector("#mainqueue .pvbar"), null, { timeout: 20000 }).catch(() => {});
-        // Live keeps its playlist panel on signing in and on a refresh (it went
-        // into Discover's hidden column until you went to Discover and back)
-        const panelAway = () => page.evaluate(() => firetable.discover.state().mode !== "live" || document.body.classList.contains("d-queue-here"));
-        if (await panelAway()) failures.push(role + " " + w + ": signed in to Live, its playlist panel isn't in Live");
+        // A refresh in Live keeps Live's playlist panel there (signing in on
+        // load put it in Discover's hidden column until you went there and back)
         if (role === "member") {
+          await page.evaluate(() => { location.hash = "#live"; });
           await page.reload({ waitUntil: "domcontentloaded" });
           await page.waitForFunction((u) => window.ftapi && ftapi.uid === u && document.body.classList.contains("d-member") && document.querySelector("#mainqueue .pvbar"), people[role].uid, { timeout: 30000 }).catch(() => {});
-          if (await panelAway()) failures.push(role + " " + w + ": after a refresh in Live, its playlist panel isn't in Live");
+          const where = await page.evaluate(() => ({ mode: firetable.discover.state().mode, away: document.body.classList.contains("d-queue-here") }));
+          if (where.mode !== "live" || where.away) failures.push(role + " " + w + ": after a refresh in Live, its playlist panel isn't in Live (" + JSON.stringify(where) + ")");
         }
       }
       console.log("-- " + role + " at " + w + " wide");
