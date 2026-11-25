@@ -3981,34 +3981,56 @@ try {
     ftapi.queueRef = ftapi.lookup.listRef("0");
     ftapi.queueBind = ftapi.queueRef.on("value", (snap) => { ftapi.queue = snap.val() || {}; ftapi.events.emit("playlistChanged", ftapi.queue, "0"); });
     document.querySelector('#dSide [data-sidetab="list"]').click();
-    await until(() => document.querySelectorAll("#pv-plrows > li").length === 3);
-    const titles = () => [...document.querySelectorAll("#pv-plrows > li .d-mini-text b")].map((b) => b.childNodes[0].textContent.trim()).join();
+    const rowsNow = () => [...document.querySelectorAll("#dSide #mainqueue .pvbar")];
+    await until(() => rowsNow().length === 3);
+    // Live's own panel, with all its tools, in Discover's column
+    const qb = document.getElementById("queuebox");
+    out.moved = !!qb.closest("#dSide .d-queuehost") && document.body.classList.contains("d-queue-here") && qb.offsetParent !== null;
+    out.tools = ["listpicker", "cr-listBtn", "addToQueueBttn", "queueFilter", "cr-sort", "cr-select", "plIndexBtn"].filter((id) => !document.getElementById(id) || !document.getElementById(id).closest("#dSide"));
+    out.toolsShown = ["listpicker", "cr-listBtn", "addToQueueBttn", "queueFilter"].every((id) => document.getElementById(id).offsetParent !== null);
+    out.bar = !!document.querySelector("#pv-plbar .d-playall") && !!document.querySelector("#pv-plbar .pl-dj.on");
+    const titles = () => rowsNow().filter((r) => r.style.display !== "none" && r.offsetParent !== null).map((r) => r.querySelector(".q-title").textContent.trim()).join();
     out.rows = titles();
-    out.next = !!document.querySelector("#pv-plrows > li .pl-next");
-    const f = document.getElementById("pv-plfilter");
+    out.next = !!document.querySelector("#dSide #mainqueue.is-djlist .pvbar .q-next") && document.querySelector("#dSide #mainqueue .q-next").offsetParent !== null;
+    const f = document.getElementById("queueFilter");
     f.value = "bee";
     f.dispatchEvent(new Event("input", { bubbles: true }));
-    out.filtered = [...document.querySelectorAll("#pv-plrows > li")].filter((li) => !li.hidden).length;
-    out.sortOff = document.getElementById("pv-plrows").classList.contains("is-sort-off");
+    await wait(100);
+    out.filtered = titles();
     f.value = "";
     f.dispatchEvent(new Event("input", { bubbles: true }));
-    out.sortOn = !document.getElementById("pv-plrows").classList.contains("is-sort-off");
-    document.querySelectorAll("#pv-plrows > li")[2].querySelector(".pl-top").click();
+    await wait(100);
+    rowsNow()[2].querySelector(".bumpsongs").click();
     await until(() => titles().startsWith("Three"));
     out.topped = titles();
-    // drag the first row's grip below the last row
-    const rowsNow = () => [...document.querySelectorAll("#pv-plrows > li")];
-    const grip = rowsNow()[0].querySelector(".pl-grip");
-    const g = grip.getBoundingClientRect(), last = rowsNow()[2].getBoundingClientRect();
-    const pe = (type, y, target) => (target || document).dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, isPrimary: true, button: 0, pointerType: "mouse", clientX: g.x + g.width / 2, clientY: y }));
-    pe("pointerdown", g.y + g.height / 2, grip);
+    // drag the first row (the whole row drags, as in Live) below the last row
+    const grab = rowsNow()[0].querySelector(".listwords");
+    const g = grab.getBoundingClientRect(), last = rowsNow()[2].getBoundingClientRect();
+    const pe = (type, y, target) => (target || document).dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, isPrimary: true, button: 0, pointerType: "mouse", clientX: g.x + 4, clientY: y }));
+    pe("pointerdown", g.y + g.height / 2, grab);
     for (let i = 1; i <= 6; i++) pe("pointermove", g.y + g.height / 2 + (last.bottom - 4 - g.y - g.height / 2) * i / 6);
     pe("pointerup", last.bottom - 4);
     await wait(500); // the saved order comes back from the database and the list is drawn again
+    await until(() => titles() === "One,Two,Three");
     out.dragged = titles();
-    document.querySelectorAll("#pv-plrows > li")[0].querySelector(".d-mini-row").click();
+    // a song's play button plays it here, in the bar (not Live's 30-second preview), and the list marks it
+    rowsNow()[0].querySelector(".previewicon").click();
     await wait(200);
-    out.playingRow = !!document.querySelector("#pv-plrows > li.is-playing") && /Your|Default/.test(document.getElementById("pv-src").textContent);
+    const st = firetable.discover.state();
+    out.playingRow = st.list === "playlist" && st.playing === "plA000001" && firetable.preview === "discover" &&
+      rowsNow()[0].classList.contains("d-playing") && /Your|Default/.test(document.getElementById("pv-src").textContent);
+    // Next follows the playlist
+    document.querySelector("#dMini .d-next").click();
+    await wait(200);
+    out.nextPlays = firetable.discover.state().playing === "plB000002" && rowsNow()[1].classList.contains("d-playing") && !rowsNow()[0].classList.contains("d-playing");
+    // Chat takes the column; Live gets its panel back
+    document.querySelector('#dSide [data-sidetab="chat"]').click();
+    await wait(100);
+    const inLive = () => !qb.closest("#dSide") && !!qb.closest("#appShell") && !document.body.classList.contains("d-queue-here");
+    out.backOnChat = inLive();
+    document.querySelector('#dSide [data-sidetab="list"]').click();
+    await wait(100);
+    out.inAgain = !!qb.closest("#dSide .d-queuehost");
     // a Discover song, to the top of the DJ playlist
     location.hash = "#discover/new";
     await wait(300);
@@ -4035,11 +4057,14 @@ try {
     firetable.discover.onFailed = skip;
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await wait(200);
+    out.liveHome = inLive();
     return out;
   });
-  check(member.rows === "One,Two,Three" && member.next && member.filtered === 1, "the Playlists tab lists the DJ playlist with Next, and filters it (" + JSON.stringify(member) + ")");
-  check(member.topped === "Three,One,Two" && member.playingRow, "Top moves a song up; a row plays in the bar, marked in the list (" + JSON.stringify(member) + ")");
-  check(member.dragged === "One,Two,Three" && member.sortOff && member.sortOn, "a row's grip drags it and the order is saved; no dragging while filtered (" + JSON.stringify({ dragged: member.dragged, sortOff: member.sortOff, sortOn: member.sortOn }) + ")");
+  check(member.moved && !member.tools.length && member.toolsShown && member.bar, "the Playlists tab is Live's own playlist panel, every tool with it, and Discover's Play and DJ bar (" + JSON.stringify(member) + ")");
+  check(member.rows === "One,Two,Three" && member.next && member.filtered === "Two", "it lists the DJ playlist with Next, and Live's filter filters it (" + JSON.stringify(member) + ")");
+  check(member.topped === "Three,One,Two" && member.dragged === "One,Two,Three", "Send to top moves a song up; dragging a row saves the order (" + JSON.stringify(member) + ")");
+  check(member.playingRow && member.nextPlays, "a song's play button plays it in the bar, marked in the list, and Next goes on through the playlist (" + JSON.stringify(member) + ")");
+  check(member.backOnChat && member.inAgain && member.liveHome, "Chat and Live get Live its panel back, and Playlists takes it again (" + JSON.stringify(member) + ")");
   check(member.first && member.done && /First in/.test(member.note || "") && member.undone && member.fire,
     "Play it in the room puts the song first in the DJ playlist, says so, and Undo takes it out; listening in, Fire is in the bar (" + JSON.stringify(member) + ")");
 

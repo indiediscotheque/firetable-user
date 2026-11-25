@@ -7,7 +7,8 @@
  *
  * Discover is its own page with the site's own parts: the left column keeps
  * the header and theme, then search and the views; the middle shows the
- * library; the right column is playlists (or the crate) and chat. The player is
+ * library; the right column is playlists (Live's own panel, js/discover-queue.js;
+ * the crate for visitors) and chat. The player is
  * the bar along the bottom, which also carries the room (On air / Live, Listen
  * in), so there's no separate room line. The bar opens the full-screen player:
  * the song in full and what goes with it (who found it, up next, the decks,
@@ -1872,9 +1873,21 @@ firetable.discover = (function () {
       renderBar();
       return;
     }
+    // Playlists, for members: Live's own panel. Only the tabs and Discover's
+    // bar around it are drawn again, so the panel keeps its place, filter and search
+    if (D.sideTab === "list" && D.signedIn) {
+      chatBack();
+      if (queue.here()) el.querySelector(".d-sidetabs").outerHTML = sideTabs();
+      else el.innerHTML = queue.html(sideTabs());
+      queue.show();
+      renderBar();
+      renderFull();
+      firetable.ui.markSaved();
+      return;
+    }
+    queue.back();
     var old = el.querySelector(".d-sidebody");
     var scroll = old && old.getAttribute("data-tab") === D.sideTab ? old.scrollTop : 0;
-    var filterFocused = document.activeElement && document.activeElement.id === "pv-plfilter";
     chatBack();
     if (D.sideTab === "chat" && D.signedIn) {
       D.unread = 0;
@@ -1883,10 +1896,8 @@ firetable.discover = (function () {
       renderBar();
       return;
     }
-    var body = D.signedIn ? playlistPanel() : cratePanel();
-    el.innerHTML = '<div class="d-sidebody" data-tab="' + D.sideTab + '">' + sideTabs() + body + "</div>";
+    el.innerHTML = '<div class="d-sidebody" data-tab="' + D.sideTab + '">' + sideTabs() + cratePanel() + "</div>";
     if (scroll) el.querySelector(".d-sidebody").scrollTop = scroll;
-    if (D.sideTab === "list" && D.signedIn) listReady(filterFocused);
     renderBar();
     renderFull();
     firetable.ui.markSaved();
@@ -1905,6 +1916,7 @@ firetable.discover = (function () {
       var b = r.querySelector(".d-mini-row");
       if (b) b.setAttribute("aria-current", on ? "true" : "false");
     });
+    queue.mark();
   }
 
   function toRoomNote(t, saved) {
@@ -2115,137 +2127,18 @@ firetable.discover = (function () {
   }
 
   // ─── Playlists (members) ────────────────────────────────────────────────
-  // The playlist open in Live's Playlists (one list on screen across the
-  // site): switch lists, pick the one you DJ from, filter, drag to reorder,
-  // Top / Bottom / Remove with Undo, and play it here. Everything goes
-  // through the same ftapi actions Live uses.
-
-  var PL_SHOWN = 300;
-  function djList() {
-    var v = $("#djlistpicker").val();
-    var me = ftapi.users && ftapi.users[ftapi.uid];
-    return String(v || (me && me.selectedList) || "0");
-  }
-  function viewList() { return String(firetable.viewListID || $("#listpicker").val() || "0"); }
-  function queueTracks() {
-    var queue = ftapi.queue || {};
-    return Object.keys(queue).sort(ftapi.utilities.compareKeys).map(function (k) {
-      var q = queue[k] || {};
-      var parts = String(q.name || "").split(" - ");
-      var a = parts.length > 1 ? parts.shift() : "";
-      return { key: k, type: q.type || 1, cid: q.cid, a: a, t: parts.join(" - ") || q.name, img: q.img, url: q.url, flagged: !!q.flagged };
-    }).filter(function (t) { return t.cid != null; });
-  }
-
-  function playlistPanel() {
-    var listID = viewList();
-    var name = firetable.utilities.listName(listID);
-    var tracks = queueTracks();
-    var isDj = listID === djList();
-    setList("playlist", name, tracks);
-    var opts = Array.prototype.map.call(document.querySelectorAll("#listpicker option"), function (o) {
-      return '<option value="' + esc(o.value) + '"' + (o.value === listID ? " selected" : "") + ">" + esc(o.textContent) + (o.value === djList() ? " · DJ" : "") + "</option>";
-    }).join("") || '<option value="0">Default Playlist</option>';
-    var shown = D.plAll ? tracks : tracks.slice(0, PL_SHOWN);
-    var rows = shown.map(function (t, i) {
-      var isNew = firetable.saved.session[firetable.saved.key(t.type, t.cid)];
-      return '<li class="pl-row d-listrow' + (isNew ? " d-added" : "") + (t.flagged ? " d-flagged" : "") + (isPlaying("playlist", i) ? " is-playing" : "") + '" data-key="' + esc(t.key) + '" data-cid="' + esc(t.cid) + '" data-list="playlist" data-i="' + i + '">' +
-        '<span class="pl-grip material-symbols-outlined" aria-hidden="true" title="Drag to reorder">drag_indicator</span><span class="d-n">' + (i + 1) + "</span>" +
-        '<button type="button" class="d-mini-row" data-list="playlist" data-i="' + i + '" aria-label="Play ' + esc(t.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
-        '<span class="d-mini-text"><b>' + esc(t.t) + (i === 0 && isDj ? ' <span class="d-tag pl-next">Next</span>' : "") + (t.flagged ? ' <span class="d-tag pl-broken" title="This song can\'t play">⚠ Broken</span>' : "") + "</b><span>" + esc(t.a) + "</span></span></button>" +
-        '<span class="pl-acts">' +
-        (i ? '<button type="button" class="row-icon material-symbols-outlined pl-top" title="Move to the top" aria-label="Move ' + esc(t.t) + ' to the top">vertical_align_top</button>' : "") +
-        (i < tracks.length - 1 ? '<button type="button" class="row-icon material-symbols-outlined pl-bottom" title="Send to the bottom" aria-label="Send ' + esc(t.t) + ' to the bottom">vertical_align_bottom</button>' : "") +
-        '<button type="button" class="row-icon material-symbols-outlined pl-del" title="Remove" aria-label="Remove ' + esc(t.t) + ' from ' + esc(name) + '">delete</button></span></li>';
-    }).join("");
-    return '<div class="d-panel d-listpanel">' +
-      '<div class="pl-head"><label class="sr-only" for="pv-listpick">Playlist</label><select id="pv-listpick" class="pl-pick">' + opts + "</select>" +
-      '<button type="button" class="butt graybutt iconbutt pl-dj' + (isDj ? " on" : "") + '" aria-pressed="' + isDj + '" title="' + (isDj ? "You DJ from this playlist" : "DJ from this playlist") + '" aria-label="' + (isDj ? "You DJ from this playlist" : "DJ from this playlist") + '">' + ms("headphones", isDj) + "</button></div>" +
-      (tracks.length ? '<div class="pl-tools"><input type="search" id="pv-plfilter" class="pl-filter" placeholder="Filter this playlist" aria-label="Filter this playlist" autocomplete="off" value="' + esc(D.plFilter || "") + '" />' +
-        '<button type="button" class="butt darkbutt small d-playall" data-list="playlist" title="Play it here, from the top">' + ms("play_arrow", true) + "<span>Play</span></button>" +
-        '<button type="button" class="butt graybutt iconbutt small pl-shuffle" data-list="playlist" title="Shuffle play (the playlist keeps its order)" aria-label="Shuffle play">' + ms("shuffle") + "</button></div>" +
-        '<ol class="pl-rows" id="pv-plrows" aria-label="' + esc(name) + '">' + rows + "</ol>" +
-        '<p class="d-fact pl-nomatch" hidden>No songs in this playlist match.</p>' +
-        (tracks.length > shown.length ? '<button type="button" class="linkButton pl-all">Show all ' + esc(tracks.length) + " songs</button>" : "")
-        : '<p class="d-fact">Empty. Save songs here with ' + ms("playlist_add") + ", or Play it in the room from the player.</p>") +
-      '<div class="pl-deck" id="pv-deckline">' + deckLine(isDj, tracks.length) + "</div>" +
-      '<p class="d-fact">Drag ' + ms("drag_indicator") + " to reorder. Songs saved this visit are marked. Every playlist tool is in Live, under Playlists.</p></div>";
-  }
-
-  /** Under the DJ playlist: where you stand on the decks. */
-  function deckLine(isDj, n) {
-    var d = deckState();
-    if (!isDj) return '<p class="d-fact">The room plays from ' + esc(firetable.utilities.listName(djList())) + " when you DJ.</p>";
-    if (d.on) return '<p class="d-fact">' + ms("headphones") + " You're on the decks. The room plays from the top of this list.</p>";
-    if (d.waiting) return '<p class="d-fact">' + ms("queue_music") + " You're #" + esc(d.place) + " in line for the decks.</p>";
-    if (!n) return "";
-    return '<button type="button" class="butt darkbutt d-joinwait">' + ms("queue_music") + "<span>" + (d.open ? "Hop on the decks" : "Join the waitlist") + "</span></button>" +
-      '<p class="d-fact d-center">' + (d.open ? "A spot is open. The room plays this list, from the top." : "You'll take the decks when a spot opens.") + "</p>";
-  }
-
-  /** Filter, drag and the list's buttons, once it's on screen. */
-  function listReady(refocus) {
-    var input = document.getElementById("pv-plfilter");
-    if (input) {
-      applyFilter();
-      if (refocus) { input.focus(); var v = input.value; input.setSelectionRange(v.length, v.length); }
-    }
-    var rowsEl = document.getElementById("pv-plrows");
-    if (!rowsEl || rowsEl._ftDrag) return;
-    rowsEl._ftDrag = true; // the list is redrawn as a new element, so this runs once per drawing
-    rowsEl.classList.toggle("is-sort-off", !!D.plFilter);
-    firetable.utilities.dragSort(rowsEl, {
-      items: ".pl-row",
-      handle: ".pl-grip",
-      disabled: function () { return !!D.plFilter; },
-      onUpdate: function () {
-        var keys = $(rowsEl).children("li").map(function () { return this.getAttribute("data-key"); }).get();
-        ftapi.actions.reorderList(keys);
-        firetable.ui.toast("Order saved", "success");
-      }
-    });
-  }
-  function applyFilter() {
-    var q = fold(String(D.plFilter || "").trim());
-    var rows = document.querySelectorAll("#pv-plrows > li");
-    var shown = 0;
-    rows.forEach(function (r) {
-      var hit = !q || fold(r.textContent).indexOf(q) !== -1;
-      r.hidden = !hit;
-      if (hit) shown++;
-    });
-    var none = document.querySelector("#dSide .pl-nomatch");
-    if (none) none.hidden = !(q && !shown);
-    var rowsEl = document.getElementById("pv-plrows");
-    if (rowsEl) rowsEl.classList.toggle("is-sort-off", !!q); // no dragging while filtered: hide the grips
-  }
-
-  function rowTrack(btn) {
-    var li = btn.closest(".pl-row[data-key]");
-    if (!li) return null;
-    var key = li.getAttribute("data-key");
-    var q = (ftapi.queue || {})[key];
-    return q ? { key: key, cid: li.getAttribute("data-cid"), track: q } : null;
-  }
-  function plAct(kind, btn) {
-    var r = rowTrack(btn);
-    if (!r) return;
-    var label = firetable.utilities.decodeEntities(String(r.track.name || "That song"));
-    if (kind === "top") return ftapi.actions.moveTrackToTop(r.key, null, null, null, r.cid);
-    if (kind === "bottom") return ftapi.actions.moveTrackToBottom(r.key, null, r.cid);
-    var ref = ftapi.queueRef;
-    var name = firetable.utilities.listName(viewList());
-    ftapi.actions.deleteTrack(r.key, function (err) {
-      if (err) return firetable.ui.toast("Couldn't remove it. Try again.", "error");
-      firetable.saved.unmark(r.track.type, r.track.cid);
-      firetable.ui.toast("Removed " + label + " from " + name, "notice", {
-        action: { label: "Undo", fn: function () {
-          ref.child(r.key).set(r.track).then(function () { firetable.ui.toast("Put back in " + name, "success"); },
-            function () { firetable.ui.toast("Couldn't put it back. Find it in Recent or search.", "error"); });
-        } }
-      });
-    });
-  }
+  // Live's own playlist panel, moved into the Playlists tab (js/discover-queue.js):
+  // everything Live does with a playlist, with Discover's Play, Shuffle play,
+  // DJ from this playlist and the decks beside it.
+  var queue = firetable.discoverQueue({
+    esc: esc, ms: ms, setList: setList, deckState: deckState,
+    lists: function () { return lists; },
+    player: function () { return P; },
+    active: function () { return discoverActive(); },
+    play: function (list, i) { play(list, i); },
+    togglePause: function () { togglePause(); }
+  });
+  function djList() { return queue.djList(); }
 
   // ─── The room, as Discover plays alongside it ───────────────────────────
 
@@ -3507,6 +3400,7 @@ firetable.discover = (function () {
     if (mode === "live") {
       releaseData();
       chatBack();
+      queue.back();
       if (D.sideTab === "chat") D.sideTab = "list";
       document.body.classList.remove("d-sheet-open");
       if (changed) window.dispatchEvent(new Event("resize")); // the stage measures itself again
@@ -3776,11 +3670,7 @@ firetable.discover = (function () {
     if ((b = t.closest(".pb-joinfire"))) return showSignIn("create");
     if ((b = t.closest(".pb-savelive"))) return liveTrack() && save(liveTrack(), b);
     // the playlist panel
-    if ((b = t.closest(".pl-dj"))) return djFrom(viewList());
-    if ((b = t.closest(".pl-top"))) return plAct("top", b);
-    if ((b = t.closest(".pl-bottom"))) return plAct("bottom", b);
-    if ((b = t.closest(".pl-del"))) return plAct("delete", b);
-    if ((b = t.closest(".pl-all"))) { D.plAll = true; return renderSide(); }
+    if ((b = t.closest(".pl-dj"))) return D.signedIn && queue.djFrom();
     if ((b = t.closest(".pl-shuffle"))) return shufflePlay(b.getAttribute("data-list"));
     if ((b = t.closest(".pl-cratetop"))) {
       var cr = crate();
@@ -3928,17 +3818,6 @@ firetable.discover = (function () {
     e.preventDefault();
     var to = stops[at + (e.key === "ArrowRight" ? 1 : -1)];
     if (to) to.focus();
-  }
-
-  /** Make a playlist the one the room plays from when you DJ (as All Playlists does). */
-  function djFrom(id) {
-    if (!D.signedIn || djList() === id) return;
-    ftapi.actions.switchDjList(id);
-    $("#djlistpicker").val(id);
-    if (ftapi.users && ftapi.users[ftapi.uid]) ftapi.users[ftapi.uid].selectedList = id;
-    if (firetable.ui.renderPlaylistIndex) firetable.ui.renderPlaylistIndex();
-    firetable.ui.toast("You DJ from " + firetable.utilities.listName(id) + " now", "success");
-    renderSide();
   }
 
   /** Play a list in a shuffled order, here only: the list itself keeps its order. */
@@ -4527,7 +4406,7 @@ firetable.discover = (function () {
   function signedIn(on) {
     D.signedIn = on;
     document.body.classList.toggle("d-member", !!on);
-    if (!on) { chatBack(); if (D.sideTab === "chat") D.sideTab = "list"; }
+    if (!on) { chatBack(); queue.back(); if (D.sideTab === "chat") D.sideTab = "list"; }
     if (on) firetable.ui.closeAuth();
     if (on) {
       firetable.saved.session = {};
@@ -4605,7 +4484,6 @@ firetable.discover = (function () {
           }, 200);
           return;
         }
-        if (e.target.id === "pv-plfilter") { D.plFilter = e.target.value; return applyFilter(); }
         if (e.target.id === "pv-vol") return setVolume(e.target.value);
         if (e.target.id === "pv-seek") { D.seeking = true; var at = document.getElementById("dAt"); if (at) at.textContent = clock(Number(e.target.value)); return; }
         if (e.target.id !== "dDjFind") return;
@@ -4660,11 +4538,6 @@ firetable.discover = (function () {
         if (e.target.id === "dNewShow") { D.newFilter = e.target.value; return renderBrowse(); }
         if (e.target.id === "dChartGenre") { D.chartGenre = e.target.value || null; return renderBrowse(); }
         if (e.target.id === "dChartWhich") { D.chartNew = e.target.value === "new"; return renderBrowse(); }
-        if (e.target.id === "pv-listpick") {
-          D.plFilter = ""; D.plAll = false;
-          // the same switch as Live's Playlists picker: one list on screen across the site
-          $("#listpicker").val(e.target.value).trigger("change");
-        }
       });
       document.addEventListener("submit", function (e) {
         if (e.target.id !== "dSearch") return;
@@ -4714,8 +4587,7 @@ firetable.discover = (function () {
       // the room's seats and line: the bar's and panels' "you're next", Hop on
       var seats = firetable.utilities.oncePerFrame(function () {
         renderFull();
-        var line = document.getElementById("pv-deckline");
-        if (line) line.innerHTML = deckLine(viewList() === djList(), queueTracks().length);
+        if (queue.here()) queue.refresh();
         renderBar();
       });
       ["tableChanged", "waitlistChanged", "spotlightStateChanged"].forEach(function (ev) { ftapi.events.on(ev, seats); });

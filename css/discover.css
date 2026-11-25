@@ -1009,8 +1009,6 @@ section .d-chips a.d-chip {
     font-weight: 400;
 }
 .d-listrow { display: flex; align-items: center; gap: var(--pad2); border-radius: var(--radius-sm); }
-.d-listrow.d-added { box-shadow: inset 3px 0 0 var(--color-accent); padding-left: var(--pad2); }
-.d-listrow.d-flagged { opacity: 0.5; }
 .d-n {
     min-width: 1.5rem;
     color: var(--color-text-muted);
@@ -1704,53 +1702,62 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
 .d-livebadge.is-off { background: none; color: var(--color-danger-text); box-shadow: inset 0 0 0 1px var(--color-danger); }
 .d-onair .d-cover { position: relative; }
 
-/* the playlist panel */
+/* the crate's panel (visitors) */
 .d-listpanel { gap: var(--pad2); }
-.pl-head { display: flex; align-items: center; gap: var(--pad2); }
-.pl-pick {
-    flex: 1;
-    min-width: 0;
-    height: 2.25rem;
-    padding: 0 var(--pad2);
-    color: var(--color-text-light);
-    font: 600 var(--fs-title) var(--font-family);
-    background: var(--color-bg-t1);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-}
-.pl-head .pl-dj.on { color: var(--color-accent); }
 .pl-tools { display: flex; align-items: center; gap: var(--pad2); }
 .pl-tools .butt { display: inline-flex; align-items: center; gap: 0.25rem; }
 .pl-tools .butt i { font-size: 1.1rem; }
-.pl-filter {
-    flex: 1;
-    min-width: 0;
-    height: 2rem;
-    padding: 0 var(--pad2);
-    color: var(--color-text);
-    font: var(--fs-meta) var(--font-family);
-    background: var(--color-bg-t1);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-}
 .pl-rows { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .pl-row { position: relative; padding-right: var(--pad1); }
-.pl-row[hidden] { display: none; }
 .pl-row .d-mini-row { flex: 1; min-width: 0; }
 .pl-row.is-playing { background: var(--color-bg-t1); box-shadow: inset 3px 0 0 var(--color-accent); }
 .pl-row.is-playing .d-mini-text b { color: var(--color-accent); }
-.pl-grip { flex: none; color: var(--color-text-dim); font-size: 1.1rem; cursor: grab; touch-action: none; }
-.d-listpanel .is-sort-off .pl-grip { visibility: hidden; }
-.pl-row.is-dragging { background: var(--color-bg-t2); box-shadow: var(--shadow-drop); }
 .pl-acts { display: flex; flex: none; align-items: center; }
 .pl-acts .row-icon { width: 1.75rem; height: 1.75rem; font-size: 1.1rem; }
-.d-mini-text b .d-tag { display: inline-block; padding: 0 0.35rem; font-size: 0.6875rem; line-height: 1.1rem; vertical-align: 1px; overflow: visible; }
-.pl-next { color: var(--color-accent); }
-.pl-broken { color: var(--color-danger-text); }
 @media (hover: hover) and (pointer: fine) {
     .pl-acts { opacity: 0; transition: opacity 120ms ease-out; }
     .pl-row:hover .pl-acts, .pl-row:focus-within .pl-acts { opacity: 1; }
 }
+
+/* Playlists (members): Live's own panel, moved in (js/discover-queue.js), with
+   Discover's Play, Shuffle play and DJ from this playlist above it and the decks below */
+.d-sidequeue { display: flex; flex-direction: column; overflow: hidden; }
+.d-plbar { display: flex; flex: none; align-items: center; gap: var(--pad2); padding: var(--pad2) var(--pad3) 0; }
+.d-plbar .butt { display: inline-flex; align-items: center; gap: 0.25rem; }
+.d-plbar .butt i { font-size: 1.1rem; }
+.d-plbar .pl-dj.on { color: var(--color-accent); }
+.d-plhint {
+    flex: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.15rem;
+    color: var(--color-text-muted);
+    font-size: var(--fs-meta);
+    white-space: nowrap;
+    overflow: hidden;
+}
+.d-plhint i { font-size: 1rem; }
+.d-queuehost { flex: 1; min-height: 0; display: flex; }
+body.ft-discover #dSide #queuebox {
+    display: flex !important;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    grid-area: auto;
+    padding-top: var(--pad1);
+}
+#dSide #mainqueue .pvbar.d-playing { background-color: var(--color-bg-t1); box-shadow: inset 3px 0 0 var(--color-accent); }
+#dSide #mainqueue .pvbar.d-playing .q-title { color: var(--color-accent); }
+/* saved this visit */
+#dSide #mainqueue .pvbar.d-added .q-art { box-shadow: 0 0 0 2px var(--color-accent); }
+/* the column is narrower than Live's middle one: the filter's tools are their
+   glyphs and tooltips, as Live's are below 1200px, so the filter box keeps its room */
+body.ft-discover #dSide #queueFilterForm :is(#cr-showOnly, #cr-sort, #cr-select) { width: 2rem; padding: 0; }
+body.ft-discover #dSide #queueFilterForm .cr-toolLabel { display: none; }
+body.ft-discover #dSide #queueFilterForm :is(#tip-cr-showOnly, #tip-cr-sort, #tip-cr-select) { display: inline; }
+.d-sidequeue .pl-deck { flex: none; padding: var(--pad2) var(--pad3); border-top: 1px solid var(--color-border); }
 .pl-deck:empty { display: none; }
 .pl-deck { display: flex; flex-direction: column; gap: var(--pad1); }
 .pl-deck p { display: flex; align-items: center; gap: var(--pad1); }
