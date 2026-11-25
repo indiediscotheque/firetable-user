@@ -100,7 +100,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 
 | Id | Feature | Who | Today | Goes to |
 |---|---|---|---|---|
-| CH-01 | Chat messages, grouped by sender | M (visitors no longer read it, CH-19) | `#actualChat` > `#chatsWrap` > `#chats`, template `#chatKEY`, `chat.js` `setupChatEvents`, `chatFeed` / `chatData` | keep; 1.13 type and spacing |
+| CH-01 | Chat messages, grouped by sender | M (visitors no longer read it, CH-19) | `#actualChat` > `#chatsWrap` > `#chats`, template `#chatKEY`, `chat.js` `setupChatEvents`, `chatFeed` / `chatData` | keep; 1.13 type and spacing Since November 25, 2026 (`js/chat-lines.js`): a heading where the day changes ("Yesterday", "Today", "Monday, Nov 23"; `.ch-day`), times in the chat's own type (they were Roboto Mono), and the role icon after a name is the people list's (filled) |
 | CH-02 | Song announcements (the bot's "started playing …") | All | bot messages; Settings `#showSongAnnouncementsToggle` (`applySongAnnouncementVisibility`) | 1.13 one slim line each, setting kept |
 | CH-03 | Images in chat | All | `#showImagesToggle`, `firetable.ui.showImages` | keep |
 | CH-04 | Avatars in chat | All | `#showAvatarsToggle` | keep |
@@ -112,7 +112,7 @@ To re-check this list against the code, look for ids in `index.html`, `firetable
 | CH-10 | Typing indicator (and sharing yours) | M | `#typingIndicator`, `renderTyping`, `typing/`, Settings `#shareTypingToggle` | keep |
 | CH-11 | "New messages" jump | All | `#morechats` | keep |
 | CH-12 | Slash commands: /block, /unblock, /hot, /storm, /shrug, /tableflip, /unflip | M | `chat.js` (switch near "tableflip") | keep; 1.18 listed in the keyboard help |
-| CH-13 | Bot commands typed in chat (`!plays`, `!firstplay`, `!bpm`, `!suggest`, `!link`, `!theme`, `!grab`, …) | All | the bot | keep; 1.18 help lists the common ones |
+| CH-13 | Bot commands typed in chat (`!plays`, `!firstplay`, `!bpm`, `!suggest`, `!link`, `!theme`, `!grab`, …) | All | the bot | keep; 1.18 help lists the common ones Since November 25, 2026 a command typed in chat ("!skip") is set as quietly as the bot's lines (`.ch-cmd`), and the bot's line that someone fired the song has the people list's flame before it (`.ch-fire`); the names the bot quotes in backticks keep their colour, in the chat's own type |
 | CH-14 | Mod delete of a message | Mod | delete button on messages | keep |
 | CH-15 | Badoop sound on @mention | M | `#badoopToggle`, `sound.mp3` | keep |
 | CH-16 | Desktop notification on @mention | M | `#desktopNotifyMentionsToggle` | keep |
