@@ -912,7 +912,8 @@ function buildQueueItemHTML(key, track, isPreview, pos) {
     '<button type="button" class="material-symbols-outlined row-icon bumpsongs" title="Send to top" aria-label="Send to top">vertical_align_top</button>' +
     '<button type="button" class="material-symbols-outlined row-icon bottomsongs" title="Send to bottom" aria-label="Send to bottom">vertical_align_bottom</button>' +
     '<button type="button" class="material-symbols-outlined row-icon closeeditor" title="Close tags editor" aria-label="Close tags editor">close</button>' +
-    '<a class="row-icon tracklink-btn" target="_blank" rel="noopener" href="' + trackUrl + '" title="Open on ' + platform + '" aria-label="Open on ' + platform + '">' + (isYT ? YT_LOGO_SVG : SC_LOGO_SVG) + '</a>' +
+    // Same "open the song" icon as the player bar's, whichever site it's on
+    '<a class="material-symbols-outlined row-icon tracklink-btn" target="_blank" rel="noopener" href="' + trackUrl + '" title="Open on ' + platform + '" aria-label="Open on ' + platform + '">open_in_new</a>' +
     '<button type="button" class="material-symbols-outlined row-icon histeal" title="Add to playlist" aria-label="Add to playlist">playlist_add</button>' +
     '<button type="button" class="material-symbols-outlined row-icon deletesong" title="Delete track" aria-label="Delete track">delete</button>' +
     '<button type="button" class="material-symbols-outlined row-icon row-more" title="More" aria-label="More track options" aria-haspopup="menu" aria-expanded="false">more_vert</button>' +
@@ -1078,7 +1079,6 @@ firetable.ui.setupPlaylistEvents = function () {
     var $menu = $(trackMenuEl);
     $menu.find('[data-act="open"]').attr('href', $link.attr('href') || '#');
     $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
-    $menu.find('.ft-menu-open-logo').html($link.find('svg').prop('outerHTML') || '');
     $menu.find('[data-act="swap"]').prop('hidden', !$p.hasClass('has-swap'));
     $menu.find('[data-act="swaptags"]').prop('hidden', String($p.attr('data-tags') || '').indexOf(' - ') < 1);
     $menu.find('[data-act="copy"]').prop('hidden', !/^https?:/.test($link.attr('href') || ''));

@@ -188,7 +188,7 @@ firetable.ui.setupSearchEvents = function () {
           $srli.find('.listwords').text(firetable.ui.strip(vidTitle));
           $srli.attr('data-kind', r.kind);
           if (YT_KIND_LABELS[r.kind]) $('<span class="search-kind"></span>').text(YT_KIND_LABELS[r.kind]).insertAfter($srli.find('.listwords'));
-          $srli.find('.pvbarWrap').append('<a class="tracklink-btn" target="_blank" href="https://www.youtube.com/watch?v=' + thecid + '" title="Open on YouTube">' + YT_LOGO_SVG + '</a>');
+          $srli.find('.pvbarWrap').append('<a class="material-symbols-outlined row-icon tracklink-btn" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=' + thecid + '" title="Open on YouTube" aria-label="Open on YouTube">open_in_new</a>');
           bindSearchResultButtons($srli, thecid, MEDIA_YOUTUBE);
           $("#searchResults").append($srli);
         });
@@ -237,7 +237,7 @@ firetable.ui.setupSearchEvents = function () {
             firetable.actions.pview($(this).closest('.pvbar').attr('data-key'), true, MEDIA_SOUNDCLOUD);
           });
           $srli.find('.listwords').text(firetable.ui.strip(vidTitle));
-          var $scLink = $('<a class="tracklink-btn" target="_blank" rel="noopener" title="Open on SoundCloud"></a>').html(SC_LOGO_SVG);
+          var $scLink = $('<a class="material-symbols-outlined row-icon tracklink-btn" target="_blank" rel="noopener" title="Open on SoundCloud" aria-label="Open on SoundCloud">open_in_new</a>');
           if (/^https:\/\/(?:[a-z0-9-]+\.)?soundcloud\.com\//i.test(item.permalink_url || '')) $scLink.attr('href', item.permalink_url);
           $srli.find('.pvbarWrap').append($scLink);
           bindSearchResultButtons($srli, item.id, MEDIA_SOUNDCLOUD, firetable.utilities.soundCloudExtras(item));
@@ -302,7 +302,7 @@ firetable.ui.setupSearchEvents = function () {
     var platform = meta.type === MEDIA_SOUNDCLOUD ? 'SoundCloud' : 'YouTube';
     var $link = $('<a target="_blank" rel="noopener" class="importLinkCheck"></a>')
       .attr({ title: 'Open on ' + platform, 'aria-label': 'Open on ' + platform })
-      .html(meta.type === MEDIA_SOUNDCLOUD ? SC_LOGO_SVG : YT_LOGO_SVG);
+      .html('<i class="material-symbols-outlined" aria-hidden="true">open_in_new</i>');
     if (/^https:\/\//i.test(meta.href || '')) $link.attr('href', meta.href);
     $row.append($link);
     $("#importResults").append($row);

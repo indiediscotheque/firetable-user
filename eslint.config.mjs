@@ -31,7 +31,6 @@ const appGlobals = {
   CHAT_HISTORY_LIMIT: "readonly", HISTORY_PAGE_SIZE: "readonly",
   SEARCH_MAX_RESULTS: "readonly", IMPORT_PAGE_SIZE: "readonly",
   PREVIEW_BAR_INTERVAL: "readonly", PROGRESS_BAR_INTERVAL: "readonly",
-  YT_LOGO_SVG: "readonly", SC_LOGO_SVG: "readonly",
   // seasons.js
   AVATAR_SEASONS: "readonly", LIGHTS_MONTHS: "readonly", SNOW_MONTHS: "readonly",
   // other app files

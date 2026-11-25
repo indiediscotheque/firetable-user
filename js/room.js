@@ -112,8 +112,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
   }
   var platform = data.type == MEDIA_SOUNDCLOUD ? 'SoundCloud' : 'YouTube';
   $histItem.find('.tracklink-btn')
-    .attr({ href: data.url || '', title: 'Open on ' + platform, 'aria-label': 'Open on ' + platform })
-    .html(data.type == MEDIA_SOUNDCLOUD ? SC_LOGO_SVG : YT_LOGO_SVG);
+    .attr({ href: data.url || '', title: 'Open on ' + platform, 'aria-label': 'Open on ' + platform });
 
   // Edit tags button (mod only)
   $histItem.find('.edittags').on('click', function () {
@@ -805,7 +804,6 @@ firetable.ui.setupRoomEvents = function () {
     var $menu = $(histMenuEl);
     $menu.find('[data-act="open"]').attr('href', $link.attr('href') || '#');
     $menu.find('.ft-menu-open-label').text($link.attr('title') || 'Open track');
-    $menu.find('.ft-menu-open-logo').html($link.find('svg').prop('outerHTML') || '');
     $menu.find('[data-act="copy"]').prop('hidden', !/^https?:/.test($link.attr('href') || ''));
     $(this).addClass('on').attr('aria-expanded', 'true');
     histMenuEl.style.visibility = 'hidden';

@@ -6360,13 +6360,6 @@ input.tagMachine,
     transition: background-image 0.2s ease;
 }
 
-.tracklink-btn svg {
-    width: 1em;
-    height: 1em;
-    vertical-align: middle;
-    flex-shrink: 0;
-}
-
 #importSources {
     padding: 0;
     background: none;
@@ -7578,13 +7571,6 @@ body.media-off .q-art.no-art {
     opacity: .6;
 }
 
-/* Platform logo in the ⋮ track menu's "Open on YouTube / SoundCloud" item */
-.ft-menu-open-logo {
-    display: inline-flex;
-    font-size: 1.2rem;
-    width: 1.5rem;
-    justify-content: center;
-}
 
 
 /* ─── Logged out: live room preview (#9) ──────────────────────────────────── */
@@ -7794,11 +7780,6 @@ body.is-mod :is(#thehistory, .ft-rows) :is(.edittags, .flagplay) { display: inli
 @container hist (width < 34rem) {
     body.is-mod :is(#thehistory, .ft-rows) :is(.tracklink-btn, .edittags, .flagplay) { display: none; }
     body.is-mod :is(#thehistory, .ft-rows) .row-more { display: inline-flex; }
-}
-#histMenuPopover .ft-menu-open-logo {
-    display: inline-flex;
-    width: 1.25rem;
-    justify-content: center;
 }
 
 .ft-menu-title {
