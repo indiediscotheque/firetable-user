@@ -70,6 +70,19 @@ const FEATURES = [
   { row: "TB-10", name: "Light mode (the account menu)", who: IN, via: account, target: "#nav-acctLook" },
   { row: "TB-08", name: "Discover / Live: to Live", who: ALL, widths: WIDE, mode: "discover", via: ['#modeTabs [data-mode="live"]'], target: "#stage", hash: "#live" },
   { row: "TB-08", name: "Discover / Live: to Discover", who: ALL, widths: WIDE, via: ['#modeTabs [data-mode="discover"]'], target: "#dBrowse", hash: "#discover" },
+  // the left column folded into a toolbar (wide screens), and back: its button opens it again (close)
+  { row: "TB-11", name: "Fold the left column into a toolbar", who: ALL, widths: WIDE, via: ["#nav-railBtn"], target: "#nav-railPeople", close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: who's here, with names, over the middle", who: IN, widths: WIDE, via: ["#nav-railBtn", "#nav-railPeople"], target: "#usersDJs .prson .ft-avatar", close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: who's here, with names, over the middle (visitors)", who: ["visitor"], widths: WIDE, via: ["#nav-railBtn", "#nav-railPeople"], target: "#pe-here .pe-row", close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: Discover's search, over the middle", who: ALL, widths: WIDE, mode: "discover", via: ["#nav-railBtn", "#dSearch"], target: "#dQ", close: ["#nav-railBtn"] },
+  // folded, light mode, community, about and the shortcuts are in More, at the toolbar's bottom
+  { row: "TB-11", name: "Toolbar: More → light mode", who: ALL, widths: WIDE, via: ["#nav-railBtn", "#nav-railMore"], target: '#nav-railMenu [data-rail="look"]', close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: More → community", who: ALL, widths: WIDE, via: ["#nav-railBtn", "#nav-railMore", '#nav-railMenu [data-rail="community"]'], target: "#socialPopover", close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: More → about", who: ALL, widths: WIDE, via: ["#nav-railBtn", "#nav-railMore"], target: '#nav-railMenu [data-rail="about"]', close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: More → shortcuts", who: ALL, widths: WIDE, via: ["#nav-railBtn", "#nav-railMore", '#nav-railMenu [data-rail="help"]'], target: "#helpBox", close: [] },
+  { row: "TB-11", name: "Toolbar: mentions", who: IN, widths: WIDE, via: ["#nav-railBtn", "#inboxTrigger"], target: "#inboxList", close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: your account", who: IN, widths: WIDE, via: ["#nav-railBtn", "#loggedInUser"], target: "#nav-accountMenu", close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: Discover's pages", who: ALL, widths: WIDE, mode: "discover", via: ["#nav-railBtn", '#dNav [data-view="charts"]'], target: "#dBrowse", hash: "#discover/charts", close: ["#nav-railBtn"] },
   // ── phones: the bottom tab bar (NV-01) ──
   { row: "NV-01", name: "Tab bar: Home", who: ALL, widths: PHONE, via: ['#nav-tabs [data-tab="home"]'], target: "#dBrowse .ft-cards .pvbar", hash: "#discover" },
   { row: "NV-01", name: "Tab bar: Discover's pages", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="discover"]'], target: '#dNav [data-view="years"]' },
@@ -229,6 +242,9 @@ async function reset(page, mode) {
     if (window.firetable && firetable.discover && firetable.discover.state().full) firetable.discover.closeFull();
     document.body.classList.remove("d-sheet-open");
   });
+  // the left column open, as it is for everyone at first (TB-11 folds it)
+  await page.evaluate(() => firetable.rail.isOn() && firetable.rail.set(false));
+  await page.waitForFunction(() => !document.documentElement.classList.contains("rail"), null, { timeout: 3000 }).catch(() => {});
   // phones: back out of Discover's list of pages and the Library tab
   await page.evaluate((m) => {
     const tap = (t) => { const b = document.querySelector('#nav-tabs [data-tab="' + t + '"]'); if (b && b.offsetParent) b.click(); };
