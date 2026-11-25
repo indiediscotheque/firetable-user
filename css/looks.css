@@ -7787,6 +7787,72 @@ body.is-mod :is(#thehistory, .ft-rows) :is(.edittags, .flagplay) { display: inli
 }
 
 
+/* ─── The bus menu (js/bus-menu.js): when to step down ───────────────────── */
+.bus-menu {
+    min-width: 15rem;
+    max-width: 21rem;
+
+    & .bus-now,
+    & .bus-hint {
+        margin: 0 0.5rem 0.35rem;
+        font-size: 0.8rem;
+        color: var(--color-text-w60);
+        white-space: normal;
+    }
+    & .bus-row,
+    & .bus-own {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0.5rem;
+    }
+    & .bus-row-label {
+        min-width: 2.6rem;
+        font-size: 0.75rem;
+        color: var(--color-text-w60);
+    }
+    & .butt.bus-chip {
+        min-height: 1.9rem;
+        padding: 0 0.6rem;
+        font-size: 0.85rem;
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+    }
+    & .bus-own-n {
+        width: 3.6rem;
+    }
+    & .bus-own-n,
+    & .bus-own-unit {
+        box-sizing: border-box;
+        height: 1.9rem;
+        padding: 0 0.4rem;
+        line-height: 1;
+        font: inherit;
+        font-size: 0.85rem;
+        color: var(--color-text);
+        background-color: var(--color-bg-t3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+    }
+    & .bus-own-unit {
+        display: inline-flex;
+        align-items: center;
+        padding-right: 1.8rem; /* clear of the site's caret (select, above) */
+        background-position: right 0.4rem center;
+    }
+    & .bus-own-n[aria-invalid="true"] {
+        border-color: var(--color-danger-soft);
+    }
+    & .butt.bus-own-go {
+        min-height: 1.9rem;
+        padding: 0 0.9rem;
+        font-size: 0.85rem;
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+    }
+}
+
 /* ─── View density: Compact / Cozy (default) / Comfortable (#142) ────────── */
 body.density-compact {
     --q-art: 1.75rem; /* not smaller: the 28px row buttons would set the height */

@@ -1417,7 +1417,7 @@ firetable.tt = (function () {
     var items = [];
     if (self) {
       items.push(["stickers", "Laptop stickers"]);
-      items.push(["bus", leaving ? "Stay on (cancel the bus)" : "Step down after this song"]);
+      items.push(["bus", leaving ? "Change or cancel the bus…" : "Catch the bus…"]);
       items.push(["stepdown", "Step down", "Tap again to step down"]);
       return items;
     }
@@ -1427,7 +1427,7 @@ firetable.tt = (function () {
     if (page) items.push(["page", "Their DJ page", null, page]);
     if (me && (me.mod || me.supermod) && !them.hostbot && rank(them) <= rank(me)) {
       if (d.id === firetable.displayedDjId && firetable.song && firetable.song.cid != 0) items.push(["skip", "Skip their song", "Tap again to skip"]);
-      items.push(["theirbus", leaving ? "Let them stay" : "Step them down after this song"]);
+      items.push(["theirbus", leaving ? "Change or cancel their bus…" : "Send them home…"]);
       items.push(["remove", "Remove DJ", "Tap again to remove"]);
     }
     if (me && me.supermod && !them.supermod && !them.hostbot) {
@@ -1476,12 +1476,11 @@ firetable.tt = (function () {
     var act = btn.dataset.act, name = d.name;
     var run = function () {
       if (act === "stickers") openLaptop();
-      else if (act === "bus") ftapi.actions.sendBotCommand(btn.textContent.indexOf("Stay") === 0 ? "!dontremoveme" : "!removeafter");
+      else if (act === "bus" || act === "theirbus") firetable.busMenu.open(document.querySelector('#tt-table .tt-dj[data-uid="' + CSS.escape(uid) + '"]') || btn, uid, act === "bus" ? "" : name);
       else if (act === "stepdown") ftapi.actions.sendBotCommand("!removeme");
       else if (act === "mention") firetable.ui.mentionInChat(name);
       else if (act === "card") { var p = document.querySelector('#tt-table .tt-dj[data-uid="' + CSS.escape(uid) + '"]'); if (p && firetable.ui.tooltip.user) firetable.ui.tooltip.user(p, uid); }
       else if (act === "skip") ftapi.actions.sendBotCommand("!skip");
-      else if (act === "theirbus") ftapi.actions.sendBotCommand((btn.textContent.indexOf("Let") === 0 ? "!dontremoveme " : "!removeafter ") + name);
       else if (act === "remove") ftapi.actions.sendBotCommand("!remove " + name);
       else if (act === "mod") ftapi.actions.modUser(uid);
       else if (act === "unmod") ftapi.actions.unmodUser(uid);

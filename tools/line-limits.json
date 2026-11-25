@@ -38,18 +38,18 @@
     "longFunctions": 1
   },
   "js/room.js": {
-    "lines": 1329,
+    "lines": 1310,
     "longFunctions": 5
   },
   "js/search.js": {
     "longFunctions": 2
   },
   "js/ttskin.js": {
-    "lines": 1335,
+    "lines": 1334,
     "longFunctions": 3
   },
   "js/ui.js": {
-    "lines": 1881,
+    "lines": 1879,
     "longFunctions": 4
   },
   "js/users.js": {

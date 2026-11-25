@@ -2117,13 +2117,13 @@ try {
     return out;
   });
   check(wlCard.wl.open && wlCard.wl.facts === "Name=wl1|Role=Member|Status=Here|DJ=Waitlist, 1 of 3", "a waitlist avatar's card shows their place in line (" + JSON.stringify(wlCard.wl) + ")");
-  check(wlCard.wl.actions === "chat-at:@ in chat|remove-from-deck:Remove from waitlist|toggle-bus:Send wl1 home after their next play|toggle-block:Block",
+  check(wlCard.wl.actions === "chat-at:@ in chat|remove-from-deck:Remove from waitlist|toggle-bus:Send wl1 home: after a song or more, or in a while|toggle-block:Block",
     "mods get the deck's actions on the waitlist: remove and the bus, no \"Add to deck\" (" + wlCard.wl.actions + ")");
-  check(wlCard.deck.open && /DJ=On deck\|Session plays=2\/∞\|Leaving=After next play/.test(wlCard.deck.facts) && /remove-from-deck:Remove from deck\|toggle-bus:Don't send dj2 home/.test(wlCard.deck.actions),
+  check(wlCard.deck.open && /DJ=On deck\|Session plays=2\/∞\|Leaving=After next play/.test(wlCard.deck.facts) && /remove-from-deck:Remove from deck\|toggle-bus:dj2 steps down after next play: change or let them stay/.test(wlCard.deck.actions),
     "the on-deck card still shows plays and its actions (" + JSON.stringify(wlCard.deck) + ")");
   check(!/remove-from-deck|toggle-bus/.test(wlCard.boss), "no remove or bus for someone who outranks you (" + wlCard.boss + ")");
   check(wlCard.self.facts === "Name=smokeMod|Role=Mod|Status=Here|DJ=Waitlist, 2 of 3|Leaving=After next play" &&
-    wlCard.self.actions === "toggle-bus:Don't step down after your next play|step-down:Leave the waitlist",
+    wlCard.self.actions === "toggle-bus:You're stepping down after next play: change or stay|step-down:Leave the waitlist",
     "your own waitlist card lets you take the bus or leave the waitlist (" + JSON.stringify(wlCard.self) + ")");
   check(wlCard.redraw.open && wlCard.redraw.anchored && /DJ=Waitlist, 2 of 3/.test(wlCard.redraw.facts), "an open card follows its person when the waitlist redraws (" + JSON.stringify(wlCard.redraw) + ")");
   await put("/waitlist", null);

@@ -59,6 +59,8 @@
 	<!-- and the laptops' format it needs, loaded just before it -->
 	<meta name="tt-laptop-js" content="js/ttlaptop.js?v=01.12.08" />
 	<meta name="mention-js" content="js/mention-jump.js?v=01.12.08" />
+	<!-- the bus menu (when to step down), the first time a bus button is tapped -->
+	<meta name="bus-js" content="js/bus-menu.js?v=01.12.08" />
 	<!-- and its avatars' list and sticker sheet: linked here so the deploy versions them like the rest -->
 	<meta name="tt-avatars" content="img/tt/avatars.json?v=01.12.08" />
 	<meta name="tt-stickers" content="img/tt/stickers.webp?v=01.12.08" />
@@ -1307,9 +1309,9 @@
 					<dt><code>!plays</code>, <code>!firstplay</code></dt><dd>How often the song has played here, and who played it first and last</dd>
 					<dt><code>!bpm</code></dt><dd>The song's tempo; the DJ can set it: <code>!bpm 128</code></dd>
 					<dt><code>!suggest theme</code></dt><dd>Start a theme vote</dd>
-					<dt><code>!removeafter</code>, <code>!stay</code></dt><dd>Step down after your next song, or stay on after all</dd>
-					<dt><code>!leaveafter 3</code></dt><dd>Step down after 3 songs, counting the one you're playing</dd>
-					<dt><code>!leavein 45</code></dt><dd>Step down in 45 minutes (or <code>1h30</code>), finishing your song if you're playing</dd>
+					<dt><code>!removeafter</code>, <code>!stay</code></dt><dd>Step down after your next song, or stay on after all (the 🚏 buttons have a menu for all of these)</dd>
+					<dt><code>!removeafter 3</code></dt><dd>Step down after 3 songs, counting the one you're playing</dd>
+					<dt><code>!removeafter 45m</code>, <code>!leavein 45</code></dt><dd>Step down in 45 minutes (or <code>1h30</code>), finishing your song if you're playing</dd>
 					<dt><code>!bus</code></dt><dd>Who's catching the bus, and when</dd>
 					<dt><code>!autodj</code></dt><dd>What the autopilot DJ is doing</dd>
 				</dl>
@@ -1317,7 +1319,7 @@
 					<h3>Mods</h3>
 					<dl class="helpKeys">
 						<dt><code>!remove name</code></dt><dd>Take someone off the decks or the line</dd>
-						<dt><code>!leaveafter 3 name</code>, <code>!leavein 30 name</code>, <code>!stay name</code></dt><dd>Put someone of lower rank on the bus, or take them off it</dd>
+						<dt><code>!removeafter 3 name</code>, <code>!leavein 30 name</code>, <code>!stay name</code></dt><dd>Put someone of lower rank on the bus, or take them off it</dd>
 						<dt><code>!fixtags artist - title</code></dt><dd>Fix the playing song's tags</dd>
 						<dt><code>!flagplay id reason</code></dt><dd>Flag a play from Recent: broken, quality or offtheme</dd>
 						<dt><code>!upbot</code>, <code>!downbot</code>, <code>!autodj auto</code></dt><dd>The bot DJs, stays off, or decides for itself again</dd>
@@ -1605,7 +1607,7 @@
 			<button class="utt-icon-btn utt-at-btn" data-action="chat-at" title="@ in chat"><i class="material-symbols-outlined">alternate_email</i></button>
 			<button class="utt-icon-btn utt-deck-btn" data-action="add-to-deck" title="Add to deck"><i class="material-symbols-outlined">add_2</i></button>
 			<button class="utt-icon-btn utt-remove-deck-btn" data-action="remove-from-deck" title="Remove from deck"><i class="material-symbols-outlined">person_remove</i></button>
-			<button class="utt-icon-btn utt-bus-btn" data-action="toggle-bus" title="Take the bus (step down after next play)"><i class="material-symbols-outlined">departure_board</i></button>
+			<button class="utt-icon-btn utt-bus-btn" data-action="toggle-bus" aria-haspopup="menu" title="Catch the bus"><i class="material-symbols-outlined">departure_board</i></button>
 			<button class="utt-icon-btn utt-stepdown-btn" data-action="step-down" title="Step down from deck"><i class="material-symbols-outlined">logout</i></button>
 			<button class="utt-icon-btn utt-block-btn" data-action="toggle-block" title="Block"><i class="material-symbols-outlined">block</i></button>
 		</div>
