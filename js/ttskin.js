@@ -54,7 +54,7 @@ firetable.tt = (function () {
     ready: null,       // the avatars' list, loading
     seats: {}, crowd: {}, // the figures on the stage, by uid
     pick: { tier: "classic", page: 0 },
-    timer: 0, ro: null, mo: null, chatMo: null, konami: 0, logoClicks: [],
+    timer: 0, ro: null, mo: null, chatMo: null, logoClicks: [],
     marker: null
   };
 
@@ -1571,18 +1571,11 @@ firetable.tt = (function () {
 
   // ─── The easter egg ───────────────────────────────────────────────────────
 
-  var KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
   function inLive() { return !document.body.classList.contains("ft-discover"); }
 
   function init() {
     S.pref = store.get(STORAGE.ttSkin) === "1";
-    document.addEventListener("keydown", function (e) {
-      var t = e.target;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) { S.konami = 0; return; }
-      var k = e.key && e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      S.konami = k === KONAMI[S.konami] ? S.konami + 1 : (k === KONAMI[0] ? 1 : 0);
-      if (S.konami === KONAMI.length) { S.konami = 0; if (inLive()) toggle(); }
-    });
+    document.addEventListener("keydown", ftLazy.konami(function () { if (inLive()) toggle(); }));
     var logo = $id("roomlogo");
     if (logo) logo.addEventListener("click", function () {
       if (!inLive()) return;

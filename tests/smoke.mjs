@@ -3666,14 +3666,17 @@ try {
   await kmPage.waitForFunction(() => document.getElementById("roomlogo") && firetable.tt, null, { timeout: 30000 }).catch(() => {});
   await sleep(500);
   const konamiBefore = await ttLoaded(kmPage);
-  await kmPage.evaluate(() => { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); });
+  // entered from the chat box, which keeps what was in it
+  await kmPage.click("#newchat");
+  await kmPage.keyboard.type("hi");
   for (const k of ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"]) await kmPage.keyboard.press(k);
   await kmPage.waitForFunction(() => typeof firetable.tt._coverBox === "function", null, { timeout: 15000 }).catch(() => {});
   const konamiAfter = await ttLoaded(kmPage);
+  konamiAfter.chat = await kmPage.$eval("#newchat", (el) => el.value);
   await kmPage.evaluate(() => { if (firetable.tt.isOn()) firetable.tt.leave(); localStorage.removeItem("firetableTurntable"); });
   await kmPage.close();
-  check(!konamiBefore.real && !konamiBefore.fetched && konamiAfter.real && konamiAfter.fetched,
-    "the Turntable theme's script loads only when someone goes in: not with the page, then with the Konami code in Live (" + JSON.stringify({ before: konamiBefore, after: konamiAfter }) + ")");
+  check(!konamiBefore.real && !konamiBefore.fetched && konamiAfter.real && konamiAfter.fetched && konamiAfter.chat === "hi",
+    "the Turntable theme's script loads only when someone goes in: not with the page, then with the Konami code in Live, from the chat box too, leaving no \"ba\" there (" + JSON.stringify({ before: konamiBefore, after: konamiAfter }) + ")");
   // on a device where it was left on, it comes with the page
   const leftOnPage = await context.newPage();
   await leftOnPage.addInitScript(() => { try { localStorage.setItem("firetableTurntable", "1"); } catch (e) { /* storage blocked */ } });
