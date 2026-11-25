@@ -174,3 +174,45 @@ firetable.tt = (function () {
   };
   return stub;
 })();
+
+/*
+ * Going to an @mention in the room's chat (js/mention-jump.js, loaded the
+ * first time a mention is tapped). A tapped notification that opens the app
+ * comes with #mentions/<message id>: that's Live (#live) from the start, so
+ * the page opens there, and the message is shown once you're signed in and
+ * the chat has loaded (firetable.mentionJump.resume, from js/chat.js). A row
+ * in the @ inbox (or its Show button) goes there too.
+ */
+firetable.mentionJump = (function () {
+  "use strict";
+  var pending = null;
+  var tapped = /^#mentions(?:\/([\w-]{1,64}))?$/.exec(location.hash);
+  if (tapped) {
+    pending = tapped[1] || "";
+    try { history.replaceState(history.state, "", location.pathname + location.search + "#live"); } catch (e) { /* stays as it is */ }
+  }
+  var stub = {
+    /** Go to a mention (its chat message's id) in Live's chat. */
+    show: function (id) {
+      return ftLazy.own("mention-js", "js/mention-jump.js").then(function () {
+        if (firetable.mentionJump === stub) throw new Error("js/mention-jump.js didn't load");
+        return firetable.mentionJump.show(id);
+      }).catch(function (err) {
+        console.error("[firetable] going to the mention:", err);
+      });
+    },
+    /** Signed in, the chat loaded: show the mention a notification opened the app for. */
+    resume: function () {
+      if (pending === null || !ftapi.uid || !firetable._chatBooted) return;
+      var id = pending;
+      pending = null;
+      firetable.mentionJump.show(id);
+    }
+  };
+  // the inbox's rows: Show, or the row itself (not its other buttons or links)
+  document.addEventListener("click", function (e) {
+    var row = e.target.closest && e.target.closest("#inboxList .inboxItem[data-id]");
+    if (row && (e.target.closest(".inboxGo") || !e.target.closest("button, a"))) firetable.mentionJump.show(row.getAttribute("data-id"));
+  });
+  return stub;
+})();

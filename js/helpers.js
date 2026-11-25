@@ -515,19 +515,21 @@ firetable.utilities = {
   desktopNotify: function (chatData, namebo) {
     // iPhone/iPad Safari has no Notification API, and Android Chrome throws on
     // `new Notification()`. Never let either break rendering the chat message.
-    if (typeof Notification === "undefined") return;
     // Permission is asked for when the setting is turned on (a tap); asking
     // here, outside one, makes browsers quiet the site's prompts for good.
-    if (Notification.permission !== "granted") return;
-    // The same tag as the bot's push for this mention, so one replaces the other
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    // The same tag as the bot's push for this mention, so one replaces the other;
+    // tapped, it takes you to the message in Live's chat (as the push does, sw.js)
     var options = {
       icon: (function (u) { return u.indexOf("#bm=") === -1 ? u : "favicon.png"; })(firetable.utilities.avatarURL(chatData.id, namebo)), // a Bouletmaton still being drawn: the site's icon
       body: chatData.txt,
-      tag: chatData.chatID ? "m-" + chatData.chatID : undefined
+      tag: chatData.chatID ? "m-" + chatData.chatID : undefined,
+      data: { kind: "mention", id: chatData.chatID, url: "./#mentions" }
     };
     var direct = function () {
       try {
-        new Notification(namebo, options);
+        var n = new Notification(namebo, options);
+        n.onclick = function () { window.focus(); n.close(); firetable.mentionJump.show(chatData.chatID); };
       } catch (e) {
         firetable.debug && console.log("desktop notification failed:", e);
       }
@@ -535,10 +537,7 @@ firetable.utilities = {
     // Android only shows notifications through the service worker
     var reg = firetable.push && firetable.push._reg;
     if (!reg) return direct();
-    reg.then(function (r) {
-      if (!r) return direct();
-      return r.showNotification(namebo, options);
-    }).catch(direct);
+    reg.then(function (r) { return r ? r.showNotification(namebo, options) : direct(); }).catch(direct);
   },
 
   // ─── Screen (Video Stage) ────────────────────────────────────────────────

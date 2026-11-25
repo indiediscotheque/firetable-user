@@ -276,6 +276,53 @@ try {
   // received and read the push; it messages open windows as it shows one)
   check(!!reg && got === '{"type":"push","kind":"mention","id":"c1"}', "the service worker receives a pushed mention" + (got ? "" : " (nothing arrived)"));
 
+  console.log("-- a tapped @mention: Live, at its message in the chat");
+  {
+    const savedMode = await page.evaluate(() => localStorage.getItem("ft-mode"));
+    // a notification that opens the app: #mentions/<message id>
+    const cold = await context.newPage();
+    await openPage(cold, SITE + "#mentions/smkmj1");
+    await cold.waitForFunction(() => firetable._chatBooted, null, { timeout: 15000 }).catch(() => {});
+    // signed in (as the other checks here are), with a chat longer than the screen
+    await cold.evaluate(() => {
+      if (firetable.$appShell && !document.getElementById("appShell")) $("#mainGrid").append(firetable.$appShell);
+      ftapi.uid = "smoke";
+      const say = (chatID, id, txt) => ftapi.events.emit("newChat", { chatID, feedID: "f" + chatID, id, name: id, txt, time: Date.now() - 60000 });
+      say("smkmj0", "dj1", "evening all");
+      say("smkmj1", "dj2", "@smoke this one's for you");
+      for (let i = 0; i < 40; i++) say("smkmjf" + i, i % 2 ? "dj1" : "dj2", "filler " + i);
+      say("smkmj3", "dj1", "and one more");
+      ftapi.events.emit("chatHistoryLoaded");
+    });
+    const lit = (p, id) => p.waitForFunction((i) => document.getElementById("chattxt" + i)?.classList.contains("mentionFlash"), id, { timeout: 15000 }).then(() => true, () => false);
+    const coldLit = await lit(cold, "smkmj1");
+    const coldState = await cold.evaluate(() => {
+      const wrap = document.getElementById("chatsWrap").getBoundingClientRect(), line = document.getElementById("chattxtsmkmj1").getBoundingClientRect();
+      return { hash: location.hash, mode: firetable.discover.state().mode, inView: line.top >= wrap.top && line.bottom <= wrap.bottom,
+        pinned: chatPinned, loaded: !!document.querySelector('script[src*="mention-jump.js"]') };
+    });
+    check(coldLit && coldState.hash === "#live" && coldState.mode === "live" && coldState.inView && !coldState.pinned && coldState.loaded,
+      "opened by a tapped mention, the app is in Live with that message in view and lit (" + JSON.stringify(coldState) + ")");
+    // the app already open, in Discover: the service worker's message takes it to Live's chat
+    await cold.evaluate(() => document.querySelector('#modeTabs [data-mode="discover"]').click());
+    await cold.waitForFunction(() => firetable.discover.state().mode === "discover", null, { timeout: 5000 }).catch(() => {});
+    await cold.evaluate(() => navigator.serviceWorker.dispatchEvent(new MessageEvent("message", { data: { type: "showMention", id: "smkmj3" } })));
+    const warmLit = await lit(cold, "smkmj3");
+    const warm = await cold.evaluate(() => ({ mode: firetable.discover.state().mode, chatShown: document.getElementById("actualChat").getClientRects().length > 0 }));
+    check(warmLit && warm.mode === "live" && warm.chatShown, "tapped with the app open in Discover, it goes to Live, at the message (" + JSON.stringify(warm) + ")");
+    // a row in the @ inbox does the same (its buttons don't)
+    await cold.evaluate(() => {
+      firetable.inbox.items = [{ id: "smkmj0", from: "dj1", fromId: "dj1", txt: "evening all", time: Date.now(), read: true }];
+      firetable.ui.renderInbox();
+      document.querySelector('#inboxList .inboxItem[data-id="smkmj0"] .inboxText').click();
+    });
+    const rowLit = await lit(cold, "smkmj0");
+    await cold.evaluate(() => { firetable.ui.renderInbox(); document.querySelector('#inboxList .inboxItem[data-id="smkmj0"] .inboxGo').click(); });
+    check(rowLit && await lit(cold, "smkmj0"), "a row in the @ inbox, or its Show button, goes to its message in the chat");
+    await cold.close();
+    await page.evaluate((m) => { if (m === null) localStorage.removeItem("ft-mode"); else localStorage.setItem("ft-mode", m); }, savedMode);
+  }
+
   console.log("-- on deck: the tab holds a Web Lock so it isn't frozen while idle");
   const lockHeld = () => page.evaluate(() => navigator.locks.query().then((q) => q.held.some((l) => l.name === "firetable-on-deck")));
   const realUid = await page.evaluate(() => ftapi.uid);

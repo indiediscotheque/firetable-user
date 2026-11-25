@@ -114,13 +114,16 @@ self.addEventListener("notificationclick", function (event) {
   var target = new URL(data.url || "./", self.registration.scope);
   if (target.origin !== self.location.origin) target = new URL("./", self.registration.scope);
   var url = target.href;
-  var openInbox = /#mentions$/.test(url);
+  // a mention opens Live at its message in the chat (#mentions/<message id>)
+  var mention = /#mentions$/.test(url);
+  var id = mention && /^[\w-]{1,64}$/.test(data.id || "") ? data.id : "";
+  if (id) url += "/" + id;
   var openView = (url.match(/#(cards)$/) || [])[1]; // a card notice opens the card case
   event.waitUntil(appWindows().then(function (wins) {
     var win = wins.filter(function (w) { return w.focused; })[0] ||
       wins.filter(function (w) { return w.visibilityState === "visible"; })[0] || wins[0];
     if (win) {
-      if (openInbox) win.postMessage({ type: "openInbox", id: data.id });
+      if (mention) win.postMessage({ type: "showMention", id: id });
       else if (openView) win.postMessage({ type: "openView", view: openView });
       return win.focus();
     }
