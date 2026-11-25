@@ -7898,19 +7898,24 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
 
 .densityPicker { display: flex; gap: var(--pad2); align-items: center; flex-wrap: wrap; }
 
-/* "alice is typing…" (#33) */
+/* "alice is typing…" (#33). Its line above the chat box is always there,
+   empty or not, so the chat above doesn't jump each time someone starts or
+   stops typing; the words fade in instead. */
 #typingIndicator {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
     gap: 0.4rem;
-    height: 0;
+    height: 1.4rem;
     padding: 0 var(--pad3);
     overflow: hidden;
+    white-space: nowrap;
     font-size: 0.75rem;
     color: var(--color-text-w60);
-    transition: height 150ms ease;
 }
-#typingIndicator.show { height: 1.4rem; }
+#typingIndicator.show { animation: typing-in 150ms ease; }
+.typing-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@keyframes typing-in { from { opacity: 0; } }
 .typing-dots { display: inline-flex; gap: 3px; }
 .typing-dots i {
     width: 4px;
@@ -7925,7 +7930,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
     0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
     30% { transform: translateY(-3px); opacity: 1; }
 }
-@media (prefers-reduced-motion: reduce) { .typing-dots i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .typing-dots i, #typingIndicator.show { animation: none; } }
 
 /* ─── Chat reactions (#51) ─────────────────────────────────────────────────── */
 .chatText { position: relative; }
