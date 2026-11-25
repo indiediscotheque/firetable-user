@@ -4118,7 +4118,7 @@ try {
     out.moved = !!qb.closest("#dSide .d-queuehost") && document.body.classList.contains("d-queue-here") && qb.offsetParent !== null;
     out.tools = ["listpicker", "cr-listBtn", "addToQueueBttn", "queueFilter", "cr-sort", "cr-select", "plIndexBtn"].filter((id) => !document.getElementById(id) || !document.getElementById(id).closest("#dSide"));
     out.toolsShown = ["listpicker", "cr-listBtn", "addToQueueBttn", "queueFilter"].every((id) => document.getElementById(id).offsetParent !== null);
-    out.bar = !!document.querySelector("#pv-plbar .d-playall") && !!document.querySelector("#pv-plbar .pl-dj.on");
+    out.bar = !document.querySelector("#dSide .d-plbar, #dSide .pl-dj"); // no second Play / Shuffle / DJ row over Live's own
     const titles = () => rowsNow().filter((r) => r.style.display !== "none" && r.offsetParent !== null).map((r) => r.querySelector(".q-title").textContent.trim()).join();
     out.rows = titles();
     out.next = !!document.querySelector("#dSide #mainqueue.is-djlist .pvbar .q-next") && document.querySelector("#dSide #mainqueue .q-next").offsetParent !== null;
@@ -4190,7 +4190,7 @@ try {
     out.liveHome = inLive();
     return out;
   });
-  check(member.moved && !member.tools.length && member.toolsShown && member.bar, "the Playlists tab is Live's own playlist panel, every tool with it, and Discover's Play and DJ bar (" + JSON.stringify(member) + ")");
+  check(member.moved && !member.tools.length && member.toolsShown && member.bar, "the Playlists tab is Live's own playlist panel, every tool with it, and no second Play / Shuffle / DJ row above it (" + JSON.stringify(member) + ")");
   check(member.rows === "One,Two,Three" && member.next && member.filtered === "Two", "it lists the DJ playlist with Next, and Live's filter filters it (" + JSON.stringify(member) + ")");
   check(member.topped === "Three,One,Two" && member.dragged === "One,Two,Three", "Send to top moves a song up; dragging a row saves the order (" + JSON.stringify(member) + ")");
   check(member.playingRow && member.nextPlays, "a song's play button plays it in the bar, marked in the list, and Next goes on through the playlist (" + JSON.stringify(member) + ")");

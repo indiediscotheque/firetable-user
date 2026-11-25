@@ -3672,7 +3672,6 @@ firetable.discover = (function () {
     if ((b = t.closest(".pb-joinfire"))) return showSignIn("create");
     if ((b = t.closest(".pb-savelive"))) return liveTrack() && save(liveTrack(), b);
     // the playlist panel
-    if ((b = t.closest(".pl-dj"))) return D.signedIn && queue.djFrom();
     if ((b = t.closest(".pl-shuffle"))) return shufflePlay(b.getAttribute("data-list"));
     if ((b = t.closest(".pl-cratetop"))) {
       var cr = crate();
