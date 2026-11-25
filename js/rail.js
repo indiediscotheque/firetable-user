@@ -1,0 +1,436 @@
+/**
+ * rail.js — the left column folded into a toolbar, on wide screens (1024px
+ * and up). Loaded by its stand-in in js/lazy.js (which keeps its ways in:
+ * the button by the logo, the [ key and Settings' switch); css/rail.css
+ * draws it. This keeps it working:
+ * - folding and opening (set, toggle): html.rail, kept on this device
+ *   (STORAGE.rail, which js/head.js reads before the first paint next time),
+ *   the button's and Settings' state, the column fading to its new shape
+ *   (not with reduced motion), and the same in every open tab;
+ * - where the list under the toolbar's top starts and ends (--rail-top,
+ *   --rail-foot), measured from the top part and the buttons at the bottom;
+ * - peek: who's here (the people button, or a visitor's faces) or search
+ *   opens the column whole, over the middle, for a moment (html.rail-peek).
+ *   Escape, a click or the focus going outside, or choosing a view, puts it
+ *   away; the button by the logo keeps it open;
+ * - one tooltip, beside the icon or face under the pointer or the keyboard:
+ *   what it does, or who it is and what they're up to;
+ * - the count on the people button.
+ */
+firetable.rail = (function () {
+  "use strict";
+
+  var root = document.documentElement;
+  var wide = window.matchMedia("(min-width: 1024px)");
+  var hover = window.matchMedia("(hover: hover)");
+  // what makes up the column: the header (the toolbar itself) and the lists under it
+  var COLUMN = "#topbar, #usersbox, #pe-here, #dRail";
+  // the toolbar's top part, which the list starts under
+  var TOP = ["roomlogo", "nav-railBtn", "modeTabs", "themeSlot", "nav-railPeople"];
+  // where the focus goes when the people list opens over the middle
+  var FIRST_PERSON = "#allUsers .prson .ft-avatar[role=button], #pe-here";
+  var $id = function (id) { return document.getElementById(id); };
+  var peekFrom = null; // what had the focus before a peek
+
+  function on() { return root.classList.contains("rail"); }
+  function peeking() { return root.classList.contains("rail-peek"); }
+  /** The toolbar is what's showing: folded, on a wide screen, outside the Turntable theme. */
+  function showing() { return on() && wide.matches && !document.body.classList.contains("tt-skin"); }
+
+  // ── Folding and opening ─────────────────────────────────────────────────
+
+  var cssReady = null;
+  /** css/rail.css, on the page and loaded (js/head.js may have added it already). */
+  function css() {
+    if (cssReady) return cssReady;
+    cssReady = new Promise(function (resolve, reject) {
+      var link = $id("nav-railCss");
+      if (link && link.sheet) return resolve();
+      if (!link) {
+        var meta = document.querySelector('meta[name="rail-css"]');
+        link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.id = "nav-railCss";
+        link.href = meta ? meta.content : "css/rail.css";
+        document.head.appendChild(link);
+      }
+      link.addEventListener("load", function () { resolve(); });
+      link.addEventListener("error", function () {
+        cssReady = null; // try again next time
+        link.remove();
+        reject(new Error("couldn't load css/rail.css"));
+      });
+    });
+    return cssReady;
+  }
+
+  function save(folded) {
+    try {
+      if (folded) localStorage.setItem(STORAGE.rail, "1");
+      else localStorage.removeItem(STORAGE.rail);
+    } catch (e) { /* storage blocked: it lasts this visit */ }
+  }
+
+  /**
+   * Fold the column (true) or open it (false).
+   * @param {boolean} folded
+   * @param {boolean} [quiet] - don't keep the choice (another tab made it)
+   * @returns {Promise<boolean>} folded or not, after
+   */
+  var going = null; // where a change on its way is going (the cross-fade puts it on a moment later)
+  /** Folded, or where it's on its way to. */
+  function wanted() { return going === null ? on() : going; }
+
+  function set(folded, quiet) {
+    folded = !!folded;
+    if (folded === wanted()) { if (going === null) show(); return Promise.resolve(folded); }
+    going = folded;
+    return (folded ? css() : Promise.resolve()).then(function () {
+      if (going !== folded) return wanted(); // changed again while the stylesheet loaded
+      if (!quiet) save(folded);
+      closePeek();
+      swap(function () {
+        root.classList.toggle("rail", folded);
+        going = null;
+        show();
+        measure();
+      });
+      return folded;
+    }, function (err) {
+      going = null;
+      console.error("[firetable] the toolbar:", err);
+      if (firetable.ui && firetable.ui.toast) firetable.ui.toast("The toolbar didn't load. Try again in a moment.", "error");
+      show();
+      return on();
+    });
+  }
+
+  /**
+   * Make a change to the layout, the column fading in to its new shape (CSS,
+   * html.rail-fade: not with reduced motion). Not a view transition: the page
+   * takes no presses while one plays. After it, the parts that measure
+   * themselves on a resize (the stage, the lists) do.
+   */
+  var fading = 0;
+  function swap(change) {
+    change();
+    clearTimeout(fading);
+    root.classList.remove("rail-fade");
+    void root.offsetWidth; // start the fade again if it was already playing
+    root.classList.add("rail-fade");
+    fading = setTimeout(function () { root.classList.remove("rail-fade"); }, 400);
+    window.dispatchEvent(new Event("resize"));
+  }
+
+  /** Every control shows the state: the button (its icon is CSS's), its tooltip, Settings' switch. */
+  function show() {
+    var folded = on();
+    var btn = $id("nav-railBtn");
+    var tip = $id("tip-nav-railBtn");
+    var box = $id("railToggle");
+    if (btn) {
+      btn.setAttribute("aria-expanded", String(!folded));
+      btn.setAttribute("aria-label", folded ? "Open the column" : "Collapse the column into a toolbar");
+    }
+    if (tip) tip.textContent = folded ? "Open the column ([)" : "Collapse the column ([)";
+    if (box) box.checked = folded;
+    // a visitor's faces scroll in the toolbar: the keyboard reaches them too (Enter shows the names)
+    var here = $id("pe-here");
+    if (here) {
+      if (folded) here.setAttribute("tabindex", "0");
+      else here.removeAttribute("tabindex");
+    }
+    count();
+  }
+
+  // ── Where the list starts and ends ──────────────────────────────────────
+
+  /** --rail-top and --rail-foot: under the toolbar's top part, over its buttons at the bottom. */
+  function measure() {
+    if (!showing() || peeking()) return;
+    var bar = $id("topbar");
+    var utils = $id("topbarUtils");
+    if (!bar || !utils) return;
+    var box = bar.getBoundingClientRect();
+    var top = 0;
+    TOP.forEach(function (id) {
+      var el = $id(id);
+      if (el && el.getClientRects().length) top = Math.max(top, el.getBoundingClientRect().bottom - box.top);
+    });
+    var foot = box.bottom - utils.getBoundingClientRect().top;
+    if (top > 0) root.style.setProperty("--rail-top", Math.ceil(top + 6) + "px");
+    if (foot > 0) root.style.setProperty("--rail-foot", Math.ceil(foot) + "px");
+  }
+  var queued = false;
+  /** Measure (and count) once, in the next frame. */
+  function soon() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () {
+      queued = false;
+      measure();
+      count();
+    });
+  }
+  var sizes = window.ResizeObserver ? new ResizeObserver(soon) : null;
+  /** Watch the sizes of the toolbar and its parts (Discover adds its tabs once it's built). */
+  function watchSizes() {
+    if (!sizes) return;
+    sizes.disconnect();
+    ["topbar", "topbarUtils"].concat(TOP).forEach(function (id) {
+      var el = $id(id);
+      if (el) sizes.observe(el);
+    });
+  }
+
+  // ── Peek: the column whole, over the middle ─────────────────────────────
+
+  /**
+   * @param {Element} [from] - where the focus goes back to after
+   * @param {string} [focus] - a selector: move the focus into the column, there
+   */
+  function openPeek(from, focus) {
+    if (!showing() || peeking()) return;
+    peekFrom = from || document.activeElement;
+    root.classList.add("rail-peek");
+    hideTip();
+    var btn = $id("nav-railPeople");
+    if (btn) btn.setAttribute("aria-expanded", "true");
+    var to = focus && document.querySelector(focus);
+    if (to) {
+      if (!to.matches("button, a, input, [tabindex]")) to.setAttribute("tabindex", "-1");
+      to.focus({ preventScroll: true });
+    }
+  }
+
+  /** @param {boolean} [back] - put the focus back where it was */
+  function closePeek(back) {
+    if (!peeking()) return;
+    root.classList.remove("rail-peek");
+    var btn = $id("nav-railPeople");
+    if (btn) btn.setAttribute("aria-expanded", "false");
+    var from = peekFrom;
+    peekFrom = null;
+    if (back && from && from.isConnected && from.getClientRects().length) from.focus({ preventScroll: true });
+    soon();
+  }
+
+  /** Outside the column: anything that isn't it, a menu, a card or a dialog it opened. */
+  function outside(t) {
+    return !(t && t.closest && (t.closest(COLUMN) || t.closest("[popover], dialog, #ft-tooltip")));
+  }
+
+  function anyPopover() {
+    try { return !!document.querySelector(":popover-open"); } catch (e) { return false; }
+  }
+
+  function bindPeek() {
+    document.addEventListener("click", function (e) {
+      var t = e.target;
+      if (!t.closest) return;
+      var btn = t.closest("#nav-railPeople");
+      if (btn) {
+        if (peeking()) closePeek(true);
+        else openPeek(btn, FIRST_PERSON);
+        return;
+      }
+      // a visitor's faces have nothing to press: a press shows the names
+      if (showing() && !peeking() && t.closest("#pe-here")) { openPeek($id("nav-railPeople"), FIRST_PERSON); return; }
+      // a view chosen in Discover: the toolbar again
+      if (peeking() && t.closest("#dNav .d-nav")) closePeek(false);
+    });
+    document.addEventListener("pointerdown", function (e) {
+      if (peeking() && outside(e.target)) closePeek(false);
+    }, true);
+    document.addEventListener("focusin", function (e) {
+      var t = e.target;
+      // search (the toolbar's magnifier, the / key, or the header's search from Live)
+      if (t.id === "dQ" && showing() && !peeking()) { openPeek(document.querySelector("#dNav .d-nav.on") || $id("dNav")); return; }
+      // the room's video takes the focus by itself while it loads: that's not leaving
+      if (peeking() && t.tagName !== "IFRAME" && outside(t)) closePeek(false);
+    });
+    document.addEventListener("keydown", function (e) {
+      if ((e.key === "Enter" || e.key === " ") && e.target.id === "pe-here" && showing() && !peeking()) {
+        e.preventDefault();
+        openPeek(e.target);
+        return;
+      }
+      if (e.key !== "Escape" || !peeking() || document.querySelector("dialog[open]") || anyPopover()) return;
+      closePeek(true);
+    });
+  }
+
+  // ── The tooltip ─────────────────────────────────────────────────────────
+
+  var TIPS = "#topbar button, #topbar a, #topbar .tab, #reconnecting, #dSearch, #dNav .d-nav, " +
+    "#usersWaitlist .waitlist-item, #usersWaitlist .wlAddMeBtn, #allUsers .prson, #allUsers > .pe-groupHead, " +
+    "#pe-here .pe-row";
+  var tip = null;
+  var tipFor = null;
+
+  var text = function (el, sel) {
+    var x = sel ? el.querySelector(sel) : el;
+    return x ? x.textContent.replace(/\s+/g, " ").trim() : "";
+  };
+  var attr = function (el, sel, name) {
+    var x = el.querySelector(sel);
+    return (x && x.getAttribute(name)) || "";
+  };
+
+  /** A face in the people list: the name, then what they're up to (as the row says it). */
+  function person(row) {
+    return [
+      text(row, ".prsnName") + (row.classList.contains("is-me") ? " (you)" : ""),
+      attr(row, ".prsnRole", "aria-label"),
+      attr(row, ".pe-now", "aria-label"),
+      text(row, ".pe-next") ? "Next" : "",
+      attr(row, ".pe-plays", "title"),
+      text(row, ".pe-gone") || (row.classList.contains("idle") ? "Away" + (text(row, ".pe-away") ? " " + text(row, ".pe-away") : "") : ""),
+      row.querySelector(".pe-fire") ? "Fired this song" : ""
+    ].filter(Boolean).join(" · ");
+  }
+
+  /** What the tooltip says for `el`. */
+  function tipText(el) {
+    if (el.matches(".prson")) return person(el);
+    if (el.matches(".waitlist-addme-row")) return "Join the DJ waitlist";
+    if (el.matches(".waitlist-item")) return text(el, ".waitlist-name") + " · " + text(el, ".wl-pos-num, .waitlist-pos") + " in line";
+    if (el.matches(".wlAddMeBtn")) return "Hop on the DJ waitlist";
+    if (el.matches(".pe-row")) return [text(el, ".pe-name"), attr(el, ".pe-role", "aria-label"), el.classList.contains("is-dj") ? "DJ" : ""].filter(Boolean).join(" · ");
+    if (el.id === "themePill") return el.classList.contains("no-theme") ? "No theme yet" : "Theme: " + text(el, "#themePillText");
+    if (el.id === "dSearch") return "Search (/)";
+    if (el.id === "reconnecting") return text(el) || "Reconnecting…";
+    if (el.id === "nav-railPeople") return el.getAttribute("aria-label");
+    if (el.matches(".d-nav")) return text(el, "span");
+    return el.getAttribute("data-rail-title") || el.getAttribute("title") || el.getAttribute("aria-label") || text(el);
+  }
+
+  /** The element under `t` the tooltip is for, if any (not one with a tooltip of its own). */
+  function tippable(t) {
+    if (!showing() || peeking() || !t || !t.closest) return null;
+    var el = t.closest(TIPS);
+    if (!el || el.hasAttribute("aria-describedby") || el.id === "nav-signin" && !el.offsetParent) return null;
+    return el;
+  }
+
+  function showTip(el) {
+    var says = tipText(el);
+    if (!says) { hideTip(); return; }
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.id = "nav-railTip";
+      tip.setAttribute("aria-hidden", "true"); // each says it to screen readers already
+      document.body.appendChild(tip);
+    }
+    hideTip();
+    // its own title would pop up too: held while the tooltip shows
+    if (el.hasAttribute("title")) { el.setAttribute("data-rail-title", el.getAttribute("title")); el.removeAttribute("title"); }
+    tip.textContent = says;
+    var r = el.getBoundingClientRect();
+    tip.style.left = Math.round(r.right + 10) + "px";
+    var h = tip.offsetHeight;
+    tip.style.top = Math.round(Math.min(Math.max(4, r.top + r.height / 2 - h / 2), window.innerHeight - h - 4)) + "px";
+    tip.classList.add("is-on");
+    tipFor = el;
+  }
+
+  function hideTip() {
+    if (tip) tip.classList.remove("is-on");
+    if (tipFor && tipFor.hasAttribute("data-rail-title")) {
+      tipFor.setAttribute("title", tipFor.getAttribute("data-rail-title"));
+      tipFor.removeAttribute("data-rail-title");
+    }
+    tipFor = null;
+  }
+
+  function bindTips() {
+    document.addEventListener("pointerover", function (e) {
+      if (!hover.matches || e.pointerType === "touch") return;
+      var el = tippable(e.target);
+      if (el === tipFor) return;
+      if (el) showTip(el);
+      else if (tipFor) hideTip();
+    });
+    document.addEventListener("pointerout", function (e) { if (tipFor && !e.relatedTarget) hideTip(); });
+    document.addEventListener("focusin", function (e) {
+      var el = tippable(e.target);
+      var keys = false;
+      try { keys = e.target.matches(":focus-visible"); } catch (x) { /* older browsers: no keyboard tips */ }
+      if (el && keys) showTip(el);
+      else if (tipFor) hideTip();
+    });
+    document.addEventListener("pointerdown", hideTip, true);
+    document.addEventListener("scroll", function () { if (tipFor) hideTip(); }, true);
+  }
+
+  // ── Who's here: the count on the people button ──────────────────────────
+
+  function count() {
+    var btn = $id("nav-railPeople");
+    if (!btn) return;
+    var all = $id("numListeners");
+    var n = all ? all.textContent.trim() : "";
+    if (!n) n = text(document, "#pe-here .pe-count");
+    if (!n) {
+      var faces = document.querySelectorAll("#allUsers .prson[data-userid]").length;
+      n = faces ? String(faces) : "";
+    }
+    var shown = btn.querySelector(".nav-railCount");
+    if (shown && shown.textContent !== n) shown.textContent = n;
+    btn.setAttribute("aria-label", (n ? n + " here" : "Who's here") + ": show the list with names");
+  }
+
+  function watchCount() {
+    var counts = new MutationObserver(soon);
+    ["numListeners", "pe-here", "allUsers"].forEach(function (id) {
+      var el = $id(id);
+      if (el) counts.observe(el, { childList: true, subtree: true, characterData: true });
+    });
+  }
+
+  // ── Start ───────────────────────────────────────────────────────────────
+
+  // what in the body's classes changes the toolbar (others change all the time: the beat)
+  var shape = function () {
+    var b = document.body.classList;
+    return [showing(), b.contains("ft-discover"), b.contains("disconnected")].join();
+  };
+  var was = shape();
+  function settle() {
+    var now = shape();
+    if (now === was) return;
+    was = now;
+    if (!showing()) closePeek();
+    hideTip();
+    soon();
+  }
+
+  bindPeek();
+  bindTips();
+  watchSizes();
+  watchCount();
+  var bar = $id("topbar");
+  if (bar) new MutationObserver(function () { watchSizes(); soon(); }).observe(bar, { childList: true });
+  // Discover or Live, the Turntable theme, signing in: what the toolbar holds changes
+  new MutationObserver(settle).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  if (wide.addEventListener) wide.addEventListener("change", settle);
+  // another tab folded or opened it
+  window.addEventListener("storage", function (e) {
+    if (e.key !== STORAGE.rail && e.key !== null) return;
+    var folded = false;
+    try { folded = localStorage.getItem(STORAGE.rail) === "1"; } catch (x) { /* storage blocked */ }
+    set(folded, true);
+  });
+  show();
+  soon();
+
+  return {
+    isOn: on,
+    set: set,
+    /** Fold it, or open it, whichever it isn't. */
+    toggle: function () { return set(!wanted()); },
+    /** The column whole over the middle, for a moment (the people, or search). */
+    peek: openPeek,
+    unpeek: closePeek
+  };
+})();

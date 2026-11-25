@@ -268,3 +268,63 @@ firetable.recentPlays = (function () {
   if (window.ftapi && ftapi.events) ftapi.events.on("loggedIn", function () { firetable.recentPlays.watch(); });
   return stub;
 })();
+
+/*
+ * The left column folded into a toolbar, on wide screens (js/rail.js, and
+ * css/rail.css, loaded the first time it's folded; where it was left folded,
+ * js/head.js put both on before the first paint and the script loads with
+ * the page). Its ways in stay here, so they work before it's loaded and go
+ * to the real thing once it is: the button by the logo, the [ key and
+ * Settings' switch.
+ */
+firetable.rail = (function () {
+  "use strict";
+  var root = document.documentElement;
+  var loading = null;
+  var stub;
+
+  /** The real thing, loaded (once). */
+  function real() {
+    if (!loading) {
+      loading = ftLazy.own("rail-js", "js/rail.js").then(function () {
+        if (firetable.rail === stub) throw new Error("js/rail.js didn't set up the toolbar");
+      });
+      loading.catch(function (err) {
+        loading = null; // try again next time
+        console.error("[firetable] the toolbar:", err);
+        if (firetable.ui && firetable.ui.toast) firetable.ui.toast("The toolbar didn't load. Try again in a moment.", "error");
+      });
+    }
+    return loading;
+  }
+
+  stub = {
+    isOn: function () { return root.classList.contains("rail"); },
+    toggle: function () { return real().then(function () { return firetable.rail.toggle(); }, function () {}); },
+    set: function (on) { return real().then(function () { return firetable.rail.set(on); }, function () {}); }
+  };
+
+  /** [ : not while typing, with Ctrl, Cmd or Alt held, over a dialog, or where there's no column to fold. */
+  function railKey(e) {
+    if (e.key !== "[" || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || e.isComposing) return false;
+    var t = e.target;
+    if (/^(input|textarea|select)$/i.test(t.tagName || "") || t.isContentEditable) return false;
+    if (document.querySelector("dialog[open]") || document.body.classList.contains("tt-skin")) return false;
+    return !!(window.matchMedia && window.matchMedia("(min-width: 1024px)").matches);
+  }
+  document.addEventListener("keydown", function (e) {
+    if (!railKey(e)) return;
+    e.preventDefault();
+    firetable.rail.toggle();
+  });
+  document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest("#nav-railBtn")) firetable.rail.toggle();
+  });
+  var box = document.getElementById("railToggle");
+  if (box) {
+    box.checked = stub.isOn();
+    box.addEventListener("change", function () { firetable.rail.set(box.checked); });
+  }
+  if (stub.isOn()) real();
+  return stub;
+})();

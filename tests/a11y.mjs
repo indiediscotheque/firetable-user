@@ -69,6 +69,13 @@ const VIEWS = [
   { name: "live-people", run: liveTab("mmusrs") },
   { name: "full-player", run: async (page) => { await hash("#discover")(page); await page.evaluate(() => firetable.discover.openFull()); },
     after: (page) => page.evaluate(() => firetable.discover.closeFull()) },
+  // the left column folded into a toolbar (wide screens), and the column over the middle
+  { name: "rail-live", minWidth: 1024, run: async (page) => { await liveTab("mm-playlists")(page); await page.evaluate(() => firetable.rail.set(true)); },
+    after: (page) => page.evaluate(() => firetable.rail.set(false)) },
+  { name: "rail-peek", minWidth: 1024, run: async (page) => { await liveTab("mm-playlists")(page); await page.evaluate(() => firetable.rail.set(true)); await sleep(600); await page.click("#nav-railPeople"); },
+    after: (page) => page.evaluate(() => firetable.rail.set(false)) },
+  { name: "rail-discover", minWidth: 1024, run: async (page) => { await hash("#discover")(page); await page.evaluate(() => firetable.rail.set(true)); },
+    after: (page) => page.evaluate(() => firetable.rail.set(false)) },
   { name: "join", who: ["visitor"], run: (page) => page.locator("#nav-signin").click() },
   { name: "profile", who: ["member", "mod"], run: (page) => page.evaluate(() => firetable.ui.openAccount("profile-tab")) },
   { name: "settings", who: ["member", "mod"], run: (page) => page.evaluate(() => firetable.ui.openAccount("settings-tab")) },
@@ -194,6 +201,7 @@ try {
       process.stdout.write(look + " " + role + " " + w + ": ");
       for (const v of VIEWS) {
         if (v.who && !v.who.includes(role)) continue;
+        if (v.minWidth && w < v.minWidth) continue;
         await reset(page);
         try {
           await v.run(page);

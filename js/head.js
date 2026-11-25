@@ -6,6 +6,9 @@
  *    and theme-color metas (before this in <head>), so even the blank page
  *    before the stylesheets is the right colour. The stage, the full-screen
  *    player and the Turntable theme stay dark (css/looks.css, js/ttskin.js).
+ * 3. The left column folded into a toolbar (js/rail.js): where it was left
+ *    folded, html.rail and its stylesheet (css/rail.css), so the page paints
+ *    folded.
  * Runs before storage.js, so it reads localStorage itself.
  */
 
@@ -112,4 +115,24 @@ var ftLook = (function () {
     /** fn(current, pref) runs now and on every change, so a control can show the state. */
     onChange: function (fn) { listeners.push(fn); try { fn(wanted(), pref); } catch (e) { /* ignore */ } }
   };
+})();
+
+// ── 3. The folded column ──
+// Only on a device where it was left folded; nothing downloads otherwise
+// (js/lazy.js loads it the first time). blocking="render": a browser that
+// knows it waits for the stylesheet before painting; the others draw the
+// column open for a moment.
+(function () {
+  "use strict";
+  var on = null;
+  try { on = window.localStorage.getItem("firetableRail"); } catch (e) { /* storage blocked */ } // STORAGE.rail in js/constants.js
+  if (on !== "1") return;
+  document.documentElement.classList.add("rail");
+  var meta = document.querySelector('meta[name="rail-css"]');
+  var css = document.createElement("link");
+  css.rel = "stylesheet";
+  css.id = "nav-railCss";
+  css.href = meta ? meta.content : "css/rail.css";
+  css.setAttribute("blocking", "render");
+  document.head.appendChild(css);
 })();

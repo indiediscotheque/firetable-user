@@ -1263,6 +1263,12 @@ button.track-warning {
 #topbarUtils { flex-shrink: 0; }
 #topbar > .flexpacer { flex: 0 0 0; } /* the theme slot takes the free space */
 #topbarUtils { margin-left: auto; }
+/* the toolbar's buttons: wide screens only (below, and css/rail.css) */
+#nav-railBtn,
+#nav-railPeople { display: none; }
+@media only screen and (max-width: 1023px) {
+    #railLine, #railHint { display: none; } /* Settings' switch for it, too */
+}
 
 .ftlogo {
     margin-right: 0.5rem;
@@ -7538,6 +7544,13 @@ html#about body {
     #topbarUtils .header_icon { min-width: 2.125rem; }
     #mainGrid.login #nav-signin { margin-left: var(--pad1); padding: 0 0.625rem; }
     #mainGrid.login #nav-signin [class*="material-symbols-"] { display: none; }
+
+    /* Fold the column into a toolbar, and back (js/rail.js, css/rail.css):
+       beside the logo, its icon showing what a click does. Not in the
+       Turntable theme, which has its own layout. */
+    body:not(.tt-skin) #nav-railBtn { display: inline-flex; min-width: 2.125rem; margin-left: calc(-1 * var(--pad2)); }
+    :root.rail #nav-railBtn .nav-railClose,
+    :root:not(.rail) #nav-railBtn .nav-railOpen { display: none; }
 
     /* The column is narrow, so the theme takes a full row under the logo */
     #themeSlot {

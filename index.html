@@ -30,7 +30,10 @@
 	<!-- The page's look before anything paints: dark, unless js/head.js finds light mode on (it sets these two) -->
 	<meta name="color-scheme" content="dark" />
 	<meta name="theme-color" content="#181818" />
-	<!-- Before first paint, in one request: the iPhone viewport and light mode (js/head.js) -->
+	<!-- The left column folded into a toolbar (wide screens): js/head.js adds this stylesheet before the
+	     first paint where it was left folded, js/lazy.js the first time it's folded; nothing downloads before -->
+	<meta name="rail-css" content="css/rail.css?v=01.12.08" />
+	<!-- Before first paint, in one request: the iPhone viewport, light mode and the folded column (js/head.js) -->
 	<script src="js/head.js?v=01.12.08"></script>
 	<!-- Google Analytics, on the live site only (js/analytics.js; never holds up the page) -->
 	<script async src="js/analytics.js?v=01.12.08" data-id="G-ZJC6WV417B G-RP332GNB93"></script>
@@ -63,6 +66,8 @@
 	<meta name="bus-js" content="js/bus-menu.js?v=01.12.08" />
 	<!-- songs the room played lately, marked in your playlist: once you're signed in -->
 	<meta name="recent-js" content="js/recent-plays.js?v=01.12.08" />
+	<!-- and the folded column's script, the same way (js/lazy.js; until then firetable.rail is a stand-in there) -->
+	<meta name="rail-js" content="js/rail.js?v=01.12.08" />
 	<!-- and its avatars' list and sticker sheet: linked here so the deploy versions them like the rest -->
 	<meta name="tt-avatars" content="img/tt/avatars.json?v=01.12.08" />
 	<meta name="tt-stickers" content="img/tt/stickers.webp?v=01.12.08" />
@@ -81,6 +86,12 @@
 	<div id="mainGrid" class="pre-auth">
 		<header id="topbar">
 			<h1 id="roomlogo" title="Indie Discotheque"><span class="sr-only">Indie Discotheque</span></h1>
+			<!-- Wide screens: fold this column into a toolbar, and open it again ([ does the same; js/rail.js).
+			     Its icon is what a click does, picked by CSS from html.rail, so it's right before any script runs -->
+			<button type="button" id="nav-railBtn" class="header_icon" aria-label="Collapse the column into a toolbar" aria-expanded="true" style="anchor-name: --tip-nav-railBtn" aria-describedby="tip-nav-railBtn">
+				<i class="material-symbols-outlined nav-railClose" aria-hidden="true">left_panel_close</i><i class="material-symbols-outlined nav-railOpen" aria-hidden="true">left_panel_open</i>
+			</button>
+			<span id="tip-nav-railBtn" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-nav-railBtn">Collapse the column ([)</span>
 			<!-- Room theme; at 1024px+ it wraps onto its own row -->
 			<div id="themeSlot">
 				<button type="button" id="themePill" class="no-theme" popovertarget="themePopover" aria-haspopup="dialog">
@@ -88,6 +99,10 @@
 					<span id="themePillText">none yet</span>
 				</button>
 			</div>
+			<!-- The toolbar (the column folded): who's here, how many; a press shows the list with names -->
+			<button type="button" id="nav-railPeople" class="header_icon" aria-label="People here: show the list" aria-expanded="false">
+				<i class="material-symbols-outlined" aria-hidden="true">groups</i><span class="nav-railCount" aria-hidden="true"></span>
+			</button>
 			<div class="flexpacer"></div>
 			<div id="topbarUtils">
 				<!-- Light mode: a toggle for everyone, visitors too (js/head.js; the account menu and Settings have it as well).
@@ -1216,6 +1231,11 @@
 								<option value="comfortable">Comfortable</option>
 							</select>
 						</div>
+						<div class="settingline" id="railLine">
+							<input type="checkbox" id="railToggle" name="railToggle" aria-describedby="railHint">
+							<label for="railToggle">Fold the left column into a toolbar</label>
+						</div>
+						<p class="settingHint" id="railHint">More room for the stage, your playlists and Discover. Its icons do everything the column does, and who's here or search opens it for a moment. <kbd>[</kbd> or the button by the logo switches it too. Kept on this device.</p>
 					</section>
 					<section class="ac-section" aria-labelledby="se-privacyLabel">
 						<h3 class="ac-label" id="se-privacyLabel">Privacy</h3>
@@ -1300,6 +1320,7 @@
 					<dt><kbd>T</kbd></dt><dd>Selecting songs in a playlist: move them to the top</dd>
 					<dt><kbd>Alt</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Move the focused playlist song up or down</dd>
 					<dt><kbd>L</kbd></dt><dd>Light mode on or off</dd>
+					<dt><kbd>[</kbd></dt><dd>Fold the left column into a toolbar, or open it again (wide screens)</dd>
 					<dt><kbd>?</kbd></dt><dd>This list</dd>
 				</dl>
 				<p class="helpNote">Keys do nothing while you're typing.</p>

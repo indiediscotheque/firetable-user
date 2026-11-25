@@ -1,0 +1,463 @@
+/* ============================================
+   The left column as a toolbar (js/rail.js)
+   On wide screens (1024px and up) the left column can fold into a narrow
+   toolbar, and the middle (the stage, the playlists, Discover's pages)
+   takes the room it gives up; chat keeps its width. Everything the column
+   holds stays one click away, as an icon with a tooltip:
+   - at the top: the logo, the button that opens it again, Discover | Live,
+     the theme, and (in Live) who's here, with how many;
+   - in the middle: the people in the room as faces (DJs first, the one
+     playing ringed, presence on each), with the waitlist and Hop on; in
+     Discover, search and the views;
+   - at the bottom: the header's buttons (search, light mode, community,
+     about, mentions, your account or Join).
+   Who's here, or search, opens the column over the middle for a moment
+   ("peek", html.rail-peek: Escape, a click outside or the button puts it
+   away). Only loaded once someone folds the column (js/lazy.js), or with the
+   page where it was left folded (js/head.js puts html.rail and this
+   stylesheet on before the first paint). The Turntable theme has its own
+   layout, so none of this applies there.
+   ============================================ */
+
+@media only screen and (min-width: 1024px) {
+    :root.rail {
+        --rail-w: 4rem;
+        /* a little smaller on a short screen, so the list between keeps some room */
+        --rail-btn: clamp(2rem, 4.6vh, 2.375rem);
+        /* the middle takes what the column gave up; chat keeps its width */
+        --col-mid-rail: calc(var(--col-mid) + var(--col-left) - var(--rail-w));
+        /* where the column's list starts and ends: under the top's buttons and
+           over the bottom's (js/rail.js measures them; these are close) */
+        --rail-top-at: var(--rail-top, 16rem);
+        --rail-foot-at: var(--rail-foot, 15rem);
+    }
+
+    /* ── The grid: a toolbar, a wider middle, chat as it was ── */
+    :root.rail body:not(.tt-skin) #mainGrid {
+        grid-template-columns: var(--rail-w) var(--col-mid-rail) auto;
+    }
+    :root.rail body.ft-discover:not(.tt-skin) #mainGrid {
+        grid-template-columns: var(--rail-w) var(--col-mid-rail) minmax(0, 1fr);
+    }
+    /* A visitor's Live: the stage and the welcome keep their width in the
+       middle, so the room goes to Fresh beside them, for more of its songs */
+    :root.rail body:not(.tt-skin):not(.ft-discover) #mainGrid.login {
+        grid-template-columns: var(--rail-w) var(--col-mid) minmax(0, 1fr);
+    }
+
+    /* ── The toolbar ── */
+    :root.rail:not(.rail-peek) body:not(.tt-skin) {
+        /* The header becomes the toolbar itself, the column's full height: its
+           top part, then the list under it (the people, or Discover's views,
+           which keep their own places in the grid), then its buttons at the
+           bottom. The space between lets the list under it be pressed. */
+        & #topbar {
+            align-self: stretch;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 2px;
+            min-height: 0;
+            padding: var(--pad3) 0 var(--pad2);
+            border-right: 1px solid var(--color-border);
+            pointer-events: none;
+            & > * { pointer-events: auto; }
+        }
+        & #roomlogo {
+            flex: none;
+            width: 2.75rem;
+            height: 2.25rem;
+            margin: 0 0 var(--pad1);
+        }
+        & #topbar > .flexpacer { display: none; }
+
+        /* Open the column again */
+        & #nav-railBtn {
+            order: 1;
+            width: var(--rail-btn);
+            min-width: 0;
+            height: var(--rail-btn);
+            min-height: 0;
+            margin: 0;
+            border-radius: var(--radius-md);
+        }
+
+        /* Discover | Live: two icons, the page you're on lit */
+        & #modeTabs {
+            order: 2;
+            flex: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            width: 100%;
+            margin: var(--pad1) 0 0;
+            padding: var(--pad2) 0 0;
+            border-top: 1px solid var(--color-border);
+            border-bottom: 0;
+            & .tab {
+                flex: none;
+                position: relative;
+                width: var(--rail-btn);
+                height: var(--rail-btn);
+                min-height: 0;
+                padding: 0;
+                gap: 0;
+                font-size: 0;
+                border-radius: var(--radius-md);
+                &::before {
+                    font-family: 'Material Symbols Outlined';
+                    font-size: 1.3rem;
+                    font-weight: normal;
+                    line-height: 1;
+                    letter-spacing: normal;
+                    text-transform: none;
+                    font-feature-settings: 'liga';
+                    color: var(--color-icon);
+                }
+                &[data-mode="discover"]::before { content: "explore"; }
+                &[data-mode="live"]::before { content: "sensors"; }
+                /* Live's dot: the room is on air */
+                & .d-dot {
+                    position: absolute;
+                    top: 0.4rem;
+                    right: 0.4rem;
+                    width: 0.4rem;
+                    height: 0.4rem;
+                }
+                &.on {
+                    background: var(--color-bg-t1);
+                    &::before { color: var(--color-accent); }
+                    /* the page you're on: a mark at the toolbar's edge, as the tabs' underline */
+                    &::after {
+                        left: calc(-1 * (var(--rail-w) - var(--rail-btn)) / 2);
+                        right: auto;
+                        top: 0.5rem;
+                        bottom: 0.5rem;
+                        width: 3px;
+                        height: auto;
+                        border-radius: 0 3px 3px 0;
+                    }
+                }
+            }
+        }
+        @media (hover: hover) {
+            & #modeTabs .tab:not(.on):hover,
+            & #nav-railBtn:hover,
+            & #nav-railPeople:hover,
+            & #topbarUtils .header_icon:hover { background: var(--color-bg-t1); }
+        }
+
+        /* The theme: its icon, lit when there is one tonight (the tooltip says which) */
+        & #themeSlot {
+            order: 3;
+            flex: none;
+            width: auto;
+        }
+        & #themePill {
+            flex: none;
+            position: relative;
+            justify-content: center;
+            width: var(--rail-btn);
+            height: var(--rail-btn);
+            min-height: 0;
+            padding: 0;
+            gap: 0;
+            border-radius: var(--radius-md);
+            &::before {
+                content: "nightlife";
+                font-family: 'Material Symbols Outlined';
+                font-size: 1.25rem;
+                line-height: 1;
+                font-feature-settings: 'liga';
+                color: var(--color-accent);
+            }
+            &.no-theme::before { color: var(--color-icon); }
+        }
+
+        /* Who's here (Live): the count, and the list with names over the middle */
+        & #nav-railPeople {
+            order: 4;
+            display: inline-flex;
+            flex-direction: column;
+            gap: 0.1rem;
+            width: var(--rail-btn);
+            height: auto;
+            min-height: var(--rail-btn);
+            margin: 0;
+            padding: 0.3rem 0;
+            border-radius: var(--radius-md);
+            & [class*="material-symbols-"] { font-size: 1.25rem; }
+            & .nav-railCount {
+                font-family: var(--font-numbers);
+                font-size: 0.65rem;
+                line-height: 1;
+                color: var(--color-text);
+                &:empty { display: none; }
+            }
+        }
+        &.ft-discover #nav-railPeople { display: none; }
+
+        /* The bottom: the header's buttons, one above the other */
+        & #topbarUtils {
+            order: 5;
+            flex-direction: column;
+            gap: 2px;
+            margin: auto 0 0;
+            padding-top: var(--pad2);
+            width: 100%;
+            align-items: center;
+            border-top: 1px solid var(--color-border);
+            & .header_icon {
+                width: var(--rail-btn);
+                min-width: 0;
+                height: var(--rail-btn);
+                min-height: 0;
+                margin: 0;
+                border-radius: var(--radius-md);
+            }
+            & .header_icon [class*="material-symbols-"] { font-size: 1.25rem; }
+        }
+        & #loggedInUser .ft-avatar { width: 1.75rem; height: 1.75rem; }
+        & #inboxBadge { top: 0.1rem; right: 0; }
+        /* Join: its face, the word in the tooltip */
+        & #mainGrid #nav-signin {
+            width: var(--rail-btn);
+            height: var(--rail-btn);
+            margin: 0;
+            padding: 0;
+            justify-content: center;
+            & #nav-signinLabel { display: none; }
+            & [class*="material-symbols-"] { display: inline-block; font-size: 1.35rem; }
+        }
+        /* Reconnecting: a red dot that pulses (the tooltip says it) */
+        &.disconnected #reconnecting {
+            width: 0.625rem;
+            height: 0.625rem;
+            margin: var(--pad1) 0;
+            padding: 0;
+            overflow: hidden;
+            font-size: 0;
+            border-radius: 50%;
+        }
+        /* Discover has search in its own column */
+        &.ft-discover #dSearchOpen { display: none; }
+
+        /* Words the icons stand for: out of sight, still read by screen readers
+           (the tooltips show them) */
+        & :is(#themePill .themeLabel, #themePillText, .d-nav span, .waitlist-empty-msg, .waitlist-name,
+              #allUsers .prson .prsnNameRole, #allUsers .prson .prsnRole, #allUsers .prson .pe-you, #allUsers .prson .pe-meta,
+              #pe-here .pe-name, #pe-here .pe-role, #pe-here .pe-tag) {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
+        /* ── The list under the top: the people, or Discover's views ── */
+        & #usersbox,
+        & #mainGrid.login:not(.pre-auth) #pe-here:not(:empty),
+        & #dRail {
+            margin: var(--rail-top-at) 0 var(--rail-foot-at);
+            padding-top: 0;
+            border-top: 1px solid var(--color-border);
+        }
+        & #dRail {
+            overflow: hidden auto;
+            scrollbar-width: none;
+            border-right: 0;
+        }
+        & #mainGrid.login #pe-here { padding: 0 0 var(--pad3); overflow: hidden auto; scrollbar-width: none; cursor: pointer; }
+        & #allUsersWrap { scrollbar-width: none; }
+
+        /* Discover: search (a press opens the column with the box), then the views */
+        & #dSearch {
+            flex: none;
+            align-self: center;
+            width: var(--rail-btn);
+            height: var(--rail-btn);
+            margin: var(--pad2) 0 0;
+            border-radius: var(--radius-md);
+            & i { left: 50%; transform: translate(-50%, -50%); font-size: 1.25rem; color: var(--color-icon); }
+            & input {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                padding: 0;
+                opacity: 0;
+                cursor: pointer;
+            }
+        }
+        & #dNav {
+            align-items: center;
+            padding: var(--pad1) 0 var(--pad2);
+        }
+        & .d-nav {
+            justify-content: center;
+            width: var(--rail-btn);
+            height: var(--rail-btn);
+            min-height: 0;
+            padding: 0;
+            gap: 0;
+            & i { font-size: 1.25rem; }
+        }
+        @media (hover: hover) {
+            & #dSearch:hover { background: var(--color-bg-t1); }
+        }
+
+        /* The people: faces, DJs first */
+        & #usersStats,
+        & #usersbox > #ondeck,
+        & #pe-audience { display: none; }
+        & #usersWaitlist {
+            align-items: center;
+            gap: var(--pad1);
+            padding: var(--pad2) 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+        /* Hop on says what the heading did; with nobody waiting and no Hop on
+           (you're on the decks), the waitlist has nothing to show here */
+        & .waitlist-label { display: none; }
+        & #usersWaitlist:not(.has-entries):not(:has(.wlAddMeBtn)) { display: none; }
+        & .waitlist-empty {
+            justify-content: center;
+            padding: 0;
+        }
+        & .wlAddMeBtn {
+            width: var(--rail-btn);
+            height: var(--rail-btn);
+            min-height: 0;
+            padding: 0;
+            justify-content: center;
+            font-size: 0;
+            border-radius: 50%;
+            & [class*="material-symbols-"] { font-size: 1.2rem; }
+        }
+        & .waitlist-item {
+            position: relative;
+            justify-content: center;
+            & .deckDepartureBtn,
+            & .prsnRole { display: none; }
+            /* their place in line, on the face's corner */
+            & .waitlist-pos {
+                position: absolute;
+                z-index: 1;
+                top: -0.15rem;
+                left: 0.55rem;
+                min-width: 0.9rem;
+                height: 0.9rem;
+                padding: 0 0.15rem;
+                font-size: 0.625rem;
+                line-height: 0.9rem;
+                border-radius: var(--radius-pill);
+                background: var(--color-bg-t2);
+                & .wl-pos-icon { display: none; }
+            }
+        }
+        & #allUsers {
+            align-items: center;
+            padding: var(--pad2) 0 var(--pad3);
+        }
+        & #allUsers > .pe-groupHead {
+            flex-direction: column;
+            gap: 0.1rem;
+            padding: var(--pad2) 0 var(--pad1);
+            font-size: 0;
+            & .pe-count { font-size: 0.625rem; font-family: var(--font-numbers); }
+        }
+        & #allUsers > #pe-floorHead {
+            width: var(--rail-btn);
+            margin-top: var(--pad2);
+            border-top: 1px solid var(--color-border);
+        }
+        & #allUsers > #pe-djHead { padding-top: 0; }
+        & #allUsers > div { align-items: center; }
+        & #allUsers .prson {
+            justify-content: center;
+            width: var(--rail-btn);
+            padding: 0.2rem 0;
+            & .ft-avatar { width: 2rem; height: 2rem; }
+            & .pe-dot { left: auto; right: 0.2rem; bottom: 0.2rem; }
+            /* playing now: a ring in the room's colour */
+            &.is-playing .ft-avatar { box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent); }
+            &.idle .ft-avatar,
+            &.ghost .ft-avatar { opacity: 0.6; }
+        }
+
+        /* A visitor's list: faces too; a press shows the names */
+        & #pe-here {
+            /* the people button has the count */
+            & .pe-head { display: none; }
+            & .pe-list { display: flex; flex-direction: column; align-items: center; padding-top: var(--pad2); }
+            & .pe-row {
+                justify-content: center;
+                padding: 0.2rem 0;
+                &.is-dj .ft-avatar { box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3px var(--color-text-muted); }
+                &.is-idle .ft-avatar { opacity: 0.6; }
+            }
+            & .pe-audience,
+            & .pe-foot { display: none; }
+        }
+    }
+
+    /* ── Peek: the column, whole, over the middle for a moment ── */
+    :root.rail.rail-peek body:not(.tt-skin) {
+        & #topbar,
+        & #usersbox,
+        & #mainGrid.login:not(.pre-auth) #pe-here:not(:empty),
+        & #dRail {
+            justify-self: start;
+            width: var(--col-left);
+            max-width: calc(100vw - var(--rail-w));
+            z-index: 40;
+            animation: rail-peek var(--dur-fast, 150ms) var(--ease-out, ease-out);
+        }
+        & #topbar { z-index: 41; }
+        & #usersbox,
+        & #mainGrid.login:not(.pre-auth) #pe-here:not(:empty),
+        & #dRail {
+            background: var(--color-bg);
+            border-right: 1px solid var(--color-border);
+            box-shadow: 0.5rem 0 1.5rem -0.5rem rgba(0, 0, 0, 0.5);
+        }
+        /* a visitor's Live had nothing else in the column: the header gets the panel's floor */
+        & #mainGrid.login #topbar { background: var(--color-bg); }
+    }
+}
+
+/* Folding and opening: the column fades in to its new shape (js/rail.js swap) */
+@media (prefers-reduced-motion: no-preference) {
+    :root.rail-fade body:not(.tt-skin) :is(#topbar, #usersbox, #pe-here, #dRail) {
+        animation: rail-fade 200ms var(--ease-out, ease-out);
+    }
+}
+@keyframes rail-fade {
+    from { opacity: 0; }
+}
+
+@keyframes rail-peek {
+    from { opacity: 0; transform: translateX(-0.75rem); }
+}
+
+/* The toolbar's tooltips: one, beside whatever the pointer or the keyboard is on */
+#nav-railTip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    max-width: 16rem;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--color-tip-text, var(--color-text-light));
+    background: var(--color-tip-bg, var(--color-bg-t2));
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms ease;
+    &.is-on { opacity: 1; }
+}
