@@ -4704,12 +4704,14 @@ a.importLinkCheck {
     flex: 1;
 }
 
+/* the role icon is the people list's: filled, and as grey as the name */
 .chatContent .utitle {
     order: 2;
     flex: 0 0 auto;
     font-size: 1em;
     margin-left: 0.25em;
-    color: var(--color-text-dim);
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    color: var(--color-text-muted);
 }
 
 .chatContent .utitle:empty {
@@ -8410,11 +8412,13 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
 .themeTimr,
 .hist-timestamp,
 :is(#thediscovers, .ft-cards) .histdate,
-:is(#thediscovers, .ft-cards) .histtime,
-.chatTime {
+:is(#thediscovers, .ft-cards) .histtime {
     font-family: var(--font-numbers);
     font-variant-numeric: tabular-nums;
 }
+/* Chat's times are in the chat's own type, like the people list's numbers:
+   equal-width digits keep the column straight without a second typeface */
+.chatTime { font-variant-numeric: tabular-nums; }
 
 /* The preview player for "Previews play over the room": playing, out of sight */
 #pvOverPlayer { position: fixed !important; left: -10000px; top: 0; width: 320px; height: 180px; opacity: 0; pointer-events: none; }
@@ -8710,6 +8714,44 @@ body:not(.is-mod) .helpMods { display: none; }
 /* The room's bot in chat (1.13): its lines quieter than people's talk; printed cards and their GRAB as before */
 .ch-bot .chatText { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 400; }
 .ch-bot .chatText strong, .ch-bot .chatText b { color: var(--color-text); }
+/* the names it quotes (a song's artist and title, in `backticks`) keep their
+   colour but not the typewriter face, which set them wide and broke them
+   across lines; what people put in backticks stays as they typed it */
+.ch-bot .chatText code { font-family: inherit; font-weight: 500; }
+
+/* ── What a chat line gets besides its words (js/chat-lines.js) ── */
+/* a heading between two days */
+.ch-day {
+    display: flex;
+    align-items: center;
+    gap: var(--pad2);
+    margin: var(--pad3) var(--pad2) var(--pad1);
+    padding: 0 var(--pad3);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    &::before,
+    &::after { content: ""; flex: 1; height: 1px; background: rgba(var(--ink-rgb), 0.1); }
+}
+/* someone fired the song: the flame the people list gives them */
+.chatText.ch-fire::before {
+    content: 'mode_heat';
+    display: inline-block;
+    width: 1em;
+    overflow: hidden;
+    margin-right: 0.2em;
+    font-family: 'Material Symbols Outlined';
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    font-feature-settings: 'liga';
+    font-size: 1em;
+    line-height: 1;
+    vertical-align: -0.15em;
+    color: var(--color-accent);
+}
+/* a command typed to the bot ("!skip") is as quiet as the bot's own lines */
+.chatText.ch-cmd { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 400; }
 
 /* Fire's count (1.5): a badge on its button, wherever the button is (bar, full-screen player) */
 #fire { position: relative; }

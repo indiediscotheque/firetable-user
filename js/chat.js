@@ -734,29 +734,6 @@ firetable.ui.formatChatText = function (rawTxt) {
 firetable.ui.setupChatEvents = function () {
   var $chatTemplate = $('#chatKEY').remove();
 
-  function isJarvisGiftDanceMessage(chatData) {
-    var fromHostbot = !!(ftapi.users[chatData.id] && ftapi.users[chatData.id].hostbot);
-    var senderName = (chatData.name || '').toLowerCase();
-    var fromJarvisName = senderName === 'jarvis';
-    if (!fromHostbot && !fromJarvisName) return false;
-
-    var rawTxt = firetable.ui.strip(chatData.txt || '');
-    var mentionsGift = /\bgift(?:ed|ing)?\b/i.test(rawTxt);
-    var mentionsDance = /!dance\b/i.test(rawTxt) || /\bdance\b/i.test(rawTxt);
-    return mentionsGift && mentionsDance;
-  }
-
-  function appendDanceCta($chatText) {
-    if (!$chatText || !$chatText.length) return;
-    if ($chatText.find('.chat-dance-wrap').length) return;
-    $chatText.append(
-      '<div class="chat-dance-wrap">' +
-      '<button type="button" class="butt chat-dance-btn" aria-pressed="false">DANCE</button>' +
-      '</div>'
-    );
-    firetable.actions.syncDanceCtaButtons();
-  }
-
   // ── Chat Collapse: hide messages longer than 7 lines behind "show more" ──
   function maybeCollapseChat(el) {
     if (!el) return;
@@ -836,7 +813,8 @@ firetable.ui.setupChatEvents = function () {
       }
     };
 
-    // Format the message text
+    // A heading when the day changes (js/chat-lines.js), then the message's text
+    firetable.chatLines.day(chatData.time);
     var grabAsk = !chatData.grab && !chatData.hidden && GRAB_ASK_RE.test(chatData.txt || "");
     var txtOut = firetable.ui.formatChatText(grabAsk ? chatData.txt.replace(GRAB_ASK_RE, "") : chatData.txt);
     if (chatData.hidden) txtOut = "[message removed]";
@@ -859,9 +837,7 @@ firetable.ui.setupChatEvents = function () {
       }
       twemoji.parse($line[0]);
       maybeCollapseChat($line[0]);
-      if (isJarvisGiftDanceMessage(chatData)) {
-        appendDanceCta($line);
-      }
+      firetable.chatLines.mark($line[0], chatData); // a fire, a command, the bot's DANCE button
 
     } else {
       // ── New message block (different user or @-mention break) ──
@@ -894,9 +870,7 @@ firetable.ui.setupChatEvents = function () {
         document.querySelectorAll('#chats .ft-skeleton').forEach(function(el) { el.remove(); });
       }
       maybeCollapseChat($chatthing.find('.chatText')[0]);
-      if (isJarvisGiftDanceMessage(chatData)) {
-        appendDanceCta($chatthing.find('.chatText'));
-      }
+      firetable.chatLines.mark($chatthing.find('.chatText')[0], chatData);
 
       if (canDelete()) {
         $chatthing.find(".chatText").addClass("deleteMe");

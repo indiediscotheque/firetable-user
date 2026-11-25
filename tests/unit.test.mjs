@@ -721,6 +721,75 @@ test("the people header and the waitlist's card say only what there is", async (
   assert.equal(r.full, "The decks are full. Nobody is waiting yet.|on", "four DJs: the note doesn't say there's no wait");
 });
 
+test("chat lines: a heading between two days, a flame on the bot's fire lines, quiet commands, the DANCE button", async () => {
+  const r = await run(() => {
+    const chats = document.getElementById("chats") || firetable.$appShell.find("#chats")[0];
+    const kept = [...chats.childNodes];
+    const was = { person: firetable.lastChatPerson, id: firetable.lastChatId };
+    chats.replaceChildren();
+    const D = 86400000, noon = new Date();
+    noon.setHours(12, 0, 0, 0);
+    const t = noon.getTime();
+    // a message as chat.js draws it: the heading (if any) first, then its block with its time
+    const add = (time) => {
+      const headed = firetable.chatLines.day(time);
+      const el = document.createElement("div");
+      el.className = "newChat";
+      el.innerHTML = '<span class="chatTime" data-time="' + time + '"></span>';
+      chats.appendChild(el);
+      return headed;
+    };
+    const song = () => { const el = document.createElement("div"); el.className = "newChat nowplayn"; el.innerHTML = '<span class="chatTime npmsg-time">9:00pm</span>'; chats.appendChild(el); };
+    const out = { todayFirst: add(t) + "|" + chats.querySelectorAll(".ch-day").length };
+    chats.replaceChildren();
+    firetable.lastChatPerson = "someone";
+    const seq = [add(t - 3 * D), add(t - 3 * D + 60000), add(t - D)];
+    out.newBlock = firetable.lastChatPerson;
+    song(); // a song announcement carries no time of its own
+    seq.push(add(t - D + 5000), add(t), add(t + 1000));
+    out.seq = seq.join();
+    out.heads = [...chats.querySelectorAll(".ch-day")].map((h) => h.textContent + "|" + h.getAttribute("role"));
+    out.order = [...chats.children].map((c) => (c.classList.contains("ch-day") ? "H" : c.classList.contains("nowplayn") ? "s" : "m")).join("");
+    out.label = [firetable.chatLines.dayLabel(t, t), firetable.chatLines.dayLabel(t - D, t), firetable.chatLines.dayLabel(t, t + D)].join();
+    // midnight passes: a heading that said Today is brought up to date
+    const last = [...chats.querySelectorAll(".ch-day")].pop();
+    last.firstChild.textContent = "Tomorrow";
+    firetable.chatLines.relabel();
+    out.relabel = last.textContent;
+
+    const line = (chatData) => { const el = document.createElement("div"); el.className = "chatText"; firetable.chatLines.mark(el, chatData); firetable.chatLines.mark(el, chatData); return el; };
+    const cls = (chatData) => [...line(chatData).classList].filter((c) => c !== "chatText").join() || "-";
+    out.marks = [
+      cls({ id: "x", name: "jarvis", txt: "Chris thinks this track is h0t! A small fire has started." }),
+      cls({ id: "x", name: "jarvis", txt: "Chris thinks this track is h0t! FIRE LEVEL IS OFF THE CHARTS. CHARTS ON FIRE!" }),
+      cls({ id: "x", name: "jarvis", txt: "Chris has played this 3 times." }),
+      cls({ id: "x", name: "Pat", txt: "jarvis thinks this track is h0t! not really" }),
+      cls({ id: "x", name: "Pat", txt: "!skip" }),
+      cls({ id: "x", name: "Pat", txt: "!plays daft punk" }),
+      cls({ id: "x", name: "Pat", txt: "!!! wow" }),
+      cls({ id: "x", name: "Pat", txt: "try !skip" }),
+      cls({ id: "x", name: "Pat", txt: "!skip", hidden: true })
+    ].join(" ");
+    out.dance = line({ id: "x", name: "jarvis", txt: "Pat gifted everyone a dance! Type !dance" }).querySelectorAll(".chat-dance-btn").length + "|" +
+      line({ id: "x", name: "Pat", txt: "I gifted a dance" }).querySelectorAll(".chat-dance-btn").length;
+
+    chats.replaceChildren(...kept);
+    firetable.lastChatPerson = was.person;
+    firetable.lastChatId = was.id;
+    return out;
+  });
+  assert.equal(r.todayFirst, "false|0", "a chat that starts today has no heading");
+  assert.equal(r.seq, "true,false,true,false,true,false", "a heading goes in where the day changes, and only there");
+  assert.equal(r.newBlock, false, "the message under a heading starts a block of its own");
+  assert.equal(r.order, "HmmHmsmHmm", "each heading sits above its day's first message");
+  assert.match(r.heads[0], /^(Sun|Mon|Tues|Wednes|Thurs|Fri|Satur)day, [A-Z][a-z]{2} \d{1,2}(, \d{4})?\|separator$/, "an older day is its weekday and date (" + r.heads[0] + ")");
+  assert.deepEqual(r.heads.slice(1), ["Yesterday|separator", "Today|separator"]);
+  assert.equal(r.label, "Today,Yesterday,Yesterday");
+  assert.equal(r.relabel, "Today", "headings are brought up to date");
+  assert.equal(r.marks, "ch-fire ch-fire - - ch-cmd ch-cmd - - -", "only the bot's fire lines get the flame; only a command that starts a person's message is quiet");
+  assert.equal(r.dance, "1|0", "the bot's gift line gets one DANCE button");
+});
+
 test("no page errors while the site loaded and ran these", () => {
   assert.deepEqual(errors, []);
 });
