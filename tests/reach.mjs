@@ -75,6 +75,13 @@ const FEATURES = [
   { row: "TB-11", name: "Toolbar: who's here, with names, over the middle", who: IN, widths: WIDE, via: ["#nav-railBtn", "#nav-railPeople"], target: "#usersDJs .prson .ft-avatar", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: who's here, with names, over the middle (visitors)", who: ["visitor"], widths: WIDE, via: ["#nav-railBtn", "#nav-railPeople"], target: "#pe-here .pe-row", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: Discover's search, over the middle", who: ALL, widths: WIDE, mode: "discover", via: ["#nav-railBtn", "#dSearch"], target: "#dQ", close: ["#nav-railBtn"] },
+  // folded, light mode, community, about and the shortcuts are in More, at the toolbar's bottom
+  { row: "TB-11", name: "Toolbar: More → light mode", who: ALL, widths: WIDE, via: ["#nav-railBtn", "#nav-railMore"], target: '#nav-railMenu [data-rail="look"]', close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: More → community", who: ALL, widths: WIDE, via: ["#nav-railBtn", "#nav-railMore", '#nav-railMenu [data-rail="community"]'], target: "#socialPopover", close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: More → about", who: ALL, widths: WIDE, via: ["#nav-railBtn", "#nav-railMore"], target: '#nav-railMenu [data-rail="about"]', close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: More → shortcuts", who: ALL, widths: WIDE, via: ["#nav-railBtn", "#nav-railMore", '#nav-railMenu [data-rail="help"]'], target: "#helpBox", close: [] },
+  { row: "TB-11", name: "Toolbar: mentions", who: IN, widths: WIDE, via: ["#nav-railBtn", "#inboxTrigger"], target: "#inboxList", close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: your account", who: IN, widths: WIDE, via: ["#nav-railBtn", "#loggedInUser"], target: "#nav-accountMenu", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: Discover's pages", who: ALL, widths: WIDE, mode: "discover", via: ["#nav-railBtn", '#dNav [data-view="charts"]'], target: "#dBrowse", hash: "#discover/charts", close: ["#nav-railBtn"] },
   // ── phones: the bottom tab bar (NV-01) ──
   { row: "NV-01", name: "Tab bar: Home", who: ALL, widths: PHONE, via: ['#nav-tabs [data-tab="home"]'], target: "#dBrowse .ft-cards .pvbar", hash: "#discover" },

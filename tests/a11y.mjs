@@ -74,6 +74,8 @@ const VIEWS = [
     after: (page) => page.evaluate(() => firetable.rail.set(false)) },
   { name: "rail-peek", minWidth: 1024, run: async (page) => { await liveTab("mm-playlists")(page); await page.evaluate(() => firetable.rail.set(true)); await sleep(600); await page.click("#nav-railPeople"); },
     after: (page) => page.evaluate(() => firetable.rail.set(false)) },
+  { name: "rail-more", minWidth: 1024, run: async (page) => { await liveTab("mm-playlists")(page); await page.evaluate(() => firetable.rail.set(true)); await sleep(600); await page.click("#nav-railMore"); },
+    after: (page) => page.evaluate(() => firetable.rail.set(false)) },
   { name: "rail-discover", minWidth: 1024, run: async (page) => { await hash("#discover")(page); await page.evaluate(() => firetable.rail.set(true)); },
     after: (page) => page.evaluate(() => firetable.rail.set(false)) },
   { name: "join", who: ["visitor"], run: (page) => page.locator("#nav-signin").click() },

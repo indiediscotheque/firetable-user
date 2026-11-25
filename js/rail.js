@@ -15,7 +15,12 @@
  *   away; the button by the logo keeps it open;
  * - one tooltip, beside the icon or face under the pointer or the keyboard:
  *   what it does, or who it is and what they're up to;
- * - the count on the people button.
+ * - the count on the people button, and who that is in its tooltip;
+ * - More: light mode, community, about and the shortcuts, in one menu at
+ *   the bottom, so the toolbar keeps to what's used all the time;
+ * - the desk: when Live's middle is wide (66rem and up), your playlist down
+ *   the left and the room's Recent, Fresh or Cards beside it, under the
+ *   stage (html.rail-desk; css/rail.css lays it out).
  */
 firetable.rail = (function () {
   "use strict";
@@ -137,10 +142,12 @@ firetable.rail = (function () {
     // a visitor's faces scroll in the toolbar: the keyboard reaches them too (Enter shows the names)
     var here = $id("pe-here");
     if (here) {
-      if (folded) here.setAttribute("tabindex", "0");
+      if (showing()) here.setAttribute("tabindex", "0");
       else here.removeAttribute("tabindex");
     }
+    if (folded) moreMenu();
     count();
+    desk();
   }
 
   // ── Where the list starts and ends ──────────────────────────────────────
@@ -170,14 +177,15 @@ firetable.rail = (function () {
       queued = false;
       measure();
       count();
+      desk();
     });
   }
   var sizes = window.ResizeObserver ? new ResizeObserver(soon) : null;
-  /** Watch the sizes of the toolbar and its parts (Discover adds its tabs once it's built). */
+  /** Watch the sizes of the toolbar and its parts (Discover adds its tabs once it's built), and the middle's. */
   function watchSizes() {
     if (!sizes) return;
     sizes.disconnect();
-    ["topbar", "topbarUtils"].concat(TOP).forEach(function (id) {
+    ["topbar", "topbarUtils", "stage"].concat(TOP).forEach(function (id) {
       var el = $id(id);
       if (el) sizes.observe(el);
     });
@@ -377,15 +385,136 @@ firetable.rail = (function () {
     }
     var shown = btn.querySelector(".nav-railCount");
     if (shown && shown.textContent !== n) shown.textContent = n;
-    btn.setAttribute("aria-label", (n ? n + " here" : "Who's here") + ": show the list with names");
+    // who that is, as the people list's header names each count (js/audience.js)
+    var who = [];
+    document.querySelectorAll("#usersStats .listenerType:not([hidden])").forEach(function (row) {
+      var says = row.getAttribute("aria-label");
+      if (says) who.push(says);
+    });
+    var label = (n ? n + " here" : "Who's here") + (who.length ? " (" + who.join(", ") + ")" : "") + ": show everyone";
+    if (btn.getAttribute("aria-label") !== label) btn.setAttribute("aria-label", label);
   }
 
   function watchCount() {
     var counts = new MutationObserver(soon);
-    ["numListeners", "pe-here", "allUsers"].forEach(function (id) {
+    ["usersStats", "pe-here", "allUsers"].forEach(function (id) {
       var el = $id(id);
-      if (el) counts.observe(el, { childList: true, subtree: true, characterData: true });
+      if (el) counts.observe(el, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["hidden", "aria-label"] });
     });
+  }
+
+  // ── More: light mode, community, about, shortcuts ───────────────────────
+
+  var menuItem = function (role, act, icon, words, extra) {
+    return '<button type="button" role="' + role + '" class="butt graybutt nav-acctItem" data-rail="' + act + '">' +
+      '<i class="material-symbols-outlined" aria-hidden="true">' + icon + "</i>" + words + (extra || "") + "</button>";
+  };
+
+  /** The More button at the toolbar's bottom, and its menu (made the first time it's folded). */
+  function moreMenu() {
+    var utils = $id("topbarUtils");
+    if ($id("nav-railMore") || !utils) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "nav-railMore";
+    btn.className = "header_icon";
+    btn.setAttribute("aria-label", "More: light mode, community, about, shortcuts");
+    btn.setAttribute("aria-haspopup", "menu");
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("popovertarget", "nav-railMenu");
+    btn.innerHTML = '<i class="material-symbols-outlined" aria-hidden="true">more_horiz</i>';
+    utils.appendChild(btn);
+    var menu = document.createElement("div");
+    menu.id = "nav-railMenu";
+    menu.className = "ft-popover";
+    menu.setAttribute("popover", "auto");
+    menu.innerHTML = '<div id="nav-railMenuArrow" class="ft-arrow"></div>' +
+      '<div class="ft-popover-box ft-menu nav-acctBox" role="menu" aria-label="More">' +
+      menuItem("menuitemcheckbox", "look", "light_mode", "Light mode", '<span class="nav-lookSwitch" aria-hidden="true"></span>') +
+      menuItem("menuitem", "community", "share", "Community") +
+      '<a role="menuitem" class="butt graybutt nav-acctItem" data-rail="about" target="_blank" rel="noopener" href="about">' +
+      '<i class="material-symbols-outlined" aria-hidden="true">help</i>About the room</a>' +
+      menuItem("menuitem", "help", "keyboard", "Shortcuts and commands") +
+      '<div class="nav-acctSep" role="separator"></div>' +
+      menuItem("menuitem", "open", "left_panel_open", "Open the column") + "</div>";
+    document.body.appendChild(menu);
+    menu.addEventListener("toggle", function (e) {
+      var open = e.newState === "open";
+      btn.setAttribute("aria-expanded", String(open));
+      if (!open) return;
+      hideTip();
+      var about = $id("roomInfo"); // the room's own About address (ftconfigs.roomInfoUrl)
+      if (about) menu.querySelector('[data-rail="about"]').href = about.href;
+      menu.style.visibility = "hidden";
+      firetable.ui.positionPopover(btn, menu, $id("nav-railMenuArrow"), "right-end");
+    });
+    menu.addEventListener("click", function (e) { moreChosen(e.target.closest && e.target.closest("[data-rail]"), menu); });
+    // light mode's state, as the account menu shows it
+    if (window.ftLook) ftLook.onChange(function (look) {
+      var item = menu.querySelector('[data-rail="look"]');
+      item.setAttribute("aria-checked", look === "light" ? "true" : "false");
+      item.querySelector("i").textContent = look === "light" ? "light_mode" : "dark_mode";
+    });
+    // Community opens from here while its own button is folded away
+    var social = $id("socialPopover");
+    if (social) social.addEventListener("toggle", function (e) {
+      if (e.newState !== "open" || !showing() || $id("socialTrigger").offsetParent) return;
+      social.style.visibility = "hidden";
+      firetable.ui.positionPopover(btn, social, $id("socialArrow"), "right-end");
+    });
+  }
+
+  /** A choice in More. */
+  function moreChosen(item, menu) {
+    if (!item) return;
+    var act = item.getAttribute("data-rail");
+    if (act === "look") { firetable.ui.toggleLook(); return; } // a switch: the menu stays open
+    menu.hidePopover();
+    if (act === "community") { var social = $id("socialPopover"); if (social) social.showPopover(); }
+    else if (act === "help") firetable.ui.openHelp();
+    else if (act === "open") set(false);
+  }
+
+  // ── The desk: Live's middle, when it's wide ─────────────────────────────
+
+  var DESK = 66 * 16; // the middle's width, in pixels, from which it's a desk
+  var MAIN = null; // Live's own list of the panels a view change fades
+
+  /** Live, a member's, on a wide screen with the column folded, and its middle wide enough. */
+  function deskFits() {
+    var grid = $id("mainGrid");
+    var stage = $id("stage");
+    if (!showing() || !grid || !stage || document.body.classList.contains("ft-discover") ||
+      grid.classList.contains("login") || grid.classList.contains("pre-auth")) return false;
+    return stage.getBoundingClientRect().width >= DESK;
+  }
+
+  function desk() {
+    var fits = deskFits();
+    var n = firetable.nav;
+    if (fits !== root.classList.contains("rail-desk")) {
+      root.classList.toggle("rail-desk", fits);
+      if (n) {
+        // the playlist stays put while the other side's tabs change: it doesn't fade with them
+        if (!MAIN) MAIN = n._mainPanels;
+        n._mainPanels = fits ? MAIN.filter(function (p) { return p !== "#queuebox"; }) : MAIN;
+        if (!fits) n.apply(); // the tabs as they were
+      }
+      window.dispatchEvent(new Event("resize"));
+    }
+    if (fits) deskTabs();
+  }
+
+  /** On the desk the playlist is always there: with Playlists picked, Recent is beside it, its tab lit. */
+  function deskTabs() {
+    var n = firetable.nav;
+    var recent = $id("mm-history");
+    if (!n || !recent || n.view !== "playlists") return;
+    if (!recent.classList.contains("on")) {
+      recent.classList.add("on");
+      recent.setAttribute("aria-selected", "true");
+    }
+    try { ftapi.watchFeed("history"); } catch (e) { /* signed out: no feeds */ }
   }
 
   // ── Start ───────────────────────────────────────────────────────────────
@@ -402,6 +531,7 @@ firetable.rail = (function () {
     was = now;
     if (!showing()) closePeek();
     hideTip();
+    show();
     soon();
   }
 
@@ -411,6 +541,9 @@ firetable.rail = (function () {
   watchCount();
   var bar = $id("topbar");
   if (bar) new MutationObserver(function () { watchSizes(); soon(); }).observe(bar, { childList: true });
+  // the desk: the middle's width, and Live's view and tabs (firetable.nav.apply)
+  var grid = $id("mainGrid");
+  if (grid) new MutationObserver(function () { if (root.classList.contains("rail-desk")) deskTabs(); soon(); }).observe(grid, { attributes: true, attributeFilter: ["class"] });
   // Discover or Live, the Turntable theme, signing in: what the toolbar holds changes
   new MutationObserver(settle).observe(document.body, { attributes: true, attributeFilter: ["class"] });
   if (wide.addEventListener) wide.addEventListener("change", settle);

@@ -1266,8 +1266,12 @@ button.track-warning {
 /* the toolbar's buttons: wide screens only (below, and css/rail.css) */
 #nav-railBtn,
 #nav-railPeople { display: none; }
+/* Settings' switch for it too, where there's a column to fold: not on a
+   narrower screen, nor in the Turntable theme (its own layout, untouched) */
+body.tt-skin #railLine,
+body.tt-skin #railHint { display: none; }
 @media only screen and (max-width: 1023px) {
-    #railLine, #railHint { display: none; } /* Settings' switch for it, too */
+    #railLine, #railHint { display: none; }
 }
 
 .ftlogo {
@@ -7549,8 +7553,8 @@ html#about body {
        beside the logo, its icon showing what a click does. Not in the
        Turntable theme, which has its own layout. */
     body:not(.tt-skin) #nav-railBtn { display: inline-flex; min-width: 2.125rem; margin-left: calc(-1 * var(--pad2)); }
-    :root.rail #nav-railBtn .nav-railClose,
-    :root:not(.rail) #nav-railBtn .nav-railOpen { display: none; }
+    :root.rail body:not(.tt-skin) #nav-railBtn .nav-railClose,
+    :root:not(.rail) body:not(.tt-skin) #nav-railBtn .nav-railOpen { display: none; }
 
     /* The column is narrow, so the theme takes a full row under the logo */
     #themeSlot {

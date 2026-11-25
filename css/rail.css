@@ -4,13 +4,17 @@
    toolbar, and the middle (the stage, the playlists, Discover's pages)
    takes the room it gives up; chat keeps its width. Everything the column
    holds stays one click away, as an icon with a tooltip:
-   - at the top: the logo, the button that opens it again, Discover | Live,
-     the theme, and (in Live) who's here, with how many;
-   - in the middle: the people in the room as faces (DJs first, the one
-     playing ringed, presence on each), with the waitlist and Hop on; in
-     Discover, search and the views;
-   - at the bottom: the header's buttons (search, light mode, community,
-     about, mentions, your account or Join).
+   - at the top: the logo and the button that opens it again; then where
+     you are (Discover | Live) and the room (tonight's theme, and in Live
+     who's here, with how many);
+   - in the middle, in Live: who's on the decks, as faces (the one playing
+     ringed, presence on each), the waitlist and Hop on. Everyone else is
+     behind the count. In Discover: search and the views;
+   - at the bottom, you: search, mentions, More (light mode, community,
+     about, shortcuts) and your account, or Join.
+   On a wide middle (html.rail-desk, js/rail.js), Live's middle becomes a
+   desk: the stage across the top, your playlist down the left and the
+   room's Recent, Fresh or Cards beside it.
    Who's here, or search, opens the column over the middle for a moment
    ("peek", html.rail-peek: Escape, a click outside or the button puts it
    away). Only loaded once someone folds the column (js/lazy.js), or with the
@@ -43,6 +47,37 @@
        middle, so the room goes to Fresh beside them, for more of its songs */
     :root.rail body:not(.tt-skin):not(.ft-discover) #mainGrid.login {
         grid-template-columns: var(--rail-w) var(--col-mid) minmax(0, 1fr);
+    }
+
+    /* ── The middle: a stage that keeps its shape ──
+       The stage is 16:9 up to a third of the screen's height, so a wider middle
+       only made it a thin band: folded, it may grow a little taller with it (the
+       DJs and the video with it, js/discover.css sizes them from it). */
+    :root.rail body:not(.tt-skin) #mainGrid:not(.login) #djStage {
+        --stage-max-height: 38vh;
+    }
+
+    /* ── The desk: Live's middle when it's wide (js/rail.js: 66rem and up) ──
+       The stage across the top; under it your playlist down the left, whole
+       height, and the room's Recent, Fresh or Cards beside it, under their tabs.
+       Playlists is always there, so its tab steps aside (with it picked, Recent
+       is the other side). Each side is about the width the middle has with the
+       column open, the width its rows are made for. */
+    :root.rail.rail-desk body:not(.tt-skin):not(.ft-discover) #mainGrid:not(.login) {
+        grid-template-columns: var(--rail-w) calc(var(--col-mid-rail) * 0.52) calc(var(--col-mid-rail) * 0.48) auto;
+        grid-template-areas:
+            "people stage stage chat"
+            "people crate nav   chat"
+            "people crate view  chat";
+        & #queuebox {
+            grid-area: crate;
+            display: flex;
+            margin-top: var(--pad3);
+            border-right: 1px solid var(--color-border);
+        }
+        &.view-playlists #thehistoryWrap { display: flex; }
+        & #mm-playlists { display: none; }
+        & #minimodeoptions { justify-content: flex-start; }
     }
 
     /* ── The toolbar ── */
@@ -144,6 +179,7 @@
             & #modeTabs .tab:not(.on):hover,
             & #nav-railBtn:hover,
             & #nav-railPeople:hover,
+            & #themePill:hover,
             & #topbarUtils .header_icon:hover { background: var(--color-bg-t1); }
         }
 
@@ -162,7 +198,9 @@
             min-height: 0;
             padding: 0;
             gap: 0;
+            border-color: transparent;
             border-radius: var(--radius-md);
+            background: none;
             &::before {
                 content: "nightlife";
                 font-family: 'Material Symbols Outlined';
@@ -216,7 +254,16 @@
                 border-radius: var(--radius-md);
             }
             & .header_icon [class*="material-symbols-"] { font-size: 1.25rem; }
+            /* search, mentions, More, then you, last */
+            & #reconnecting { order: 0; }
+            & #dSearchOpen { order: 1; }
+            & #inboxTrigger { order: 2; }
+            & #nav-railMore { order: 3; display: inline-flex; }
+            & #loggedInUser,
+            & #nav-signin { order: 4; }
         }
+        /* light mode, community and about are in More */
+        & :is(#nav-look, #tip-nav-look, #socialTrigger, #tip-socialTrigger, #roomInfo, #tip-roomInfo) { display: none; }
         & #loggedInUser .ft-avatar { width: 1.75rem; height: 1.75rem; }
         & #inboxBadge { top: 0.1rem; right: 0; }
         /* Join: its face, the word in the tooltip */
@@ -309,7 +356,7 @@
             & #dSearch:hover { background: var(--color-bg-t1); }
         }
 
-        /* The people: faces, DJs first */
+        /* The people: who's on the decks, as faces */
         & #usersStats,
         & #usersbox > #ondeck,
         & #pe-audience { display: none; }
@@ -369,11 +416,8 @@
             font-size: 0;
             & .pe-count { font-size: 0.625rem; font-family: var(--font-numbers); }
         }
-        & #allUsers > #pe-floorHead {
-            width: var(--rail-btn);
-            margin-top: var(--pad2);
-            border-top: 1px solid var(--color-border);
-        }
+        /* everyone else is behind the count (the people button) */
+        & :is(#pe-floorHead, #usersBot, #usersSuper, #usersMod, #usersRegular) { display: none; }
         & #allUsers > #pe-djHead { padding-top: 0; }
         & #allUsers > div { align-items: center; }
         & #allUsers .prson {
@@ -388,15 +432,15 @@
             &.ghost .ft-avatar { opacity: 0.6; }
         }
 
-        /* A visitor's list: faces too; a press shows the names */
+        /* A visitor's list: the DJs' faces too; a press shows everyone, with names */
         & #pe-here {
             /* the people button has the count */
             & .pe-head { display: none; }
             & .pe-list { display: flex; flex-direction: column; align-items: center; padding-top: var(--pad2); }
+            & .pe-row:not(.is-dj) { display: none; }
             & .pe-row {
                 justify-content: center;
                 padding: 0.2rem 0;
-                &.is-dj .ft-avatar { box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3px var(--color-text-muted); }
                 &.is-idle .ft-avatar { opacity: 0.6; }
             }
             & .pe-audience,
@@ -441,6 +485,15 @@
 
 @keyframes rail-peek {
     from { opacity: 0; transform: translateX(-0.75rem); }
+}
+
+/* More (js/rail.js makes it): only in the toolbar. Its menu is the account
+   menu's kind, light mode a switch in it the same way. */
+#nav-railMore { display: none; }
+#nav-railMenu [data-rail="look"] { justify-content: flex-start; }
+#nav-railMenu [aria-checked="true"] .nav-lookSwitch {
+    background: var(--color-accent);
+    &::after { transform: translateX(0.75rem); background: var(--color-on-accent); }
 }
 
 /* The toolbar's tooltips: one, beside whatever the pointer or the keyboard is on */
