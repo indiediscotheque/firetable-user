@@ -4,7 +4,10 @@
  * A skin over the room that looks like the Turntable.fm people remember:
  * the stage with its truss and speaker stacks, the LED songboard, the
  * awesome meter, the DJs behind their laptops, everyone standing on the floor
- * as a Turntable avatar, and the Queue · Room · Chat panel on the right. It's
+ * as a Turntable avatar, and the Queue · Room · Chat panel on the right.
+ * Everyone's status is Live's (js/people.js status()): someone away dozes
+ * where they stand ("z z Z" over their head), and in the People list their
+ * face's dot turns from green to orange, with how long from five minutes on. It's
  * the same room underneath: every control is the room's own (Fire is
  * Awesome, Storm takes your fire back, Grab is the heart), the screen is the
  * room's own player, and nothing here pauses or reloads it.
@@ -21,8 +24,8 @@
  * Art: the community archive of every Turntable.fm avatar and room asset
  * (github.com/ttdevelopers), built by tools/tt-avatars.py.
  *
- * Not in the page's scripts: js/lazy.js loads it the first time someone goes
- * in (its stand-in for firetable.tt takes the same calls and ways in until
+ * Not in the page's scripts: js/lazy.js loads it (after js/ttlaptop.js, the
+ * laptops' format) the first time someone goes in (its stand-in for firetable.tt takes the same calls and ways in until
  * then) and calls init() once it's here.
  */
 firetable.tt = (function () {
@@ -33,14 +36,10 @@ firetable.tt = (function () {
   var SEATS = 4; // the bot's deck
   var PAGE = 16;
   var TIERS = [{ id: "classic", label: "Classic" }, { id: "gold", label: "Gold" }, { id: "special", label: "Specials" }];
-  // Laptop stickers: the room's own and Turntable's gold ones are one picture
-  // (img/tt/stickers.webp, tools/tt-art.py: same names, same order); the rest
-  // are the emoji the chat already shows (Twemoji, from the same place).
-  var STICKERS = ["id", "id9", "eight", "cake", "rohn", "heart", "happy", "wink", "laughing", "sad", "smh", "poop", "glowstick", "ttfm"];
-  var EMOJI = ["1faa9", "1f525", "1f3a7", "1f4bf", "1f308", "2b50", "1f680", "1f47e", "1f496", "1f984", "1f918", "1f3b8", "1f3b9", "1f941", "1f3a4", "1f3b6",
-    "1f4fc", "1f4fb", "26a1", "1f319", "1f6f8", "1f47d", "1f419", "1f412", "1f63a", "1f355", "1f32e", "1f32f", "2615", "1f369", "1f366", "1f352", "1f335", "1f344", "1f338", "1f30a", "1f389", "1f60e"];
-  var LIDS = ["black", "silver", "white", "gold", "pink", "teal", "purple"];
-  var MAX_STICKERS = 10;
+  // Laptops and their stickers: the format they're kept in (js/ttlaptop.js, loaded first)
+  var LAP = firetable.ttLaptop;
+  var STICKERS = LAP.STICKERS, EMOJI = LAP.EMOJI, LIDS = LAP.LIDS, MAX_STICKERS = LAP.MAX_STICKERS;
+  var keepOn = LAP.keepOn, parseLaptop = LAP.parse, stringifyLaptop = LAP.stringify;
 
   var S = {
     pref: false,       // on, on this device
@@ -186,47 +185,6 @@ firetable.tt = (function () {
   function src(id) { var a = S.byId[id]; return abs("img/tt/av/" + id + ".webp" + (a && a.v ? "?v=" + a.v : "")); }
 
   // ─── Laptops ──────────────────────────────────────────────────────────────
-
-  /**
-   * A laptop, as kept at users/<uid>/ttLaptop: "lid;sticker,x,y,turn,size;…"
-   * (x and y in % of the lid, turn in degrees, size in %), short enough for
-   * the database rules to check in one pattern. A sticker can hang off the
-   * lid's edge (the lid cuts it off): its middle as far as -40..140%. The
-   * rules take x and y as 0..999, so one off the left or top is kept as
-   * 1000 less it (-12 is 988); 0..100 are as they always were.
-   */
-  var POS_MIN = -40, POS_MAX = 140;
-  function decodePos(n) { n = +n; return Math.max(POS_MIN, Math.min(POS_MAX, n >= 900 ? n - 1000 : n)); }
-  function encodePos(v) { v = Math.round(v); return v < 0 ? 1000 + v : v; }
-  /**
-   * Where a sticker's middle can go: off the lid's edge as far as leaves a
-   * fifth of it on (the lid is 96 by 66; a sticker is 30% of it wide, square).
-   */
-  var BLEED = 0.6;
-  function keepOn(it) {
-    var hx = 15 * it.s / 100, hy = hx * 96 / 66;
-    it.x = Math.max(-hx * BLEED, Math.min(100 + hx * BLEED, it.x));
-    it.y = Math.max(-hy * BLEED, Math.min(100 + hy * BLEED, it.y));
-    return it;
-  }
-  function parseLaptop(str) {
-    var out = { lid: "black", items: [] }; // Turntable's laptops were dark
-    if (typeof str !== "string" || !/^[a-z]{3,6}(;[a-z0-9]{1,10},[0-9]{1,3},[0-9]{1,3},-?[0-9]{1,3},[0-9]{2,3}){0,10}$/.test(str)) return out;
-    var parts = str.split(";");
-    if (LIDS.indexOf(parts[0]) !== -1) out.lid = parts[0];
-    parts.slice(1).forEach(function (p) {
-      var f = p.split(",");
-      if (!stickerOk(f[0])) return;
-      out.items.push(keepOn({ id: f[0], x: decodePos(f[1]), y: decodePos(f[2]), r: Math.max(-180, Math.min(180, +f[3])), s: Math.max(40, Math.min(160, +f[4])) }));
-    });
-    return out;
-  }
-  function stringifyLaptop(l) {
-    return [l.lid].concat(l.items.slice(0, MAX_STICKERS).map(function (i) {
-      return [i.id, encodePos(i.x), encodePos(i.y), Math.round(i.r), Math.round(i.s)].join(",");
-    })).join(";");
-  }
-  function stickerOk(id) { return STICKERS.indexOf(id) !== -1 || (id.charAt(0) === "e" && EMOJI.indexOf(id.slice(1)) !== -1); }
 
   function laptopOf(uid) {
     if (uid && uid === ftapi.uid) {
@@ -558,6 +516,9 @@ firetable.tt = (function () {
       seat.classList.toggle("tt-self", d.id === ftapi.uid);
       // on deck but gone from the room (Live's "ghost"): dimmed, as Live dims them
       seat.classList.toggle("tt-ghost", !!(ftapi.users && typeof ftapi.users === "object" && !ftapi.users[d.id]));
+      var st = firetable.people.status(d.id);
+      seat.classList.toggle("tt-idle", st.away);
+      seat.querySelector(".tt-dj").setAttribute("aria-label", nameOf(d.id, d.name) + ", DJ" + (st.away ? ", " + st.label.toLowerCase() : ""));
       seat.querySelector(".tt-plays").textContent = d.plays + "/" + (firetable.playlimit || "∞");
     }
     // a DJ who left takes their menu with them
@@ -628,11 +589,13 @@ firetable.tt = (function () {
         el.textContent = "";
         el.appendChild(figure(av, "b"));
       }
-      el.setAttribute("aria-label", name + (u === ftapi.uid ? " (you)" : ""));
+      var st = firetable.people.status(u);
+      el.setAttribute("aria-label", name + (u === ftapi.uid ? " (you)" : "") + (st.away ? ", " + st.label.toLowerCase() : ""));
       el.style.cssText = "left:" + spot.x + "px;--f:" + spot.f.toFixed(3) + ";--d:" + spot.s + ";z-index:" + Math.round(10 + spot.f * 900) + ";animation-delay:" + el.style.animationDelay;
       el.dataset.name = name;
       el.classList.toggle("tt-fired", !!fired[u]);
       el.classList.toggle("tt-self", u === ftapi.uid);
+      el.classList.toggle("tt-idle", st.away);
     });
     Object.keys(existing).forEach(function (u) {
       var el = existing[u];
@@ -929,12 +892,14 @@ firetable.tt = (function () {
       if (g[0] !== "djs") list.sort(function (a, b) { return name(a) < name(b) ? -1 : 1; });
       else list.sort(function (a, b) { return seats.indexOf(a) - seats.indexOf(b); });
       return '<h2 class="tt-group">' + g[1] + " <span>" + list.length + "</span></h2><ul>" + list.map(function (u) {
-        var d = who(u);
+        var d = who(u), st = firetable.people.status(u);
         var badges = (d.supermod ? ms("verified_user", "material-symbols-filled tt-b tt-bmod") : d.mod ? ms("shield", "material-symbols-filled tt-b tt-bmod") : "") +
           (d.hostbot ? ms("smart_toy", "material-symbols-filled tt-b") : "") +
           (firetable.fireReactors && firetable.fireReactors[u] ? ms("thumb_up", "material-symbols-filled tt-b tt-bawe") : "");
-        return '<li><button type="button" class="tt-guest' + (gone[u] ? " tt-gone" : "") + '" data-uid="' + esc(u) + '">' +
-          '<span class="tt-face" style="' + faceStyle(avatarOf(u, d.username)) + '"></span><span class="tt-gname">' + esc(nameOf(u, d.username)) + "</span>" + badges + "</button></li>";
+        // the face's dot: green here, orange away (none for a DJ gone from the room, as in Live)
+        return '<li><button type="button" class="tt-guest' + (gone[u] ? " tt-gone" : "") + (st.away ? " tt-idle" : "") + '" data-uid="' + esc(u) + '"' + (st.away || gone[u] ? ' title="' + esc(st.label) + '"' : "") + ">" +
+          '<span class="tt-face" style="' + faceStyle(avatarOf(u, d.username)) + '">' + (gone[u] ? "" : '<span class="tt-pres" aria-hidden="true"></span>') + '</span><span class="tt-gname">' + esc(nameOf(u, d.username)) + "</span>" +
+          (st.away ? '<span class="sr-only"> (away)</span>' : "") + badges + (st.since ? '<span class="pe-away tt-away" data-since="' + st.since + '">' + st.time + "</span>" : "") + "</button></li>";
       }).join("") + "</ul>";
     }).join("");
     // the radio's listeners by country and the guests (js/audience.js)
@@ -1360,10 +1325,12 @@ firetable.tt = (function () {
       var p = t.closest(".tt-person[data-uid]");
       if (p && firetable.ui.tooltip && firetable.ui.tooltip.user) firetable.ui.tooltip.user(p, p.dataset.uid);
     });
-    // a name over each person on the floor, as Turntable did
+    // a name over each person on the floor, as Turntable did, and whether they're away
     room.addEventListener("pointerover", function (e) {
       var p = e.target.closest(".tt-listener");
-      if (p && firetable.ui.tooltip && firetable.ui.tooltip.show) firetable.ui.tooltip.show(p, p.dataset.name);
+      if (!p || !firetable.ui.tooltip || !firetable.ui.tooltip.show) return;
+      var st = firetable.people.status(p.dataset.uid); // the time away as it is now, not at the last draw
+      firetable.ui.tooltip.show(p, p.dataset.name + (st.away ? " · " + st.label.toLowerCase() : ""));
     });
     room.addEventListener("pointerout", function (e) {
       if (e.target.closest(".tt-listener") && firetable.ui.tooltip && firetable.ui.tooltip.hide) firetable.ui.tooltip.hide();

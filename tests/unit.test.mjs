@@ -656,7 +656,8 @@ test("the people list: DJs in deck order (playing, next, plays, leaving), then t
       you: [...byId("allUsers").querySelectorAll(".pe-you")].map((y) => y.closest(".prson").id).join(","),
       dots: byId("allUsers").querySelectorAll(".prson:not(.ghost) .pe-dot").length + "|" + byId("allUsers").querySelectorAll(".prson.ghost .pe-dot").length,
       roles: [...byId("allUsers").querySelectorAll(".prsnRole")].map((i) => i.closest(".prson").id.slice(4) + "=" + i.title).join(","),
-      away: [now - 4 * 60000, now - 5 * 60000, now - 3 * 3600000, now - 2 * 86400000, 0].map(firetable.people.awayFor).join("|")
+      away: [now - 4 * 60000, now - 5 * 60000, now - 3 * 3600000, now - 2 * 86400000, 0].map(firetable.people.awayFor).join("|"),
+      status: ["amy", "bob", "bot", "zed", "g1"].map((u) => firetable.people.status(u).label).join("|")
     };
     // nobody DJing: one plain list, no headings
     firetable.tableData = null;
@@ -678,6 +679,7 @@ test("the people list: DJs in deck order (playing, next, plays, leaving), then t
   assert.equal(r.dots, "6|0", "everyone here has a presence dot; a DJ who dropped off has none");
   assert.equal(r.roles, "d2=Supermod,bot=Room bot,bob=Mod", "only the bot, mods and supermods have a role icon, named");
   assert.equal(r.away, "|5m|3h|2d|", "away times start at five minutes");
+  assert.equal(r.status, "Away for 47m|Away|Here|Here|Not on the site", "status (the profile card's, the Turntable theme's): the bot is always here");
   assert.equal(r.noDjs, "true|true|d2:Duo[]|0", "with nobody DJing it's one list with no headings");
 });
 

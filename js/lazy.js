@@ -123,7 +123,9 @@ firetable.tt = (function () {
   /** The real theme, loaded and started (once). */
   function real() {
     if (!started) {
-      started = ftLazy.own("tt-js", "js/ttskin.js").then(function () {
+      started = ftLazy.own("tt-laptop-js", "js/ttlaptop.js").then(function () {
+        return ftLazy.own("tt-js", "js/ttskin.js");
+      }).then(function () {
         if (firetable.tt === stub) throw new Error("js/ttskin.js didn't set up the theme");
         firetable.tt.init();
       });

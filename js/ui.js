@@ -1502,10 +1502,8 @@ firetable.ui.tooltip = (function () {
 
       facts.push({ label: 'Role', val: role });
 
-      // Audio broadcasting
-      if (userData.idle && userData.idle.audio === 2) {
-        facts.push({ label: 'Audio', val: 'Broadcasting' });
-      }
+      // Here or away, and for how long (js/people.js: the same rule as the members' list)
+      if (!userData.hostbot && firetable.people) facts.push({ label: 'Status', val: firetable.people.status(userid).label });
 
       // Cards (async — placeholder first)
       facts.push({ label: 'Cards', val: '<span class="utt-cards-val">…</span>' });

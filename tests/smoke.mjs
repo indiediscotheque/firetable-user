@@ -1316,7 +1316,7 @@ try {
     await wait(200);
     localStorage.removeItem("firetableTurntableAvatar");
     delete ftapi.users.smoke.ttAvatar;
-    out.cssBefore = { inPage: !!document.getElementById("tt-css"), fetched: performance.getEntriesByType("resource").some((e) => /ttskin\.(css|js)|img\/tt\/|Doto-/.test(e.name)), stub: firetable.tt.isOn() === false && typeof firetable.tt._coverBox === "undefined" };
+    out.cssBefore = { inPage: !!document.getElementById("tt-css"), fetched: performance.getEntriesByType("resource").some((e) => /ttskin\.(css|js)|ttlaptop\.js|img\/tt\/|Doto-/.test(e.name)), stub: firetable.tt.isOn() === false && typeof firetable.tt._coverBox === "undefined" };
     const player = document.getElementById("playerArea"), src = player.getAttribute("src");
     ftapi.events.emit("newChat", { chatID: "smktt" + Date.now(), feedID: "f", id: "dj1", name: "dj1", txt: "tt test", time: Date.now() });
     await wait(200);
@@ -1370,6 +1370,25 @@ try {
     ttRoom.classList.toggle("tt-dance", wasDance);
     out.djMoves = bob === "tt-bob" && small === "tt-smallrock" && still && danceFan === "tt-rock" && (dj.classList.contains("tt-fired") ? danceDj === "tt-smallrock" : danceDj === "tt-bob");
     out.djMovesInfo = [bob, small, still, danceFan, danceDj].join("|");
+    // status, as Live's (js/people.js): someone away dozes where they stand, says so, and in the
+    // People list their dot turns orange with how long; back again, it all goes
+    const fanUser = ftapi.users[fan.dataset.uid], wasIdle = fanUser.idle;
+    fanUser.idle = { isIdle: true, audio: 1, since: Date.now() + (ftapi.serverTimeOffset || 0) - 12 * 60000 };
+    ftapi.events.emit("usersChanged", ftapi.users);
+    const tabWas = document.body.getAttribute("data-tt-tab");
+    document.getElementById("tt-tab-room").click();
+    document.querySelector('#tt-pane [data-tt-sub="people"]').click();
+    const row = () => document.querySelector('#tt-people .tt-guest[data-uid="' + fan.dataset.uid + '"]');
+    out.doze = await until(() => fan.classList.contains("tt-idle") && row() && row().classList.contains("tt-idle"), 2000) &&
+      /z z Z/.test(getComputedStyle(fan, "::before").content) && /away for 12m$/.test(fan.getAttribute("aria-label")) &&
+      row().querySelector(".tt-away").textContent === "12m" && row().title === "Away for 12m" &&
+      getComputedStyle(row().querySelector(".tt-pres")).backgroundColor !== getComputedStyle(document.querySelector("#tt-people .tt-guest:not(.tt-idle):not(.tt-gone) .tt-pres") || row()).backgroundColor;
+    fanUser.idle = wasIdle || { isIdle: false, audio: 1, since: 0 };
+    ftapi.events.emit("usersChanged", ftapi.users);
+    out.awake = await until(() => !fan.classList.contains("tt-idle") && row() && !row().classList.contains("tt-idle") && !row().querySelector(".tt-away"), 2000) &&
+      getComputedStyle(fan, "::before").content === "none";
+    document.querySelector('#tt-pane [data-tt-sub=""]').click();
+    document.getElementById("tt-tab-" + tabWas).click();
     out.screen = player.isConnected && document.getElementById("playerArea") === player && player.getAttribute("src") === src;
     // every face here is a Turntable one
     const faces = [...document.querySelectorAll("#chats .ft-avatar[data-avatar-uid]")];
@@ -1548,6 +1567,8 @@ try {
   check(tt.menu && tt.laptop && /^teal;heart,/.test(tt.stickers), "the account menu has Turntable avatar and Laptop stickers, and stickers save (" + tt.stickers + ")");
   check(tt.layout, "one sidebar or two");
   check(tt.heads && tt.rock, "everyone is a head on a body, and a fire rocks the head only, as deepcut does (its rock: 20 frames a second, about the head's middle) (" + tt.rockInfo + ")");
+  check(tt.doze, "someone away dozes on the floor (z z Z), says how long, and their People row's dot turns orange with the time");
+  check(tt.awake, "back again, the doze and the away time go");
   check(tt.djMoves, "the DJ playing bobs their head and a DJ who fires small-rocks it, as deepcut does, and in dance mode only heads move (" + tt.djMovesInfo + ")");
   check(tt.listen, "the sound held back: a plain Turntable Listen button, on the stage's base between the front speakers at the stage's scale, that starts the sound (" + tt.listenInfo + ")");
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
@@ -2048,13 +2069,13 @@ try {
     firetable.$appShell = $("#appShell").detach();
     return out;
   });
-  check(wlCard.wl.open && wlCard.wl.facts === "Name=wl1|Role=Member|DJ=Waitlist, 1 of 3", "a waitlist avatar's card shows their place in line (" + JSON.stringify(wlCard.wl) + ")");
+  check(wlCard.wl.open && wlCard.wl.facts === "Name=wl1|Role=Member|Status=Here|DJ=Waitlist, 1 of 3", "a waitlist avatar's card shows their place in line (" + JSON.stringify(wlCard.wl) + ")");
   check(wlCard.wl.actions === "chat-at:@ in chat|remove-from-deck:Remove from waitlist|toggle-bus:Send wl1 home after their next play|toggle-block:Block",
     "mods get the deck's actions on the waitlist: remove and the bus, no \"Add to deck\" (" + wlCard.wl.actions + ")");
   check(wlCard.deck.open && /DJ=On deck\|Session plays=2\/∞\|Leaving=After next play/.test(wlCard.deck.facts) && /remove-from-deck:Remove from deck\|toggle-bus:Don't send dj2 home/.test(wlCard.deck.actions),
     "the on-deck card still shows plays and its actions (" + JSON.stringify(wlCard.deck) + ")");
   check(!/remove-from-deck|toggle-bus/.test(wlCard.boss), "no remove or bus for someone who outranks you (" + wlCard.boss + ")");
-  check(wlCard.self.facts === "Name=smokeMod|Role=Mod|DJ=Waitlist, 2 of 3|Leaving=After next play" &&
+  check(wlCard.self.facts === "Name=smokeMod|Role=Mod|Status=Here|DJ=Waitlist, 2 of 3|Leaving=After next play" &&
     wlCard.self.actions === "toggle-bus:Don't step down after your next play|step-down:Leave the waitlist",
     "your own waitlist card lets you take the bus or leave the waitlist (" + JSON.stringify(wlCard.self) + ")");
   check(wlCard.redraw.open && wlCard.redraw.anchored && /DJ=Waitlist, 2 of 3/.test(wlCard.redraw.facts), "an open card follows its person when the waitlist redraws (" + JSON.stringify(wlCard.redraw) + ")");
