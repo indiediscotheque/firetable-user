@@ -545,6 +545,36 @@ try {
   await page.evaluate(() => firetable.ui.markDjList());
   await redraw();
 
+  console.log("-- songs the room played lately: tagged in your list, and Next moves to the song that will play (js/recent-plays.js)");
+  const listBeforeRecent = await listNow();
+  const hourAgo = Date.now() - 3600000;
+  await put("/playedRecently", { "1recent00001": { w: hourAgo, u: hourAgo + 4 * 3600000, n: "played lately", dj: "dj2" } });
+  await put("/queues/smoke", { r1: { type: 1, cid: "recent00001", name: "Played - Lately" },
+    r2: { type: 1, cid: "another0001", name: "Played - Lately (Official Video)" }, r3: { type: 1, cid: "fresh000001", name: "Fresh - Song" } });
+  await page.evaluate(() => firetable.recentPlays.watch());
+  await redraw();
+  await sleep(600);
+  const lately = () => page.evaluate(() => {
+    const row = (k) => document.querySelector('#mainqueue .pvbar[data-key="' + k + '"]');
+    const tag = (k) => row(k).querySelector(".q-recent");
+    return {
+      tags: ["r1", "r2", "r3"].map((k) => (tag(k) ? tag(k).textContent.replace("history", "") : "")).join(),
+      title: tag("r1") ? tag("r1").title : "",
+      next: ["r1", "r2", "r3"].filter((k) => [...row(k).querySelectorAll(".q-next")].some((el) => getComputedStyle(el).display !== "none")).join(),
+      djList: document.getElementById("mainqueue").classList.contains("is-djlist")
+    };
+  });
+  let played = await lately();
+  check(played.tags === "Played 1h ago,Played 1h ago," && /played this 1h ago \(dj2\).*skipped.*until/.test(played.title),
+    "the song and another upload of it are tagged Played 1h ago, saying until when they're skipped (" + JSON.stringify(played) + ")");
+  check(played.djList && played.next === "r3", "Next moves to the first song that will play (" + played.next + ")");
+  await put("/playedRecently/1recent00001", null);
+  await sleep(600);
+  played = await lately();
+  check(played.tags === ",," && played.next === "r1", "once its hours are up the tags go and Next is back on top (" + JSON.stringify(played) + ")");
+  await put("/queues/smoke", listBeforeRecent);
+  await redraw();
+
   console.log("-- the playlist's tools: two rows, a ⋮ menu for the list, Show only for the filters");
   const tools = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -860,8 +890,9 @@ try {
   });
   check(rowLook.num === "1,2,3,4" && rowLook.name === "Karma Police|Radiohead" && rowLook.read === '" · "' && rowLook.stored === "Radiohead - Karma Police",
     "playlist rows show their place, then Title · Artist; the stored Artist - Title is kept (" + JSON.stringify(rowLook) + ")");
-  check(rowLook.k1 === "Next+Low audio" && rowLook.k4 === "Remix" && rowLook.k2 === "Broken" && rowLook.notDj === "Low audio",
-    "tags: Next on the first song of the list you DJ from (only that list), Broken (or why) when flagged, Remix when the title says so (" + JSON.stringify(rowLook) + ")");
+  // (the bot skips flagged tracks, so Next is on the first one it will play: js/recent-plays.js)
+  check(rowLook.k1 === "Low audio" && rowLook.k4 === "Next+Remix" && rowLook.k2 === "Broken" && rowLook.notDj === "Low audio",
+    "tags: Next on the song the list you DJ from plays next (only that list), Broken (or why) when flagged, Remix when the title says so (" + JSON.stringify(rowLook) + ")");
   check(rowLook.delsearch === "k2|Daft Punk - One More Time|1", "the row's ⋮ has Delete and search for another (" + rowLook.delsearch + ")");
   check(/^rgba\(0, 0, 0, 0\)\|rgba\(0, 0, 0, 0\)\|none$/.test(rowLook.status.box) && rowLook.status.hugs && rowLook.status.beside && rowLook.status.select === "SELECT",
     "under the stage, the playlist you DJ from reads as a status: no box, as wide as its name, still the same select (" + JSON.stringify(rowLook.status) + ")");

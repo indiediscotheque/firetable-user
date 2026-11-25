@@ -48,6 +48,23 @@ const chat = (txt, showImages = false) => run((t, si) => {
 
 // ─── Escaping ────────────────────────────────────────────────────────────────
 
+test("recentPlays.nameKey: the same song across uploads (as the hostbot's lib/repeats.js), and where Next really is", async () => {
+  const r = await run(async () => {
+    await ftLazy.own("recent-js", "js/recent-plays.js");
+    const k = firetable.recentPlays.nameKey;
+    return {
+      keys: [k("Röyksopp - Running to the Sea (Official Video)"), k("ROYKSOPP – Running To The Sea [HD]"), k("Röyksopp - Running to the Sea feat. Susanne Sundfør"),
+        k("Simon & Garfunkel - Cecilia (2011 Remaster)"), k("Art - Song (Someone Remix)"), k("Intro"), k(null)],
+      next: firetable.recentPlays.nextKey({ a: { type: 1, cid: "x", flagged: { code: 2 } }, b: { type: 1, cid: "y", name: "B - B" } }),
+      none: firetable.recentPlays.nextKey({})
+    };
+  });
+  assert.deepEqual(r.keys, ["royksopp running to the sea", "royksopp running to the sea", "royksopp running to the sea",
+    "simon and garfunkel cecilia", "art song someone remix", "", ""]);
+  assert.equal(r.next, "b", "a flagged track is never next");
+  assert.equal(r.none, null);
+});
+
 test("htmlEscape escapes every markup character", async () => {
   assert.equal(await run(() => firetable.utilities.htmlEscape(`<a href="x" onclick='y'>&</a>`)),
     "&lt;a href=&quot;x&quot; onclick=&#39;y&#39;&gt;&amp;&lt;/a&gt;");
