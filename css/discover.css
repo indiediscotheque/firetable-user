@@ -1242,7 +1242,7 @@ body.ft-discover #dSide #actualChat {
 }
 .pb.is-onair .pb-cover, .pb.is-paused .pb-cover { filter: saturate(0.6) brightness(0.8); }
 .pb-face { position: absolute; right: -0.4rem; bottom: -0.4rem; display: flex; }
-.pb-face .ft-avatar { width: 1.6rem; height: 1.6rem; border: 2px solid var(--color-bar); }
+.pb-face .ft-avatar { width: 1.6rem; height: 1.6rem; } /* no ring: the face sits straight on the cover */
 .pb-art:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .pb-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
 .pb-src {
