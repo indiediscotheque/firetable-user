@@ -1528,12 +1528,13 @@ a.sociallogo[href] {
     overflow: hidden;
 }
 
+/* left-aligned, its edge in line with the DJ Waitlist heading under it */
 #usersStats {
     display: none;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0.5rem;
-    padding: var(--pad2) var(--pad3) 0 var(--pad3);
+    padding: var(--pad2) var(--pad4) 0 var(--pad4);
     color: var(--color-text-muted);
 }
 
@@ -7503,7 +7504,6 @@ html#about body {
     }
 
     #usersStats {
-        justify-content: flex-start;
         padding: var(--pad3) var(--pad4);
     }
 
