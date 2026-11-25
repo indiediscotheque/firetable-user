@@ -14,9 +14,6 @@
  *   - a song's play button plays it here, in the bar (the whole song, then the
  *     rest of the playlist), where Live plays a 30-second preview; a search
  *     result in Find tracks plays here the same way
- *   - Play (#cr-playHere), before the picker: the playlist here, from the top
- *     or from a random song when the player's Shuffle is on (in Live the same
- *     button previews the playlist: js/preview-run.js)
  *   - where you stand on the decks, under the list (which list you DJ from
  *     is Live's own: the DJ list tag by the picker, and All playlists)
  *   - the song playing here, and the songs saved this visit, are marked
@@ -32,7 +29,6 @@ firetable.discoverQueue = (function () {
   var watcher = null;
 
   function queuebox() { return document.getElementById("queuebox"); }
-  function playHere() { return document.getElementById("cr-playHere") || {}; }
   function hostOf() { return document.querySelector("#dSide .d-queuehost"); }
   /** Is Live's panel in Discover's column now? */
   function here() { var q = queuebox(), h = hostOf(); return !!(q && h && h.contains(q)); }
@@ -93,11 +89,6 @@ firetable.discoverQueue = (function () {
     }
     host.appendChild(q);
     document.body.classList.add("d-queue-here");
-    if (firetable.previewRun) firetable.previewRun.drop(); // Live's previews of it: the one playing finishes
-    var b = playHere();
-    b.hidden = false;
-    b.title = "Play this playlist here";
-    if (b.setAttribute) { b.setAttribute("aria-label", b.title); b.classList.remove("on"); b.querySelector("i").textContent = "play_arrow"; }
     host.addEventListener("click", onPlayClick, true);
     // Live draws the rows again on every change (and long lists a block at a time): mark them each time
     var rows = document.getElementById("mainqueue");
@@ -112,7 +103,6 @@ firetable.discoverQueue = (function () {
   function back() {
     var q = queuebox();
     document.body.classList.remove("d-queue-here");
-    if (firetable.previewRun) firetable.previewRun.draw(); // Live's Play: the playlist as previews
     if (watcher) { watcher.disconnect(); watcher = null; }
     if (!q || !home || !home.parentNode) return;
     var host = q.parentNode;
@@ -140,7 +130,6 @@ firetable.discoverQueue = (function () {
   /** The decks, after any change to the list, the seats or what plays. */
   function refresh() {
     var all = sync();
-    playHere().disabled = !all.length;
     var deck = document.getElementById("pv-deckline");
     if (deck) deck.innerHTML = deckLine(viewList() === djList(), all.length);
     mark();
@@ -227,8 +216,6 @@ firetable.discoverQueue = (function () {
     deps = d;
     esc = d.esc;
     ms = d.ms;
-    var btn = document.getElementById("cr-playHere");
-    if (btn) btn.addEventListener("click", function () { if (here()) { sync(); deps.playAll(LIST); } });
     // the decks line says which list you DJ from
     ftapi.events.on("djListChanged", function () { if (here()) refresh(); });
     return { html: html, show: show, back: back, here: here, refresh: refresh, mark: mark, djList: djList };

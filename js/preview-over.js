@@ -47,7 +47,7 @@ firetable.overlayPreview = (function () {
         onReady: function () { ready = true; keepFocusOut("pvOverPlayer"); var f = pending; pending = null; if (f) f(); },
         onStateChange: function (e) {
           if (e.data === YT.PlayerState.PLAYING) firetable.media.toQuarter(pv, state.id);
-          if (e.data === YT.PlayerState.ENDED) ended();
+          if (e.data === YT.PlayerState.ENDED) stop();
         },
         onError: function () { stop(); firetable.ui.toast("That song can't be previewed here."); }
       }
@@ -73,12 +73,6 @@ firetable.overlayPreview = (function () {
     if (pv && ready) pv.stopVideo();
     duck(false);
   }
-  /** The preview played its 30 seconds (or the song ended first). */
-  function ended() {
-    var was = state.id;
-    stop();
-    if (was) firetable.media.previewEnded(was);
-  }
   function toggle(id, fromSearch) {
     if (state.id === id) return stop();
     stop();
@@ -87,7 +81,7 @@ firetable.overlayPreview = (function () {
     state.id = id;
     state.count = 0;
     paint(id, 0);
-    state.timer = setTimeout(ended, PREVIEW_DURATION);
+    state.timer = setTimeout(stop, PREVIEW_DURATION);
     firetable.media.quarterFor = id;
     state.bar = setInterval(function () {
       state.count += PREVIEW_BAR_INTERVAL / 1000;

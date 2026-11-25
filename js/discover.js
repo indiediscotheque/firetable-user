@@ -2130,14 +2130,13 @@ firetable.discover = (function () {
 
   // ─── Playlists (members) ────────────────────────────────────────────────
   // Live's own playlist panel, moved into the Playlists tab (js/discover-queue.js):
-  // everything Live does with a playlist, with Play here and the decks beside it.
+  // everything Live does with a playlist, with the decks beside it.
   var queue = firetable.discoverQueue({
     esc: esc, ms: ms, setList: setList, deckState: deckState,
     lists: function () { return lists; },
     player: function () { return P; },
     active: function () { return discoverActive(); },
     play: function (list, i) { play(list, i); },
-    playAll: function (list) { shuffle.playAll(list); },
     togglePause: function () { togglePause(); }
   });
   // Shuffle, a setting of the player for whatever list plays (js/discover-shuffle.js)

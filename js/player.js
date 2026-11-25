@@ -273,7 +273,6 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
 
       // Resume the room's current song
       firetable.utilities.resumeCurrentSong();
-      firetable.media.previewEnded(id);
     }, PREVIEW_DURATION);
 
     // ── Show pause icon + animate progress bar ──
@@ -381,11 +380,6 @@ firetable.media = {
     if (!(d > 0)) return; // not known yet: the next PLAYING tries again
     m.quarterFor = null;
     yt.seekTo(d * PREVIEW_FROM, true);
-  },
-
-  /** A Live preview played to its end: whoever waits on it (js/preview-run.js) carries on. */
-  previewEnded: function (id) {
-    if (window.ftapi && ftapi.events) ftapi.events.emit("previewEnded", id);
   },
 
   /** Seconds into the room's song right now (server clock), or null. */
