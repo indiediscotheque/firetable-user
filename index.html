@@ -1307,13 +1307,17 @@
 					<dt><code>!plays</code>, <code>!firstplay</code></dt><dd>How often the song has played here, and who played it first and last</dd>
 					<dt><code>!bpm</code></dt><dd>The song's tempo; the DJ can set it: <code>!bpm 128</code></dd>
 					<dt><code>!suggest theme</code></dt><dd>Start a theme vote</dd>
-					<dt><code>!removeafter</code>, <code>!dontremoveme</code></dt><dd>Step down after your next song, or don't</dd>
+					<dt><code>!removeafter</code>, <code>!stay</code></dt><dd>Step down after your next song, or stay on after all</dd>
+					<dt><code>!leaveafter 3</code></dt><dd>Step down after 3 songs, counting the one you're playing</dd>
+					<dt><code>!leavein 45</code></dt><dd>Step down in 45 minutes (or <code>1h30</code>), finishing your song if you're playing</dd>
+					<dt><code>!bus</code></dt><dd>Who's catching the bus, and when</dd>
 					<dt><code>!autodj</code></dt><dd>What the autopilot DJ is doing</dd>
 				</dl>
 				<div class="helpMods">
 					<h3>Mods</h3>
 					<dl class="helpKeys">
 						<dt><code>!remove name</code></dt><dd>Take someone off the decks or the line</dd>
+						<dt><code>!leaveafter 3 name</code>, <code>!leavein 30 name</code>, <code>!stay name</code></dt><dd>Put someone of lower rank on the bus, or take them off it</dd>
 						<dt><code>!fixtags artist - title</code></dt><dd>Fix the playing song's tags</dd>
 						<dt><code>!flagplay id reason</code></dt><dd>Flag a play from Recent: broken, quality or offtheme</dd>
 						<dt><code>!upbot</code>, <code>!downbot</code>, <code>!autodj auto</code></dt><dd>The bot DJs, stays off, or decides for itself again</dd>

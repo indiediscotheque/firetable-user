@@ -583,6 +583,17 @@ test("suggest finds emoji by their search words once the picker's data is in", a
   assert.ok(r.cow.includes("cut_of_meat") || r.cow.includes("water_buffalo"), "related emoji follow the names: " + r.cow);
 });
 
+test("the bus in words: after this song, after a number of songs, at a time (the bot's lib/bus.js)", async () => {
+  const r = await run(() => {
+    const b = firetable.people.bus;
+    const at = new Date(2026, 10, 25, 21, 45).getTime();
+    return [b(null), b({}), b({ removeAfter: false }), b({ removeAfter: true }), b({ removeAfter: true }, true),
+      b({ busSongs: 3 }), b({ busSongs: 3 }, true), b({ busSongs: 2 }, true),
+      b({ busAt: at }) === "at " + new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })];
+  });
+  assert.deepEqual(r, ["", "", "", "after next play", "after this song", "after 3 more songs", "after this song and 2 more", "after this song and 1 more", true]);
+});
+
 test("usersSig: changes with what's shown of the people here, not with idle", async () => {
   const r = await run(() => {
     const was = ftapi.users;
@@ -668,7 +679,7 @@ test("the people list: DJs in deck order (playing, next, plays, leaving), then t
     firetable.people.render();
     return out;
   });
-  assert.deepEqual(r.djs, ["d1:Dee[is-dj,is-playing] Playing now,1/2", "d2:Duo[is-dj] Next,Steps down after their next play,2/2", "g1:gone[ghost,is-dj] 0/2,away"],
+  assert.deepEqual(r.djs, ["d1:Dee[is-dj,is-playing] Playing now,1/2", "d2:Duo[is-dj] Next,Steps down after next play,2/2", "g1:gone[ghost,is-dj] 0/2,away"],
     "the DJs lead in deck order: who's playing, who's next, who steps down, each one's plays; a DJ who dropped off says away");
   assert.deepEqual(r.bot, ["bot:hostbot[]"], "the bot is never idle");
   assert.deepEqual(r.supers, [], "a DJ isn't listed twice");

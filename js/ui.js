@@ -1521,9 +1521,8 @@ firetable.ui.tooltip = (function () {
       } else if (dj.where === 'waitlist') {
         facts.push({ label: 'DJ', val: 'Waitlist, ' + dj.pos + ' of ' + dj.count });
       }
-      if (dj.entry && dj.entry.removeAfter) {
-        facts.push({ label: 'Leaving', val: 'After next play' });
-      }
+      var leaving = firetable.people.bus(dj.entry, dj.where === 'deck' && !!firetable.song && firetable.song.djid === userid);
+      if (leaving) facts.push({ label: 'Leaving', val: firetable.utilities.htmlEscape(leaving.charAt(0).toUpperCase() + leaving.slice(1)) });
 
       var factsHtml = facts.map(function (f) {
         return '<div class="utt-fact' + (f.cls ? ' ' + f.cls : '') + '"><span class="utt-label">' + f.label + '</span><span class="utt-val">' + f.val + '</span></div>';
@@ -1568,7 +1567,7 @@ firetable.ui.tooltip = (function () {
       // Mods can act on someone of lower rank (#121); the bot checks rank too
       var rank = function (u) { return !u ? 0 : u.supermod ? 2 : u.mod ? 1 : 0; };
       var outranks = rank(userData) < rank(ownUser);
-      var departureScheduled = !!(dj.entry && dj.entry.removeAfter);
+      var departureScheduled = !!firetable.people.bus(dj.entry);
       $userTip.toggleClass('can-add-to-deck', isMod && !isSelf && !isDj);
       $userTip.toggleClass('can-remove-from-deck', isMod && !isSelf && isDj && rank(userData) <= rank(ownUser));
       $userTip.toggleClass('can-step-down', isSelf && isDj);

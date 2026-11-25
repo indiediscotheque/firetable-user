@@ -3,7 +3,8 @@
  *
  * Who is here, in the order the room cares about:
  * - "On the decks": the DJs in deck order, with who's playing, who's next,
- *   each one's plays this turn and who steps down after their next play.
+ *   each one's plays this turn and who steps down when (the bot's bus: after
+ *   their next play, after a number of songs, or at a time).
  *   The stage shows the DJs as small faces; this is where their names are.
  * - "On the floor": everyone else (the bot, supermods, mods, members), by
  *   name. People on the waitlist are in the waitlist's card above (room.js).
@@ -28,6 +29,22 @@ firetable.people = (function () {
   }
   function esc(s) { return firetable.utilities.htmlEscape(String(s)); }
   function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+
+  /**
+   * When a DJ steps down, from their seat in table/ or waitlist/ (the bot's
+   * lib/bus.js): "after this song", "after this song and 2 more", "after
+   * next play", "after 3 more songs", "at 9:45 PM", or "" when they aren't leaving.
+   * @param {Object} [seat] - {removeAfter, busSongs (songs left, the one playing included), busAt (a time)}
+   * @param {boolean} [playing] - their song is the one on now
+   */
+  function bus(seat, playing) {
+    if (!seat) return "";
+    if (seat.busAt > 0) return "at " + new Date(seat.busAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    var left = seat.busSongs > 1 ? seat.busSongs | 0 : seat.removeAfter ? 1 : 0;
+    if (!left) return "";
+    if (playing) return left === 1 ? "after this song" : "after this song and " + (left - 1) + " more";
+    return left === 1 ? "after next play" : "after " + left + " more songs";
+  }
 
   /** The icon and name of a role that differs from a member's, or null. */
   function roleOf(u) {
@@ -97,7 +114,7 @@ firetable.people = (function () {
     var html = "";
     if (p.playing) html += '<span class="material-symbols-outlined pe-now" role="img" title="Playing now" aria-label="Playing now">graphic_eq</span>';
     else if (p.next) html += '<span class="pe-next">Next</span>';
-    if (p.leaving) html += '<span class="material-symbols-filled pe-leaving" role="img" title="Steps down after their next play" aria-label="Steps down after their next play">departure_board</span>';
+    if (p.leaving) html += '<span class="material-symbols-filled pe-leaving" role="img" title="Steps down ' + esc(p.leaving) + '" aria-label="Steps down ' + esc(p.leaving) + '">departure_board</span>';
     var limit = firetable.playlimit || "∞";
     var plays = p.plays | 0;
     return html + '<span class="pe-plays" title="' + plays + " of " + limit + ' plays this turn">' + plays + "/" + esc(limit) + "</span>";
@@ -154,7 +171,7 @@ firetable.people = (function () {
         id: d.id, name: (live && live.username) || d.name || d.id, dj: true, ghost: !live,
         user: live || (firetable.ghostRoleCache && firetable.ghostRoleCache[d.id]) || {},
         playing: i === at, next: djs.length > 1 && at > -1 && i === (at + 1) % djs.length,
-        leaving: !!d.removeAfter, plays: d.plays
+        leaving: bus(d, i === at), plays: d.plays
       };
     });
   }
@@ -240,6 +257,7 @@ firetable.people = (function () {
     },
     render: render,
     status: status,
+    bus: bus,
     /** For tests: "12m" for a time `ms` ago. */
     awayFor: awayFor
   };
