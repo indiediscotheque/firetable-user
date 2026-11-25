@@ -628,40 +628,6 @@ firetable.ui.textToLinks = function (text, themeBox) {
 };
 
 /**
- * Upgrade image links in linkified HTML to inline <img> embeds (when the
- * "Show images" setting is on). Only anchors made by textToLinks() are
- * matched; the href is re-validated with imageLinkUrl() and escaped again.
- * Auto-scrolls chat if the user was already at the bottom when the image loads.
- * @param {string} chatTxt - HTML from textToLinks()
- * @returns {string}
- */
-firetable.ui.showImages = function (chatTxt) {
-  if (!firetable.showImages) return chatTxt;
-
-  return chatTxt.replace(/<a\b[^>]*\bhref="([^"]*)"[^>]*>[^<]*<\/a>/gi, function (anchor, href) {
-    var decoded = firetable.parser
-      ? firetable.parser.parseFromString(href, 'text/html').body.textContent
-      : href;
-    var imageUrl = firetable.utilities.imageLinkUrl(decoded);
-    if (!imageUrl) return anchor;
-    var safeUrl = firetable.utilities.htmlEscape(imageUrl);
-    // load/error are handled by the listeners below (no inline handlers)
-    return '<a class="inlineImgLink" href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" tabindex="-1">' +
-           '<img src="' + safeUrl + '" class="inlineImage" alt="" />' +
-           '<span role="button" class="hideImage">&times;</span></a>';
-  });
-};
-
-// Inline chat images: hide ones that fail (staying pinned to the bottom as
-// they load is handled by the chat's sticky-bottom tracker in state.js).
-// error doesn't bubble, so this listens in the capture phase.
-document.addEventListener('error', function (e) {
-  var link = e.target && e.target.classList && e.target.classList.contains('inlineImage') &&
-    e.target.closest('.inlineImgLink');
-  if (link) link.style.display = 'none';
-}, true);
-
-/**
  * Strip HTML from a string using DOMParser.
  * @param {string} html - Raw HTML string
  * @returns {string} Plain text content
@@ -710,9 +676,9 @@ firetable.ui.formatChatText = function (rawTxt) {
 
   txt = firetable.utilities.emojiShortnamestoUnicode(txt);
 
-  // Restore links, upgrading image links when "Show images" is on
+  // Restore links, upgrading image links when "Show images" is on (js/chat-images.js)
   txt = txt.replace(/\x02(\d+)\x02/g, function (_, i) {
-    return firetable.ui.showImages(links[parseInt(i, 10)]);
+    return firetable.chatImages.upgrade(links[parseInt(i, 10)]);
   });
 
   // Newlines → <br> (for bot/system messages)

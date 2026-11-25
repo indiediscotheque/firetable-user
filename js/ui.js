@@ -821,7 +821,7 @@ firetable.ui.initSettings = function () {
 
   // ── Show Inline Images ──
   firetable.showImages = readSetting(STORAGE.showImages, false);
-  $("#showImagesToggle").prop("checked", firetable.showImages);
+  document.getElementById("showImagesToggle").checked = firetable.showImages;
 
   // ── Show Avatars ──
   firetable.showAvatars = readSetting(STORAGE.showAvatars, true);
@@ -2163,31 +2163,8 @@ firetable.ui.setupMiscEvents = function () {
     firetable.shareTyping = this.checked;
     if (!this.checked) firetable.actions.setTyping(false);
   });
-  $('#showImagesToggle').change(function () {
-    firetable.debug && console.log("show images " + (this.checked ? "on" : "off"));
-    localStorage[STORAGE.showImages] = this.checked;
-    firetable.showImages = this.checked;
-    if (this.checked) {
-      // Convert plain image links → inline images. Built with attr(), never
-      // string concatenation: hrefs come from chat and can contain quotes.
-      $('#actualChat a[href]').not('.inlineImgLink').each(function () {
-        var url = firetable.utilities.imageLinkUrl($(this).attr('href'));
-        if (!url) return;
-        var $img = $('<a class="inlineImgLink" target="_blank" rel="noopener noreferrer" tabindex="-1"></a>')
-          .attr('href', url)
-          .append($('<img class="inlineImage" alt="" />').attr('src', url))
-          .append('<span role="button" class="hideImage">&times;</span>');
-        $(this).replaceWith($img);
-      });
-    } else {
-      // Convert inline images → plain links
-      $('#actualChat a.inlineImgLink').each(function () {
-        var url = $(this).attr('href');
-        var $link = $('<a target="_blank" tabindex="-1"></a>').attr('href', url).text(url);
-        $(this).replaceWith($link);
-      });
-    }
-    firetable.utilities.scrollToBottom();
+  document.getElementById('showImagesToggle').addEventListener('change', function () {
+    firetable.chatImages.setEnabled(this.checked);
   });
   $('#mediaDisableToggle').change(function () {
     firetable.debug && console.log("media disable " + (this.checked ? "on" : "off"));
