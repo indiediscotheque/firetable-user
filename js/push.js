@@ -82,7 +82,8 @@ firetable.push = {
     });
     navigator.serviceWorker.addEventListener("message", function (e) {
       var msg = e.data || {};
-      if (msg.type === "openInbox") firetable.ui.openInbox();
+      // a tapped mention: Live, at its message in the chat ("openInbox": a worker from before)
+      if (msg.type === "showMention" || msg.type === "openInbox") firetable.mentionJump.show(msg.id);
       else if (msg.type === "openView" && msg.view) firetable.nav.setView(msg.view);
       else if (msg.type === "resubscribed") firetable.push.sync(true);
     });
