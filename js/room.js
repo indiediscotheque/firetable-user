@@ -1198,7 +1198,6 @@ firetable.ui.setupRoomEvents = function () {
     // ── Platform-specific UI + playback ──
     if (data.type === MEDIA_YOUTUBE) {
       $("#scScreen").hide();
-      $("#songlink").html(YT_LOGO_SVG);
 
       if (firetable.ytLoaded && !firetable.preview) {
         if (firetable.scLoaded) firetable.scwidget.pause();
@@ -1210,7 +1209,6 @@ firetable.ui.setupRoomEvents = function () {
 
     } else if (data.type === MEDIA_SOUNDCLOUD) {
       $("#scScreen").show();
-      $("#songlink").html(SC_LOGO_SVG);
 
       var biggerImg = data.image.replace('-large', '-t500x500');
       firetable.scImg = biggerImg;

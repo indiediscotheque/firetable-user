@@ -1298,7 +1298,6 @@ body.ft-discover #dSide #actualChat {
     background-color: var(--color-accent);
     box-shadow: 0 0 0.75rem color-mix(in srgb, var(--color-accent) 55%, transparent), var(--shadow-drop);
 }
-.pb #songlink svg { width: 1.4rem; height: 1.4rem; }
 /* the room's buttons only while the bar shows the room; Fire and Grab need an account */
 .pb:not(.is-room) :is(#pv-livekeep, #pv-liveacts) { display: none; }
 .pb:not(.is-member) #pv-livekeep { display: none; }
@@ -2195,7 +2194,6 @@ button.pvf-line:focus-visible { outline: 2px solid var(--pb-tone); outline-offse
     background-color: var(--color-accent);
     box-shadow: 0 0 0.75rem color-mix(in srgb, var(--color-accent) 55%, transparent), var(--shadow-drop);
 }
-.pvf #songlink svg { width: 1.6rem; height: 1.6rem; }
 .pvf:not(.is-room) #pv-fstage, .pvf:not(.is-member) #pv-fstage { display: none; }
 .pvf .pb-vol { display: flex; align-items: center; gap: var(--pad1); }
 #pv-fvol { width: clamp(5rem, 7vw, 8rem); }
