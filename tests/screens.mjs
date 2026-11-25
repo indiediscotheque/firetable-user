@@ -43,7 +43,7 @@ const SIZES = { 390: { width: 390, height: 844 }, 1024: { width: 1024, height: 7
 // what changes on its own between two runs: clocks, progress and the times in chat and
 // Recent are masked; the video is hidden for the picture (a mask would cover whatever
 // stands in front of it)
-const MASK = "#timr, #timrUp, #prgbar, .pb-time, .pb-line, #pv-fat, #pv-flen, #pv-fseek, .chatTime, .hist-timestamp:not(.d-rank), .histtime";
+const MASK = "#timr, #timrUp, #prgbar, .pb-at, .pb-len, .pb-track .d-bar, .pb-line, #pv-fat, #pv-flen, #pv-fseek, .chatTime, .hist-timestamp:not(.d-rank), .histtime";
 // the DJs bob to the beat from the song's start: hold them still for the picture
 const HIDE = ".avtr, .avtr *, .ft-avatar, #deck *, #ondeck * { animation: none !important; transition: none !important; }" +
   (process.env.SHOW_VIDEO ? "" : " #playerArea iframe, #pvOverPlayer iframe, #sc-widget { visibility: hidden !important; }");

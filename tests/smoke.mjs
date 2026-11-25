@@ -2585,7 +2585,18 @@ try {
       main: (document.querySelector("#dMini .pb-main") || {}).getAttribute("aria-label"), seek: document.getElementById("pv-seek").disabled,
       fireHere: !!document.querySelector("#dMini #fire") && document.getElementById("fire").offsetParent !== null,
       joinFire: !!document.querySelector("#dMini .pb-joinfire"), tone: el().getAttribute("data-tone-for"), other: (document.querySelector("#pv-switch .pb-other") || { className: "" }).className,
-      time: getComputedStyle(document.querySelector("#dMini .pb-time")).display !== "none" });
+      time: getComputedStyle(document.querySelector("#dMini .pb-time")).display !== "none", geo: geo() });
+    // where things are: play (from the bar's middle, and from its top), the bar's height, then reload, cast, mute and full screen from the left
+    const geo = () => {
+      const b = el().getBoundingClientRect(), m = document.querySelector("#dMini .pb-main").getBoundingClientRect();
+      const x = (sel) => { const e = document.querySelector(sel); return e && e.offsetParent ? Math.round(e.getBoundingClientRect().left) : -1; };
+      return [Math.round(m.left + m.width / 2 - (b.left + b.width / 2)), Math.round(m.top - b.top), Math.round(b.height),
+        x("#dMini .d-reload") + x("#reloadtrack") + 1, x("#st-cast"), x("#dMini .d-mute"), x("#fullscreenBtn")].join();
+    };
+    const point = (target, share) => {
+      const r = target.getBoundingClientRect();
+      target.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse", clientX: r.left + r.width * share, clientY: r.top + r.height / 2 }));
+    };
     const out = {};
     // the test's videos aren't real: keep the player from skipping past them
     const skip = firetable.discover.onFailed;
@@ -2598,12 +2609,28 @@ try {
     document.querySelector("#dBrowse .ft-cards .pvbar .d-play").click();
     await wait(300);
     out.disc = snap();
+    // the progress is the bar's top edge; pointing at it shows the time under the pointer, dragging moves the fill (js/scrub.js)
+    const seekEl = document.getElementById("pv-seek"), track = seekEl.closest(".pb-track"), fill = document.getElementById("dBar");
+    const tb = track.getBoundingClientRect(), bb = el().getBoundingClientRect();
+    out.edge = { wide: Math.round(tb.width) === Math.round(bb.width), top: Math.abs(tb.top + tb.height / 2 - bb.top) <= 2, line: Math.round(fill.parentElement.getBoundingClientRect().height),
+      order: [...document.querySelectorAll("#pv-transport > *")].map((b) => b.className.match(/d-prev|pb-main|d-next/)[0]).join() };
+    seekEl.max = 200;
+    point(seekEl, 0.5);
+    const tip = () => document.querySelector("#dMini .pb-tip");
+    out.edge.tip = tip() ? tip().textContent : "none";
+    seekEl.value = 50;
+    seekEl.dispatchEvent(new Event("input", { bubbles: true }));
+    out.edge.drag = fill.style.width + "|" + track.classList.contains("is-scrubbing") + "|" + (tip() ? tip().textContent : "none");
+    seekEl.dispatchEvent(new Event("change", { bubbles: true }));
+    out.edge.let = !track.classList.contains("is-scrubbing") && !tip();
     document.querySelector("#dMini .pb-main").click();
     await wait(100);
     out.paused = snap().cls;
     document.querySelector("#pv-switch .d-listen").click();
     await wait(300);
     out.live = snap();
+    point(seekEl, 0.5);
+    out.live.noTip = !tip();
     out.live.preview = firetable.preview;
     out.live.state = firetable.discover.state().listening;
     out.live.roomKey = firetable.song.type + "_" + firetable.song.cid;
@@ -2644,6 +2671,7 @@ try {
     await wait(300);
     out.card.room = firetable.preview === false && /is-(live|onair)/.test(document.getElementById("dMini").className) && nl.hidden;
     out.card.roomTime = snap().time;
+    out.card.geo = geo();
     out.card.stageTime = getComputedStyle(document.getElementById("timr")).display !== "none" && getComputedStyle(document.getElementById("prgbar")).display !== "none";
     firetable.discover.onFailed = skip;
     return out;
@@ -2666,6 +2694,14 @@ try {
   check(bar.card.shown && bar.card.room, "Listen live on the stage's not-live card takes them to the room (" + JSON.stringify(bar.card) + ")");
   check(bar.room.time && bar.disc.time && bar.live.time && bar.card.pickTime && !bar.card.roomTime && bar.card.stageTime,
     "the bar shows time and progress except in Live on the room's song, where the stage already shows them (" + JSON.stringify({ room: bar.room.time, disc: bar.disc.time, live: bar.live.time, card: bar.card }) + ")");
+
+  const geos = [bar.room.geo, bar.disc.geo, bar.live.geo, bar.stopped.geo, bar.back.geo, bar.card.geo];
+  check(geos.every((g) => g === geos[0]) && /^(-1|0|1),/.test(geos[0]) && !/-1$|,-1,/.test(geos[0]),
+    "one layout whatever plays: play in the bar's middle at one height, and reload, cast, volume and full screen where they were (" + JSON.stringify(geos) + ")");
+  check(bar.edge.wide && bar.edge.top && bar.edge.line === 3 && bar.edge.order === "d-prev,pb-main,d-next",
+    "the progress is a line along the bar's whole top edge, and the transport is previous, play, next (" + JSON.stringify(bar.edge) + ")");
+  check(bar.edge.tip === "1:40" && bar.edge.drag === "25%|true|0:50" && bar.edge.let && bar.live.noTip,
+    "pointing at the progress shows the time under the pointer, dragging moves the fill, and the room's song shows neither (" + JSON.stringify(bar.edge) + ")");
 
   console.log("-- Discover: the full-screen player grows out of the bar, shows Audio or Video, and closes back into it");
   const full = await dPage.evaluate(async () => {
@@ -3448,7 +3484,7 @@ try {
   // the bar's tools keep one order: screen and cast go into the full-screen player and come back
   const toolOrder = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-    const ids = () => [...document.querySelectorAll("#pv-tools > [id]:not(.ft-tip)")].map((b) => b.id).join();
+    const ids = () => [...document.querySelectorAll("#dMini .pb-side :is(#screenControl, #reloadtrack, #st-cast, #pv-vol, #fullscreenBtn)")].map((b) => b.id).join();
     const out = [ids()];
     for (let i = 0; i < 2; i++) {
       firetable.discover.openFull(); await wait(300);
@@ -3457,8 +3493,8 @@ try {
     }
     return out;
   });
-  check(toolOrder.every((o) => o === "screenControl,reloadtrack,st-cast,fullscreenBtn"),
-    "the bar's tools stay in one order through the full-screen player and back: screen, reload, cast, full screen (" + JSON.stringify(toolOrder) + ")");
+  check(toolOrder.every((o) => o === "screenControl,reloadtrack,st-cast,pv-vol,fullscreenBtn"),
+    "the bar's tools stay in one order through the full-screen player and back: screen, reload, cast, volume, full screen (" + JSON.stringify(toolOrder) + ")");
 
   // Fresh beside the welcome (640px and up): a visitor has no Fresh tab to choose, so it loads when it's on screen
   const fPage = await context.newPage();
