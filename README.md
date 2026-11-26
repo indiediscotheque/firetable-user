@@ -262,12 +262,14 @@ Posts name songs and artists, never the room's DJs.
 | the post kit (optional) | `STUDIO_DISCORD_WEBHOOK` and/or `STUDIO_TELEGRAM_CHAT_ID` | a webhook on a private Discord channel; or message the Telegram bot and use your chat id |
 | Bluesky | `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD` | Settings → Privacy and security → App passwords |
 | Mastodon | `MASTODON_URL`, `MASTODON_TOKEN` | Preferences → Development → New application (`write:statuses write:media`). Tick "This is an automated account"; a server's bot rules (a tag, a daily limit) go in `SOCIAL_MASTODON_TAGS` and `SOCIAL_BUDGET` |
-| X | `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` | an app at developer.x.com with read and write access |
+| X | `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` | an app at developer.x.com with read and write access, and API credits (developer.x.com → Billing): X charges for each post, and with none left it answers 402 "credits depleted" |
 | Pinterest | `PINTEREST_APP_ID`, `PINTEREST_APP_SECRET`, `PINTEREST_REFRESH_TOKEN`, `PINTEREST_BOARD_ID` | an app at developers.pinterest.com, then `node tools/social/auth.mjs pinterest` |
 | Telegram channel | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | a bot from @BotFather, made an admin of the channel (`@channelname`) |
 | Discord | `DISCORD_WEBHOOK_URL` | the channel → Edit → Integrations → Webhooks |
 
 `auth.mjs` needs the app's id and secret in the environment (named at the top of the file) and the app's redirect address set to `https://www.indiediscotheque.com/` (or `REDIRECT_URI`). It prints a link; allow the app and paste back the address the browser lands on. New releases skip Bluesky and Discord by default (`SOCIAL_SKIP`), which the older fresh-track poster already covers.
+
+**When a platform refuses:** a 401, 402 or 403 (keys refused, no API credits, no permission) fails that post on that platform at once, as an error on the run's page saying what to fix, instead of being tried twice more. A post that didn't go out gives its place in the budget back, so the next one isn't held back. Addresses in the log have their secrets masked (a Discord webhook's token, a Telegram bot's).
 
 **Trying it:** Actions → "Social posting" → Run workflow. "Dry run" (on by default) draws what's due and prints every platform's words and the post kit without uploading or posting; pick a kind and "Post even if it isn't due" to send one now. Locally, `node tools/social/run.mjs preview --site https://www.indiediscotheque.com/ --kind spotlight,chart --out /tmp/social` draws them and prints everything (needs ffmpeg for the videos).
 
