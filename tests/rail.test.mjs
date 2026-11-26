@@ -50,7 +50,12 @@ test("nothing of it loads before it's used, and its button says what it does", a
       shown: !!btn.offsetParent,
       expanded: btn.getAttribute("aria-expanded"),
       label: btn.getAttribute("aria-label"),
-      people: !!document.getElementById("nav-railPeople").offsetParent
+      people: !!document.getElementById("nav-railPeople").offsetParent,
+      // at the column's bottom right
+      corner: (() => {
+        const b = btn.getBoundingClientRect(), col = document.getElementById("topbar").getBoundingClientRect(), bar = document.getElementById("dMini").getBoundingClientRect();
+        return b.right <= col.right && b.right > col.right - 40 && b.bottom <= bar.top && b.bottom > bar.top - 40;
+      })()
     };
   });
   assert.equal(r.script, false, "js/rail.js isn't loaded with the page");
@@ -59,6 +64,7 @@ test("nothing of it loads before it's used, and its button says what it does", a
   assert.equal(r.expanded, "true");
   assert.equal(r.label, "Collapse the column into a toolbar");
   assert.equal(r.people, false, "the toolbar's people button only shows in the toolbar");
+  assert.equal(r.corner, true, "the button is at the column's bottom right");
 });
 
 test("[ folds it: the middle gets the room, chat keeps its width; kept on this device", async () => {
@@ -116,6 +122,19 @@ test("a visitor's Live: the room goes to Fresh; the people button counts and ope
   assert.equal(peek.expanded, "true");
   assert.ok(peek.topbar > 200, "the column shows whole, over the middle");
   assert.equal(peek.cols, 64, "the grid doesn't move under it");
+  // the column shows, so its button is a collapse button, at its bottom right; a press puts it away
+  const btn = await page.evaluate(() => {
+    const b = document.getElementById("nav-railBtn");
+    return { label: b.getAttribute("aria-label"), expanded: b.getAttribute("aria-expanded"), icon: getComputedStyle(b.querySelector(".nav-railClose")).display !== "none" && getComputedStyle(b.querySelector(".nav-railOpen")).display === "none",
+      corner: b.getBoundingClientRect().right > document.getElementById("topbar").getBoundingClientRect().right - 40 };
+  });
+  assert.deepEqual(btn, { label: "Collapse the column into a toolbar", expanded: "true", icon: true, corner: true });
+  await page.click("#nav-railBtn");
+  await page.waitForFunction(() => !document.documentElement.classList.contains("rail-peek"), null, { timeout: 3000 });
+  assert.equal(await folded(), true, "collapsing the peek leaves the toolbar, not the column open");
+  assert.equal(await page.evaluate(() => document.getElementById("nav-railBtn").getAttribute("aria-label")), "Open the column");
+  await page.click("#nav-railPeople");
+  await page.waitForFunction(() => document.documentElement.classList.contains("rail-peek"), null, { timeout: 3000 });
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => !document.documentElement.classList.contains("rail-peek"), null, { timeout: 3000 });
   const back = await page.evaluate(() => ({ focus: document.activeElement && document.activeElement.id, folded: document.documentElement.classList.contains("rail") }));
@@ -162,21 +181,25 @@ test("keys typed in a text box stay text; a narrow screen or the Turntable theme
   assert.equal(await folded(), true, "[ typed in a text box doesn't open it");
   await page.evaluate(() => document.querySelector("body > input:last-of-type").remove());
   // the Turntable theme has its own layout: folded or not, nothing in it moves or shows
-  const tt = await page.evaluate(() => {
+  const tt = await page.evaluate(async () => {
     const root = document.documentElement;
+    const tick = () => new Promise((r) => setTimeout(r, 50)); // the toolbar hears of the theme a moment later
     const sig = () => [...document.querySelectorAll("#mainGrid > *, #topbar *, #usersbox *, #pe-here, #railLine")].map((e) => {
       const r = e.getBoundingClientRect();
       return [e.id || e.className, getComputedStyle(e).display, Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)].join();
     }).join("|");
     document.body.classList.add("tt-skin");
+    await tick();
     const folded = sig();
     const cols = parseFloat(getComputedStyle(document.getElementById("mainGrid")).gridTemplateColumns);
-    const hidden = ["nav-railBtn", "nav-railPeople", "nav-railMore", "railLine"].every((id) => getComputedStyle(document.getElementById(id)).display === "none");
+    const hidden = ["nav-railBtn", "nav-railPeople", "railLine"].every((id) => getComputedStyle(document.getElementById(id)).display === "none");
+    const extras = document.getElementById("nav-acctAbout").hidden && document.getElementById("nav-acctRail").hidden;
     root.classList.remove("rail");
     const open = sig();
     root.classList.add("rail");
     document.body.classList.remove("tt-skin");
-    return { same: folded === open, cols, hidden };
+    await tick();
+    return { same: folded === open, cols, hidden: hidden && extras };
   });
   assert.notEqual(tt.cols, 64, "not in the Turntable theme");
   assert.equal(tt.same, true, "the Turntable theme looks the same folded or not");
@@ -193,52 +216,38 @@ test("keys typed in a text box stay text; a narrow screen or the Turntable theme
   await page.setViewportSize({ width: 1440, height: 900 });
 });
 
-test("the toolbar keeps to what's used all the time; More has light mode, community, about and the shortcuts", async () => {
+test("the toolbar's bottom: search, community, then the button that opens the column, then you; the account menu has the rest", async () => {
   await go("#live");
-  const r = await page.evaluate(() => {
-    const shown = (id) => !!document.getElementById(id).offsetParent;
-    return { look: shown("nav-look"), social: shown("socialTrigger"), about: shown("roomInfo"), more: shown("nav-railMore"), search: shown("dSearchOpen") };
+  const shown = await page.evaluate(() => ["dSearchOpen", "nav-look", "roomInfo", "socialTrigger", "nav-railBtn", "nav-signin"]
+    .map((id) => { const e = document.getElementById(id); return e.offsetParent ? Math.round(e.getBoundingClientRect().top) : null; }));
+  assert.ok(shown.every((t) => t !== null), "a visitor's light mode and about stay (no account menu): " + shown);
+  assert.deepEqual([...shown].sort((x, y) => x - y), shown, "in this order, top to bottom: " + shown);
+  assert.ok(shown[5] - shown[4] < 50 && shown[4] - shown[3] < 50, "the button sits between community and Join");
+  // a member's light mode and about move to the account menu
+  const member = await page.evaluate(() => {
+    const grid = document.getElementById("mainGrid");
+    grid.classList.remove("login", "pre-auth");
+    const out = { look: !!document.getElementById("nav-look").offsetParent, about: !!document.getElementById("roomInfo").offsetParent, community: !!document.getElementById("socialTrigger").offsetParent };
+    grid.classList.add("login");
+    return out;
   });
-  assert.deepEqual(r, { look: false, social: false, about: false, more: true, search: true });
-  await page.click("#nav-railMore");
-  await page.waitForFunction(() => document.getElementById("nav-railMenu").matches(":popover-open"), null, { timeout: 3000 });
+  assert.deepEqual(member, { look: false, about: false, community: true });
+  // the account menu, folded: About the room and Open the column, after Light mode and the shortcuts
+  await page.evaluate(() => document.getElementById("nav-accountMenu").showPopover());
   await sleep(200);
   const menu = await page.evaluate(() => {
-    const m = document.getElementById("nav-railMenu");
+    const m = document.getElementById("nav-accountMenu");
     return {
-      items: [...m.querySelectorAll("[data-rail]")].map((b) => b.textContent.trim()),
-      beside: m.getBoundingClientRect().left >= document.getElementById("nav-railMore").getBoundingClientRect().right,
-      expanded: document.getElementById("nav-railMore").getAttribute("aria-expanded"),
-      about: m.querySelector('[data-rail="about"]').href === document.getElementById("roomInfo").href
+      items: [...m.querySelectorAll(".nav-acctItem:not([hidden])")].map((b) => b.id || b.getAttribute("data-acct")),
+      about: document.getElementById("nav-acctAbout").href === document.getElementById("roomInfo").href
     };
   });
-  assert.deepEqual(menu.items, ["light_modeLight mode", "shareCommunity", "helpAbout the room", "keyboardShortcuts and commands", "left_panel_openOpen the column"].map((t) => t.replace(/^[a-z_]+/, (icon) => icon === "light_mode" ? "dark_mode" : icon)));
-  assert.equal(menu.beside, true, "the menu opens beside the toolbar");
-  assert.equal(menu.expanded, "true");
+  assert.deepEqual(menu.items.filter((i) => ["nav-acctLook", "nav-acctHelp", "nav-acctAbout", "nav-acctRail"].includes(i)), ["nav-acctLook", "nav-acctHelp", "nav-acctAbout", "nav-acctRail"]);
   assert.equal(menu.about, true, "About goes where the header's About does");
-  // light mode: a switch, the menu stays open
-  await page.click('#nav-railMenu [data-rail="look"]');
-  await page.waitForFunction(() => document.documentElement.getAttribute("data-look") === "light", null, { timeout: 3000 }).catch(() => {});
-  const lit = await page.evaluate(() => ({ look: document.documentElement.getAttribute("data-look"), checked: document.querySelector('#nav-railMenu [data-rail="look"]').getAttribute("aria-checked"), open: document.getElementById("nav-railMenu").matches(":popover-open") }));
-  assert.deepEqual(lit, { look: "light", checked: "true", open: true });
-  await page.click('#nav-railMenu [data-rail="look"]');
-  await page.waitForFunction(() => !document.documentElement.hasAttribute("data-look"), null, { timeout: 3000 });
-  // Community: its menu, beside the toolbar
-  await page.click('#nav-railMenu [data-rail="community"]');
-  await page.waitForFunction(() => document.getElementById("socialPopover").matches(":popover-open"), null, { timeout: 3000 });
-  await sleep(300);
-  const social = await page.evaluate(() => document.getElementById("socialPopover").getBoundingClientRect().left >= document.getElementById("nav-railMore").getBoundingClientRect().right);
-  assert.equal(social, true, "Community opens beside More");
-  await page.keyboard.press("Escape");
-  // the shortcuts
-  await page.click("#nav-railMore");
-  await page.click('#nav-railMenu [data-rail="help"]');
-  assert.equal(await page.evaluate(() => document.getElementById("helpBox").open), true);
-  await page.evaluate(() => document.getElementById("helpBox").close());
-  // and open the column from it
-  await page.click("#nav-railMore");
-  await page.click('#nav-railMenu [data-rail="open"]');
+  await page.evaluate(() => document.getElementById("nav-acctRail").click()); // a visitor's page: the menu has no face to open from
   await waitFolded(false);
+  const open = await page.evaluate(() => ({ menu: document.getElementById("nav-accountMenu").matches(":popover-open"), about: document.getElementById("nav-acctAbout").hidden, rail: document.getElementById("nav-acctRail").hidden }));
+  assert.deepEqual(open, { menu: false, about: true, rail: true }, "with the column open, the menu is as it was");
   await page.click("#nav-railBtn");
   await waitFolded(true);
 });

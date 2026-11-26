@@ -4,20 +4,20 @@
    toolbar, and the middle (the stage, the playlists, Discover's pages)
    takes the room it gives up; chat keeps its width. Everything the column
    holds stays one click away, as an icon with a tooltip:
-   - at the top: the logo and the button that opens it again; then where
-     you are (Discover | Live) and the room (tonight's theme, and in Live
-     who's here, with how many);
+   - at the top: the logo; then where you are (Discover | Live) and the
+     room (tonight's theme, and in Live who's here, with how many);
    - in the middle, in Live: who's on the decks, as faces (the one playing
      ringed, presence on each), the waitlist and Hop on. Everyone else is
      behind the count. In Discover: search and the views;
-   - at the bottom, you: search, mentions, More (light mode, community,
-     about, shortcuts) and your account, or Join.
+   - at the bottom: search, mentions, community, the button that opens the
+     column again, and your account (whose menu has light mode, about and
+     the shortcuts), or for visitors light mode, about and Join.
    On a wide middle (html.rail-desk, js/rail.js), Live's middle becomes a
    desk: the stage across the top, your playlist down the left and the
    room's Recent, Fresh or Cards beside it.
    Who's here, or search, opens the column over the middle for a moment
-   ("peek", html.rail-peek: Escape, a click outside or the button puts it
-   away). Only loaded once someone folds the column (js/lazy.js), or with the
+   ("peek", html.rail-peek: Escape, a click outside or the button, a
+   collapse button while it shows, puts it away). Only loaded once someone folds the column (js/lazy.js), or with the
    page where it was left folded (js/head.js puts html.rail and this
    stylesheet on before the first paint). The Turntable theme has its own
    layout, so none of this applies there.
@@ -106,17 +106,6 @@
         }
         & #topbar > .flexpacer { display: none; }
 
-        /* Open the column again */
-        & #nav-railBtn {
-            order: 1;
-            width: var(--rail-btn);
-            min-width: 0;
-            height: var(--rail-btn);
-            min-height: 0;
-            margin: 0;
-            border-radius: var(--radius-md);
-        }
-
         /* Discover | Live: two icons, the page you're on lit */
         & #modeTabs {
             order: 2;
@@ -177,8 +166,8 @@
         }
         @media (hover: hover) {
             & #modeTabs .tab:not(.on):hover,
-            & #nav-railBtn:hover,
             & #nav-railPeople:hover,
+            & #nav-railBtn:hover,
             & #themePill:hover,
             & #topbarUtils .header_icon:hover { background: var(--color-bg-t1); }
         }
@@ -254,23 +243,36 @@
                 border-radius: var(--radius-md);
             }
             & .header_icon [class*="material-symbols-"] { font-size: 1.25rem; }
-            /* search, mentions, More, then you, last */
+            /* search, (a visitor's light mode and about), mentions, community,
+               then the button that opens the column (in the space left above
+               you), then you, last */
             & #reconnecting { order: 0; }
             & #dSearchOpen { order: 1; }
-            & #inboxTrigger { order: 2; }
-            & #nav-railMore { order: 3; display: inline-flex; }
+            & #nav-look { order: 2; }
+            & #roomInfo { order: 3; }
+            & #inboxTrigger { order: 4; }
+            & #socialTrigger { order: 5; }
             & #loggedInUser,
-            & #nav-signin { order: 4; }
+            & #nav-signin { order: 7; margin-top: calc(var(--rail-btn) + 2px); }
         }
-        /* light mode, community and about are in More */
-        & :is(#nav-look, #tip-nav-look, #socialTrigger, #tip-socialTrigger, #roomInfo, #tip-roomInfo) { display: none; }
+        /* a member's light mode and about are in the account menu, with the shortcuts */
+        & #mainGrid:not(.login) :is(#nav-look, #tip-nav-look, #roomInfo, #tip-roomInfo) { display: none; }
+        /* Open the column again: at the bottom, above your account (a grid item
+           of its own, laid over the space the account leaves for it) */
+        & #nav-railBtn {
+            justify-self: center;
+            width: var(--rail-btn);
+            height: var(--rail-btn);
+            margin: 0 0 calc(var(--pad2) + var(--rail-btn) + 2px);
+            background: none;
+        }
         & #loggedInUser .ft-avatar { width: 1.75rem; height: 1.75rem; }
         & #inboxBadge { top: 0.1rem; right: 0; }
         /* Join: its face, the word in the tooltip */
         & #mainGrid #nav-signin {
             width: var(--rail-btn);
             height: var(--rail-btn);
-            margin: 0;
+            margin: calc(var(--rail-btn) + 2px) 0 0; /* the space for the button that opens the column */
             padding: 0;
             justify-content: center;
             & #nav-signinLabel { display: none; }
@@ -312,7 +314,9 @@
             padding-top: 0;
             border-top: 1px solid var(--color-border);
         }
+        & #allUsersWrap { padding-bottom: 0; }
         & #dRail {
+            padding-bottom: 0;
             overflow: hidden auto;
             scrollbar-width: none;
             border-right: 0;
@@ -461,6 +465,12 @@
             animation: rail-peek var(--dur-fast, 150ms) var(--ease-out, ease-out);
         }
         & #topbar { z-index: 41; }
+        /* collapse it again: at the column's bottom right, as when it's open */
+        & #nav-railBtn {
+            justify-self: start;
+            z-index: 42;
+            margin: 0 0 var(--pad3) calc(min(var(--col-left), 100vw - var(--rail-w)) - 2.25rem - var(--pad3));
+        }
         & #usersbox,
         & #mainGrid.login:not(.pre-auth) #pe-here:not(:empty),
         & #dRail {
@@ -485,15 +495,6 @@
 
 @keyframes rail-peek {
     from { opacity: 0; transform: translateX(-0.75rem); }
-}
-
-/* More (js/rail.js makes it): only in the toolbar. Its menu is the account
-   menu's kind, light mode a switch in it the same way. */
-#nav-railMore { display: none; }
-#nav-railMenu [data-rail="look"] { justify-content: flex-start; }
-#nav-railMenu [aria-checked="true"] .nav-lookSwitch {
-    background: var(--color-accent);
-    &::after { transform: translateX(0.75rem); background: var(--color-on-accent); }
 }
 
 /* The toolbar's tooltips: one, beside whatever the pointer or the keyboard is on */
