@@ -907,15 +907,21 @@ function buildQueueItemHTML(key, track, isPreview, pos) {
     (track.flagged ? flagHtml : '<span class="track-warning"></span>') +
     (pos ? '<span class="q-num" aria-hidden="true">' + pos + '</span>' : '') +
     '<div class="listwords">' + nameHtml + tagHtml + durationHtml + (track.from === "discover" ? '<span class="pl-from" title="Saved from Discover">Discover</span>' : '') + '</div>' +
-    swapHtml +
-    // Order matches Recent / Fresh: move actions, link, add, destructive last
-    '<button type="button" class="material-symbols-outlined row-icon bumpsongs" title="Send to top" aria-label="Send to top">vertical_align_top</button>' +
-    '<button type="button" class="material-symbols-outlined row-icon bottomsongs" title="Send to bottom" aria-label="Send to bottom">vertical_align_bottom</button>' +
-    '<button type="button" class="material-symbols-outlined row-icon closeeditor" title="Close tags editor" aria-label="Close tags editor">close</button>' +
+    // The row's actions, in the order they're on screen, so Tab goes through
+    // them that way. First Delete, Add, Open and Bottom, which ⋮ has too: a
+    // computer with a mouse shows them on the row under the pointer or
+    // holding the keyboard's focus, so the rest of the time the name has
+    // their room. Last on every row, and never moved when those four come
+    // up: × while the tags are being edited, ⇄ (when there's a swap), Top
+    // and ⋮ (css/looks.css, "Playlist rows' actions").
+    '<button type="button" class="material-symbols-outlined row-icon deletesong" title="Delete track" aria-label="Delete track">delete</button>' +
+    '<button type="button" class="material-symbols-outlined row-icon histeal" title="Add to playlist" aria-label="Add to playlist">playlist_add</button>' +
     // Same "open the song" icon as the player bar's, whichever site it's on
     '<a class="material-symbols-outlined row-icon tracklink-btn" target="_blank" rel="noopener" href="' + trackUrl + '" title="Open on ' + platform + '" aria-label="Open on ' + platform + '">open_in_new</a>' +
-    '<button type="button" class="material-symbols-outlined row-icon histeal" title="Add to playlist" aria-label="Add to playlist">playlist_add</button>' +
-    '<button type="button" class="material-symbols-outlined row-icon deletesong" title="Delete track" aria-label="Delete track">delete</button>' +
+    '<button type="button" class="material-symbols-outlined row-icon bottomsongs" title="Send to bottom" aria-label="Send to bottom">vertical_align_bottom</button>' +
+    '<button type="button" class="material-symbols-outlined row-icon closeeditor" title="Close tags editor" aria-label="Close tags editor">close</button>' +
+    swapHtml +
+    '<button type="button" class="material-symbols-outlined row-icon bumpsongs" title="Send to top" aria-label="Send to top">vertical_align_top</button>' +
     '<button type="button" class="material-symbols-outlined row-icon row-more" title="More" aria-label="More track options" aria-haspopup="menu" aria-expanded="false">more_vert</button>' +
     '</div></div>'
   );
@@ -1060,7 +1066,7 @@ firetable.ui.setupPlaylistEvents = function () {
     };
   }
 
-  // ── Narrow rows: ⋮ menu (Send to bottom / Add to playlist / Open / Delete) ──
+  // ── Each row's ⋮ menu (Send to bottom, Add to playlist, Open, Delete and the rest) ──
   var trackMenuEl = document.getElementById('trackMenuPopover');
   // its items come from the one song menu (firetable.songMenu, 2.8)
   trackMenuEl.querySelector('.ft-menu').innerHTML = firetable.songMenu.html(

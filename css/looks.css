@@ -1082,7 +1082,8 @@ button.track-warning {
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Icon-only actions inside track rows. Same size, colour and order everywhere. */
+/* Icon-only actions inside track rows. Same size and colour everywhere; a
+   playlist row keeps Top and ⋮ last (playlist.js). */
 .row-icon {
     display: inline-flex;
     align-items: center;
@@ -3398,39 +3399,53 @@ input.ft-filter {
     font-size: 0.7rem;
 }
 
-/* Narrow playlist rows: keep "Send to top" and move the rest into the ⋮ menu */
+/* Playlist rows' actions (round 5, November 25, 2026). Last on every row,
+   and never moved: × while the tags are edited, ⇄ (when there's a swap), Top
+   and ⋮ (playlist.js draws them in that order). Before them Delete, Add to
+   playlist, Open and Bottom, which ⋮ has too: a computer with a mouse shows
+   them on the row under the pointer or holding the keyboard's focus, so the
+   rest of the time the name has their room (at 1024 it was cut to "Bab…").
+   They leave the row (display: none; faded, they'd keep their room), in a
+   rule outside any @container, so Safari 15.4 hides them too. They stay
+   while something opened from the row is open: Delete's question
+   (.deleting), Add's picker or ⋮'s menu (.on on the button that opened it),
+   so what it points at stays put. They never come up while ticking songs (a
+   click there ticks the row) or dragging one. Touch screens can't point, so
+   they keep Top and ⋮ at any width, as does a row under 28rem (phones, the
+   Turntable Queue and Discover's side column on most screens), mouse or not.
+   The keyboard's focus: focus in the row (:focus-within), but not on a
+   button a click left it on (:focus without :focus-visible), or the song
+   you preview would keep a short name. Not :has(:focus-visible): as Tab
+   moves along the row, Chrome takes the focus off one button before it
+   checks the next can have it, and only :focus-within holds in between. */
 #queuelist {
     container: queuelist / inline-size;
 }
-
-/* Tablets (two columns, 640 to 1023px): the row is a little wider than a
-   phone's, so it kept all six icons and the name was left three letters
-   ("Gli…", "Bab…"). Top and ⋮ stay on the row; ⋮ has the rest. A computer
-   keeps every action on the row at any width. */
-@media only screen and (min-width: 640px) and (max-width: 1023px) {
-    @container queuelist (width < 36rem) {
-        #mainqueue .bottomsongs,
-        #mainqueue .tracklink-btn,
-        #mainqueue .histeal,
-        #mainqueue .deletesong {
-            display: none;
-        }
-        #mainqueue .row-more {
+#mainqueue :is(.bottomsongs, .tracklink-btn, .histeal, .deletesong) {
+    display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+    #mainqueue:not(.cr-selecting):not(.is-sorting) .pvbar:is(:hover, .deleting) :is(.bottomsongs, .tracklink-btn, .histeal, .deletesong) {
+        display: inline-flex;
+    }
+    /* a rule of its own, so a browser without :has() drops only this one */
+    #mainqueue:not(.cr-selecting):not(.is-sorting) .pvbar:is(:has(.row-icon.on), :focus-within:not(:has(:focus:not(:focus-visible)))) :is(.bottomsongs, .tracklink-btn, .histeal, .deletesong) {
+        display: inline-flex;
+    }
+}
+/* without :has() (Firefox before 121), any focus in the row */
+@supports not selector(:has(a)) {
+    @media (hover: hover) and (pointer: fine) {
+        #mainqueue:not(.cr-selecting):not(.is-sorting) .pvbar:focus-within :is(.bottomsongs, .tracklink-btn, .histeal, .deletesong) {
             display: inline-flex;
         }
     }
 }
 
 @container queuelist (width < 28rem) {
-    #mainqueue .bottomsongs,
-    #mainqueue .tracklink-btn,
-    #mainqueue .histeal,
-    #mainqueue .deletesong {
+    /* two ids: more than the reveal above */
+    #queuelist #mainqueue :is(.bottomsongs, .tracklink-btn, .histeal, .deletesong) {
         display: none;
-    }
-
-    #mainqueue .row-more {
-        display: inline-flex;
     }
 
     /* 4.3: a phone's rows are a thumb's height (56px), with Comfortable's 44px
