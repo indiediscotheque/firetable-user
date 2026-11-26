@@ -7,11 +7,10 @@ import { mkdtempSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { isoWeek, plain, genreTags, clip, graphemes, dayRange, zoned, artists, artistSlug, HttpError, redact } from "./util.mjs";
-import { caption, linkFor, blueskyFacets, youtubeTitle, hashtags, xReply } from "./captions.mjs";
+import { caption, linkFor, blueskyFacets, youtubeTitle, hashtags } from "./captions.mjs";
 import { roomGenre, tagsFor, GENRES } from "./keywords.mjs";
 import { kit } from "./platforms/studio.mjs";
 import { songOf } from "./content.mjs";
-import { oauth1 } from "./platforms/social.mjs";
 import { targetsFor, configured, withinBudget, budgets, onFailure, release } from "./run.mjs";
 import { emptyState, saveState, loadState, markPosted, count, today } from "./state.mjs";
 import { oneLine, usable } from "./render.mjs";
@@ -23,7 +22,7 @@ const post = (o = {}) => ({
   prompt: "Save it for your next playlist.", cta: "Listen live, 24/7, on Indie Discotheque", link: "https://www.indiediscotheque.com/music/artists/royksopp/",
   tags: ["NewMusic", "Synthpop", "NewRelease", "Electropop", "SynthMusic", "IndieDiscotheque"], topic: "Synthpop",
   searchTitle: "Röyksopp & Robyn - Do It Again (New Synthpop 2026)", sound: { title: "Do It Again", artist: "Röyksopp & Robyn" },
-  mentions: { instagram: ["royksopp"], bluesky: ["royksopp.bsky.social"], x: ["royksopp"] },
+  mentions: { instagram: ["royksopp"], bluesky: ["royksopp.bsky.social"] },
   media: { video: "a.mp4", image: "a.jpg", story: "a-story.jpg" }, platforms: {}, ...o
 });
 
@@ -47,14 +46,9 @@ test("weeks, words and dates", () => {
 
 test("each platform's words fit its limits and lead with the keywords", () => {
   const p = post();
-  for (const name of ["instagram", "tiktok", "facebook", "threads", "bluesky", "mastodon", "x", "pinterest", "telegram"]) {
+  for (const name of ["instagram", "tiktok", "facebook", "threads", "bluesky", "mastodon", "pinterest", "telegram"]) {
     assert.ok(caption(p, name).startsWith("🆕 New synthpop from Röyksopp"), name + " leads with the hook");
   }
-  // X: no link in the post (it goes in the reply), one tag
-  const xt = caption(p, "x");
-  assert.ok(!xt.includes("https://") && graphemes(xt) <= 280);
-  assert.equal((xt.match(/#\w+/g) || []).length, 1);
-  assert.match(xReply(p), /utm_source=x/);
   assert.ok(graphemes(caption(p, "bluesky")) <= 300);
   assert.ok(graphemes(caption(p, "threads")) <= 500);
   assert.ok(graphemes(caption(p, "mastodon")) <= 500);
@@ -75,7 +69,7 @@ test("each platform's words fit its limits and lead with the keywords", () => {
   const long = caption(post({ hook: "word ".repeat(120), facts: [] }), "bluesky");
   assert.ok(graphemes(long) <= 300 && long.endsWith("…"));
   // no DJ is ever named
-  for (const name of ["instagram", "x", "threads", "bluesky"]) assert.ok(!/found by|played by|brought it/i.test(caption(p, name)));
+  for (const name of ["instagram", "threads", "bluesky"]) assert.ok(!/found by|played by|brought it/i.test(caption(p, name)));
 });
 
 test("genre keywords", () => {
@@ -110,7 +104,6 @@ test("the post kit: the sound to pick and each caption, minus what already went 
 test("people can hear the song: its own video, linked where links play", () => {
   const p = post({ listen: "https://www.youtube.com/watch?v=abc" });
   for (const name of ["threads", "mastodon", "telegram", "discord"]) assert.match(caption(p, name), /▶ Hear it: https:\/\/www\.youtube\.com\/watch\?v=abc/, name);
-  assert.match(xReply(p), /▶ Hear it: https:\/\/www\.youtube\.com/);
   assert.ok(!caption(p, "instagram").includes("youtube.com"), "not where links don't work");
   assert.ok(!caption(post(), "threads").includes("Hear it"), "nothing when there's no video");
 });
@@ -132,14 +125,6 @@ test("Bluesky rich text counts bytes, not characters", async () => {
   assert.deepEqual(f.map(slice), ["https://example.com/a?b=1", "@royksopp.bsky.social", "#NewMusic"]);
   assert.equal(f[1].features[0].did, "did:plc:abc");
   assert.equal(f[2].features[0].tag, "NewMusic");
-});
-
-test("OAuth 1.0a signature matches X's documented example", () => {
-  const header = oauth1("POST", "https://api.twitter.com/1.1/statuses/update.json?include_entities=true&status=" + encodeURIComponent("Hello Ladies + Gentlemen, a signed OAuth request!"), {
-    key: "xvz1evFS4wEEPTGEFPHBog", secret: "kAcSOqF21Fu85e7zjz7ZN2U4ZRhfV3WpwPAoE3Z7kBw",
-    token: "370773112-GmHxMAgYyLbNEtIKZeRNFsMKPR9EyMZeS9weJAEb", tokenSecret: "LswwdoUaIvS8ltyTt5jkRh4J50vUPVVHtR2YPi5kE"
-  }, { nonce: "kYjzVBB8Y0ZFabxSWbWovY3uYSQ2pTgmZeNu2VS4cg", timestamp: "1318622958" });
-  assert.match(header, /oauth_signature="hCtSmYh%2BiHYCEqBWrE7C7hYmtUk%3D"/);
 });
 
 test("a post goes only where its keys are set, and fits the platform", () => {
@@ -168,8 +153,8 @@ test("budgets keep each platform to a steady few", () => {
   assert.ok(!withinBudget(st(21, 45, 69, 93, 117), "instagram", now, {}), "five a week");
   assert.ok(withinBudget({ sent: [{ p: "threads", at: now - 5 * H }] }, "threads", now, {}), "Threads: two a day, 4 hours apart");
   assert.ok(!withinBudget({ sent: [{ p: "threads", at: now - 2 * H }] }, "threads", now, {}));
-  assert.deepEqual(budgets({ SOCIAL_BUDGET: "threads=3/15/2,x=0" }).threads, [3, 15, 2]);
-  assert.ok(!withinBudget({ sent: [] }, "x", now, { SOCIAL_BUDGET: "x=0" }), "0 turns one off");
+  assert.deepEqual(budgets({ SOCIAL_BUDGET: "threads=3/15/2,pinterest=0" }).threads, [3, 15, 2]);
+  assert.ok(!withinBudget({ sent: [] }, "pinterest", now, { SOCIAL_BUDGET: "pinterest=0" }), "0 turns one off");
   // Bluesky and Discord get every post, however many went out today
   const many = (p) => ({ sent: Array.from({ length: 30 }, (_, i) => ({ p, at: now - i * 60000 })) });
   for (const p of ["bluesky", "discord"]) assert.ok(withinBudget(many(p), p, now, {}), p);
@@ -178,20 +163,20 @@ test("budgets keep each platform to a steady few", () => {
 
 test("a refused account fails at once and gives the budget back", () => {
   const now = Date.UTC(2026, 10, 25, 14), post = { at: now };
-  const credits = new HttpError("https://api.x.com/2/tweets", 402, '{"detail":"credits depleted"}');
+  const credits = new HttpError("https://graph.threads.net/v1.0/me/threads", 402, '{"detail":"credits depleted"}');
   const st = { status: "pending", tries: 1 };
   assert.match(onFailure(st, credits), /out of API credits/);
   assert.equal(st.status, "failed", "no point trying again until there are credits");
   const busy = { status: "pending", tries: 1 };
-  assert.equal(onFailure(busy, new HttpError("https://api.x.com/2/tweets", 503, "")), null);
+  assert.equal(onFailure(busy, new HttpError("https://graph.threads.net/v1.0/me/threads", 503, "")), null);
   assert.equal(busy.status, "pending", "a server stumbling is tried again");
   busy.tries = 3;
   onFailure(busy, new Error("network"));
   assert.equal(busy.status, "failed", "after three tries");
-  const state = { sent: [{ p: "x", at: now }, { p: "threads", at: now }, { p: "x", at: now - 86400000 }] };
-  release(state, "x", post);
-  assert.deepEqual(state.sent, [{ p: "threads", at: now }, { p: "x", at: now - 86400000 }]);
-  assert.ok(withinBudget(state, "x", now + 9 * 3600000, {}), "the next post can go to X");
+  const state = { sent: [{ p: "threads", at: now }, { p: "bluesky", at: now }, { p: "threads", at: now - 86400000 }] };
+  release(state, "threads", post);
+  assert.deepEqual(state.sent, [{ p: "bluesky", at: now }, { p: "threads", at: now - 86400000 }]);
+  assert.ok(withinBudget(state, "threads", now + 5 * 3600000, {}), "the next post can go to Threads");
 });
 
 test("secrets in an address stay out of the logs", () => {
@@ -212,7 +197,7 @@ test("the state forgets what's too old and keeps the rest", () => {
   count(s, "2026-11-23", "fresh");
   count(s, "2026-10-01", "fresh");
   s.queue.push({ at: now - 5 * 86400000 }, { at: now });
-  s.sent.push({ p: "x", at: now - 9 * 86400000 }, { p: "x", at: now });
+  s.sent.push({ p: "threads", at: now - 9 * 86400000 }, { p: "threads", at: now });
   saveState(file, s, now);
   const back = loadState(file);
   assert.deepEqual(Object.keys(back.posted), ["new"]);

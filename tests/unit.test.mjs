@@ -225,7 +225,7 @@ test("chatImages.src: http(s) images and known image hosts only", async () => {
     "https://x.test/a.JPG", "http://x.test/b.gif?x=1", "https://x.test/c.png#f", "https://x.test/d.webp", "https://x.test/e.avif",
     "https://i.imgur.com/AbC1234.jpg", "https://i.imgur.com/AbC1234.gif", null,
     "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif", "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif",
-    "https://pbs.twimg.com/media/Fab123?format=jpg&name=small", null,
+    null, null,
     null, null, null, null, null, null
   ]);
 });

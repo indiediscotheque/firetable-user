@@ -31,13 +31,13 @@
 // many hours apart, so followers get a steady few rather than a flood. A post
 // that would go over leaves that platform out. Bluesky and Discord have no
 // budget: every post goes to both. SOCIAL_BUDGET changes them, e.g.
-// "threads=3/15/3,x=0" (a day / a week / hours apart; 0 turns one off).
+// "threads=3/15/3,pinterest=0" (a day / a week / hours apart; 0 turns one off).
 //
 // Settings (environment, all optional):
 //   TZ                     the room's time zone for the schedule (default America/Chicago)
 //   SOCIAL_SPOTLIGHT_HOUR  when the day's song goes out (default 18)
 //   SOCIAL_FRESH_DAYS      only releases out in the last N days (default 14)
-//   SOCIAL_SKIP            kind:platform pairs to leave out, e.g. fresh:x (default none)
+//   SOCIAL_SKIP            kind:platform pairs to leave out, e.g. fresh:threads (default none)
 //   SOCIAL_PLATFORMS       only these platforms (comma separated)
 //   SOCIAL_SECONDS         a song video's length (default 30; Reels do best at 30-60)
 //   SOCIAL_BUSY_MIN / SOCIAL_BUSY_HOURS  people online for a "the room is busy"
@@ -51,26 +51,26 @@ import { fileURLToPath } from "url";
 import { connect } from "./data.mjs";
 import { loadState, saveState, emptyState, markPosted } from "./state.mjs";
 import { KINDS, AUTO } from "./content.mjs";
-import { caption, youtubeTitle, xReply } from "./captions.mjs";
+import { caption, youtubeTitle } from "./captions.mjs";
 import { haveFfmpeg, probe } from "./render.mjs";
 import { http, bytes, zoned, Handoff } from "./util.mjs";
 import { instagram, instagram_story, facebook, facebook_story, threads } from "./platforms/meta.mjs";
 import { tiktok } from "./platforms/video.mjs";
 import { studio, kit } from "./platforms/studio.mjs";
-import { bluesky, mastodon, x, pinterest, telegram, discord } from "./platforms/social.mjs";
+import { bluesky, mastodon, pinterest, telegram, discord } from "./platforms/social.mjs";
 
 // the post kit last: it says what the others have already done
-export const PLATFORMS = { instagram, instagram_story, facebook, facebook_story, tiktok, threads, bluesky, mastodon, x, pinterest, telegram, discord, studio };
+export const PLATFORMS = { instagram, instagram_story, facebook, facebook_story, tiktok, threads, bluesky, mastodon, pinterest, telegram, discord, studio };
 
 // where each kind of post goes
 const ROUTES = {
   // a song: an Instagram Reel with licensed music (or its picture), the song's own video on
   // Facebook, its picture with the video linked elsewhere; TikTok drafts and the kit only when set up
-  song: ["instagram", "facebook", "tiktok", "threads", "bluesky", "mastodon", "x", "pinterest", "telegram", "discord", "studio"],
+  song: ["instagram", "facebook", "tiktok", "threads", "bluesky", "mastodon", "pinterest", "telegram", "discord", "studio"],
   // a chart, New Music Friday, Wrapped: carousels everywhere, the countdown video through TikTok and the kit
-  list: ["instagram", "facebook", "tiktok", "threads", "bluesky", "mastodon", "x", "pinterest", "telegram", "discord", "studio"],
+  list: ["instagram", "facebook", "tiktok", "threads", "bluesky", "mastodon", "pinterest", "telegram", "discord", "studio"],
   // Rising: the quick feeds, and an Instagram Story
-  rising: ["instagram_story", "threads", "bluesky", "mastodon", "x", "telegram", "discord"],
+  rising: ["instagram_story", "threads", "bluesky", "mastodon", "telegram", "discord"],
   // a theme: Stories and the quick feeds
   image: ["instagram_story", "facebook_story", "threads", "bluesky", "mastodon", "telegram", "discord"],
   // the room right now: Stories and the quickest feeds
@@ -84,14 +84,14 @@ const ALL = [Infinity, Infinity, 0];
 export const BUDGET = {
   instagram: [1, 5, 20], instagram_story: [2, 10, 4], facebook: [1, 4, 20], facebook_story: [1, 7, 8],
   tiktok: [1, 5, 20], studio: [1, 6, 20], threads: [2, 10, 4], bluesky: ALL, mastodon: [2, 10, 3],
-  x: [1, 6, 12], pinterest: [2, 10, 3], telegram: [2, 12, 3], discord: ALL
+  pinterest: [2, 10, 3], telegram: [2, 12, 3], discord: ALL
 };
 const TRIES = 3;
 const HOUR = 3600000;
 
 // answers that mean the account itself is refused (no API credits, a revoked
 // key, no permission): trying again won't help until someone fixes the account
-const ACCOUNT = { 401: "its keys were refused: make new ones and update the secrets", 402: "the account is out of API credits (X: developer.x.com → Billing)", 403: "the account isn't allowed to post this way: check the app's permissions" };
+const ACCOUNT = { 401: "its keys were refused: make new ones and update the secrets", 402: "the account is out of API credits or needs a paid plan", 403: "the account isn't allowed to post this way: check the app's permissions" };
 
 /** What to do with a post that a platform refused: try again, or give up now and say why. */
 export function onFailure(st, err) {
@@ -228,13 +228,13 @@ function describe(post, name) {
   const files = [post.media.video && name !== "studio" && (name === "tiktok" || name === "instagram" && post.targets === "song") ? post.media.video
     : name.endsWith("_story") ? post.media.story
       : post.targets === "list" && ["instagram", "facebook", "threads", "telegram"].includes(name) ? post.media.slides.length + " slides"
-        : post.targets === "list" && ["bluesky", "mastodon", "x"].includes(name) ? post.media.glance.length + " pictures" : post.media.image].filter(Boolean);
+        : post.targets === "list" && ["bluesky", "mastodon"].includes(name) ? post.media.glance.length + " pictures" : post.media.image].filter(Boolean);
   if (name === "studio") {
     const k = kit(post);
     return `\n--- post kit · ${post.id}\n🎵 Sound: ${k.sound}\n` + k.steps.map((s, i) => `${i + 1}. ${s.where}: ${s.how}` + (s.text ? "\n" + s.text.split("\n").map((l) => "     " + l).join("\n") : "")).join("\n");
   }
   if (name.endsWith("_story")) return `\n--- ${name} · ${post.id}\n[${files.join(", ")}]`;
-  return `\n--- ${name} · ${post.id}\n${name === "youtube" ? youtubeTitle(post) + "\n\n" : ""}${caption(post, name)}${name === "x" ? "\n  ↳ reply: " + xReply(post) : ""}\n[${files.join(", ")}]`;
+  return `\n--- ${name} · ${post.id}\n${name === "youtube" ? youtubeTitle(post) + "\n\n" : ""}${caption(post, name)}\n[${files.join(", ")}]`;
 }
 
 async function publish() {

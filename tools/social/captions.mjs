@@ -9,18 +9,16 @@
 //   threads             one topic tag
 //   bluesky             300 characters, links, mentions and tags as rich text
 //   mastodon            CamelCase hashtags, which is how people find posts there
-//   x                   no link in the post (X shows posts with links to fewer
-//                       people): it goes in a reply; 1 hashtag
 //   pinterest           keywords in the title and description, no hashtags
 // Tags are CamelCase everywhere: screen readers read them as words.
 // A song post also links the song's own YouTube video ("▶ Hear it"): Facebook,
-// Bluesky, X, Discord and Telegram play it right in the post, and every play
+// Bluesky, Discord and Telegram play it right in the post, and every play
 // counts for the artist.
 // Never deployed (tools/).
 
 import { clip, graphemes } from "./util.mjs";
 
-export const TAGS = { instagram: 5, tiktok: 5, youtube: 2, facebook: 2, threads: 1, bluesky: 3, mastodon: 4, x: 1, pinterest: 0, telegram: 0, discord: 0, studio: 5 };
+export const TAGS = { instagram: 5, tiktok: 5, youtube: 2, facebook: 2, threads: 1, bluesky: 3, mastodon: 4, pinterest: 0, telegram: 0, discord: 0, studio: 5 };
 
 /** The post's link, tagged so the site's stats show which platform sent the visit. */
 export function linkFor(post, platform) {
@@ -85,8 +83,6 @@ export function caption(post, platform) {
     case "bluesky":
       // a song's video is the post's card (it plays in Bluesky): the site's link goes in the text
       return fit(300, (f) => join(hook, f, at, link, tags), facts);
-    case "x":
-      return fit(280, (f) => join(hook, f, at, tags), facts);
     case "pinterest":
       return clip(join(hook, facts, `${post.cta} at ${new URL(post.link || "https://example.com").host.replace(/^www\./, "")}.`), 500);
     case "telegram":
@@ -95,9 +91,6 @@ export function caption(post, platform) {
       return join(hook, facts, listen(post), link);
   }
 }
-
-/** X's reply under the post, with the link. */
-export const xReply = (post) => join(listen(post), `🎧 ${post.cta}: ${linkFor(post, "x")}`).replace(/\n\n/g, "\n");
 
 /** A YouTube Short's title: the words people search for, at most 100 characters. */
 export const youtubeTitle = (post) => clip(post.searchTitle || post.title, 100);

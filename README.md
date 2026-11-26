@@ -212,7 +212,7 @@ Posts name songs and artists, never the room's DJs.
 
 **Hands-off by default, and people hear the songs.** Nothing needs a person once the keys are set. No audio is ever uploaded: the song plays from the platforms' own licensed sources.
 - **Instagram:** the daily song is a Reel with the song from Instagram's own music library, attached through its Audio API when the library has that exact song. It goes out as a Trial Reel (`INSTAGRAM_TRIAL`), shown to non-followers first and shared with followers if it does well. When the library doesn't have the song, its picture is posted instead. This needs Instagram through Facebook Login (below). Turning on "Share your reels to Facebook" in Instagram's Accounts Center puts the Reels on the Page too.
-- **Everywhere else** a song post carries the song's own YouTube video, the upload the room plays it from. Facebook and Bluesky show it as a card that plays in the post; Discord, Telegram and X (in the reply) play the link inline; Threads and Mastodon link it ("▶ Hear it"). Every play counts for the artist's upload.
+- **Everywhere else** a song post carries the song's own YouTube video, the upload the room plays it from. Facebook and Bluesky show it as a card that plays in the post; Discord and Telegram play the link inline; Threads and Mastodon link it ("▶ Hear it"). Every play counts for the artist's upload.
 - **Carousels and pictures** (charts, New Music Friday, Rising, Wrapped, themes, Stories) post themselves.
 
 **Optional extras that take a few minutes a day** (left out unless their secrets are set):
@@ -221,7 +221,7 @@ Posts name songs and artists, never the room's DJs.
 
 **One post per song.** A song gets a single post of its own a year. That holds whichever kind it comes up in (new release, the room's favourite, On This Day) and whichever upload it was played from. Lists (the chart, New Music Friday) can name it again. "(feat. …)", "(Official Video)", case and accents don't make a new song; a remix, edit or version does. Every post also has its own id that's never sent twice, a post that fails is retried only on the platforms that failed, and the workflow stops rather than start from nothing when it can't read what's been posted.
 
-**Budgets** (`tools/social/run.mjs`, `SOCIAL_BUDGET` to change one, e.g. `threads=3/15/3`; `x=0` turns one off). Bluesky and Discord have none: every post goes to both. A post over budget skips that platform, and one over budget everywhere waits for another day:
+**Budgets** (`tools/social/run.mjs`, `SOCIAL_BUDGET` to change one, e.g. `threads=3/15/3`; `pinterest=0` turns one off). Bluesky and Discord have none: every post goes to both. A post over budget skips that platform, and one over budget everywhere waits for another day:
 
 | | a day | a week | hours apart |
 |---|---|---|---|
@@ -232,14 +232,13 @@ Posts name songs and artists, never the room's DJs.
 | Threads, Mastodon | 2 | 10 | 3–4 |
 | Bluesky, Discord | every post | | |
 | Telegram | 2 | 12 | 3 |
-| X | 1 | 6 | 12 |
 | Pinterest | 2 | 10 | 3 |
 
 **Words built for each platform's search and ranking** (`captions.mjs`, `keywords.mjs`):
 - **The opening line** names the genre, artist and song people search for ("French house new release: Justice, …"). The genre is the room's own, or the artist's most played genre here for songs not tagged yet.
 - **Under it:** a fact from the room (plays, chart moves), "sounds like" artists, and a prompt to comment, save or send. Those are what the feeds rank on.
-- **Tags:** CamelCase hashtags, which screen readers read as words. Instagram and TikTok get 5 (Instagram's cap), YouTube #Shorts and 2 more, Threads one topic, Bluesky 3, Mastodon 4, X 1, Pinterest none (it ranks on keywords).
-- **Links:** Instagram and TikTok say "link in bio". X puts the link in a reply, since posts with links reach fewer people. YouTube and Pinterest titles are keyword titles ("Justice - Starting From Zero (New French House 2026)").
+- **Tags:** CamelCase hashtags, which screen readers read as words. Instagram and TikTok get 5 (Instagram's cap), YouTube #Shorts and 2 more, Threads one topic, Bluesky 3, Mastodon 4, Pinterest none (it ranks on keywords).
+- **Links:** Instagram and TikTok say "link in bio". YouTube and Pinterest titles are keyword titles ("Justice - Starting From Zero (New French House 2026)").
 - **Alt text** on every picture where the platform takes it.
 - **UTM tags** on every link, so the site's stats show what each platform sends.
 
@@ -263,7 +262,6 @@ Posts name songs and artists, never the room's DJs.
 | the post kit (optional) | `STUDIO_DISCORD_WEBHOOK` and/or `STUDIO_TELEGRAM_CHAT_ID` | a webhook on a private Discord channel; or message the Telegram bot and use your chat id |
 | Bluesky | `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD` | Settings → Privacy and security → App passwords |
 | Mastodon | `MASTODON_URL`, `MASTODON_TOKEN` | Preferences → Development → New application (`write:statuses write:media`). Tick "This is an automated account"; a server's bot rules (a tag, a daily limit) go in `SOCIAL_MASTODON_TAGS` and `SOCIAL_BUDGET` |
-| X | `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` | an app at developer.x.com with read and write access, and API credits (developer.x.com → Billing): X charges for each post, and with none left it answers 402 "credits depleted" |
 | Pinterest | `PINTEREST_APP_ID`, `PINTEREST_APP_SECRET`, `PINTEREST_REFRESH_TOKEN`, `PINTEREST_BOARD_ID` | an app at developers.pinterest.com, then `node tools/social/auth.mjs pinterest` |
 | Telegram channel | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | a bot from @BotFather, made an admin of the channel (`@channelname`) |
 | Discord | `DISCORD_WEBHOOK_URL` | the channel → Edit → Integrations → Webhooks |
@@ -279,7 +277,7 @@ Posts name songs and artists, never the room's DJs.
 **What it keeps:** `firetable-social/state.json` in the SFTP user's home on the server (outside the site, never served). It holds what's been posted and where, the queue, the past week's posts (for the budgets), renewed tokens and 30 days of lookups. Until a platform has its keys, runs draw nothing; the first run after that counts every new release already out as posted, except the newest 3.
 
 ## link previews
-`index.html` has the room's title, description, canonical address and Open Graph / Twitter tags, so a link pasted into Discord, iMessage or Slack shows the room with `img/og.png` (1200 × 630). Each library page under `/music/` swaps in its own (`tools/plain-pages.mjs`), with the genre's or artist's cover where there is one. The site is `https://www.indiediscotheque.com/` in those tags: change them there if the address changes.
+`index.html` has the room's title, description, canonical address and Open Graph and `twitter:card` tags (Discord and Slack read it for the large picture), so a link pasted into Discord, iMessage or Slack shows the room with `img/og.png` (1200 × 630). Each library page under `/music/` swaps in its own (`tools/plain-pages.mjs`), with the genre's or artist's cover where there is one. The site is `https://www.indiediscotheque.com/` in those tags: change them there if the address changes.
 
 ## security headers
 `.htaccess` sends a Content Security Policy plus the usual hardening headers (no framing by other sites, HSTS, nosniff, referrer and permissions policies). The policy allows no inline scripts or event handlers, so add new behavior in the `js/` files with `addEventListener` / jQuery `.on()`, not `onclick="…"`. If you load something from a new host, add it to the matching directive in `.htaccess`. The policy only covers firetable's own paths, so other sites in folders on the same server (such as `/basement`) keep working; when you add a top-level file or folder, add it to the list in the `<If>` above the policy (CI checks this).
