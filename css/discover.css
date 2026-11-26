@@ -271,7 +271,6 @@ body.ft-discover #discoverPage {
     white-space: nowrap;
 }
 .d-num, .d-mv {
-    font-family: var(--font-numbers);
     font-variant-numeric: tabular-nums;
 }
 .d-mv { min-width: 2.6rem; text-align: right; }
@@ -654,14 +653,14 @@ section .d-chips a.d-chip {
 .d-axis {
     position: absolute;
     color: var(--color-text-muted);
-    font-family: var(--font-numbers);
     font-size: var(--fs-micro);
+    font-variant-numeric: tabular-nums;
     pointer-events: none;
 }
 .d-axis-up { top: var(--pad1); left: calc(50% + var(--pad1)); }
 .d-axis-down { bottom: var(--pad1); left: calc(50% + var(--pad1)); }
-.d-axis-left { bottom: var(--pad1); left: var(--pad2); font-family: inherit; text-transform: uppercase; letter-spacing: 0.05em; }
-.d-axis-right { bottom: var(--pad1); right: var(--pad2); font-family: inherit; text-transform: uppercase; letter-spacing: 0.05em; }
+.d-axis-left { bottom: var(--pad1); left: var(--pad2); text-transform: uppercase; letter-spacing: 0.05em; }
+.d-axis-right { bottom: var(--pad1); right: var(--pad2); text-transform: uppercase; letter-spacing: 0.05em; }
 .d-gcards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(9.5rem, 100%), 1fr));
@@ -704,8 +703,8 @@ section .d-chips a.d-chip {
 .d-yb b {
     height: 0.9rem;
     color: var(--color-text-muted);
-    font-family: var(--font-numbers);
     font-size: var(--fs-micro);
+    font-variant-numeric: tabular-nums;
     font-weight: 400;
     white-space: nowrap;
 }
@@ -950,7 +949,7 @@ section .d-chips a.d-chip {
     font-size: var(--fs-micro);
     font-weight: 600;
 }
-.d-numtag { font-family: var(--font-numbers); font-weight: 500; }
+.d-numtag { font-variant-numeric: tabular-nums; }
 /* An artist's genres, under their name */
 .d-sound { display: flex; flex-wrap: wrap; gap: var(--pad1); }
 .d-hist p {
@@ -964,14 +963,6 @@ section .d-chips a.d-chip {
 }
 .d-hist b { color: var(--color-text); font-weight: 600; }
 .d-hist .ft-avatar { width: 1.1rem; height: 1.1rem; flex: none; }
-.d-prog {
-    display: flex;
-    align-items: center;
-    gap: var(--pad2);
-    color: var(--color-text-muted);
-    font-family: var(--font-numbers);
-    font-size: var(--fs-meta);
-}
 .d-bar {
     flex: 1;
     height: 3px;
@@ -1017,14 +1008,17 @@ section .d-chips a.d-chip {
 .d-n {
     min-width: 1.5rem;
     color: var(--color-text-muted);
-    font-family: var(--font-numbers);
     font-size: var(--fs-meta);
+    font-variant-numeric: tabular-nums;
     text-align: right;
 }
 .d-listhead { display: flex; align-items: baseline; gap: var(--pad2); flex-wrap: wrap; }
 .d-listhead b { color: var(--color-text-light); font-size: 1.05rem; }
 .d-listhead span { color: var(--color-text-muted); font-size: var(--fs-meta); }
 .d-join { display: flex; flex-direction: column; gap: var(--pad2); margin-top: var(--pad2); }
+/* Join is the one filled gold button (Round 5: the main sign-up action), as big as the dialog's (44px), and so is Google
+   (and so is the welcome's copy in index.html, there until this one takes its place) */
+.d-join .butt, .au-join > .butt { min-height: 2.75rem; }
 .d-join .d-google {
     display: flex;
     align-items: center;
@@ -1102,8 +1096,8 @@ body.ft-discover #dSide #actualChat {
     border-radius: 99px;
     background: var(--color-accent);
     color: #fff;
-    font-family: var(--font-numbers);
     font-size: 0.65rem;
+    font-variant-numeric: tabular-nums;
     line-height: 1.1rem;
     text-align: center;
 }
@@ -1215,7 +1209,7 @@ body.ft-discover #dSide #actualChat {
     --pb-edge: inset 0 2px 0 var(--pb-tone);
     background-color: color-mix(in srgb, var(--pb-tone) 9%, var(--color-bar));
 }
-@media (prefers-reduced-motion: reduce) { .pb { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .pb { transition: none; --pb-stall: 0s; } }
 .pb-host { display: contents; }
 .pb-host:empty { display: none; }
 
@@ -1361,7 +1355,6 @@ body.ft-discover #dSide #actualChat {
 .pb-time {
     display: contents;
     color: var(--color-text-muted);
-    font-family: var(--font-numbers);
     font-size: var(--fs-micro);
     font-variant-numeric: tabular-nums;
 }
@@ -1440,7 +1433,6 @@ body.ft-discover #dSide #actualChat {
     border-radius: var(--radius-sm);
     background: var(--color-tip-bg, var(--color-bg-t2));
     color: var(--color-tip-text, var(--color-text-light));
-    font-family: var(--font-numbers);
     font-size: var(--fs-micro);
     font-variant-numeric: tabular-nums;
     line-height: 1.4;
@@ -1460,8 +1452,9 @@ body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
 }
 
 /* right: the song's own actions and the other source, a hairline, then the
-   player's tools in one order whatever plays: screen (Live) · reload · cast ·
-   volume · full screen. The last three never move. */
+   player's tools in one order whatever plays: screen (Live) · cast · volume ·
+   full screen, with reload before cast while the song stalls. The last three
+   never move. */
 .pb-side { grid-area: side; display: flex; align-items: center; justify-content: flex-end; gap: var(--pad2); min-width: 0; }
 .pb-acts { display: flex; align-items: center; gap: var(--pad1); }
 /* the way to the other place (Go to Live, Listen live, Back to it): one dark chip with gold words */
@@ -1545,7 +1538,28 @@ body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
 /* a hairline between the song's actions and the player's tools */
 .pb-tools:not(.pb-fs)::before { content: ""; flex: none; width: 1px; height: 1.25rem; margin: 0 var(--pad1); background: var(--color-border); }
 .pb.is-quiet .pb-tools::before { display: none; }
-.pb:not(.is-room) #reloadtrack { display: none; }      /* a Discover song has its own reload */
+/* Reload rests out of the bar's tools (Round 5): it's at the full-screen
+   player's top, and in a pick's ⋮. When YouTube has stopped on the song
+   (body.yt-stalled: the video failed or ended before the room's song did, or
+   the browser paused a pick; not while it buffers, and never on SoundCloud)
+   it's back in its place, tinted with a ring as the thing to press, after 3s
+   so a song that's only loading doesn't flash it (until then it's out of
+   sight and out of the tab order too). Not while the browser holds the sound
+   back (media-blocked: play is the fix), with media playback off in Settings
+   (media-off), or when it's a playlist preview's video that stopped
+   (preview-stalled): reloading the room's song can't help with those. Only
+   what's to its left moves (the side packs its buttons to the right): cast,
+   volume and full screen stay put, and play in the middle. The full-screen
+   player shows the room's for the room's song and a pick's own (.d-reload)
+   for a pick. */
+.pb :is(#reloadtrack, .d-reload), .pvf:not(.is-room) #reloadtrack { display: none; }
+body.yt-stalled:not(.media-blocked, .media-off, .preview-stalled) :is(.pb.is-room #reloadtrack, .pb.is-discover:not(.is-paused) .d-reload) {
+    display: flex;
+    color: var(--pb-tone);
+    box-shadow: inset 0 0 0 1px var(--pb-tone);
+    animation: pb-stall var(--pb-stall, 0.2s) ease-out 3s backwards;
+}
+@keyframes pb-stall { from { width: 0; min-width: 0; margin-left: calc(-1 * var(--pad1)); opacity: 0; visibility: hidden; } }
 /* the stage's screen: Live's, and the full player's. While you hear a Discover
    song in Live (or have stopped the room) the stage's screen stays up
    (body.pb-elsewhere, below), so the button would do nothing, and it showed on;
@@ -2302,7 +2316,6 @@ button.pvf-line:focus-visible { outline: 2px solid var(--pb-tone); outline-offse
     grid-template-areas: "track track" "at len";
     row-gap: 0.3rem;
     color: var(--color-text-subtle);
-    font-family: var(--font-numbers);
     font-size: var(--fs-meta);
     font-variant-numeric: tabular-nums;
     line-height: 1.2;
@@ -2325,8 +2338,9 @@ button.pvf-line:focus-visible { outline: 2px solid var(--pb-tone); outline-offse
 .pvf-keep { justify-self: start; }
 .pvf-right { justify-self: end; }
 .pvf-transport { display: flex; align-items: center; justify-content: center; gap: clamp(0.5rem, 1.2vw, 1.25rem); }
-/* reload follows play with nothing to balance it: an empty twin on the other
-   side keeps play in the middle, under the middle of the bar */
+/* shuffle follows next with nothing to balance it: an empty twin on the
+   other side keeps play in the middle, under the middle of the bar (reload is
+   at the top since Round 5) */
 @media only screen and (min-width: 640px) {
     .pvf-transport:has(.pb-small)::before { content: ""; flex: none; width: 2.5rem; }
 }
@@ -2752,7 +2766,8 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 .d-seg .d-segbtn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .d-chartctl { gap: var(--space-2); }
 .d-chartacts { display: inline-flex; flex-wrap: wrap; gap: var(--space-2); margin-left: auto; }
-/* a panel's main action: a dark button with gold text (round 4: no big gold fills) */
+/* a panel's main action: a dark button with gold text (round 4: no big gold
+   fills; Round 5's one exception is signing up, Join, .d-join) */
 #dBrowse .butt.d-panelmain,
 .butt.d-panelmain { background: var(--color-bg-t2); color: var(--color-accent); box-shadow: none; }
 #dBrowse .butt.d-panelmain:hover,

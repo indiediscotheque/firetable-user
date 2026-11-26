@@ -76,6 +76,17 @@ try {
   check(colours.on && near(colours.accent, [204, 28, 44]) && !near(colours.outside, [204, 28, 44]) && colours.injected === 0,
     "the song's colour reaches the stage from a stylesheet, not an injected <style> (" + JSON.stringify(colours) + ")");
   check(colours.mediaOff === "none" && colours.mediaOn !== "none", "media playback off hides the preview buttons (" + colours.mediaOff + " / " + colours.mediaOn + ")");
+  // numbers in the text's own type, with equal-width digits (Round 5, November 25, 2026): Roboto Mono is
+  // for code and keys, so a first look at Live, with none of either on screen, never fetches it
+  const liveType = await page.evaluate(async () => {
+    for (let i = 0; i < 40 && !document.getElementById("timr").textContent.trim(); i++) await new Promise((r) => setTimeout(r, 100));
+    await document.fonts.ready;
+    const c = getComputedStyle(document.getElementById("timr"));
+    return { timer: c.fontFamily.split(",")[0].replace(/["']/g, "") + " " + c.fontVariantNumeric,
+      mono: [...document.fonts].filter((f) => /Roboto Mono/.test(f.family) && f.status !== "unloaded").map((f) => f.style + " " + f.status) };
+  });
+  check(liveType.timer === "Inter tabular-nums" && !liveType.mono.length,
+    "Live's first look: the stage's timer in Inter with equal-width digits, and no Roboto Mono loaded (" + JSON.stringify(liveType) + ")");
 
   console.log("-- the stage's avatars: asked for at the size they're drawn, on this screen");
   const sharpOn = (p) => p.evaluate(() => [...document.querySelectorAll("[data-stage-uid]")].map((e) => {
@@ -2887,6 +2898,15 @@ try {
   await put("/discover/lib", lib);
   await openPage(dPage, SITE);
   await dPage.waitForFunction(() => document.querySelectorAll("#dBrowse .ft-cards .pvbar").length > 0, null, { timeout: 20000 }).catch(() => {});
+  // Home's numbers in Inter with equal-width digits too (Round 5): a chart row's plays, a card's date; nothing in Roboto Mono
+  const homeType = await dPage.evaluate(async () => {
+    await document.fonts.ready;
+    const type = (sel) => { const e = document.querySelector(sel); if (!e) return "none"; const c = getComputedStyle(e); return c.fontFamily.split(",")[0].replace(/["']/g, "") + " " + c.fontVariantNumeric; };
+    return { plays: type("#dBrowse .ft-rows .d-right .d-num:last-child"), date: type("#dBrowse .ft-cards .histdate"),
+      mono: [...document.fonts].filter((f) => /Roboto Mono/.test(f.family) && f.status !== "unloaded").map((f) => f.style + " " + f.status) };
+  });
+  check(homeType.plays === "Inter tabular-nums" && homeType.date === "Inter tabular-nums" && !homeType.mono.length,
+    "Home's first look: a chart row's plays and a card's date in Inter with equal-width digits, and no Roboto Mono loaded (" + JSON.stringify(homeType) + ")");
   const home = await dPage.evaluate(async () => ({
     on: document.body.classList.contains("ft-discover"),
     tabs: [...document.querySelectorAll("#modeTabs .tab")].map((b) => b.textContent.trim() + (b.classList.contains("on") ? "*" : "")).join(),
@@ -3083,12 +3103,13 @@ try {
       fireHere: !!document.querySelector("#dMini #fire") && document.getElementById("fire").offsetParent !== null,
       joinFire: !!document.querySelector("#dMini .pb-joinfire"), tone: el().getAttribute("data-tone-for"), other: (document.querySelector("#pv-switch .pb-other") || { className: "" }).className,
       time: getComputedStyle(document.querySelector("#dMini .pb-time")).display !== "none", geo: geo() });
-    // where things are: play (from the bar's middle, and from its top), the bar's height, then reload, cast, mute and full screen from the left
+    // where things are: play (from the bar's middle, and from its top), the bar's height, then cast, mute and full screen from the left;
+    // and how many reloads show in the bar (none: reload rests out of the tools until the song stalls, Round 5)
     const geo = () => {
       const b = el().getBoundingClientRect(), m = document.querySelector("#dMini .pb-main").getBoundingClientRect();
       const x = (sel) => { const e = document.querySelector(sel); return e && e.offsetParent ? Math.round(e.getBoundingClientRect().left) : -1; };
       return [Math.round(m.left + m.width / 2 - (b.left + b.width / 2)), Math.round(m.top - b.top), Math.round(b.height),
-        x("#dMini .d-reload") + x("#reloadtrack") + 1, x("#st-cast"), x("#dMini .d-mute"), x("#fullscreenBtn")].join();
+        x("#st-cast"), x("#dMini .d-mute"), x("#fullscreenBtn"), "reloads " + [...document.querySelectorAll("#dMini :is(.d-reload, #reloadtrack)")].filter((r) => r.offsetParent && r.getBoundingClientRect().width > 20).length].join();
     };
     const point = (target, share) => {
       const r = target.getBoundingClientRect();
@@ -3170,6 +3191,49 @@ try {
     out.card.roomTime = snap().time;
     out.card.geo = geo();
     out.card.stageTime = getComputedStyle(document.getElementById("timr")).display !== "none" && getComputedStyle(document.getElementById("prgbar")).display !== "none";
+    // while the room's song stalls (body.yt-stalled), reload comes back in the bar's tools, tinted with a
+    // ring, after a moment (a song that's only loading never flashes it; out of the tab order meanwhile),
+    // and goes when it plays again; never while the browser holds the sound back (media-blocked: play is
+    // the fix), with media playback off, or for a playlist preview's video (preview-stalled): reloading the
+    // room's song can't help there. Nothing else moves. (The site's own media state is held still meanwhile.)
+    const media = firetable.media, refresh = media.refresh, held = ["yt-stalled", "media-blocked", "media-off", "preview-stalled"];
+    const had = held.map((c) => document.body.classList.contains(c));
+    media.refresh = () => {};
+    clearTimeout(media._stallTimer);
+    const reload = document.getElementById("reloadtrack");
+    const shown = () => !!reload.closest("#dMini") && reload.checkVisibility({ opacityProperty: true }) && reload.getBoundingClientRect().width > 20;
+    document.body.classList.remove("media-blocked", "yt-stalled");
+    await wait(100);
+    out.stall = { room: /is-room/.test(el().className), rest: !shown() };
+    document.body.classList.add("yt-stalled");
+    await wait(600);
+    out.stall.soon = shown();
+    out.stall.untabbable = getComputedStyle(reload).visibility === "hidden" && getComputedStyle(reload).display !== "none";
+    await wait(3200);
+    const tone = document.createElement("i");
+    tone.style.color = "var(--pb-tone)";
+    el().appendChild(tone);
+    out.stall.later = shown();
+    out.stall.ring = /inset/.test(getComputedStyle(reload).boxShadow) && getComputedStyle(reload).color === getComputedStyle(tone).color;
+    tone.remove();
+    out.stall.geo = geo();
+    document.body.classList.remove("yt-stalled");
+    await wait(100);
+    out.stall.gone = !shown();
+    document.body.classList.add("yt-stalled", "media-blocked");
+    await wait(3600);
+    out.stall.blocked = shown();
+    // the others take it out of the bar at once (only the stall's own rule brings it in): stalled alone, then with each
+    document.body.classList.remove("media-blocked");
+    out.stall.others = [null, "media-off", "preview-stalled"].map((c) => {
+      if (c) document.body.classList.add(c);
+      const d = getComputedStyle(reload).display;
+      if (c) document.body.classList.remove(c);
+      return d;
+    }).join();
+    held.forEach((c, i) => document.body.classList.toggle(c, had[i]));
+    media.refresh = refresh;
+    refresh();
     firetable.discover.onFailed = skip;
     return out;
   });
@@ -3193,8 +3257,12 @@ try {
     "the bar shows time and progress except in Live on the room's song, where the stage already shows them (" + JSON.stringify({ room: bar.room.time, disc: bar.disc.time, live: bar.live.time, card: bar.card }) + ")");
 
   const geos = [bar.room.geo, bar.disc.geo, bar.live.geo, bar.stopped.geo, bar.back.geo, bar.card.geo];
-  check(geos.every((g) => g === geos[0]) && /^(-1|0|1),/.test(geos[0]) && !/-1$|,-1,/.test(geos[0]),
-    "one layout whatever plays: play in the bar's middle at one height, and reload, cast, volume and full screen where they were (" + JSON.stringify(geos) + ")");
+  check(geos.every((g) => g === geos[0]) && /^(-1|0|1),/.test(geos[0]) && !/,-1,/.test(geos[0]) && /,reloads 0$/.test(geos[0]),
+    "one layout whatever plays: play in the bar's middle at one height, cast, volume and full screen where they were, and reload out of the tools at rest (" + JSON.stringify(geos) + ")");
+  check(bar.stall.room && bar.stall.rest && !bar.stall.soon && bar.stall.untabbable && bar.stall.later && bar.stall.ring && bar.stall.gone && !bar.stall.blocked && bar.stall.geo === bar.card.geo.replace(/reloads 0$/, "reloads 1"),
+    "while the room's song stalls, reload shows in the bar after a moment (out of sight and the tab order till then), tinted with a ring, with cast, volume, full screen and play where they were; it goes when the song plays, and never shows while the browser holds the sound back (" + JSON.stringify({ stall: bar.stall, rest: bar.card.geo }) + ")");
+  check(bar.stall.others === "flex,none,none",
+    "nor with media playback off in Settings, nor when it's a playlist preview's video that stopped: reloading the room's song can't help there (" + bar.stall.others + ")");
   check(bar.edge.wide && bar.edge.top && bar.edge.line === 3 && bar.edge.order === "d-prev,pb-main,d-next",
     "the progress is a line along the bar's whole top edge, and the transport is previous, play, next (" + JSON.stringify(bar.edge) + ")");
   check(bar.edge.tip === "1:40" && bar.edge.drag === "25%|true|0:50" && bar.edge.let && bar.live.noTip,
@@ -3214,6 +3282,34 @@ try {
     document.querySelector("#dBrowse .ft-cards .pvbar .d-play").click();
     await wait(400);
     const out = { disc: off(), chip: (document.querySelector("#pv-switch .pb-otherdo") || {}).textContent };
+    // the pick stalls: its reload comes into the bar's tools after a moment, tinted with a ring, even if the
+    // bar is drawn again meanwhile (the room changing), and nothing else moves: play in the middle, cast,
+    // volume and full screen where they were; it goes when the song plays (Round 5). The site's own media
+    // state is held still meanwhile, as it is.
+    const media = firetable.media, refresh = media.refresh;
+    media.refresh = () => {};
+    clearTimeout(media._stallTimer);
+    const at = () => [off(), ...["#st-cast", "#dMini .d-mute", "#fullscreenBtn"].map((s) => Math.round(document.querySelector(s).getBoundingClientRect().left))].join();
+    const reload = () => document.querySelector("#dMini .d-reload");
+    const shown = () => !!reload() && reload().checkVisibility({ opacityProperty: true }) && reload().getBoundingClientRect().width > 20;
+    document.body.classList.remove("yt-stalled", "media-blocked");
+    await wait(100);
+    out.stall = { rest: at(), resting: !shown() };
+    document.body.classList.add("yt-stalled");
+    await wait(1500);
+    ftapi.events.emit("tableChanged", firetable.tableData);
+    await wait(2200);
+    out.stall.shown = shown();
+    out.stall.ring = !!reload() && /inset/.test(getComputedStyle(reload()).boxShadow);
+    out.stall.at = at();
+    // with media playback off in Settings it can't help: it goes
+    document.body.classList.add("media-off");
+    out.stall.mediaOff = getComputedStyle(reload()).display;
+    document.body.classList.remove("media-off", "yt-stalled");
+    await wait(100);
+    out.stall.gone = !shown();
+    media.refresh = refresh;
+    refresh();
     document.querySelector('#modeTabs [data-mode="live"]').click();
     await wait(500);
     // a pick in Live: the stage's screen stays up while it plays, so its button steps out of the bar
@@ -3230,6 +3326,8 @@ try {
   await dPage.setViewportSize(barSize);
   check(middle1440.disc === 0 && middle1440.live === 0 && middle1440.room === 0 && middle1440.chip === "Listen live",
     "at 1440 play is in the bar's middle with a pick in Discover and in Live, beside LISTEN LIVE, and on the room (" + JSON.stringify(middle1440) + ")");
+  check(middle1440.stall.resting && middle1440.stall.shown && middle1440.stall.ring && middle1440.stall.at === middle1440.stall.rest && /^0,/.test(middle1440.stall.rest) && middle1440.stall.gone && middle1440.stall.mediaOff === "none",
+    "at 1440 a pick that stalls gets its reload in the bar after a moment, with a ring, even when the bar is drawn again meanwhile; play stays in the middle and cast, volume and full screen where they were, and it goes when the song plays or media playback is turned off (" + JSON.stringify(middle1440.stall) + ")");
   check(middle1440.pick && !middle1440.screen && middle1440.roomScreen,
     "the stage's screen button is in the bar while you hear the room in Live, not while a pick plays there (the stage's screen stays up then) (" + JSON.stringify(middle1440) + ")");
 
@@ -3252,8 +3350,11 @@ try {
     out.open = { shown: !el.hidden, on: document.body.classList.contains("pv-full-on"), inert: document.getElementById("mainGrid").inert, dialog: el.getAttribute("role") + "/" + el.getAttribute("aria-modal"),
       covers: Math.round(r.width) === innerWidth && Math.round(r.height) === innerHeight, logo: !!logo && /idlogo2/.test(getComputedStyle(logo).backgroundImage) && logo.offsetParent !== null,
       focus: document.activeElement && document.activeElement.id, state: firetable.discover.state().full };
-    out.disc = { cls: el.className, title: document.getElementById("pv-ftitle").textContent,
-      transport: ["d-prev", "pvf-main", "d-next", "d-reload"].filter((c) => el.querySelector("#pv-ftransport ." + c)).length, seek: !document.getElementById("pv-fseek").disabled,
+    // the transport is previous, play and next (and shuffle); reload is at the top with the screen and cast (Round 5), the song's own
+    const top = () => [...el.querySelectorAll(".pvf-tools :is(#screenControl, #reloadtrack, .d-reload, #st-cast, #pv-ffs, #pv-fclose)")]
+      .filter((b) => getComputedStyle(b).display !== "none").map((b) => b.id || "d-reload").join();
+    out.disc = { cls: el.className, title: document.getElementById("pv-ftitle").textContent, top: top(),
+      transport: [...el.querySelectorAll("#pv-ftransport > button")].map((b) => (b.className.match(/d-prev|pvf-main|d-next|d-shuffle|reload/) || ["?"])[0]).join(), seek: !document.getElementById("pv-fseek").disabled,
       acts: !!el.querySelector("#pv-fkeep .d-savebtn") && !!el.querySelector("#pv-fkeep .d-toroom") && !!el.querySelector("#pv-facts .d-more"),
       next: document.getElementById("pv-fnext").textContent, noSide: !el.querySelector("#pv-fside, #pv-ftabs, .pvf-side"), theme: document.getElementById("pv-ftheme").textContent, noBars: !el.querySelector("#pv-feq, .pvf-eq") };
     const was = el.classList.contains("is-paused");
@@ -3264,7 +3365,7 @@ try {
     await wait(100);
     // the stage's screen button is in the player; V turns the screen on: the video behind the words
     out.screenHere = !!document.getElementById("screenControl").closest("#pv-fscreen");
-    out.castHere = !!document.getElementById("st-cast").closest("#pv-fscreen");
+    out.castHere = !!document.getElementById("st-cast").closest("#pv-fcast");
     const key = (k) => document.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
     key("v");
     await wait(800);
@@ -3326,7 +3427,9 @@ try {
     out.live.mainTitle = (el.querySelector(".pvf-main") || {}).title === out.live.main + " (Space)";
     out.live.same = out.live.main === document.querySelector("#dMini .pb-main").getAttribute("aria-label");
     out.live.noSkipping = !el.querySelector("#pv-ftransport .d-prev, #pv-ftransport .d-next") && document.getElementById("pv-fseek").disabled;
-    out.live.reload = !!el.querySelector(".pvf-reloadroom");
+    // the room's reload is the stage's own, at the top beside the screen (it was a stand-in beside Stop)
+    out.live.top = top();
+    out.live.reload = !!document.getElementById("reloadtrack").closest("#pv-fscreen") && !el.querySelector("#pv-ftransport [class*=reload], .pvf-reloadroom");
     firetable.discover.closeFull();
     await wait(600);
     out.live.back = document.getElementById("fire").parentElement.id;
@@ -3337,8 +3440,10 @@ try {
   check(full.open.shown && full.open.on && full.open.inert && full.open.dialog === "dialog/true" && full.open.covers && full.open.state && full.open.focus === "pv-fclose",
     "the bar's button opens the full-screen player over the whole page, as a dialog with the page behind it inert (" + JSON.stringify(full.open) + ")");
   check(full.open.logo, "the :id: logo is on the full-screen player");
-  check(/is-discover/.test(full.disc.cls) && full.disc.title === "First Single" && full.disc.transport === 4 && full.disc.seek && full.disc.acts && full.disc.toggled && full.disc.noBars,
-    "a Discover song in full: previous, play, next, reload, seek, Save, Play it in the room, ⋮, and no made-up level bars (" + JSON.stringify(full.disc) + ")");
+  check(/is-discover/.test(full.disc.cls) && full.disc.title === "First Single" && full.disc.transport === "d-prev,pvf-main,d-next,d-shuffle" && full.disc.seek && full.disc.acts && full.disc.toggled && full.disc.noBars,
+    "a Discover song in full: previous, play, next and shuffle, seek, Save, Play it in the room, ⋮, and no made-up level bars (" + JSON.stringify(full.disc) + ")");
+  check(/^screenControl,d-reload,st-cast,(pv-ffs,)?pv-fclose$/.test(full.disc.top) && /^screenControl,reloadtrack,st-cast,(pv-ffs,)?pv-fclose$/.test(full.live.top),
+    "reload is at the full-screen player's top, not beside play: screen · reload · cast · fill · close, the song's own for a pick, the stage's for the room (" + JSON.stringify({ disc: full.disc.top, live: full.live.top }) + ")");
   check(full.disc.noSide && /^NextUnplayed/i.test(full.disc.next) && /Play now/.test(full.disc.next) && /The room.*Listen live$/i.test(full.disc.next) && /smoke tests/.test(full.disc.theme),
     "no side panel: under the song, the next one (Play now) and the room (Listen live); the room's theme at the top (" + JSON.stringify({ next: full.disc.next, theme: full.disc.theme }) + ")");
   check(full.screenHere && full.video.cls && full.video.body && full.video.stage && full.video.under && full.video.screen && full.video.down && full.video.upWhileStalled && full.video.saved === "on" && full.audio,
@@ -3354,7 +3459,7 @@ try {
   check(full.closed.hidden && !full.closed.on && !full.closed.inert && full.closed.fire === "pv-livekeep" && full.closed.focus && full.fKey,
     "Escape closes it into the bar (the stage's buttons go back there, focus to the button that opened it); F opens it (" + JSON.stringify(full.closed) + ")");
   check(full.live.shown && full.live.label === "Full-screen player" && full.live.open && /is-room|is-quiet/.test(full.live.cls) && full.live.noSkipping && /^(Stop listening to the room|Listen live)$/.test(full.live.main || "") && full.live.mainTitle && full.live.same && full.live.reload && full.live.back === "pv-livekeep" && full.live.bar,
-    "in Live, the bar's full-screen button opens it for the room: no skipping or seeking, the same big button as the bar, reload; closed, the buttons go back to the bar (" + JSON.stringify(full.live) + ")");
+    "in Live, the bar's full-screen button opens it for the room: no skipping or seeking, the same big button as the bar, the stage's reload at the top; closed, the buttons go back to the bar (" + JSON.stringify(full.live) + ")");
 
   console.log("-- The full-screen player on a phone: one action, the transport and More");
   const desk = dPage.viewportSize();
@@ -3367,7 +3472,9 @@ try {
     await wait(600);
     const el = document.getElementById("pv-full");
     const shown = () => [...el.querySelectorAll("button, a.butt")].filter((b) => b.offsetParent !== null && getComputedStyle(b).visibility !== "hidden" && !b.closest(".pvf-next, .pvf-drawer, .pvf-title, .pvf-src")).length;
-    const out = { before: shown() };
+    // reload is at the top on a phone too, with the screen and cast (it was behind More)
+    const reload = [...el.querySelectorAll(".pvf-tools :is(#reloadtrack, .d-reload)")].find((b) => b.offsetParent !== null);
+    const out = { before: shown(), reloadTop: !!reload };
     el.querySelector(".pvf-morebtn").click();
     await wait(100);
     out.after = shown();
@@ -3377,8 +3484,8 @@ try {
     return out;
   });
   await dPage.setViewportSize(desk);
-  check(phoneFull.before <= 8 && phoneFull.after > phoneFull.before && phoneFull.expanded === "true",
-    "on a phone it's quiet: a few buttons, and More shows the rest (" + JSON.stringify(phoneFull) + ")");
+  check(phoneFull.before <= 8 && phoneFull.after > phoneFull.before && phoneFull.expanded === "true" && phoneFull.reloadTop,
+    "on a phone it's quiet: a few buttons (reload among the screen and cast at the top), and More shows the rest (" + JSON.stringify(phoneFull) + ")");
 
   console.log("-- Live on a phone: the DJ stands at the stage's right, beside the song, on a shorter stage");
   const deskSide = await dPage.evaluate(async () => {
@@ -3522,15 +3629,37 @@ try {
     localStorage.setItem("ft-crate", "[]");
     document.querySelector("#dBrowse .d-saveall").click();
     out.saved = JSON.parse(localStorage.getItem("ft-crate") || "[]").map((t) => t.t).join();
+    // (the test's videos aren't real: keep the player from skipping past them)
+    const skip = firetable.discover.onFailed;
+    firetable.discover.onFailed = () => {};
     document.querySelector("#dBrowse .d-playall").click();
     await wait(200);
     out.playing = firetable.discover.state().list + ":" + firetable.discover.state().playing;
     firetable.discover.openFull();
     await until(() => document.querySelector("#pv-ftags .d-tag"));
     out.source = [...document.querySelectorAll("#pv-ftags .d-tag")].map((e) => e.textContent).includes("YouTube");
+    // a pick's reload: at the full-screen player's top, and in its ⋮ (only the song playing in the bar's);
+    // the bar's tools keep theirs out of sight until the song stalls (Round 5; checked with the bar above)
+    const fullReload = document.querySelector("#pv-fdtools .d-reload");
+    out.reload = { top: !!fullReload && fullReload.offsetParent !== null, name: fullReload && fullReload.getAttribute("aria-label") + "|" + fullReload.title };
     firetable.discover.closeFull();
     await wait(500);
-    out.reload = !!document.querySelector("#dMini .d-reload");
+    const other = [...document.querySelectorAll("#dBrowse .ft-rows .pvbar[data-list]")].find((r) => r.getAttribute("data-i") !== String(firetable.discover.state().i));
+    other.querySelector(".d-more").click();
+    await wait(100);
+    out.reload.notOther = !document.querySelector('#dMenu [data-act="reload"]');
+    document.querySelector("#dMini .pb-main").click(); // pause it, so playing again shows
+    await wait(100);
+    const playing = firetable.discover.state().playing;
+    out.reload.paused = /is-paused/.test(document.getElementById("dMini").className);
+    document.querySelector("#dMini .d-more").click();
+    await wait(100);
+    const item = document.querySelector('#dMenu [data-act="reload"]');
+    out.reload.menu = item ? item.querySelector("span").textContent : "none";
+    if (item) item.click();
+    await wait(200);
+    out.reload.again = [/is-paused/.test(document.getElementById("dMini").className), firetable.discover.state().playing === playing, document.getElementById("dMenu").hidden].join();
+    firetable.discover.onFailed = skip;
     localStorage.setItem("ft-crate", "[]");
     location.hash = "#discover/themes/nT2";
     await until(() => document.querySelectorAll("#dBrowse .ft-rows .pvbar").length === 100);
@@ -3544,7 +3673,10 @@ try {
   check(extras.nights === "Italo Night" && extras.night === "Italo Night|3|#discover/themes/nT1", "theme nights, and a night's songs in order (" + extras.nights + " / " + extras.night + ")");
   check(extras.saved === "One,Two,Three", "Save all puts a whole list in the crate (" + extras.saved + ")");
   check(extras.savedLong === 100, "Save all saves every song on screen, not just the first 50 (" + extras.savedLong + " of 100)");
-  check(extras.playing === "night:night00001" && extras.source && extras.reload, "Play the night; the player names the source and can reload (" + JSON.stringify(extras) + ")");
+  check(extras.playing === "night:night00001" && extras.source && extras.reload.top && extras.reload.notOther && extras.reload.menu === "Reload audio" && extras.reload.paused && extras.reload.again === "false,true,true",
+    "Play the night; the player names the source and can reload it: at the full-screen player's top and in the playing song's ⋮ (not another's) (" + JSON.stringify(extras) + ")");
+  check(extras.reload.name === "Reload audio|Reload audio (if it stalls)",
+    "a pick's reload has the one name, Reload audio, as in its ⋮ and the room's (" + extras.reload.name + ")");
 
   console.log("-- Charts: the period as one control, two drop-downs, Play the chart, Save as playlist, Share; tied songs share a rank");
   await put("/discover/charts/week/2026-W46", { at: now, from: now - 3 * 86400000, to: now + 4 * 86400000, plays: 20, djs: 2, rows: [
@@ -3598,11 +3730,16 @@ try {
   await dPage.evaluate(async () => { location.hash = "#discover/charts"; await new Promise((r) => setTimeout(r, 400)); });
   await dPage.click("#dBrowse .d-share");
   const shareItems = await dPage.$$eval("#dMenu .d-menuitem span", (els) => els.map((e) => e.textContent).join("|"));
+  // the picture is drawn by js/chart-image.js, loaded the first time one is made, not with the page
+  const imageScript = () => dPage.evaluate(() => !!document.querySelector('script[src*="js/chart-image.js"]'));
+  const imageBefore = await imageScript();
   const [download] = await Promise.all([dPage.waitForEvent("download", { timeout: 15000 }).catch(() => null), dPage.click('#dMenu [data-share="image"]')]);
   const png = download ? await download.createReadStream().then((st) => new Promise((ok) => { const parts = []; st.on("data", (d) => parts.push(d)); st.on("end", () => ok(Buffer.concat(parts))); })) : null;
   check(shareItems === "Copy a link|Save as an image|Put it on your site", "the chart's share menu (" + shareItems + ")");
   check(!!(png && png.length > 20000 && png.slice(1, 4).toString() === "PNG" && png.readUInt32BE(16) === 1080 && png.readUInt32BE(20) === 1350),
     "Save as an image makes a 1080 × 1350 picture of the chart (" + (download ? download.suggestedFilename() + ", " + (png ? png.length : 0) + " bytes" : "no download") + ")");
+  check(!imageBefore && await imageScript() && /^room-chart-2026-W45\.png$/.test(download ? download.suggestedFilename() : ""),
+    "the picture's script loads the first time one is made, not with the page, and names the file after the chart (" + (download ? download.suggestedFilename() : "no download") + ")");
   await dPage.click("#dBrowse .d-share");
   await dPage.click('#dMenu [data-share="embed"]');
   const embedCode = await dPage.$eval("#dEmbedBox textarea", (el) => el.value).catch(() => "");
@@ -3614,12 +3751,15 @@ try {
   await openPage(embed, SITE + "embed/chart/?period=week");
   await embed.waitForFunction(() => document.querySelectorAll("#chart li").length > 0, null, { timeout: 15000 }).catch(() => {});
   const shown = await embed.evaluate(() => ({
+    // its ranks and plays in Inter with equal-width digits, like the site's (Round 5: they were Roboto Mono)
+    type: [".e-n", ".e-plays"].map((sel) => { const c = getComputedStyle(document.querySelector("#chart " + sel)); return c.fontFamily.split(",")[0].replace(/["']/g, "") + " " + c.fontVariantNumeric; }).join(),
     rows: [...document.querySelectorAll("#chart .e-song b")].map((e) => e.textContent).join(),
     head: (document.querySelector("#chart header p") || {}).textContent,
     links: [...document.querySelectorAll("#chart a")].every((a) => a.target === "_blank")
   }));
   await embed.close();
-  check(shown.rows === "Song,Song,First Single" && /^Week 45/.test(shown.head || "") && shown.links, "the embed shows the latest week's chart, every link opening the room (" + JSON.stringify(shown) + ")");
+  check(shown.rows === "Song,Song,First Single" && /^Week 45/.test(shown.head || "") && shown.links && shown.type === "Inter tabular-nums,Inter tabular-nums",
+    "the embed shows the latest week's chart, every link opening the room, its numbers in Inter with equal-width digits (" + JSON.stringify(shown) + ")");
 
   console.log("-- Discover: one search for both sides");
   const search = await dPage.evaluate(async () => {
@@ -3762,6 +3902,30 @@ try {
   check(join.open && join.inside && join.form === "logscreen" && join.focused === "loginemail" && join.stillDiscover,
     "Log in opens the form in a dialog, on Discover (" + JSON.stringify(join) + ")");
   check(join.words === "Join|Create account|Create account", "the crate's door says Join; the dialog's tab and button still say Create account (" + join.words + ")");
+  // the one filled sign-up button (Round 5, November 25, 2026): Join is the accent's own fill, as big as the
+  // dialog's (44px), its words at least 4.5:1, in the dark and in light mode
+  const doorLook = (sel) => dPage.evaluate(async (sel) => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const lum = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); })
+      .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const root = document.documentElement, was = root.getAttribute("data-look"), out = {};
+    for (const look of ["dark", "light"]) {
+      if (look === "light") root.setAttribute("data-look", "light"); else root.removeAttribute("data-look");
+      await wait(300); // a button's colours ease over 140ms
+      const b = document.querySelector(sel), probe = document.createElement("i");
+      probe.style.background = "var(--color-accent)";
+      b.parentElement.appendChild(probe);
+      const c = getComputedStyle(b), accent = getComputedStyle(probe).backgroundColor, x = lum(c.color), y = lum(c.backgroundColor);
+      probe.remove();
+      out[look] = { shown: b.offsetParent !== null, fill: c.backgroundColor === accent, contrast: Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 10) / 10, h: Math.round(b.getBoundingClientRect().height) };
+    }
+    if (was) root.setAttribute("data-look", was); else root.removeAttribute("data-look");
+    await wait(300);
+    return out;
+  }, sel);
+  const crateDoor = await doorLook("#dSide .d-createaccount");
+  check(["dark", "light"].every((l) => crateDoor[l].shown && crateDoor[l].fill && crateDoor[l].contrast >= 4.5 && crateDoor[l].h >= 44),
+    "the crate's Join is the one filled gold button, 44px, its words readable on it in the dark and in light mode (" + JSON.stringify(crateDoor) + ")");
 
   console.log("-- Join or log in from the header, on Discover and in Live");
   const header = await dPage.evaluate(async () => {
@@ -3778,6 +3942,13 @@ try {
     await wait(200);
     out.discover.open = dlg.open;
     out.discover.form = ["createscreen", "logscreen"].filter((id) => !document.getElementById(id).hidden).join();
+    // in the dialog, Create account is the same action as Join: filled gold; Log in and Send reset link stay dark
+    const probe = document.createElement("i");
+    probe.style.background = "var(--color-accent)";
+    dlg.appendChild(probe);
+    const accent = getComputedStyle(probe).backgroundColor, fill = (id) => getComputedStyle(document.getElementById(id)).backgroundColor === accent;
+    probe.remove();
+    out.discover.fills = [fill("createAccountBttn"), fill("loginBttn"), fill("resetPassBttn"), fill("nav-signin")].join();
     out.discover.title = document.getElementById("joinTitle").textContent;
     document.getElementById("loginlink").click();
     out.discover.retitled = document.getElementById("joinTitle").textContent;
@@ -3808,6 +3979,13 @@ try {
   check(header.live.shown && header.live.open && header.live.inside && header.live.focused === "newemail" && header.live.welcome && header.live.welcomeOpens && header.live.welcomeWords === "Join",
     "in Live the header and the welcome's Join open the same dialog; Live has no form of its own (" + JSON.stringify(header.live) + ")");
   check(header.named === "Join or log in|Join or log in", "the header's Join is named Join or log in, and its tooltip says the same (" + header.named + ")");
+  check(header.discover.fills === "true,false,false,false",
+    "the dialog's Create account is filled gold like Join; Log in, Send reset link and the header's Join or log in are not, so a screen has one (" + header.discover.fills + ")");
+  await dPage.evaluate(async () => { document.querySelector('#modeTabs [data-mode="live"]').click(); await new Promise((r) => setTimeout(r, 300)); });
+  const welcomeDoor = await doorLook("#welcomeInfo .au-join .d-join .d-createaccount");
+  await dPage.evaluate(async () => { document.querySelector('#modeTabs [data-mode="discover"]').click(); await new Promise((r) => setTimeout(r, 200)); });
+  check(["dark", "light"].every((l) => welcomeDoor[l].shown && welcomeDoor[l].fill && welcomeDoor[l].contrast >= 4.5 && welcomeDoor[l].h >= 44),
+    "Live's welcome's Join is the one filled gold button, 44px, its words readable on it in the dark and in light mode (" + JSON.stringify(welcomeDoor) + ")");
 
   console.log("-- Discover: Genres opens on its grid; the sound map is behind Map (js/discover-map.js, loaded the first time)");
   // the room's song, as this page knows it, is one whose library record says Nu-Disco (put back after);
@@ -4140,20 +4318,23 @@ try {
   check(locked.cards > 0 && locked.cards <= 3, "Cards shows the latest cards (" + locked.cards + ")");
   check(locked.back.form && locked.back.pane, "Join brings the welcome back (" + JSON.stringify(locked.back) + ")");
 
-  // the bar's tools keep one order: screen and cast go into the full-screen player and come back
+  // the bar's tools keep one order: screen, reload and cast go into the full-screen player's top, in that
+  // order (with a pick's own reload where the room's is), and come back
   const toolOrder = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const ids = () => [...document.querySelectorAll("#dMini .pb-side :is(#screenControl, #reloadtrack, #st-cast, #pv-vol, #fullscreenBtn)")].map((b) => b.id).join();
-    const out = [ids()];
+    const top = () => [...document.querySelectorAll("#pv-full .pvf-tools :is(#screenControl, #reloadtrack, .d-reload, #st-cast, #pv-ffs, #pv-fclose)")].map((b) => b.id || "d-reload").join();
+    const out = { bar: [ids()], full: [] };
     for (let i = 0; i < 2; i++) {
       firetable.discover.openFull(); await wait(300);
+      out.full.push(top());
       firetable.discover.closeFull(); await wait(300);
-      out.push(ids());
+      out.bar.push(ids());
     }
     return out;
   });
-  check(toolOrder.every((o) => o === "screenControl,reloadtrack,st-cast,pv-vol,fullscreenBtn"),
-    "the bar's tools stay in one order through the full-screen player and back: screen, reload, cast, volume, full screen (" + JSON.stringify(toolOrder) + ")");
+  check(toolOrder.bar.every((o) => o === "screenControl,reloadtrack,st-cast,pv-vol,fullscreenBtn") && toolOrder.full.every((o) => /^screenControl,reloadtrack,(d-reload,)?st-cast,pv-ffs,pv-fclose$/.test(o)),
+    "the stage's tools keep one order through the full-screen player and back: in the bar screen, reload, cast, volume, full screen; at the player's top screen, reload, cast, fill, close (" + JSON.stringify(toolOrder) + ")");
 
   // Fresh beside the welcome (640px and up): a visitor has no Fresh tab to choose, so it loads when it's on screen
   const fPage = await context.newPage();
@@ -4201,7 +4382,19 @@ try {
   await sleep(600);
   const listenPhone = await listenAt(qPage);
   const herePhone = await hereAt(qPage);
+  // Fresh on a visitor's phone: Join or log in is a gold button in the words made for the gold (they were gold on its gold)
+  const miniJoin = await qPage.evaluate(async () => {
+    firetable.nav.setMobileTab("mm-discover");
+    await new Promise((r) => setTimeout(r, 500));
+    const b = document.getElementById("minijoin"), c = getComputedStyle(b);
+    const lum = (s) => s.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); })
+      .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const x = lum(c.color), y = lum(c.backgroundColor);
+    return { shown: b.offsetParent !== null, color: c.color, bg: c.backgroundColor, contrast: Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 10) / 10 };
+  });
   await qContext.close();
+  check(miniJoin.shown && miniJoin.color !== miniJoin.bg && miniJoin.contrast >= 4.5,
+    "Fresh's Join or log in on a visitor's phone: its words stand out from its gold (" + JSON.stringify(miniJoin) + ")");
   check(hereWide.shown && hereWide.rows >= 2 && hereWide.djsFirst && Number(hereWide.count) >= 1 && hereWide.pressable === 0 && hereWide.clear && !hereWide.pulse,
     "a visitor's Live on a computer lists who is in the room in the left column, DJs first, nothing to press, under the header (" + JSON.stringify(hereWide) + ")");
   check(!herePhone.shown && herePhone.pulse, "on a phone the line of faces above Join says it instead (" + JSON.stringify(herePhone) + ")");

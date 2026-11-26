@@ -115,8 +115,9 @@ const FEATURES = [
   { row: "ST-05", name: "Screen: video, art, off", who: ALL, widths: WIDE, target: "#screenControl" },
   { row: "ST-05", name: "Screen: video, art, off (phone: in the full-screen player)", who: ALL, widths: PHONE, via: full, target: "#screenControl" },
   { row: "ST-06", name: "Volume", who: ALL, widths: WIDE, target: "#pv-vol" },
-  { row: "ST-07", name: "Reload audio", who: ALL, widths: WIDE, target: "#reloadtrack" },
-  { row: "ST-07", name: "Reload audio (phone: the full-screen player's More)", who: ALL, widths: PHONE, via: fullMore, target: '#pv-full [aria-label="Reload the room\'s audio"]' },
+  // the room's reload: at the full-screen player's top, with its screen and cast (Round 5: the bar shows it only while a song stalls)
+  { row: "ST-07", name: "Reload audio (the full-screen player)", who: ALL, widths: WIDE, via: ["#fullscreenBtn"], target: "#pv-full #reloadtrack" },
+  { row: "ST-07", name: "Reload audio (phone: the full-screen player)", who: ALL, widths: PHONE, via: full, target: "#pv-full #reloadtrack" },
   { row: "ST-08", name: "Full screen", who: ALL, widths: WIDE, via: ["#fullscreenBtn"], target: "#pv-full" },
   { row: "ST-08", name: "Full screen (phone: tap the bar)", who: ALL, widths: PHONE, via: full, target: "#pv-full" },
   { row: "ST-08b", name: "Play on a speaker or TV", who: ALL, widths: WIDE, via: ["#st-cast"], target: "#st-castWays" },
@@ -214,7 +215,11 @@ const FEATURES = [
   { row: "DI-19", name: "A cover's ⋮ (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", via: ["#dBrowse .d-compact .pvbar .d-more"], target: "#dMenu" },
   { row: "DI-01", name: "A cover's save (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", target: "#dBrowse .d-compact .pvbar .histeal" },
   { row: "DI-17", name: "Members' playlist beside the player", who: IN, widths: WIDE, mode: "discover", target: "#dSide" },
-  { row: "DI-15", name: "Visitors' crate", who: ["visitor"], widths: WIDE, mode: "discover", target: "#dSide" }
+  { row: "DI-15", name: "Visitors' crate", who: ["visitor"], widths: WIDE, mode: "discover", target: "#dSide" },
+  // last, as it leaves a Discover pick playing: a pick's reload is in its ⋮ (the bar's on computers; on
+  // phones the full-screen player's, behind More), as the bar shows its own only while the song stalls
+  { row: "ST-07", name: "Reload audio (a playing pick's ⋮)", who: ALL, widths: WIDE, mode: "discover", via: ["#dBrowse .d-leadacts .d-playall", "#dMini .d-more"], target: '#dMenu [data-act="reload"]' },
+  { row: "ST-07", name: "Reload audio (phone: a playing pick's ⋮, in the full-screen player's More)", who: ALL, widths: PHONE, mode: "discover", via: ["#dBrowse .ft-cards .pvbar .d-play", ...fullMore, "#pv-facts .d-more"], target: '#dMenu [data-act="reload"]' }
 ].filter((f) => !ONLY || ONLY.some((o) => f.row.startsWith(o)));
 
 // ── the room ────────────────────────────────────────────────────────────────

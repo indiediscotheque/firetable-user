@@ -206,7 +206,8 @@
     --col-left: 24vw;
     --col-mid: min(46vw, 56rem);
 
-    /* Numbers (times, counts) use the site's second face, so they line up */
+    /* Code and keys (the shortcuts, the embed code) in the site's second face;
+       numbers in text use the text's own type with tabular-nums (Round 5) */
     --font-numbers: "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 
@@ -3578,7 +3579,6 @@ input.ft-filter {
     min-width: 1.6rem;
     margin-left: var(--pad2);
     color: var(--color-text-muted);
-    font-family: var(--font-numbers);
     font-size: var(--fs-micro);
     font-variant-numeric: tabular-nums;
     text-align: right;
@@ -3741,8 +3741,8 @@ input.ft-filter {
     border-radius: 999px;
     background: var(--color-danger);
     color: #fff;
-    font-family: var(--font-numbers);
     font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
     font-weight: 700;
     line-height: 1;
     pointer-events: none;
@@ -5624,7 +5624,9 @@ img.emoji,
     display: none !important;
 }
 
-#minidiscover, #minijoin {
+/* (Fresh's Join or log in, #minijoin, is a gold .butt with its own words colour,
+   --color-on-accent: they were gold on its gold) */
+#minidiscover {
     color: var(--color-accent);
     cursor: pointer;
 }
@@ -8222,7 +8224,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
   & .modalContent > :not(#plIndexList) { flex: none; }
 }
 .plx-total {
-  font-family: var(--font-numbers); font-size: var(--fs-meta); font-weight: 500;
+  font-size: var(--fs-meta); font-variant-numeric: tabular-nums; font-weight: 500;
   color: var(--color-text-muted);
   &:empty { display: none; }
 }
@@ -8322,12 +8324,12 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
 }
 .plx-meta {
   display: flex; flex-wrap: wrap; align-items: center; gap: 0 .6rem; padding: 0 .45rem;
-  font-family: var(--font-numbers); font-size: var(--fs-meta); color: var(--color-text-muted);
+  font-size: var(--fs-meta); font-variant-numeric: tabular-nums; color: var(--color-text-muted);
   white-space: nowrap; min-width: 0;
   & .plx-flagged { color: var(--color-flagged); }
   & .plx-swaps { color: var(--color-accent); }
   & .plx-tag {
-    font-family: var(--font-family); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em;
+    font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em;
     text-transform: uppercase; color: var(--color-text-subtle);
     padding: 0 .35rem; border: 1px solid var(--plx-line); border-radius: var(--radius-sm);
   }
@@ -8679,16 +8681,13 @@ html body .is-saved :is(i, .material-symbols-outlined, .material-symbols-filled)
     font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Times, counts and timers in the numbers face */
-.themeTimr,
+/* Times, counts and timers in the text's own type, with equal-width digits
+   so a column of them stays straight (Round 5: they were Roboto Mono; the
+   stage's timers, .themeTimr, ask for the same in their own rule). Chat's
+   times too, like the people list's numbers. */
 .hist-timestamp,
 :is(#thediscovers, .ft-cards) .histdate,
-:is(#thediscovers, .ft-cards) .histtime {
-    font-family: var(--font-numbers);
-    font-variant-numeric: tabular-nums;
-}
-/* Chat's times are in the chat's own type, like the people list's numbers:
-   equal-width digits keep the column straight without a second typeface */
+:is(#thediscovers, .ft-cards) .histtime,
 .chatTime { font-variant-numeric: tabular-nums; }
 
 /* The preview player for "Previews play over the room": playing, out of sight */
@@ -8737,7 +8736,11 @@ html body .is-saved :is(i, .material-symbols-outlined, .material-symbols-filled)
    #joinBox), and one place for the account once you're in (the header avatar
    opens #nav-accountMenu: Profile, Account and sign-in, Settings, Log out). */
 
-/* Dark with gold text: a panel's main action (no big gold fills in new work) */
+/* Dark with gold text: a panel's main action (no big gold fills in new work,
+   but one: Round 5 lifted it for the one main sign-up action, Join and the
+   dialog's Create account, which are the filled gold .butt; Log in and Send
+   reset link stay dark, and the header's Join stays outlined, so a screen
+   has one filled sign-up button) */
 .butt.darkbutt {
     color: var(--color-accent);
     background: var(--color-bg-t3);
@@ -9038,8 +9041,8 @@ body:not(.is-mod) .helpMods { display: none; }
     border-radius: var(--radius-pill);
     background: var(--color-danger);
     color: #fff;
-    font-family: var(--font-numbers);
     font-size: var(--fs-label);
+    font-variant-numeric: tabular-nums;
     font-weight: 700;
     line-height: 1;
     pointer-events: none;

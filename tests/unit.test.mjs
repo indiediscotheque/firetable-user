@@ -997,6 +997,37 @@ test("a member's light mode and About are in the account menu at every width; a 
   assert.deepEqual(out, sizes.map(([w]) => w + ": visitor true,true member false,false,true turntable false"));
 });
 
+// The player bar shows its reload when YouTube stops on the song (yt-stalled), but not where
+// reloading the room's song can't help: the browser held it back (media-blocked), or what
+// stopped is a playlist preview's video (preview-stalled). css/discover.css reads these.
+test("the media state: YouTube stopped on the song, held back by the browser, or a playlist preview's video", async () => {
+  const r = await run(() => {
+    const m = firetable.media, body = document.body;
+    const was = { song: firetable.song, preview: firetable.preview, type: firetable.previewType, off: firetable.disableMediaPlayback,
+      state: m.ytState, error: m.ytError, tap: m.directTap, cls: body.className };
+    const at = (preview, state) => {
+      firetable.preview = preview;
+      firetable.previewType = preview ? MEDIA_YOUTUBE : null;
+      m.ytState = state;
+      m.refresh();
+      return ["yt-stalled", "media-blocked", "preview-stalled"].filter((c) => body.classList.contains(c)).join() || "none";
+    };
+    firetable.song = { type: MEDIA_YOUTUBE, cid: "abc", started: Date.now() };
+    firetable.disableMediaPlayback = false;
+    m.ytError = false;
+    m.directTap = false;
+    // the room's song: playing, buffering, ended early, paused; a preview's: ended, paused, then playing; a Discover pick's, paused
+    const out = [at(false, 1), at(false, 3), at(false, 0), at(false, 2), at("pl1", 0), at("pl1", 2), at("pl1", 1), at("discover", 2)];
+    m.ytError = true; // the room's video failed
+    out.push(at(false, -1));
+    Object.assign(firetable, { song: was.song, preview: was.preview, previewType: was.type, disableMediaPlayback: was.off });
+    Object.assign(m, { ytState: was.state, ytError: was.error, directTap: was.tap });
+    body.className = was.cls;
+    return out;
+  });
+  assert.deepEqual(r, ["none", "none", "yt-stalled", "yt-stalled,media-blocked", "yt-stalled,preview-stalled", "yt-stalled,preview-stalled", "none", "yt-stalled", "yt-stalled"]);
+});
+
 test("no page errors while the site loaded and ran these", () => {
   assert.deepEqual(errors, []);
 });

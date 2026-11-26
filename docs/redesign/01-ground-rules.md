@@ -23,7 +23,7 @@ Read this at the start of every session. It's the difference between a redesign 
 - Density is a feature: people want the data (plays, firsts, versions, BPM) and the tools.
 - The desktop crate and the phone crate share one interface.
 - Apple Music import is out. Spotify import waits for the owner's Spotify developer key.
-- The design must not look "vibecoded": no gradient washes, no everything-is-a-pill, no generic icon sets, no blurred colour blobs. Use the site's own type (Inter, Roboto Mono for numbers and times) and its own icons (Material Symbols, as today).
+- The design must not look "vibecoded": no gradient washes, no everything-is-a-pill, no generic icon sets, no blurred colour blobs. Use the site's own type (Inter, Roboto Mono for numbers and times) (Round 5: numbers in Inter with tabular figures; Roboto Mono for code and keys) and its own icons (Material Symbols, as today).
 
 Added in round 4 (November 12, 2026):
 - **The stage belongs to Live.** Nothing in Discover is drawn like it: no small stage, no song-colour tint, no `:id:` watermark, no name plates. One exception (the owner, November 13, 2026): the player bar along the bottom takes the playing song's artwork colour for its edge, progress, label and a faint wash; the panels stay flat.

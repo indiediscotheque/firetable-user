@@ -75,6 +75,8 @@
 	<meta name="find-js" content="js/discover-find.js?v=01.12.08" />
 	<!-- Genres' sound map (js/lazy.js loads it the first time Map is pressed: Genres opens on its grid) -->
 	<meta name="map-js" content="js/discover-map.js?v=01.12.08" />
+	<!-- A chart as a picture (Share → Save as an image): js/discover.js loads it the first time one is made -->
+	<meta name="chart-image-js" content="js/chart-image.js?v=01.12.08" />
 </head>
 
 <body>
@@ -670,7 +672,7 @@
 				<h2>Welcome to <span id="welcomeName">Firetable</span></h2>
 				<p>Anyone can listen. Members chat with the room, save the songs they hear to playlists, collect trading cards and take a turn on the decks.</p>
 				<div id="roomPulse" aria-live="polite"></div>
-				<div class="au-join"><button type="button" class="butt darkbutt d-createaccount">Join</button><span>Already a member? <button type="button" class="linkButton d-login">Log in</button></span></div>
+				<div class="au-join"><button type="button" class="butt d-createaccount">Join</button><span>Already a member? <button type="button" class="linkButton d-login">Log in</button></span></div>
 				<p class="welcomeGetApp" id="welcomeGetApp" hidden><button type="button" class="linkButton showInstallGuide"><i class="material-symbols-outlined" aria-hidden="true">install_mobile</i> Get the app on your phone</button></p>
 				<div class="miniLoginNavOnly"><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
 			</div>
@@ -714,7 +716,7 @@
 							<div class="field"><label for="newpass">Password</label><span class="passField"><input type="password" id="newpass" autocomplete="new-password" aria-describedby="newpassNote" enterkeyhint="go" /><button type="button" class="showPass material-symbols-outlined" aria-label="Show password" aria-pressed="false">visibility</button></span><p class="fieldNote" id="newpassNote" data-hint="At least 6 characters.">At least 6 characters.</p></div>
 							<label id="termsAgreement" class="checkLine"><input type="checkbox" id="agreetoterms" /><span>I agree to the <a href="terms" target="_blank">Terms of Service</a> and <a href="privacy" target="_blank">Privacy Policy</a>.</span></label>
 							<div class="formMessage" role="alert"></div>
-							<button type="submit" class="butt darkbutt" id="createAccountBttn" data-label="Create account">Create account</button>
+							<button type="submit" class="butt" id="createAccountBttn" data-label="Create account">Create account</button>
 						</form>
 					</div>
 					<div id="logscreen" role="tabpanel" aria-labelledby="loginlink" hidden>

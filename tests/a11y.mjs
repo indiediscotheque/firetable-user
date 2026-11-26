@@ -79,6 +79,8 @@ const VIEWS = [
   { name: "live-recent", run: liveTab("mm-history") },
   { name: "live-chat", run: liveTab("mmchat") },
   { name: "live-people", run: liveTab("mmusrs") },
+  // a visitor's Fresh on a phone, with its Join or log in (a gold button; its words were gold on gold until Round 5)
+  { name: "live-fresh", who: ["visitor"], maxWidth: 639, run: liveTab("mm-discover") },
   { name: "full-player", run: async (page) => { await hash("#discover")(page); await page.evaluate(() => firetable.discover.openFull()); },
     after: (page) => page.evaluate(() => firetable.discover.closeFull()) },
   // the left column folded into a toolbar (wide screens), and the column over the middle
@@ -258,6 +260,7 @@ try {
       for (const v of VIEWS) {
         if (v.who && !v.who.includes(role)) continue;
         if (v.minWidth && w < v.minWidth) continue;
+        if (v.maxWidth && w > v.maxWidth) continue;
         await reset(page);
         try {
           await v.run(page);
