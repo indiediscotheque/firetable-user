@@ -6,13 +6,16 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export class HttpError extends Error {
   constructor(url, status, body) {
-    super(`${new URL(url).host}${new URL(url).pathname} answered ${status}: ${String(body).slice(0, 600)}`);
+    const u = new URL(url);
+    super(`${u.host}${u.pathname.replace(/%E2%80%A6/g, "…")} answered ${status}: ${String(body).slice(0, 600)}`);
     this.status = status;
     this.body = body;
   }
 }
 
-const redact = (u) => String(u).replace(/(access_token|key|client_secret|token)=[^&]+/gi, "$1=…");
+// secrets in a query (access_token=…) or a path (a Discord webhook's token, a Telegram bot's)
+export const redact = (u) => String(u).replace(/(access_token|key|client_secret|token)=[^&]+/gi, "$1=…")
+  .replace(/(\/webhooks\/\d+\/)[^/?#\s]+/g, "$1…").replace(/\/bot\d+:[\w-]+/g, "/bot…");
 
 /**
  * fetch with retries (Retry-After respected). Reads, and requests marked

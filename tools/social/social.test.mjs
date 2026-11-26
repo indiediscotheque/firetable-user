@@ -6,13 +6,13 @@ import assert from "node:assert/strict";
 import { mkdtempSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { isoWeek, plain, genreTags, clip, graphemes, dayRange, zoned, artists, artistSlug } from "./util.mjs";
+import { isoWeek, plain, genreTags, clip, graphemes, dayRange, zoned, artists, artistSlug, HttpError, redact } from "./util.mjs";
 import { caption, linkFor, blueskyFacets, youtubeTitle, hashtags, xReply } from "./captions.mjs";
 import { roomGenre, tagsFor, GENRES } from "./keywords.mjs";
 import { kit } from "./platforms/studio.mjs";
 import { songOf } from "./content.mjs";
 import { oauth1 } from "./platforms/social.mjs";
-import { targetsFor, configured, withinBudget, budgets } from "./run.mjs";
+import { targetsFor, configured, withinBudget, budgets, onFailure, release } from "./run.mjs";
 import { emptyState, saveState, loadState, markPosted, count, today } from "./state.mjs";
 import { oneLine, usable } from "./render.mjs";
 
@@ -170,6 +170,31 @@ test("budgets keep each platform to a steady few", () => {
   assert.ok(!withinBudget({ sent: [{ p: "threads", at: now - 2 * H }] }, "threads", now, {}));
   assert.deepEqual(budgets({ SOCIAL_BUDGET: "threads=3/15/2,x=0" }).threads, [3, 15, 2]);
   assert.ok(!withinBudget({ sent: [] }, "x", now, { SOCIAL_BUDGET: "x=0" }), "0 turns one off");
+});
+
+test("a refused account fails at once and gives the budget back", () => {
+  const now = Date.UTC(2026, 10, 25, 14), post = { at: now };
+  const credits = new HttpError("https://api.x.com/2/tweets", 402, '{"detail":"credits depleted"}');
+  const st = { status: "pending", tries: 1 };
+  assert.match(onFailure(st, credits), /out of API credits/);
+  assert.equal(st.status, "failed", "no point trying again until there are credits");
+  const busy = { status: "pending", tries: 1 };
+  assert.equal(onFailure(busy, new HttpError("https://api.x.com/2/tweets", 503, "")), null);
+  assert.equal(busy.status, "pending", "a server stumbling is tried again");
+  busy.tries = 3;
+  onFailure(busy, new Error("network"));
+  assert.equal(busy.status, "failed", "after three tries");
+  const state = { sent: [{ p: "x", at: now }, { p: "threads", at: now }, { p: "x", at: now - 86400000 }] };
+  release(state, "x", post);
+  assert.deepEqual(state.sent, [{ p: "threads", at: now }, { p: "x", at: now - 86400000 }]);
+  assert.ok(withinBudget(state, "x", now + 9 * 3600000, {}), "the next post can go to X");
+});
+
+test("secrets in an address stay out of the logs", () => {
+  const hook = new HttpError(redact("https://discord.com/api/webhooks/1574539783766302883/9pkQ-abc_DEF?wait=true"), 404, "Unknown Webhook");
+  assert.ok(!hook.message.includes("9pkQ") && hook.message.includes("/webhooks/1574539783766302883/…"), hook.message);
+  assert.equal(redact("https://api.telegram.org/bot123456:AA-bc_d/sendPhoto"), "https://api.telegram.org/bot…/sendPhoto");
+  assert.equal(redact("https://graph.facebook.com/v21.0/me?access_token=abc&x=1"), "https://graph.facebook.com/v21.0/me?access_token=…&x=1");
 });
 
 test("the state forgets what's too old and keeps the rest", () => {

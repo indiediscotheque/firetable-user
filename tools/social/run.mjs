@@ -87,6 +87,23 @@ export const BUDGET = {
 const TRIES = 3;
 const HOUR = 3600000;
 
+// answers that mean the account itself is refused (no API credits, a revoked
+// key, no permission): trying again won't help until someone fixes the account
+const ACCOUNT = { 401: "its keys were refused: make new ones and update the secrets", 402: "the account is out of API credits (X: developer.x.com → Billing)", 403: "the account isn't allowed to post this way: check the app's permissions" };
+
+/** What to do with a post that a platform refused: try again, or give up now and say why. */
+export function onFailure(st, err) {
+  const fix = ACCOUNT[err && err.status];
+  if (fix || st.tries >= TRIES) st.status = "failed";
+  return fix || null;
+}
+
+/** A post that didn't go out gives its place in that platform's budget back. */
+export function release(state, name, post) {
+  const i = (state.sent || []).findIndex((s) => s.p === name && s.at === post.at);
+  if (i !== -1) state.sent.splice(i, 1);
+}
+
 const argv = process.argv.slice(2);
 const cmd = argv[0];
 const arg = (name, fallback) => { const i = argv.indexOf("--" + name); return i === -1 ? fallback : argv[i + 1]; };
@@ -262,9 +279,11 @@ async function publish() {
       } catch (err) {
         st.error = String(err.message || err).slice(0, 500);
         if (err instanceof Handoff) { st.status = "handoff"; console.log("  → the post kit: " + st.error); continue; }
-        if (st.tries >= TRIES) st.status = "failed";
+        const fix = onFailure(st, err);
+        if (st.status === "failed") release(state, name, post);
         failed++;
-        console.log(`::warning::${name} couldn't post ${post.id} (try ${st.tries} of ${TRIES}): ${st.error}`);
+        if (fix) console.log(`::error::${name} couldn't post ${post.id}: ${fix}. ${st.error}`);
+        else console.log(`::warning::${name} couldn't post ${post.id} (try ${st.tries} of ${TRIES}): ${st.error}`);
       }
     }
   }
