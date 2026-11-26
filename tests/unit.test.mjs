@@ -1064,3 +1064,38 @@ test("Konami code: heard in the chat box too, and its \"b\" and \"a\" don't stay
   assert.deepEqual(r.first, { done: 1, value: "hi" });
   assert.deepEqual(r.after, { done: 1, value: "hiba" });
 });
+
+// ─── The phone's tab bar (js/discover-tabs.js) ──────────────────────────────
+test("the phone's tab bar lights the tab for where you are: Discover, Live, Library (a member's playlists, a visitor's crate), Fresh under Discover", async () => {
+  const r = await run(() => {
+    // a member in Live on Chat, unless said otherwise; a visitor's Live is the stage over the welcome (or Fresh)
+    const at = (s) => firetable.discoverTabs.lit(Object.assign({ mode: "live", member: true, crate: false, view: "playlists", section: "chat", welcome: false, theme: false }, s));
+    const visitor = (s) => at(Object.assign({ member: false, welcome: true }, s));
+    return {
+      discover: at({ mode: "discover" }),
+      visitorCrate: visitor({ mode: "discover", crate: true }),
+      visitorDiscover: visitor({ mode: "discover" }),
+      memberSheet: at({ mode: "discover", crate: true }),
+      chat: at({}),
+      people: at({ section: "people" }),
+      library: at({ section: "view" }),
+      recent: at({ section: "view", view: "history" }),
+      cards: at({ section: "view", view: "cards" }),
+      fresh: at({ section: "view", view: "discover" }),
+      freshUnderChat: at({ view: "discover" }),
+      visitorLive: visitor({}),
+      visitorWelcome: visitor({ section: "view" }),
+      visitorFresh: visitor({ view: "discover" }),
+      themeFresh: at({ section: "view", view: "discover", theme: true }),
+      themeQueue: at({ section: "view", theme: true }),
+      liveCrate: visitor({ crate: true })
+    };
+  });
+  assert.deepEqual(r, {
+    discover: "discover", visitorCrate: "library", visitorDiscover: "discover", memberSheet: "discover",
+    chat: "live", people: "live", library: "library", recent: "live", cards: "live",
+    fresh: "discover", freshUnderChat: "live",
+    visitorLive: "live", visitorWelcome: "live", visitorFresh: "discover",
+    themeFresh: "live", themeQueue: "library", liveCrate: "live"
+  });
+});

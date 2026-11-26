@@ -26,7 +26,7 @@ Read these in order before touching anything:
 2. **Phase 1, inside today's layout:** every improvement that doesn't move a region: readable text, labelled controls, small pick menus, the one-row crate toolbar, bulk select, playlist import, the "your turn" bar, stage states. Regulars keep their muscle memory.
 3. **Phase 2, Discover:** new releases lead Home, an On Air card shows the room, the player gains "Found by" and "Play it in the room", and the sound map shows where the room is. Today's frame and colours; nothing in Live changes.
 4. **Phase 3, the new room: dropped (the owner, November 23, 2026).** Round 3's rearranged Live layout won't be built. Live keeps today's layout and look.
-5. **Phase 4, phones:** a bottom tab bar (Home · Discover · Live · Library · You), for everyone at once. **Phase 5:** remove the controls the tab bar replaced.
+5. **Phase 4, phones:** a bottom tab bar (Home · Discover · Live · Library · You; Discover · Live · Library · You since Round 5, November 25, 2026, with Discover's pages as tiles on its Home), for everyone at once. **Phase 5:** remove the controls the tab bar replaced.
 
 ## Status
 

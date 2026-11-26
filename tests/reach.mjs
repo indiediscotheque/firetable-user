@@ -40,10 +40,11 @@ const PHONE = [390];
 const WIDE = [1024, 1440];
 
 // shorthands for the routes
-// phones: the bottom tab bar (4.1) stands in for Live's Playlists tab and Discover's row of pages
+// phones: the bottom tab bar (4.1, Round 5) stands in for Live's Playlists tab (a member's Library),
+// and Discover's row of pages is tiles at the top of its Home (one step or the other is on screen)
 const tab = (t) => '?#nav-tabs [data-tab="' + t + '"]';
 const playlists = ["?#mm-playlists", tab("library")];
-const pages = (v) => [tab("discover"), '#dNav [data-view="' + v + '"]'];
+const pages = (v) => ['?#dBrowse .d-tile[data-view="' + v + '"]', '?#dNav [data-view="' + v + '"]'];
 const listMenu = [...playlists, "#cr-listBtn"];
 const account = ["#loggedInUser"];
 const chatTab = ["?#mmchat", "?#sp-chat"];
@@ -91,12 +92,12 @@ const FEATURES = [
   { row: "TB-11", name: "Toolbar: mentions", who: IN, widths: WIDE, via: ["#nav-railBtn", "#inboxTrigger"], target: "#inboxList", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: your account", who: IN, widths: WIDE, via: ["#nav-railBtn", "#loggedInUser"], target: "#nav-accountMenu", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: Discover's pages", who: ALL, widths: WIDE, mode: "discover", via: ["#nav-railBtn", '#dNav [data-view="charts"]'], target: "#dBrowse", hash: "#discover/charts", close: ["#nav-railBtn"] },
-  // ── phones: the bottom tab bar (NV-01) ──
-  { row: "NV-01", name: "Tab bar: Home", who: ALL, widths: PHONE, via: ['#nav-tabs [data-tab="home"]'], target: "#dBrowse .ft-cards .pvbar", hash: "#discover" },
-  { row: "NV-01", name: "Tab bar: Discover's pages", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="discover"]'], target: '#dNav [data-view="years"]' },
+  // ── phones: the bottom tab bar (NV-01): Discover · Live · Library · You (Round 5, November 25, 2026) ──
+  { row: "NV-01", name: "Tab bar: Discover (from Live, the page you left)", who: ALL, widths: PHONE, via: ['#nav-tabs [data-tab="discover"]'], target: "#dBrowse", hash: "#discover" },
+  { row: "NV-01", name: "Tab bar: Discover again: Home, with its pages as tiles", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="discover"]'], target: '#dBrowse .d-tiles [data-view="years"]', hash: "#discover" },
   { row: "NV-01", name: "Tab bar: Live", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="live"]'], target: "#stage", hash: "#live" },
   { row: "NV-01", name: "Tab bar: Library", who: IN, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="library"]'], target: "#mainqueue", hash: "#live" },
-  { row: "NV-01", name: "Tab bar: Library (visitors: what joining opens)", who: ["visitor"], widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="library"]'], target: "#welcomeInfo .d-createaccount" },
+  { row: "NV-01", name: "Tab bar: Library (visitors: their crate, over Discover)", who: ["visitor"], widths: PHONE, via: ['#nav-tabs [data-tab="library"]'], target: "#dSide .d-listpanel", hash: "#discover" },
   { row: "NV-01", name: "Tab bar: You (the account menu)", who: IN, widths: PHONE, via: ['#nav-tabs [data-tab="you"]'], target: "#nav-accountMenu" },
   { row: "NV-01", name: "Tab bar: You (join or log in)", who: ["visitor"], widths: PHONE, via: ['#nav-tabs [data-tab="you"]'], target: "#joinBox #newemail" },
   { row: "AU-02", name: "Join or log in", who: ["visitor"], via: ["#nav-signin"], target: "#joinBox #newemail", notFor: IN, notTarget: "#nav-signin" },
@@ -193,7 +194,13 @@ const FEATURES = [
   // ── Recent, Fresh, Cards (RE) ──
   { row: "RE-01", name: "Recent plays", who: IN, via: ["#mm-history"], target: "#thehistory .pvbar" },
   { row: "RE-02", name: "Filter Recent", who: IN, via: ["#mm-history"], target: "#histFilter" },
-  { row: "RE-04", name: "Fresh", who: IN, via: ["#mm-discover"], target: "#thediscovers" },
+  // Discover's Recent plays links members to every play, in Live's Recent (where the mods' tools for a past play are)
+  { row: "RE-01", name: "Recent plays (Discover's Recent plays: See every play in Live)", who: IN, mode: "discover", via: [...pages("recent"), '#dBrowse a[data-live="history"]'],
+    target: "#thehistory .pvbar", hash: "#live" },
+  { row: "RE-04", name: "Fresh", who: IN, widths: WIDE, via: ["#mm-discover"], target: "#thediscovers" },
+  { row: "RE-04", name: "Fresh (visitors: beside the welcome)", who: ["visitor"], widths: WIDE, target: "#thediscovers" },
+  // phones: Fresh is a tile on Discover's Home (Round 5), opening Live's Fresh with the screen to itself
+  { row: "RE-04", name: "Fresh (phone: its tile on Discover's Home)", who: ALL, widths: PHONE, mode: "discover", via: ['#dBrowse .d-tile[data-view="fresh"]'], target: "#thediscovers", hash: "#live" },
   { row: "RE-05", name: "Cards", who: IN, via: ["#mm-cards"], target: "#cardsMain" },
   // visitors in Live: tabs showing what joining opens, and the room's recent plays
   { row: "DI-16", name: "Live for visitors: Join, and what joining opens", who: ["visitor"], target: "#dLocked [data-locked]" },
@@ -209,6 +216,8 @@ const FEATURES = [
   { row: "DI-26", name: "Genres: the sound map (Map)", who: ALL, mode: "discover", via: [...pages("genres"), '#dBrowse .d-segbtn[data-gview="map"]'], hash: "#discover/genres", target: "#dBrowse .d-mapg" },
   { row: "DI-06", name: "DJs", who: ALL, mode: "discover", via: pages("djs"), hash: "#discover/djs", target: "#dBrowse" },
   { row: "DI-08", name: "Years", who: ALL, mode: "discover", via: pages("years"), hash: "#discover/years", target: "#dBrowse" },
+  { row: "DI-10", name: "Theme nights", who: ALL, mode: "discover", via: pages("themes"), hash: "#discover/themes", target: "#dBrowse" },
+  { row: "DI-11", name: "Recent plays", who: ALL, mode: "discover", via: pages("recent"), hash: "#discover/recent", target: "#dBrowse .pvbar" },
   { row: "DI-13", name: "The player bar", who: ALL, mode: "discover", target: "#dMini .pb-main" },
   { row: "DI-14", name: "Listen live / stop the room", who: ALL, mode: "discover", target: "#dMini .pb-main" },
   { row: "DI-27", name: "The full-screen player", who: ALL, widths: WIDE, mode: "discover", via: ["#fullscreenBtn"], target: "#pv-full" },
@@ -222,7 +231,11 @@ const FEATURES = [
   // last, as it leaves a Discover pick playing: a pick's reload is in its ⋮ (the bar's on computers; on
   // phones the full-screen player's, behind More), as the bar shows its own only while the song stalls
   { row: "ST-07", name: "Reload audio (a playing pick's ⋮)", who: ALL, widths: WIDE, mode: "discover", via: ["#dBrowse .d-leadacts .d-playall", "#dMini .d-more"], target: '#dMenu [data-act="reload"]' },
-  { row: "ST-07", name: "Reload audio (phone: a playing pick's ⋮, in the full-screen player's More)", who: ALL, widths: PHONE, mode: "discover", via: ["#dBrowse .ft-cards .pvbar .d-play", ...fullMore, "#pv-facts .d-more"], target: '#dMenu [data-act="reload"]' }
+  { row: "ST-07", name: "Reload audio (phone: a playing pick's ⋮, in the full-screen player's More)", who: ALL, widths: PHONE, mode: "discover", via: ["#dBrowse .ft-cards .pvbar .d-play", ...fullMore, "#pv-facts .d-more"], target: '#dMenu [data-act="reload"]' },
+  // phones (Round 5): a visitor's crate is the tab bar's Library; a member's chat in Discover is a sheet from the full-screen player
+  { row: "DI-15", name: "Visitors' crate (phone: the tab bar's Library)", who: ["visitor"], widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="library"]'], target: "#dSide .d-listpanel" },
+  { row: "DI-17", name: "Members' chat in Discover (phone: the full-screen player's More, Playlists, then Chat)", who: IN, widths: PHONE, mode: "discover",
+    via: [...fullMore, "#pv-full .pvf-list", '#dSide [data-sidetab="chat"]'], target: "#dSide #newchat" }
 ].filter((f) => !ONLY || ONLY.some((o) => f.row.startsWith(o)));
 
 // ── the room ────────────────────────────────────────────────────────────────
@@ -243,6 +256,9 @@ async function onScreen(page, sel, timeout = 3000) {
   const loc = page.locator(sel).first();
   try { await loc.waitFor({ state: "visible", timeout }); } catch (e) { return "not visible"; }
   await loc.scrollIntoViewIfNeeded({ timeout: 1000 }).catch(() => {});
+  // a person taps once the page has stopped moving: let the scroll's own events
+  // (Discover closes an open ⋮ menu on a scroll) arrive before the tap, not after it
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   return loc.evaluate((el) => {
     const r = el.getBoundingClientRect();
     if (r.bottom <= 0 || r.top >= innerHeight || r.right <= 0 || r.left >= innerWidth) return "off screen";
@@ -272,16 +288,18 @@ async function reset(page, mode) {
   // the left column open, as it is for everyone at first (TB-11 folds it)
   await page.evaluate(() => firetable.rail.isOn() && firetable.rail.set(false));
   await page.waitForFunction(() => !document.documentElement.classList.contains("rail"), null, { timeout: 3000 }).catch(() => {});
-  // phones: back out of Discover's list of pages and the Library tab
-  await page.evaluate((m) => {
-    const tap = (t) => { const b = document.querySelector('#nav-tabs [data-tab="' + t + '"]'); if (b && b.offsetParent) b.click(); };
-    if (m === "discover" && document.body.classList.contains("nt-browse")) tap("home");
-    if (m !== "discover" && document.body.classList.contains("nt-library")) tap("live");
-  }, mode);
   await page.waitForFunction(() => { const f = document.getElementById("pv-full"); return !f || !f.checkVisibility(); }, null, { timeout: 3000 }).catch(() => {});
   const want = mode === "discover" ? "#discover" : "#live";
   if (await page.evaluate(() => firetable.discover.address()) !== want) await page.evaluate((h) => { location.hash = h; }, want);
   await sleep(250);
+  // phones: Live's own tabs, out of the Library tab and Fresh (each has the screen to itself)
+  const tapped = mode !== "discover" && await page.evaluate(() => {
+    const b = document.querySelector('#nav-tabs [data-tab="live"]');
+    if (!b || !b.offsetParent || !/\bnt-(library|fresh)\b/.test(document.body.className)) return false;
+    b.click();
+    return true;
+  });
+  if (tapped) await sleep(450);
 }
 
 const browser = await chromium.launch(launchOptions());
