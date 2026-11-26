@@ -6,7 +6,7 @@ Run the relevant checklists before every merge. Paste the ticked list into the p
 
 Walk these by hand on every step that touches Live, at 1440 and 390 wide, as the role shown:
 
-1. **Visitor:** open the site → Discover Home → play a song → save it to the crate (third save offers to keep it) → Step inside → Listen to the room → join with email.
+1. **Visitor:** open the site → Discover Home → play a song → save it to the crate (third save offers to keep it) → Go to Live → Listen live → Join with email.
 2. **Member:** log in → the room plays → chat a message with an emoji and an @mention → react to a message → Fire → Grab to a playlist → Undo.
 3. **Member:** open Playlists → switch list → filter → find a track on YouTube → add it to the top → drag it to third → preview it → delete it → Undo.
 4. **Member:** hop on the decks → your song plays → see Skip and your fires → Take the bus → step down after the song.

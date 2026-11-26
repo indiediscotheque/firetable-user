@@ -1319,6 +1319,17 @@ body.ft-discover #dSide #actualChat {
     background-color: var(--color-accent);
     box-shadow: 0 0 0.75rem color-mix(in srgb, var(--color-accent) 55%, transparent), var(--shadow-drop);
 }
+/* its word beside the flame (the owner, November 25, 2026): on a computer's bar,
+   from 1440px as the bar's other words, the button as wide as it needs. The
+   stage's own Fire, the full-screen player's and a phone's 44px one are the
+   flame alone. Lit, the flame and the word take the colour made for the gold
+   (white on the gold fails as words), so the chip reads as one */
+.st-fireLabel { display: none; }
+@media only screen and (min-width: 1440px) {
+    .pb #fire { gap: var(--pad1); width: auto; padding: 0 var(--pad2) 0 var(--pad1); border-radius: var(--radius-md); }
+    .pb #fire .st-fireLabel { display: inline; font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+    .pb #fire.on { color: var(--color-on-accent); }
+}
 /* the room's buttons only while the bar shows the room; Fire and Grab need an account */
 .pb:not(.is-room) :is(#pv-livekeep, #pv-liveacts) { display: none; }
 .pb:not(.is-member) #pv-livekeep { display: none; }
@@ -1454,7 +1465,7 @@ body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
    volume · full screen. The last three never move. */
 .pb-side { grid-area: side; display: flex; align-items: center; justify-content: flex-end; gap: var(--pad2); min-width: 0; }
 .pb-acts { display: flex; align-items: center; gap: var(--pad1); }
-/* the way to the other place (Step inside, Listen in, Back to it): one dark chip with gold words */
+/* the way to the other place (Go to Live, Listen live, Back to it): one dark chip with gold words */
 .pb .pb-stepin {
     gap: var(--pad1);
     height: 2.25rem;
@@ -1536,7 +1547,12 @@ body:not(.ft-discover) .pb.is-room .pb-time { display: none; }
 .pb-tools:not(.pb-fs)::before { content: ""; flex: none; width: 1px; height: 1.25rem; margin: 0 var(--pad1); background: var(--color-border); }
 .pb.is-quiet .pb-tools::before { display: none; }
 .pb:not(.is-room) #reloadtrack { display: none; }      /* a Discover song has its own reload */
-body.ft-discover .pb #screenControl { display: none; }  /* the stage's screen: Live's, and the full player's */
+/* the stage's screen: Live's, and the full player's. While you hear a Discover
+   song in Live (or have stopped the room) the stage's screen stays up
+   (body.pb-elsewhere, below), so the button would do nothing, and it showed on;
+   without it play stays in the bar's exact middle at 1440 beside a pick's
+   tools, as in Discover (it sat 29px left of it) */
+body:is(.ft-discover, .pb-elsewhere) .pb #screenControl { display: none; }
 #reloadtrack.on i, #reloadtrack.working i { animation: pb-spin 1s linear infinite; }
 @keyframes pb-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { #reloadtrack.on i, #reloadtrack.working i { animation: none; } }
@@ -1627,7 +1643,7 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
             flex: 0 0 var(--dj-side-w);
             max-width: var(--dj-side-w);
         }
-        /* "Listen to the room" gets a row of its own under the song, left of the DJ */
+        /* "Listen live" gets a row of its own under the song, left of the DJ */
         body.media-blocked & #nowplaying,
         &:has(#st-notlive:not([hidden])) #nowplaying {
             padding-bottom: calc(var(--tap-min) + var(--pad3) * 2);
@@ -1673,8 +1689,11 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
 /* Under 1920 there isn't the width for the whole chip beside the tools: its
    label was cut to "THE ROC" and its song to a few letters. It's the cover (a
    red dot on it for the room) and what the chip does; the song is in its
-   tooltip. The label and the song show from 1920. */
+   tooltip. The label and the song show from 1920. The bar's edges and the
+   gaps either side of the middle are a little tighter too, so at 1440 play
+   stays in the middle beside a pick's tools and Listen live. */
 @media only screen and (max-width: 1919px) {
+    .pb { padding-inline: var(--pad3); gap: var(--pad2); }
     .pb-other .d-mini-text { display: none; }
     .pb-other .d-mini-art { position: relative; }
     .pb-other.d-listen .d-mini-art::after {
@@ -1689,9 +1708,8 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
         box-shadow: 0 0 0 2px var(--color-bg-t1);
     }
 }
-/* 1024 to 1439: the other source shrinks to its cover and dot, Step inside to its icon */
+/* 1024 to 1439: the other source shrinks to its cover and dot, Go to Live to its icon */
 @media only screen and (max-width: 1439px) {
-    .pb { padding-inline: var(--pad3); gap: var(--pad2); }
     .pb-side { gap: var(--pad1); }
     .pb-tools:not(.pb-fs)::before { margin: 0; }
     .pb-mid .pb-at, .pb-mid .pb-len { min-width: 2.25rem; }

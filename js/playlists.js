@@ -500,12 +500,11 @@ firetable.ui.setupPlaylistIndex = function () {
       firetable.ui.toast(val ? "\u201c" + firetable.utilities.listName(id) + "\u201d: " + firetable.utilities.LIST_FORMATS[val].help : "\u201c" + firetable.utilities.listName(id) + "\u201d takes any source.", "notice");
     })
     .on("click", ".plx-dj", function () {
-      var id = $(this).closest(".plx-row").attr("data-id");
-      ftapi.actions.switchDjList(id);
-      $("#djlistpicker").val(id);
-      if (ftapi.users[ftapi.uid]) ftapi.users[ftapi.uid].selectedList = id;
+      if (this.getAttribute("aria-pressed") === "true") return; var id = this.closest(".plx-row").getAttribute("data-id"); // already the one: as the crate's switch, nothing to do
+      firetable.actions.djFrom(id); // as the stage's picker and the crate's DJ switch do (js/dj-switch.js)
       firetable.ui.renderPlaylistIndex();
-      $list.find('.plx-row[data-id="' + id + '"] .plx-dj').trigger("focus");
+      var again = $list[0].querySelector('.plx-row[data-id="' + id + '"] .plx-dj');
+      if (again) again.focus();
     })
     .on("click", ".plx-more", function () { openRowMenu(this); })
     .on("click", ".plx-open", function () {

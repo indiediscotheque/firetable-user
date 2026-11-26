@@ -10,7 +10,7 @@
  * library; the right column is playlists (Live's own panel, js/discover-queue.js;
  * the crate for visitors) and chat. The player is
  * the bar along the bottom, which also carries the room (On air / Live, Listen
- * in), so there's no separate room line. The bar opens the full-screen player:
+ * live), so there's no separate room line. The bar opens the full-screen player:
  * the song in full and what goes with it (who found it, up next, the decks,
  * the chat), for a TV or a second screen, in Discover and in Live.
  *
@@ -25,13 +25,13 @@
  *
  * Playback uses the room's own players, the way 30-second previews do:
  * firetable.preview = "discover" stops the room from re-syncing, and going
- * back to Live (or Listen in) picks the room up where it is now. Discover
+ * back to Live (or Listen live) picks the room up where it is now. Discover
  * plays whole songs, and they're scrobbled like the room's (lastfm.js asks
  * hearing() what's sounding).
  *
  * Visitors save songs to a crate kept in this browser. The third save offers
  * to keep it; when they join, it becomes a playlist ("My Discover crate"),
- * their DJ playlist if they have none yet. "Step inside" shows Live as
+ * their DJ playlist if they have none yet. "Go to Live" shows Live as
  * visitors see it today (the chat is for members only).
  *
  * Addresses. A page of the library has a real one, the same address its page
@@ -48,7 +48,7 @@
  */
 
 // The YouTube player's own script leaves a fetch it cancelled unhandled when a
-// song is stopped right after it starts (going to Live, Listen in, the next
+// song is stopped right after it starts (going to Live, Listen live, the next
 // song): "signal is aborted". Nothing's wrong; it's not an error of ours.
 window.addEventListener("unhandledrejection", function (e) {
   if (e.reason && e.reason.name === "AbortError") e.preventDefault();
@@ -1899,7 +1899,7 @@ firetable.discover = (function () {
     if (P.inRoom && String(P.inRoom.cid) === String(t.cid)) {
       var d = deckState();
       return esc("First in " + firetable.utilities.listName(P.inRoom.list) + ". ") +
-        (d.on ? "You're on the decks: it's your next song." : d.waiting ? "You're #" + d.place + " in line for the decks." : '<button type="button" class="linkButton d-joinwait">' + (d.open ? "Hop on the decks" : "Join the waitlist") + "</button> to play it.") +
+        (d.on ? "You're on the decks: it's your next song." : d.waiting ? "You're #" + d.place + " in line for the decks." : '<button type="button" class="linkButton d-joinwait">Hop on the decks</button> to play it.') +
         ' <button type="button" class="linkButton d-toroom-undo">Undo</button>';
     }
     return esc(saved ? "Saved in " + saved + ". " : "") + "Play it in the room puts it first in your DJ playlist, " + esc(firetable.utilities.listName(djList())) + ".";
@@ -2044,7 +2044,7 @@ firetable.discover = (function () {
     var g = document.querySelector('#oauthBox .oauthBttn[data-provider="google"] svg');
     return '<div class="d-join">' +
       (google ? '<button type="button" class="butt oauthBttn d-google">' + (g ? g.outerHTML : "") + "Continue with Google</button>" : "") +
-      '<button type="button" class="butt darkbutt d-createaccount">Create account</button>' +
+      '<button type="button" class="butt darkbutt d-createaccount">Join</button>' +
       '<p class="d-fact d-center">Already a member? <button type="button" class="linkButton d-login">Log in</button></p></div>';
   }
 
@@ -2159,7 +2159,7 @@ firetable.discover = (function () {
       P.inRoom = { cid: t.cid, type: type, key: key, ref: ref, list: dest };
       var d = deckState();
       var msg = d.on ? "First in " + name + ": your next song on the decks." : d.waiting ? "First in " + name + ". It plays when your turn comes." : "First in " + name + ". It plays the next time you DJ.";
-      firetable.ui.toast(msg, "success", { duration: 6000, action: d.on || d.waiting ? { label: "Undo", fn: undoToRoom } : { label: d.open ? "Hop on" : "Join the waitlist", fn: hopOn } });
+      firetable.ui.toast(msg, "success", { duration: 6000, action: d.on || d.waiting ? { label: "Undo", fn: undoToRoom } : { label: "Hop on", fn: hopOn } });
       refreshSide();
       renderSide();
     });
@@ -2185,7 +2185,7 @@ firetable.discover = (function () {
 
   /**
    * Your turn on the decks, while you're in Discover: a toast one song before
-   * and another when your song starts, each with Listen in. Discover never
+   * and another when your song starts, each with Listen live. Discover never
    * switches what you hear by itself: members DJ from here while they dig or
    * play a list, and the room is one tap away.
    */
@@ -2208,7 +2208,7 @@ firetable.discover = (function () {
       if ((D.src === "live" && !blocked()) || songNoted === s.started) return;
       songNoted = s.started;
       firetable.ui.toast("Your song is on in the room.", "notice", {
-        duration: 8000, action: { label: "Listen in", fn: listenIn }
+        duration: 8000, action: { label: "Listen live", fn: listenIn }
       });
       return;
     }
@@ -2216,7 +2216,7 @@ firetable.discover = (function () {
     if (order.length > 1 && order[1].id === ftapi.uid && discoverActive() && turnNoted !== s.started) {
       turnNoted = s.started;
       firetable.ui.toast("You're up next on the decks. Your Discover pick keeps playing.", "notice", {
-        duration: 7000, action: { label: "Listen in", fn: listenIn }
+        duration: 7000, action: { label: "Listen live", fn: listenIn }
       });
     }
   }
@@ -2230,7 +2230,7 @@ firetable.discover = (function () {
   //         "live":     the room, as it plays (the stage's buttons come along)
   //         "off":      the room stopped by you; nothing sounds
 
-  // play: counts each start of a song (a new listen for Last.fm; pausing or Listen in keeps it)
+  // play: counts each start of a song (a new listen for Last.fm; pausing or Listen live keeps it)
   var P = { track: null, list: null, i: 0, paused: false, len: 0, at: 0, timer: null, inRoom: null, play: 0 };
   var DECK_SPOTS = 4;
 
@@ -2312,7 +2312,7 @@ firetable.discover = (function () {
     } catch (e) { /* a browser without it */ }
   }
 
-  /** Give the players back to the room (Live, Listen in). */
+  /** Give the players back to the room (Live, Listen live). */
   function release() {
     mediaSession(null);
     if (firetable.preview !== "discover") return;
@@ -2333,7 +2333,7 @@ firetable.discover = (function () {
     if (s) mediaSession(s, true);
     renderSide();
     renderBrowse();
-    announce(s ? "Listening to the room live: " + s.t + (s.dj ? ", " + s.dj + " on deck" : "") : "The room is quiet");
+    announce(s ? "Listening live: " + s.t + (s.dj ? ", " + s.dj + " on deck" : "") : "The room is quiet");
   }
 
   /** Stop hearing the room without leaving Discover (live can't be paused, only left). */
@@ -2557,7 +2557,7 @@ firetable.discover = (function () {
       var line = t && !P.paused ? "Playing from Discover: " + t.t + (t.a ? " · " + t.a : "")
         : t ? "Discover is paused" : "You turned the room's sound off";
       html = '<span class="st-nl-text"><b>' + ms(t ? "explore" : "volume_off") + 'You\'re not listening live</b><span>' + esc(line) + "</span></span>" +
-        '<button type="button" class="butt graybutt small d-listen st-nl-go" title="You\'re not listening live. Listen in to the room"><i class="d-dot" aria-hidden="true"></i>Listen live</button>';
+        '<button type="button" class="butt graybutt small d-listen st-nl-go" title="' + esc("Listen live: " + liveTrack().t) + '"><i class="d-dot" aria-hidden="true"></i>Listen live</button>';
     }
     el.hidden = !show;
     if (html !== notLiveHtml) { el.innerHTML = html; notLiveHtml = html; }
@@ -2680,7 +2680,7 @@ firetable.discover = (function () {
       src.innerHTML = '<span class="pb-kind pb-livekind"><i class="d-dot" aria-hidden="true"></i>Live</span><span>' + esc((s.dj ? s.dj + " on deck" : "The room") + (n ? " · " + n + " here" : "")) + "</span>";
     } else if (kind === "onair") {
       src.innerHTML = '<span class="pb-kind pb-livekind is-off"><i class="d-dot" aria-hidden="true"></i>On air</span><span>' +
-        esc(blocked() ? "Your browser held the room's sound back. Press play" : "Not listening · press play to listen in") + "</span>";
+        esc(blocked() ? "Your browser held the room's sound back. Press play" : "Not listening · press play to listen live") + "</span>";
     } else {
       src.innerHTML = '<span class="pb-kind is-off">' + ms("music_off") + "Nothing playing</span><span>" + esc(n ? n + " here · " : "") + "The room is quiet</span>";
     }
@@ -2713,7 +2713,7 @@ firetable.discover = (function () {
     var mainLabel = "Play", mainIcon = "play_arrow";
     if (kind === "discover" || kind === "pick") { mainIcon = P.paused || kind === "pick" ? "play_arrow" : "pause"; mainLabel = mainIcon === "pause" ? "Pause" : "Play"; }
     else if (kind === "live") { mainIcon = "stop"; mainLabel = "Stop listening to the room"; }
-    else if (kind === "onair") mainLabel = "Listen in to the room";
+    else if (kind === "onair") mainLabel = "Listen live";
     var disc = kind === "discover" || kind === "pick";
     tr.innerHTML = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous" aria-label="Previous"' + (shuffle.before(idx) < 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
       '<button type="button" class="butt iconbutt pb-main d-big" title="' + mainLabel + '" aria-label="' + mainLabel + '"' + (kind === "quiet" ? " disabled" : "") + ">" + ms(mainIcon, true) + "</button>" +
@@ -2739,14 +2739,14 @@ firetable.discover = (function () {
         '<button type="button" class="butt graybutt iconbutt d-more" title="More" aria-label="More about this song" aria-haspopup="menu">' + ms("more_vert") + "</button>";
     } else {
       acts.removeAttribute("data-list");
-      acts.innerHTML = live && D.mode === "discover" ? '<button type="button" class="butt graybutt small d-stepin pb-stepin" title="Go to the room: the stage, the DJs, everyone">' + ms("login") + "<span>Step inside</span></button>" : "";
+      acts.innerHTML = live && D.mode === "discover" ? '<button type="button" class="butt graybutt small d-stepin pb-stepin" title="Go to Live: the stage, the DJs, everyone">' + ms("sensors") + "<span>Go to Live</span></button>" : "";
     }
 
     // the other source, one tap away
     var sw = document.getElementById("pv-switch");
     if (disc && s) {
-      sw.innerHTML = '<button type="button" class="pb-other d-listen" title="Listen in to the room: ' + esc(s.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(s)) + ')"></span>' +
-        '<span class="d-mini-text"><b><i class="d-dot" aria-hidden="true"></i>The room</b><span>' + esc(s.t) + "</span></span><span class=\"pb-otherdo\">Listen in</span></button>";
+      sw.innerHTML = '<button type="button" class="pb-other d-listen" title="Listen live: ' + esc(s.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(s)) + ')"></span>' +
+        '<span class="d-mini-text"><b><i class="d-dot" aria-hidden="true"></i>The room</b><span>' + esc(s.t) + "</span></span><span class=\"pb-otherdo\">Listen live</span></button>";
     } else if (!disc && P.track) {
       sw.innerHTML = '<button type="button" class="pb-other d-mypick" title="Back to ' + esc(P.track.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(P.track)) + ')"></span>' +
         '<span class="d-mini-text"><b>' + ms("explore") + "Your pick</b><span>" + esc(P.track.t) + "</span></span><span class=\"pb-otherdo\">Back to it</span></button>";
@@ -2901,7 +2901,7 @@ firetable.discover = (function () {
   /**
    * Under the song, quietly (the player is for listening): what's next in the
    * list, Play it in the room's Undo once it's used, and the other source one
-   * tap away (the room's song with Listen in, or a paused pick with Back to it).
+   * tap away (the room's song with Listen live, or a paused pick with Back to it).
    */
   function fullNext(kind) {
     var s = liveTrack();
@@ -2917,7 +2917,7 @@ firetable.discover = (function () {
       var next = list && list.tracks[shuffle.after(P.i)];
       if (next) out += line("pvf-playnext", "Next", next, "Play now");
       if (t && P.inRoom && String(P.inRoom.cid) === String(t.cid)) out += '<p class="pvf-line pvf-note" id="pv-toRoomNote">' + toRoomNote(t, firetable.saved.where(t.type, t.cid)) + "</p>";
-      if (s) out += line("d-listen", '<i class="d-dot" aria-hidden="true"></i>The room', s, "Listen in");
+      if (s) out += line("d-listen", '<i class="d-dot" aria-hidden="true"></i>The room', s, "Listen live");
     } else if (P.track && !(s && String(s.cid) === String(P.track.cid))) {
       out += line("d-mypick", ms("explore") + "Your pick", P.track, "Back to it");
     }
@@ -2988,7 +2988,7 @@ firetable.discover = (function () {
         "<span>" + (dj ? nameLink(dj) + " on the decks" : esc(s && s.dj ? s.dj + " on the decks" : "The room")) + esc(n ? " · " + n + " here" : "") + "</span>";
     } else if (kind === "onair") {
       src = '<span class="pb-kind pb-livekind is-off"><i class="d-dot" aria-hidden="true"></i>On air</span><span>' +
-        esc(blocked() ? "Your browser held the room's sound back. Press play" : "Not listening · press play to listen in") + "</span>";
+        esc(blocked() ? "Your browser held the room's sound back. Press play" : "Not listening · press play to listen live") + "</span>";
     } else src = '<span class="pb-kind is-off">' + ms("music_off") + "Nothing playing</span><span>" + esc(n ? n + " here · " : "") + "The room is quiet</span>";
     redraw(document.getElementById("pv-fsrc"), src);
 
@@ -3033,7 +3033,7 @@ firetable.discover = (function () {
     var mainIcon, mainLabel;
     if (disc) { mainIcon = P.paused || kind === "pick" ? "play_arrow" : "pause"; mainLabel = mainIcon === "pause" ? "Pause" : "Play"; }
     else if (kind === "live") { mainIcon = "stop"; mainLabel = "Stop listening to the room"; }
-    else if (kind === "onair") { mainIcon = "play_arrow"; mainLabel = "Listen in to the room"; }
+    else if (kind === "onair") { mainIcon = "play_arrow"; mainLabel = "Listen live"; }
     else { mainIcon = "play_arrow"; mainLabel = "Play"; }
     tr = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous (Shift + ←)" aria-label="Previous"' + (shuffle.before(P.i) < 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
       '<button type="button" class="butt iconbutt pvf-main d-big" title="' + mainLabel + ' (Space)" aria-label="' + mainLabel + '"' + (kind === "quiet" ? " disabled" : "") + ">" + ms(mainIcon, true) + "</button>" +
@@ -3377,7 +3377,7 @@ firetable.discover = (function () {
     });
     if (opts.remember) store.set(MODE_KEY, mode);
     // Going between Discover and Live never changes what you hear: the bar says
-    // which it is, Listen in takes you to the room, a song in Discover away from it.
+    // which it is, Listen live takes you to the room, a song in Discover away from it.
     if (!D.src) setSrc("live"); // the room plays until something is picked
     if (mode === "live") {
       releaseData();

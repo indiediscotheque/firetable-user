@@ -403,7 +403,7 @@ firetable.ui.setupRoomEvents = function () {
           '<div id="djthing0" class="djplaque djActive">' +
           '<div class="djname">' + firetable.utilities.htmlEscape(djName) + '</div>' +
           departureIndicator + actionBtn +
-          '<div class="playcount">' + djPlays + '/<span id="plimit0">' + firetable.playlimit + '</span></div>' +
+          '<div class="playcount" data-plays="' + (djPlays | 0) + '"><span id="plimit0">' + firetable.utilities.htmlEscape(firetable.people.plays(djPlays | 0, firetable.playlimit).tip) + '</span></div>' +
           '</div></div>';
       }
 
@@ -436,7 +436,7 @@ firetable.ui.setupRoomEvents = function () {
           firetable.utilities.htmlEscape(firetable.utilities.avatarURL(odj.id, odj.name, firetable.utilities.sharpAvatarSize(64))) + ')"></div>' +
           '</button>';
       } else {
-        ondeckHtml += '<button class="ondeck-slot empty" aria-label="Add to DJ list"' + (isSelfOnDeck ? ' disabled' : '') + '></button>';
+        ondeckHtml += '<button class="ondeck-slot empty" aria-label="Hop on the decks"' + (isSelfOnDeck ? ' disabled' : '') + '></button>';
       }
     }
     ondeckHtml += '</div>';
@@ -1398,7 +1398,7 @@ firetable.ui.setupRoomEvents = function () {
           '<span class="waitlist-name">' + selfName + '</span>' +
           '<button class="iconbutt deckDepartureBtn" disabled title="Step down after your next play"><i class="material-symbols-filled" aria-hidden="true">departure_board</i></button>' +
           (selfRoleicon ? '<span class="' + selfRoleiconclass + ' prsnRole" aria-hidden="true">' + selfRoleicon + '</span>' : '') +
-          '<div class="ft-avatar" title="Join the DJ Waitlist"></div>' +
+          '<div class="ft-avatar" role="button" tabindex="0" aria-label="Hop on the decks" title="Hop on the decks"></div>' +
           '</div>';
       }
       $wl.html(wlLabel + html + addMeRow).addClass('has-entries');
@@ -1527,11 +1527,9 @@ firetable.ui.setupRoomEvents = function () {
   // ── Play Limit ──
   ftapi.events.on("playLimitChanged", function (data) {
     firetable.playlimit = data;
-    $("#plimit0").text(data);
-    $("#deckQueue .deckqueue-plays").each(function () {
-      var plays = $(this).text().split('/')[0];
-      $(this).text(plays + '/' + data);
-    });
+    // the playing DJ's plays this turn, in the people list's words (the tooltip on their name)
+    var limitEl = document.getElementById("plimit0"), n = limitEl && limitEl.parentNode.getAttribute("data-plays");
+    if (limitEl) limitEl.textContent = firetable.people.plays(+n || 0, data).tip;
   });
 
   // ── Ban List ──

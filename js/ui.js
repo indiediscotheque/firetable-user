@@ -340,11 +340,11 @@ firetable.saved = {
   }
 };
 
-/** A playlist's name by id ("0" is the default playlist). */
+/** A playlist's name by id, as its owner sees it: the built-in list ("0") by the name they gave it, and older names (saved escaped) decoded. Plain text. */
 firetable.utilities.listName = function (listID) {
-  if (listID == null || String(listID) === "0") return "Default Playlist";
+  if (listID == null || String(listID) === "0") return firetable.utilities.defaultListName();
   var pl = firetable.allPlaylists && firetable.allPlaylists[listID];
-  return (pl && pl.name) || "your playlist";
+  return (pl && firetable.utilities.decodeEntities(String(pl.name || ""))) || "your playlist";
 };
 
 /** Draw one add button as saved or not. */
@@ -1342,7 +1342,7 @@ firetable.ui.tooltip = (function () {
       var name  = $el.attr('aria-label') || '';
       var plays = parseInt($el.data('plays'), 10);
       var limit = firetable.playlimit;
-      var text  = name + (plays ? ' \u00b7 ' + plays + '/' + (limit || '?') : '');
+      var text  = name + (plays ? ' \u00b7 ' + firetable.people.plays(plays, limit).shown : ''); // the people list's words (it was "2/∞")
       if (text) show(this, text);
     }).on('mouseleave.ft-tooltip', '#deck .ondeck-slot:not(.empty), #ondeck .ondeck-slot:not(.empty)', hide);
 
@@ -1518,7 +1518,7 @@ firetable.ui.tooltip = (function () {
       if (dj.where === 'deck') {
         var playingNow = !!(firetable.song && firetable.song.djid === userid);
         facts.push({ label: 'DJ', val: playingNow ? 'Playing now' : 'On deck' });
-        facts.push({ label: 'Session plays', val: (dj.entry.plays || 0) + '/' + (firetable.playlimit || '?') });
+        facts.push({ label: 'This turn', val: firetable.utilities.htmlEscape(firetable.people.plays(dj.entry.plays || 0, firetable.playlimit).shown) });
       } else if (dj.where === 'waitlist') {
         facts.push({ label: 'DJ', val: 'Waitlist, ' + dj.pos + ' of ' + dj.count });
       }

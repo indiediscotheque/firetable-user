@@ -21,7 +21,7 @@
 /**
  * The stage's states (1.10): with nobody on the decks, "The decks are open"
  * over the deck's own join button. With only the room's bot there, the stage
- * says nothing: the bot is just the DJ. ("Listen to the room", shown while the browser holds
+ * says nothing: the bot is just the DJ. ("Listen live", shown while the browser holds
  * the sound back, is one line: the stage and the bar already say who's playing what.)
  */
 firetable.ui.renderStageState = function () {
@@ -42,7 +42,7 @@ firetable.ui.renderStageState = function () {
   if (box) {
     box.hidden = !state || mine;
     document.getElementById("st-stateText").textContent = state === "open"
-      ? "The decks are open. Hop on and the room plays from your ★ playlist." + (hereText ? " " + hereText + "." : "")
+      ? "The decks are open. Hop on and the room plays the playlist you DJ from." + (hereText ? " " + hereText + "." : "")
       : "";
   }
 };

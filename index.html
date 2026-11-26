@@ -6,7 +6,7 @@
 	<!-- The site lives at the root: a library page's address (/music/genres/house/) is this same page, and its files stay where they are -->
 	<base href="/" />
 	<title>Indie Discotheque · alternative dance, synthpop, and nu-disco radio</title>
-	<meta name="description" content="DJs take turns playing alternative dance, synthpop and nu-disco for each other, live, since 2012. Listen in, dig through the charts and new releases, or join and DJ." />
+	<meta name="description" content="DJs take turns playing alternative dance, synthpop and nu-disco for each other, live, since 2012. Listen live, dig through the charts and new releases, or join and DJ." />
 	<!-- Search results may show a large cover -->
 	<meta name="robots" content="max-image-preview:large" />
 	<!-- Link previews (Discord, iMessage, Slack, search). tools/plain-pages.mjs swaps in each library page's own. -->
@@ -14,7 +14,7 @@
 	<meta property="og:site_name" content="Indie Discotheque" />
 	<meta property="og:type" content="website" />
 	<meta property="og:title" content="Indie Discotheque · alternative dance, synthpop, and nu-disco radio" />
-	<meta property="og:description" content="DJs take turns playing alternative dance, synthpop and nu-disco for each other, live, since 2012. Listen in, dig through the charts and new releases, or join and DJ." />
+	<meta property="og:description" content="DJs take turns playing alternative dance, synthpop and nu-disco for each other, live, since 2012. Listen live, dig through the charts and new releases, or join and DJ." />
 	<meta property="og:url" content="https://www.indiediscotheque.com/" />
 	<meta property="og:image" content="https://www.indiediscotheque.com/img/og.png" />
 	<meta property="og:image:width" content="1200" />
@@ -214,7 +214,7 @@
 			</div>
 			<div id="stageActions">
 				<button class="butt graybutt iconbutt" id="fire" aria-label="Fire!" tabindex="0" style="anchor-name: --tip-fire" aria-describedby="tip-fire">
-					<i class="material-symbols-outlined" aria-hidden="true"> mode_heat </i>
+					<i class="material-symbols-outlined" aria-hidden="true"> mode_heat </i><span class="st-fireLabel">Fire</span>
 					<span id="st-fireCount" class="st-fireCount" aria-hidden="true" hidden></span>
 				</button>
 				<span id="tip-fire" role="tooltip" class="ft-tip" style="position-anchor: --tip-fire">Fire!</span>
@@ -242,7 +242,7 @@
 			</div>
 			<button type="button" id="tapToPlay" class="butt">
 				<i class="material-symbols-filled" aria-hidden="true">play_arrow</i>
-				<span class="ttp-text"><b>Listen to the room</b><span id="tapToPlaySub"></span></span>
+				<span class="ttp-text"><b>Listen live</b><span id="tapToPlaySub"></span></span>
 			</button>
 			<!-- The decks' state (1.10): open, or the bot keeping the music going -->
 			<div id="st-state" class="st-state" role="status" hidden>
@@ -668,7 +668,7 @@
 				<h2>Welcome to <span id="welcomeName">Firetable</span></h2>
 				<p>Anyone can listen. Members chat with the room, save the songs they hear to playlists, collect trading cards and take a turn on the decks.</p>
 				<div id="roomPulse" aria-live="polite"></div>
-				<div class="au-join"><button type="button" class="butt darkbutt d-createaccount">Create account</button><span>Already a member? <button type="button" class="linkButton d-login">Log in</button></span></div>
+				<div class="au-join"><button type="button" class="butt darkbutt d-createaccount">Join</button><span>Already a member? <button type="button" class="linkButton d-login">Log in</button></span></div>
 				<p class="welcomeGetApp" id="welcomeGetApp" hidden><button type="button" class="linkButton showInstallGuide"><i class="material-symbols-outlined" aria-hidden="true">install_mobile</i> Get the app on your phone</button></p>
 				<div class="miniLoginNavOnly"><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
 			</div>

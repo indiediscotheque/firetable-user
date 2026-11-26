@@ -1499,8 +1499,7 @@ firetable.ui.setupPlaylistEvents = function () {
       var listid = ftapi.actions.createList(val);
       firetable.utilities.addPlaylistToPickers(listid, val);
       $("#listpicker").val(listid).change();
-      $("#djlistpicker").val(listid);
-      ftapi.actions.switchDjList(listid);
+      firetable.actions.djFrom(listid); // a new list is the one you DJ from, as it always was, and the toast says so now
       $(this).val('');
       exitCreateMode();
     }
