@@ -3,7 +3,8 @@
 // and a supermod, at a phone's and a computer's width. Fails on a serious or
 // critical finding that isn't in the allowlist below; the allowlist holds what
 // the site has today, each with the step that fixes it, and only ever shrinks.
-// Also fails on text smaller than 10px: the type floor (1.2, the owner, November 20, 2026).
+// Also fails on text smaller than 10px: the type floor (1.2, the owner, November 20, 2026),
+// and on an icon's word read as part of a control's name ("Hop on queue_music": iconNames).
 //
 // axe is run through the browser's own evaluate (as devtools would), so the
 // site keeps its real Content-Security-Policy. While it measures, the page's
@@ -48,7 +49,6 @@ const ALLOW = {
   "color-contrast": { // Text must stand out from what's behind it
   },
   "label-content-name-mismatch": { // Elements must have their visible text as part of their accessible name
-    "button[aria-label]": "2.8: Discover's play buttons say \"Play <title>\" but show the title and artist",
   },
 };
 /** The kind of element: a selector without the parts that change (names, numbers, positions). */
@@ -153,6 +153,48 @@ const contrast = (page) => page.evaluate(() => {
   return nodes.length ? [{ id: "color-contrast", impact: "serious", help: "Text must stand out from what's behind it (WCAG AA 4.5:1, 3:1 for large text)", nodes }] : [];
 });
 
+/**
+ * Icon names read out as words: a Material Symbols icon is a word the font
+ * draws as a picture ("queue_music"), so inside a button, link or menu item
+ * that takes its name from what it holds, the word becomes part of the name
+ * ("Hop on queue_music"). An icon there must be aria-hidden, or the control
+ * named with aria-label or aria-labelledby. A control that is itself an icon
+ * needs a label the same way. So does an icon the stylesheet draws, a ::before
+ * or ::after whose content is an icon's word in the icon font (the toolbar's
+ * "explore Discover"): the browser reads generated words into the name too.
+ * Every control in the page is looked at, shown or not (a closed menu's items
+ * too), except what's hidden from screen readers; an icon the page doesn't
+ * draw (display: none) is no part of a name. As axe-shaped findings, so they
+ * go through the allowlist like the rest.
+ */
+const iconNames = (page) => page.evaluate(() => {
+  const CONTROL = "button, a[href], summary, [role=button], [role=link], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=tab], [role=option], [role=switch], [role=checkbox], [role=radio]";
+  const ICON = ".material-symbols-outlined, .material-symbols-filled, .material-symbols-filled-outlined";
+  const name = (el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : typeof el.className === "string" && el.className.trim() ? "." + el.className.trim().split(/\s+/).slice(0, 3).join(".") : "");
+  const drawn = (el, shown) => !shown || el.checkVisibility({ visibilityProperty: true });
+  // the icons a stylesheet draws on an element: its ::before and ::after, an icon's word in the icon font
+  const drawnWords = (el) => ["::before", "::after"].map((p) => getComputedStyle(el, p))
+    .filter((s) => s.display !== "none" && /Material Symbols/.test(s.fontFamily) && /^"[a-z0-9_]+"$/.test(s.content))
+    .map((s) => s.content.slice(1, -1));
+  const nodes = [];
+  for (const c of document.querySelectorAll(CONTROL)) {
+    if (c.closest("[aria-hidden=true], [inert]") || c.hasAttribute("aria-labelledby") || (c.getAttribute("aria-label") || "").trim()) continue;
+    const shown = c.checkVisibility({ visibilityProperty: true });
+    // between the icon and the control: nothing hidden, labelled, a picture or a control of its own
+    const reaches = (i) => {
+      for (let a = i; a && a !== c; a = a.parentElement) {
+        if (a.getAttribute("aria-hidden") === "true" || a.hasAttribute("aria-label") || a.hasAttribute("aria-labelledby") || a.getAttribute("role") === "img" || (a !== i && a.matches(CONTROL))) return false;
+      }
+      return true;
+    };
+    const icons = [...(c.matches(ICON) ? [c] : []), ...c.querySelectorAll(ICON)].filter((i) => i.textContent.trim() && !i.hidden && drawn(i, shown) && reaches(i));
+    const words = icons.map((i) => i.textContent.trim());
+    for (const x of [c, ...c.querySelectorAll("*")]) if (!x.hidden && drawn(x, shown) && reaches(x)) words.push(...drawnWords(x));
+    if (words.length) nodes.push({ target: [name(c) + ' "' + words.join(" ") + '"'] });
+  }
+  return nodes.length ? [{ id: "icon-name", impact: "serious", help: "An icon's word is read as part of a control's name (aria-hidden the icon, or name the control)", nodes }] : [];
+});
+
 /** Text on screen under the 10px type floor: "selector size" for each kind of element. */
 const smallText = (page) => page.evaluate(() => {
   const out = new Set();
@@ -211,6 +253,7 @@ try {
           // axe for names, labels, roles and structure; contrast is measured below
           const result = await page.evaluate(() => axe.run(document, { resultTypes: ["violations"], rules: { "color-contrast": { enabled: false } } }));
           result.violations.push(...await contrast(page));
+          result.violations.push(...await iconNames(page)); // an icon's word in a control's name
           for (const r of result.violations) {
             if (r.impact !== "serious" && r.impact !== "critical") continue;
             for (const n of r.nodes) {

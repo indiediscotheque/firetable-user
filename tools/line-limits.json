@@ -5,7 +5,7 @@
     "longFunctions": 1
   },
   "js/chat.js": {
-    "lines": 1122,
+    "lines": 1121,
     "longFunctions": 3
   },
   "js/discover.js": {
@@ -30,7 +30,7 @@
     "longFunctions": 1
   },
   "js/playlist.js": {
-    "lines": 1996,
+    "lines": 1995,
     "longFunctions": 3
   },
   "js/playlists.js": {
@@ -38,14 +38,14 @@
     "longFunctions": 1
   },
   "js/room.js": {
-    "lines": 1308,
+    "lines": 1286,
     "longFunctions": 5
   },
   "js/search.js": {
     "longFunctions": 2
   },
   "js/ttskin.js": {
-    "lines": 1334,
+    "lines": 1329,
     "longFunctions": 3
   },
   "js/ui.js": {

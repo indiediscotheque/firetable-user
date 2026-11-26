@@ -1632,6 +1632,21 @@ body.ft-has-discover #djStage .avtr { height: max(5rem, min(26cqw, var(--stage-m
         &:has(#st-notlive:not([hidden])) #nowplaying {
             padding-bottom: calc(var(--tap-min) + var(--pad3) * 2);
         }
+        /* and so does "The decks are open", under "Nothing playing" (js/stage-state.js),
+           left of the deck's Hop on: across the middle it was drawn over the song */
+        body:not(.media-blocked) &:has(#djStage.st-empty > #st-state:not([hidden])) #nowplaying { padding-bottom: calc(5rem + var(--pad3) * 2); }
+        /* with no DJ standing at the right, the card's words have the width ("Last played: …") */
+        &:has(#djStage.st-empty) #nowplaying { margin-right: var(--pad3); }
+        /* (not in the Turntable theme, whose room keeps the note where it was, over its floor's middle) */
+        body:not(.tt-skin) & #djStage.st-empty > .st-state {
+            left: var(--pad4);
+            right: calc(var(--dj-side-w) + var(--pad3) * 2);
+            bottom: var(--pad3);
+            width: auto;
+            max-width: none;
+            transform: none;
+            text-align: left;
+        }
         /* one line, from the cover's edge to the DJ's column */
         & #tapToPlay {
             left: calc(var(--pad4) + var(--pad1));
@@ -1922,10 +1937,11 @@ body.ft-discover #dSide #queueFilterForm :is(#tip-cr-showOnly, #tip-cr-sort, #ti
     body.nt-browse .d-nav i { display: inline-flex; font-size: 1.375rem; color: var(--color-icon); }
     body.nt-browse .d-nav.on { color: var(--color-text); border-bottom-color: var(--color-border); }
 
-    /* Live: Playlists is the Library tab, which has the screen to itself */
+    /* Live: Playlists is the Library tab, which has the screen to itself
+       (in the Turntable theme the room stays over its Queue tab: ttskin.css) */
     body.ft-has-discover #mm-playlists { display: none; }
     body.nt-library #minimodeoptions { display: none; }
-    body.nt-library:not(.pv-full-on) #stage {
+    body.nt-library:not(.pv-full-on):not(.tt-skin) #stage {
         position: fixed !important;
         left: -10000px;
         top: 0;

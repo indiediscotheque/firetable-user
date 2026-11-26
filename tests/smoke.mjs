@@ -878,6 +878,14 @@ try {
       stored: row("k1").getAttribute("data-tags"),
       k1: tags("k1"), k4: tags("k4"), k2: tags("k2")
     };
+    // the row's play button is named for what it does (its glyph alone named it a private-use
+    // character), and the name follows the preview, as the preview's own code sets it (js/player.js)
+    const pv = () => row("k3").querySelector(".previewicon");
+    out.preview = [pv().getAttribute("aria-label") + (pv().textContent === "\ue037" ? ":play" : "")];
+    firetable.ui.previewIcon("pv" + "k3", true);
+    out.preview.push(pv().getAttribute("aria-label") + (pv().textContent === "\ue034" ? ":pause" : ""));
+    firetable.ui.previewIcon(pv(), false);
+    out.preview.push(pv().getAttribute("aria-label") + (pv().textContent === "\ue037" ? ":play" : ""));
     // the two pickers: the stage's is a status line (no box, as wide as its name, its label beside it),
     // and the crate's says "DJ list" while it shows the list you DJ from
     const stagePick = document.getElementById("djlistpicker"), sp = getComputedStyle(stagePick), tag = document.getElementById("cr-djTag");
@@ -919,6 +927,8 @@ try {
   check(rowLook.k1 === "Low audio" && rowLook.k4 === "Next+Remix" && rowLook.k2 === "Broken" && rowLook.notDj === "Low audio",
     "tags: Next on the song the list you DJ from plays next (only that list), Broken (or why) when flagged, Remix when the title says so (" + JSON.stringify(rowLook) + ")");
   check(rowLook.delsearch === "k2|Daft Punk - One More Time|1", "the row's ⋮ has Delete and search for another (" + rowLook.delsearch + ")");
+  check((rowLook.preview || []).join("|") === "Preview:play|Stop the preview:pause|Preview:play",
+    "a row's play button is called Preview, and Stop the preview while its preview plays (" + JSON.stringify(rowLook.preview) + ")");
   check(/^rgba\(0, 0, 0, 0\)\|rgba\(0, 0, 0, 0\)\|none$/.test(rowLook.status.box) && rowLook.status.hugs && rowLook.status.beside && rowLook.status.select === "SELECT",
     "under the stage, the playlist you DJ from reads as a status: no box, as wide as its name, still the same select (" + JSON.stringify(rowLook.status) + ")");
   check(rowLook.status.tag === "DJ list" && rowLook.status.tagOff === "DJ from this" && rowLook.status.switched,
@@ -1603,6 +1613,16 @@ try {
     await wait(400);
     out.ledStill = !led.classList.contains("tt-marquee");
     artistEl.textContent = wasArtist;
+    // nobody playing: the songboard says what the stage's card does (js/stage-state.js), Nothing playing over what played last
+    const trackEl = document.getElementById("track"), wasTrack = trackEl.textContent, wasSong = firetable.song;
+    firetable.song = null;
+    trackEl.textContent = "Nothing playing";
+    artistEl.textContent = "Last played: Smoke Song · Smoke Artist";
+    await wait(300);
+    out.ledQuiet = document.getElementById("tt-line1").dataset.text + "|" + document.getElementById("tt-line2").dataset.text;
+    firetable.song = wasSong;
+    trackEl.textContent = wasTrack;
+    artistEl.textContent = wasArtist;
     // the sticker builder
     document.getElementById("nav-ttLaptop").click();
     out.laptop = document.getElementById("tt-laptopEdit").open;
@@ -1718,6 +1738,7 @@ try {
   check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
   check(tt.artTrack, "an art track's cover fills the right screen (one with a flat background of its own too); a video's frame is left as it is");
   check(tt.ledScroll && tt.ledStill, "the songboard scrolls a line too long to fit, a dot column at a time; a short one stays put");
+  check(tt.ledQuiet === "Nothing playing|Last played: Smoke Song · Smoke Artist", "with nobody playing, the songboard says what the stage's card says: Nothing playing over what played last (" + tt.ledQuiet + ")");
   check(tt.liveListen, "Back in Live, Listen to the room is Live's own (its pill, on one line) (" + tt.liveListenInfo + ")");
   check(tt.off && tt.liveFace && tt.noTtFaceInLive, "Back to Live: Live as it was, with Live's avatars");
 
@@ -1756,8 +1777,8 @@ try {
     return firetable.actions.loadListCounts(all).then(() => [...document.querySelectorAll("#listpicker option")].map((o) => o.value + "=" + o.textContent))
       .catch((e) => ["error: " + e.message]);
   }, DB).catch((e) => ["error: " + e.message]);
-  check(counts.includes("p1=Mix (3, 1 ⚠)") && counts.includes("p2=Empty (0)") && counts.some((t) => /^0=.* \(4, 1 ⚠\)$/.test(t)),
-    "every list's track and flagged counts show in the picker (" + counts.join(" | ") + ")");
+  check(counts.includes("p1=Mix · 3 songs, 1 broken") && counts.includes("p2=Empty · 0 songs") && counts.some((t) => /^0=.* · 4 songs, 1 broken$/.test(t)),
+    "every list's song and broken counts show in the picker, in words (8 songs, 1 broken) (" + counts.join(" | ") + ")");
   // back to the tab later: the bot flagged another track meanwhile, and a list was made elsewhere
   await put("/playlists/smoke/p1/list/c/flagged", { date: 2, code: 2 });
   await put("/playlists/smoke/p3", { name: "New", list: { x: { type: 1, cid: "c9", name: "X - 9" } } });
@@ -1771,8 +1792,20 @@ try {
       options: [...document.querySelectorAll("#listpicker option")].map((o) => o.value + "=" + o.textContent), keysRead
     }));
   }).catch((e) => ({ options: ["error: " + e.message], keysRead: [] }));
-  check(recount.options.includes("p1=Mix (3, 2 ⚠)") && recount.options.includes("p3=New (1)") && recount.keysRead.join() === "playlists/smoke/p3/list",
+  check(recount.options.includes("p1=Mix · 3 songs, 2 broken") && recount.options.includes("p3=New · 1 song") && recount.keysRead.join() === "playlists/smoke/p3/list",
     "back on the tab, only the flagged counts are fetched again (every track's key only for a list not counted yet) (" + JSON.stringify(recount) + ")");
+  // the count is the option's words only: Delete asks you to type the list's name alone (its data-name), as it did before counts
+  const delName = await page.evaluate(() => {
+    if (firetable.$appShell && !$("#appShell").length) $("#mainGrid").append(firetable.$appShell);
+    const pick = document.getElementById("listpicker"), was = pick.value, box = document.getElementById("deletePromptBox");
+    pick.value = "p1";
+    document.getElementById("plDeleteLauncher").click();
+    const out = document.getElementById("deleteConfirmTarget").textContent + "|" + box.open + "|" + pick.options[pick.selectedIndex].textContent;
+    box.close();
+    pick.value = was;
+    return out;
+  }).catch((e) => "error: " + e.message);
+  check(delName === "Mix|true|Mix · 3 songs, 2 broken", "deleting a playlist asks you to type its name alone, not the count after it (" + delName + ")");
 
   console.log("-- grab stats: the hostbot's sum when there is one, otherwise every grab counted here");
   await put("/grabs/smoke", { "1_c1": { u1: 1, u2: 2 }, "1_c2": { u3: 3 } });
@@ -1970,15 +2003,19 @@ try {
     const say = (id, txt) => ftapi.events.emit("newChat", { chatID: "smkq" + Math.random().toString(36).slice(2), feedID: "f", id, name: id, txt, time: Date.now() });
     say("bot", "dj1 has played this 3 times.");
     say("dj1", "nice one");
+    say("bot", "Thanks for the tunes."); // a line of its own, after dj1's
     await new Promise((r) => setTimeout(r, 100));
-    const blocks = [...document.querySelectorAll("#chats > .newChat:not(.nowplayn)")].slice(-2);
+    const blocks = [...document.querySelectorAll("#chats > .newChat:not(.nowplayn)")].slice(-3);
+    // the role beside a name in chat: a picture named for it, as in the people list; no role, nothing to read
+    const badge = (b) => { const u = b.querySelector(".utitle"); return [u.getAttribute("role"), u.getAttribute("aria-label"), u.getAttribute("aria-hidden")].join("|"); };
     const size = (b) => getComputedStyle(b.querySelector(".chatText")).fontSize;
     const role = document.querySelector("#usersbox .prsnRole[title]");
     const members = [...document.querySelectorAll("#usersRegular .prson:not(.ft-skeleton)")];
     const plain = members.length + "|" + members.filter((m) => m.querySelector(".prsnRole")).length;
     return { plain, bot: blocks[0].classList.contains("ch-bot") + "|" + size(blocks[0]), person: blocks[1].classList.contains("ch-bot") + "|" + size(blocks[1]),
-      role: role ? role.getAttribute("title") + "|" + role.getAttribute("aria-label") : "" };
+      role: role ? role.getAttribute("title") + "|" + role.getAttribute("aria-label") : "", badges: badge(blocks[2]) + "/" + badge(blocks[1]) };
   });
+  check(botLine.badges === "img|Room bot|/||true", "in chat, the bot's role icon is a picture called Room bot, and a member's empty one is hidden (" + botLine.badges + ")");
   check(botLine.bot === "true|13px" && botLine.person === "false|14px", "the room bot's chat lines are quieter than people's (" + JSON.stringify(botLine) + ")");
   check(/^(Mod|Supermod|Room bot)\|\1$/.test(botLine.role), "the people list names each role icon, for a tooltip and screen readers (" + botLine.role + ")");
   check(/^[1-9]\d*\|0$/.test(botLine.plain), "only the bot, mods and supermods have a role icon: no member's row repeats one (" + botLine.plain + ")");
@@ -2150,8 +2187,11 @@ try {
       ftapi.events.emit("newHistory", { histID: "svh" + i, cid, type: 1, artist, title, dj: "dj1", djid: "dj1", when: t - i * 60000, img: "img/idlogo.png", url: "https://www.youtube.com/watch?v=" + cid }));
     const btn = (cid) => document.querySelector('#thehistory .pvbar[data-cid="' + cid + '"] .histeal');
     const state = (cid) => btn(cid).textContent.trim() + (btn(cid).classList.contains("is-saved") ? ":saved" : "");
+    // saved looks it at a glance: the room's accent, the glyph filled, and its name says so
+    const accent = (() => { const s = document.createElement("span"); s.style.color = "var(--color-accent)"; document.getElementById("thehistory").appendChild(s); const c = getComputedStyle(s).color; s.remove(); return c; })();
+    const look = (cid) => { const cs = getComputedStyle(btn(cid)); return (cs.color === accent ? "accent" : cs.color) + "|" + (/"FILL" 1/.test(cs.fontVariationSettings) ? "filled" : "outlined") + "|" + btn(cid).getAttribute("aria-label"); };
     await new Promise((r) => setTimeout(r, 200));
-    const before = { have: state("inlist01"), want: state("newsave01") };
+    const before = { have: state("inlist01"), want: state("newsave01"), haveLook: look("inlist01"), wantLook: look("newsave01") };
     btn("newsave01").click();
     await wait(() => $("#stealContain").is(":visible") && $("#stealpicker option[value='0']").length);
     $("#stealpicker").val("0").trigger("change");
@@ -2162,9 +2202,11 @@ try {
     const stored = await ftapi.queueRef.once("value").then((s) => Object.values(s.val() || {}).map((x) => x.cid));
     return { before, toast, after, stored };
   });
-  check(saving.before.have === "playlist_add_check:saved" && saving.before.want === "playlist_add", "a song already in the open playlist shows a gold check; others show + (" + JSON.stringify(saving.before) + ")");
+  check(saving.before.have === "playlist_add_check_circle:saved" && saving.before.want === "playlist_add" &&
+    saving.before.haveLook === "accent|filled|Saved in Default Playlist. Add to another playlist" && /^(?!accent).*\|outlined\|Add to playlist$/.test(saving.before.wantLook),
+    "a song already in the open playlist shows a filled check in the accent colour and says Saved; others show an outlined + (" + JSON.stringify(saving.before) + ")");
   check(/^Saved to Default Playlist/.test(saving.toast) && saving.stored.includes("newsave01"), "saving shows \"Saved to …\" with Undo (" + saving.toast + ")");
-  check(saving.after === "playlist_add_check:saved", "the check stays after saving (" + saving.after + ")");
+  check(saving.after === "playlist_add_check_circle:saved", "the check stays after saving (" + saving.after + ")");
   await put("/queues/smoke", null);
   const undone = await page.evaluate(async () => {
     await ftapi.queueRef.once("value").then((s) => ftapi.events.emit("playlistChanged", s.val() || {}, "0"));
@@ -4030,6 +4072,32 @@ try {
     });
   };
   const ttTyping = { tall: await ttKb(844), up: await ttKb(500), down: await ttKb(844) };
+  // a phone's Turntable tabs: each shows its own page and nothing over it (the crate stayed on over Room
+  // and Chat once Queue had picked Playlists: Live's own phone rules show a panel by its view), the room
+  // stays above them all, the stage's "You DJ from" is told apart from the crate's picker, and the
+  // phone's tab bar says Library for the Queue tab alone, and takes you to it
+  await kPage.evaluate(() => document.getElementById("newchat").blur());
+  const ttPhone = await kPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const shown = (id) => { const el = document.getElementById(id), r = el && el.getBoundingClientRect(); return !!el && getComputedStyle(el).display !== "none" && r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth; };
+    const look = () => ["tt-pane", "queuebox", "actualChat", "thehistoryWrap", "cardsWrap", "discover"].filter(shown).join("+") + "|stage:" + shown("stage") +
+      "|bar:" + (document.querySelector("#nav-tabs .nt-tab.on") || { getAttribute: () => "" }).getAttribute("data-tab");
+    const tab = async (t) => { document.querySelector('#tt-tabs [data-tab="' + t + '"]').click(); await wait(400); return look(); };
+    const bar = async (t) => { document.querySelector('#nav-tabs [data-tab="' + t + '"]').click(); await wait(500); return document.body.getAttribute("data-tt-tab") + "|" + look(); };
+    firetable.nav.setView("playlists"); // as the Queue tab, or the tab bar's Library, leaves it
+    await wait(400);
+    const out = { queue: await tab("queue") };
+    const icon = document.querySelector("#queuebox > #djlistpickerWrap > .st-djIcon"), label = document.getElementById("djlistpickerLabel");
+    out.djFrom = shown("djlistpickerLabel") && getComputedStyle(label).position === "static" && label.textContent === "You DJ from" && icon.getBoundingClientRect().width > 0;
+    out.room = await tab("room");
+    out.chat = await tab("chat");
+    out.library = await bar("library");
+    out.live = await bar("live");
+    return out;
+  });
+  check(ttPhone.queue === "queuebox|stage:true|bar:library" && ttPhone.room === "tt-pane|stage:true|bar:live" && ttPhone.chat === "actualChat|stage:true|bar:live" &&
+    ttPhone.library === "queue|queuebox|stage:true|bar:library" && ttPhone.live === "room|tt-pane|stage:true|bar:live" && ttPhone.djFrom,
+    "the Turntable theme on a phone: each tab shows its own page alone under the room, the DJ picker says You DJ from, and the tab bar's Library is the Queue tab (" + JSON.stringify(ttPhone) + ")");
   await kPage.evaluate(() => { document.getElementById("newchat").blur(); firetable.tt.leave(); }); // the theme is kept per device: out again for the pages after this
   check(ttTyping.tall.skin && !ttTyping.tall.on && ttTyping.tall.stage && ttTyping.up.on && !ttTyping.up.stage && ttTyping.up.playerSize === "640x360" && ttTyping.up.tabsTop <= 48 &&
     ttTyping.up.chat >= 200 && ttTyping.up.boxInView && !ttTyping.up.bottomTabs && !ttTyping.down.on && ttTyping.down.stage && ttTyping.down.screen === ttTyping.tall.screen,
@@ -4830,6 +4898,106 @@ try {
   check(false, "older iPad test threw: " + e.message);
 } finally {
   await oldContext.close();
+}
+
+// The empty stage (js/stage-state.js): Live's song card with nobody on the
+// decks. A room of its own (a namespace apart, so the pages above don't hear
+// its songs come and go), starting quiet.
+console.log("-- the empty stage: Nothing playing, what played last, then the song, then quiet again");
+{
+  const NS3 = NS + "-quiet", put3 = putAs(NS3);
+  const site3 = await serveSite({ csp: CSP, configJs: config(NS3) });
+  const song = Object.assign({}, youtubeSong, { title: "Quiet Song", artist: "Quiet Artist", started: Date.now() });
+  await put3("/", Object.assign(room(Date.now(), song), { songToPlay: null, table: null }));
+  const qCtx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const qp = await qCtx.newPage();
+  qp.on("pageerror", (e) => { if (!theirs(e)) pageErrors.push("Quiet: " + e.message); });
+  const card = () => qp.evaluate(() => ({
+    track: document.getElementById("track").textContent, artist: document.getElementById("artist").textContent,
+    skel: document.querySelectorAll("#nowplaying .skel").length, art: document.getElementById("albumArt").dataset.albumArtCurrent || "",
+    plays: document.getElementById("plays").textContent.trim(), clocks: document.getElementById("timrUp").textContent + document.getElementById("timr").textContent,
+    bar: document.getElementById("pv-src").textContent,
+    // Discover makes the card's artist line links and its title a button (linkLive): not the quiet card's words
+    doors: document.querySelectorAll("#artist a").length + "|" + (document.getElementById("track").getAttribute("role") || "none")
+  }));
+  const says = (text) => qp.waitForFunction((t) => document.getElementById("track").textContent === t && !document.getElementById("nowplaying").classList.contains("is-transitioning"), text, { timeout: 15000 }).catch(() => {});
+  // the art turns over to the next a moment after the words (room.js setNowPlayingAlbumArt)
+  const artIs = (logo) => qp.waitForFunction((l) => /idlogo/.test(document.getElementById("albumArt").dataset.albumArtCurrent || "") === l, logo, { timeout: 5000 }).catch(() => {});
+  const none = { type: 1, cid: 0, title: "Nothing Is Playing", artist: "You could (should) queue something!", started: Date.now(), duration: 0, url: null, image: "img/idlogo.png" };
+  try {
+    await openPage(qp, site3.SITE + "#live");
+    await says("Nothing playing");
+    const first = await card();
+    // a preview in a quiet room: stopping it (or its 30 seconds running out) stops the room's player
+    // too, or the previewed song played on to its end (js/helpers.js resumeCurrentSong)
+    await qp.waitForFunction(() => firetable.ytLoaded, null, { timeout: 30000 }).catch(() => {});
+    const hushed = await qp.evaluate(async () => {
+      if (!firetable.ytLoaded) return { skipped: true };
+      let stops = 0;
+      const realStop = player.stopVideo.bind(player);
+      player.stopVideo = () => { stops++; return realStop(); };
+      firetable.actions.pview("ytcidM7lc1UVf-VE", true, MEDIA_YOUTUBE);
+      const during = { preview: firetable.preview, stops };
+      await new Promise((r) => setTimeout(r, 300));
+      firetable.actions.pview("ytcidM7lc1UVf-VE", true, MEDIA_YOUTUBE); // the same song's button again: stop
+      const after = { preview: firetable.preview, stops };
+      player.stopVideo = realStop;
+      return { during, after };
+    }).catch((e) => ({ error: e.message }));
+    await put3("/songToPlay", song);
+    await says("Quiet Song");
+    await artIs(false);
+    await qp.waitForFunction(() => document.querySelector("#artist a") && document.getElementById("track").getAttribute("role") === "button", null, { timeout: 5000 }).catch(() => {});
+    const playing = await card();
+    await put3("/songToPlay", null);
+    await says("Nothing playing");
+    await artIs(true);
+    const ended = await card();
+    // the bot's own stand-in for no song (cid 0, "Nothing Is Playing") reads the same
+    await put3("/songToPlay", song);
+    await says("Quiet Song");
+    await put3("/songToPlay", none);
+    await says("Nothing playing");
+    await artIs(true);
+    const bot = await card();
+    // back on the tab with the bot's stand-in: nothing is started again (the player still holds the song that ended)
+    const woken = await qp.evaluate(() => {
+      if (!firetable.ytLoaded) return { skipped: true };
+      let plays = 0;
+      const realPlay = player.playVideo.bind(player);
+      player.playVideo = () => { plays++; return realPlay(); };
+      document.dispatchEvent(new Event("visibilitychange"));
+      player.playVideo = realPlay;
+      return { plays, cid: firetable.song && firetable.song.cid };
+    }).catch((e) => ({ error: e.message }));
+    // after a SoundCloud song, the decks emptying takes its screen (the cover's glitch, js/glitch.js) away, as a video's
+    await put3("/songToPlay", Object.assign({}, song, { type: 2, cid: "13158665", title: "Quiet SC", url: "https://soundcloud.com/forss/flickermood",
+      image: site3.SITE + "icons/icon-512.png", started: Date.now() }));
+    await says("Quiet SC");
+    const scScreen = () => qp.evaluate(() => getComputedStyle(document.getElementById("scScreen")).display);
+    const sc = { on: await scScreen() };
+    await put3("/songToPlay", none);
+    await says("Nothing playing");
+    sc.off = await scScreen();
+    check(first.track === "Nothing playing" && first.artist === "" && first.skel === 0 && /idlogo\.png$/.test(first.art) && /Nothing playing/.test(first.bar) && first.doors === "0|none",
+      "a first visit to a quiet room: the card says Nothing playing, in plain words, with the room's own art and no loading skeleton, as the player bar does (" + JSON.stringify(first) + ")");
+    check(hushed.skipped || (hushed.during && hushed.during.preview === "ytcidM7lc1UVf-VE" && hushed.after.preview === false && hushed.after.stops > hushed.during.stops),
+      "a preview in a quiet room: stopping it stops the room's player too (" + JSON.stringify(hushed) + ")");
+    check(playing.track === "Quiet Song" && playing.artist === "Quiet Artist" && !/idlogo/.test(playing.art) && !/Nothing playing/.test(playing.bar) && playing.doors === "1|button",
+      "a song comes on: the card and the bar are the song's, its artist a link and its title a button again (" + JSON.stringify(playing) + ")");
+    check(ended.track === "Nothing playing" && ended.artist === "Last played: Quiet Song · Quiet Artist" && ended.plays === "" && ended.clocks === "" &&
+      ended.skel === 0 && /idlogo\.png$/.test(ended.art) && /Nothing playing/.test(ended.bar) && ended.doors === "0|none",
+      "the decks empty: Nothing playing over what played last, in plain words (no artist links, no button), no plays, tempo or clocks, and the bar says the same (" + JSON.stringify(ended) + ")");
+    check(bot.track === "Nothing playing" && bot.artist === "Last played: Quiet Song · Quiet Artist" && /idlogo\.png$/.test(bot.art) && bot.doors === "0|none",
+      "the bot's own stand-in for no song (cid 0) reads the same (" + JSON.stringify(bot) + ")");
+    check(woken.skipped || (woken.plays === 0 && woken.cid === 0), "back on the tab in a quiet room (the bot's cid 0): the room's player isn't started again (" + JSON.stringify(woken) + ")");
+    check(sc.on !== "none" && sc.off === "none", "the decks empty after a SoundCloud song: its screen goes, as a video's does (" + JSON.stringify(sc) + ")");
+  } catch (e) {
+    check(false, "empty stage test threw: " + e.message);
+  } finally {
+    await qCtx.close();
+    site3.server.close();
+  }
 }
 
 // The live stage for QueUp's screen (embed/stage/): its own page under its own

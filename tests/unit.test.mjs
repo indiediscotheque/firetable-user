@@ -784,6 +784,12 @@ test("the people list: DJs in deck order (playing, next, plays, leaving), then t
       away: [now - 4 * 60000, now - 5 * 60000, now - 3 * 3600000, now - 2 * 86400000, 0].map(firetable.people.awayFor).join("|"),
       status: ["amy", "bob", "bot", "zed", "g1"].map((u) => firetable.people.status(u).label).join("|")
     };
+    // plays in words: with no limit tonight (the bot's "∞"), "2 plays", and the tooltip says so
+    out.limitTip = byId("usersDJs").querySelector(".pe-plays").title;
+    firetable.playlimit = "∞";
+    firetable.people.render();
+    out.noLimit = [...byId("usersDJs").querySelectorAll(".pe-plays")].map((p) => p.textContent + "=" + p.title).join("|");
+    firetable.playlimit = 2;
     // nobody DJing: one plain list, no headings
     firetable.tableData = null;
     firetable.people.render();
@@ -793,8 +799,11 @@ test("the people list: DJs in deck order (playing, next, plays, leaving), then t
     firetable.people.render();
     return out;
   });
-  assert.deepEqual(r.djs, ["d1:Dee[is-dj,is-playing] Playing now,1/2", "d2:Duo[is-dj] Next,Steps down after next play,2/2", "g1:gone[ghost,is-dj] 0/2,away"],
-    "the DJs lead in deck order: who's playing, who's next, who steps down, each one's plays; a DJ who dropped off says away");
+  assert.deepEqual(r.djs, ["d1:Dee[is-dj,is-playing] Playing now,1 of 2", "d2:Duo[is-dj] Next,Steps down after next play,2 of 2", "g1:gone[ghost,is-dj] 0 of 2,away"],
+    "the DJs lead in deck order: who's playing, who's next, who steps down, each one's plays (in words: 1 of 2); a DJ who dropped off says away");
+  assert.equal(r.limitTip, "1 of 2 plays this turn", "the plays' tooltip says what the numbers are");
+  assert.equal(r.noLimit, "1 play=1 play this turn, no limit|2 plays=2 plays this turn, no limit|0 plays=0 plays this turn, no limit",
+    "with no limit, each DJ's plays this turn in words (it was 1/∞), and the tooltip says there's no limit");
   assert.deepEqual(r.bot, ["bot:hostbot[]"], "the bot is never idle");
   assert.deepEqual(r.supers, [], "a DJ isn't listed twice");
   assert.deepEqual(r.mods, ["bob:Bob[idle] "], "away under five minutes: the dot, no time");

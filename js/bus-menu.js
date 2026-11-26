@@ -122,7 +122,7 @@ firetable.busMenu = (function () {
     if (now) html += '<p class="bus-now">' + esc((who.self ? "You're stepping down " : who.name + " steps down ") + now + ".") + "</p>";
     var end = who.self && setEnd();
     if (end) html += '<p class="bus-now">' + esc("Your set ends with " + end.name + (end.songs > 1 ? ", " + end.songs + " songs from now." : ", your next song.")) + "</p>";
-    html += '<button type="button" role="menuitem" class="butt graybutt" data-bus="s:1"><i class="material-symbols-outlined">departure_board</i> ' + first + "</button>";
+    html += '<button type="button" role="menuitem" class="butt graybutt" data-bus="s:1"><i class="material-symbols-outlined" aria-hidden="true">departure_board</i> ' + first + "</button>";
     html += chips("After", SONGS.map(function (n) { return ["s:" + n, n + " songs"]; }));
     html += chips("In", TIMES.map(function (t) { return ["m:" + t[0], t[1]]; }));
     html += '<form class="bus-own" novalidate><label class="bus-row-label" for="busOwnN">Or</label>' +
@@ -132,7 +132,7 @@ firetable.busMenu = (function () {
     if (at.playing) html += '<p class="bus-hint">Songs count the one playing now.</p>';
     if (now) {
       html += '<hr class="ft-menu-sep" /><button type="button" role="menuitem" class="butt graybutt" data-bus="stay">' +
-        '<i class="material-symbols-outlined">close</i> ' + (who.self ? "Stay on (cancel the bus)" : "Let them stay") + "</button>";
+        '<i class="material-symbols-outlined" aria-hidden="true">close</i> ' + (who.self ? "Stay on (cancel the bus)" : "Let them stay") + "</button>";
     }
     box.innerHTML = html;
   }

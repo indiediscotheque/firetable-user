@@ -381,7 +381,7 @@ firetable.ui.setupRoomEvents = function () {
         var btnIcon = isSelf ? 'close' : 'person_remove';
         var btnTitle = isSelf ? 'Step down' : 'Remove from deck';
         var actionBtn = showBtn
-          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + djId + '" data-tablekey="' + tableKey + '" title="' + btnTitle + '"><i class="material-symbols-filled">' + btnIcon + '</i></button>'
+          ? '<button class="iconbutt deckRemoveBtn" data-userid="' + djId + '" data-tablekey="' + tableKey + '" title="' + btnTitle + '"><i class="material-symbols-filled" aria-hidden="true">' + btnIcon + '</i></button>'
           : '';
         var departureIndicator;
         if (showDeparture) {
@@ -390,9 +390,9 @@ firetable.ui.setupRoomEvents = function () {
           var departureTitleOff = isSelf ? 'Catch the bus: after this song, a few more, or in a while' : 'Have ' + djDisplayName + ' step down after their next play';
           var departureTitleOn  = isSelf ? "You're stepping down " + activeEntry.bus + ': tap to change or stay' : "Don't have " + djDisplayName + ' step down after their next play';
           var departureTitle = removeAfterValue ? departureTitleOn : departureTitleOff;
-          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + tableKey + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled">departure_board</i></button>';
+          departureIndicator = '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-tablekey="' + tableKey + '" data-userid="' + djId + '" data-djname="' + djDisplayName + '" title="' + departureTitle + '"><i class="material-symbols-filled" aria-hidden="true">departure_board</i></button>';
         } else if (activeEntry.removeAfter) {
-          departureIndicator = '<span class="removemeIcon material-symbols-filled" title="Stepping down ' + firetable.utilities.htmlEscape(activeEntry.bus) + '">departure_board</span>';
+          departureIndicator = '<span class="removemeIcon material-symbols-filled" role="img" title="Stepping down ' + firetable.utilities.htmlEscape(activeEntry.bus) + '" aria-label="Stepping down ' + firetable.utilities.htmlEscape(activeEntry.bus) + '">departure_board</span>';
         } else {
           departureIndicator = '';
         }
@@ -418,11 +418,11 @@ firetable.ui.setupRoomEvents = function () {
       if (!deckHtml) {
         var stepUpBtn = isSelfOnDeck
           ? '&nbsp;'
-          : '<button type="button" class="butt graybutt small addmeButt">Hop on <span class="material-symbols-filled">queue_music</span></button>';
+          : '<button type="button" class="butt graybutt small addmeButt">Hop on <span class="material-symbols-filled" aria-hidden="true">queue_music</span></button>';
         deckHtml = '<div class="spot empty"><div class="djplaque">' + stepUpBtn + '</div></div>';
       }
     } else {
-      deckHtml = '<div class="spot empty"><div class="djplaque"><button type="button" class="butt graybutt small addmeButt">Hop on <span class="material-symbols-filled">queue_music</span></button></div></div>';
+      deckHtml = '<div class="spot empty"><div class="djplaque"><button type="button" class="butt graybutt small addmeButt">Hop on <span class="material-symbols-filled" aria-hidden="true">queue_music</span></button></div></div>';
     }
 
     // Always render exactly 3 on-deck slots to the right of the active DJ;
@@ -1127,8 +1127,8 @@ firetable.ui.setupRoomEvents = function () {
       $prg.css("opacity", "1");
     }, 450);
 
-    // Empty room (no song): stop here instead of crashing on missing fields
-    if (!data) return;
+    // Nobody playing (no song, or the bot's own "Nothing Is Playing", cid 0): the card says so (js/stage-state.js)
+    if (!data || !data.cid || data.cid == 0) return firetable.ui.renderNoSong(data, setNowPlayingAlbumArt, animateNowPlayingChange);
 
     // Check if tagUpdate has pre-corrected metadata for this track
     var showPlaycount = false;
@@ -1238,9 +1238,9 @@ firetable.ui.setupRoomEvents = function () {
         var npmsgTime = firetable.utilities.format_time(Date.now());
         var npmsgHTML;
         if (showPlaycount) {
-          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong><br/>' + playedSentence(firetable.tagUpdate.adamData) + '</div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
+          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined" aria-hidden="true">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong><br/>' + playedSentence(firetable.tagUpdate.adamData) + '</div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
         } else {
-          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong></div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
+          npmsgHTML = '<div class="newChat nowplayn npmsg' + nowPlayingText(data.cid) + '"><span class="material-symbols-outlined" aria-hidden="true">music_note_2</span><div class="npmsg">DJ <strong>' + nowPlayingText(nicename) + '</strong> started playing <strong>' + nowPlayingText(data.title) + '</strong> by <strong>' + nowPlayingText(data.artist) + '</strong></div><span class="chatTime npmsg-time">' + npmsgTime + '</span><span class="npmsg-fires"></span>';
         }
         $("#chats").append(npmsgHTML);
         firetable.utilities.chatAdded(doTheScrollThing);
@@ -1350,11 +1350,11 @@ firetable.ui.setupRoomEvents = function () {
           var departureTitleOff = isSelf ? 'Catch the bus: after your next song, a few more, or in a while' : 'Have ' + wlName + ' step down after their next play';
           var departureTitleOn  = isSelf ? "You're stepping down " + firetable.people.bus(data[key]) + ': tap to change or stay' : "Don't have " + wlName + ' step down after their next play';
           var departureBtn = showDeparture
-            ? '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="' + (removeAfterValue ? departureTitleOn : departureTitleOff) + '"><i class="material-symbols-filled">departure_board</i></button>'
+            ? '<button class="iconbutt deckDepartureBtn' + (removeAfterValue ? ' on' : '') + '" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="' + (removeAfterValue ? departureTitleOn : departureTitleOff) + '"><i class="material-symbols-filled" aria-hidden="true">departure_board</i></button>'
             : '';
 
           var posEl = showDeparture
-            ? '<button class="waitlist-pos" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="Remove from waitlist"><span class="wl-pos-num">' + countr + '</span><i class="material-symbols-filled wl-pos-icon">close</i></button>'
+            ? '<button class="waitlist-pos" data-wlkey="' + key + '" data-userid="' + userId + '" data-djname="' + wlName + '" title="Leave the waitlist" aria-label="You\'re #' + countr + ' in line: leave the waitlist"><span class="wl-pos-num">' + countr + '</span><i class="material-symbols-filled wl-pos-icon" aria-hidden="true">close</i></button>'
             : '<span class="waitlist-pos">' + countr + '</span>';
 
           html += '<div class="waitlist-item" data-userid="' + userId + '">' +
@@ -1375,7 +1375,7 @@ firetable.ui.setupRoomEvents = function () {
       }
     }
     var $wl = $('#usersWaitlist');
-    var wlLabel = '<div class="waitlist-label"><span class="material-symbols-filled">queue_music</span> DJ Waitlist</div>';
+    var wlLabel = '<div class="waitlist-label"><span class="material-symbols-filled" aria-hidden="true">queue_music</span> DJ Waitlist</div>';
     var isSelfOnDeck = !!(ftapi.uid && firetable.tableData && (function () {
       for (var k in firetable.tableData) {
         if (firetable.tableData.hasOwnProperty(k) && firetable.tableData[k].id === ftapi.uid) return true;
@@ -1396,7 +1396,7 @@ firetable.ui.setupRoomEvents = function () {
         addMeRow = '<div class="waitlist-item waitlist-addme-row">' +
           '<span class="waitlist-pos">' + countr + '</span>' +
           '<span class="waitlist-name">' + selfName + '</span>' +
-          '<button class="iconbutt deckDepartureBtn" disabled title="Step down after your next play"><i class="material-symbols-filled">departure_board</i></button>' +
+          '<button class="iconbutt deckDepartureBtn" disabled title="Step down after your next play"><i class="material-symbols-filled" aria-hidden="true">departure_board</i></button>' +
           (selfRoleicon ? '<span class="' + selfRoleiconclass + ' prsnRole" aria-hidden="true">' + selfRoleicon + '</span>' : '') +
           '<div class="ft-avatar" title="Join the DJ Waitlist"></div>' +
           '</div>';
@@ -1409,7 +1409,7 @@ firetable.ui.setupRoomEvents = function () {
         wlLabel +
         '<div class="waitlist-empty">' +
         '<span class="waitlist-empty-msg">' + (Object.keys(firetable.tableData || {}).length < 4 ? 'Less than 4 DJs = no need to wait!' : 'The decks are full. Nobody is waiting yet.') + '</span>' +
-        (showJoinBtn ? '<button class="butt graybutt small wlAddMeBtn">Hop on <span class="material-symbols-filled">queue_music</span></button>' : '') +
+        (showJoinBtn ? '<button class="butt graybutt small wlAddMeBtn">Hop on <span class="material-symbols-filled" aria-hidden="true">queue_music</span></button>' : '') +
         '</div>'
       ).removeClass('has-entries');
     }
@@ -1580,34 +1580,7 @@ firetable.ui.setupRoomEvents = function () {
   });
 };
 
-/**
- * The stage's states (1.10): with nobody on the decks, "The decks are open"
- * over the deck's own join button. With only the room's bot there, the stage
- * says nothing: the bot is just the DJ. ("Listen to the room", shown while the browser holds
- * the sound back, is one line: the stage and the bar already say who's playing what.)
- */
-firetable.ui.renderStageState = function () {
-  var users = ftapi.users || {};
-  var here = 0;
-  for (var uid in users) if (users.hasOwnProperty(uid) && users[uid] && !users[uid].hostbot) here++;
-  var hereText = here ? firetable.utilities.pluralize(here, "person", "people") + " here" : "";
-  var djs = [];
-  var table = firetable.tableData || {};
-  for (var k in table) if (table.hasOwnProperty(k) && table[k]) djs.push(table[k]);
-  var mine = djs.some(function (d) { return d.id === ftapi.uid; });
-  var state = !djs.length ? "open" : null;
-  var stage = document.getElementById("djStage");
-  if (stage) {
-    stage.classList.toggle("st-empty", state === "open");
-  }
-  var box = document.getElementById("st-state");
-  if (box) {
-    box.hidden = !state || mine;
-    $("#st-stateText").text(state === "open"
-      ? "The decks are open. Hop on and the room plays from your ★ playlist." + (hereText ? " " + hereText + "." : "")
-      : "");
-  }
-};
+// The stage's states (the decks' note, the song card with nothing playing): js/stage-state.js
 
 /**
  * The stage's avatars, sharp at the size they're drawn: each one is asked for

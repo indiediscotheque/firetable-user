@@ -25,6 +25,16 @@ var ASPECT_RATIO = 16 / 9;
 /** Default brand colour (firetable orange) */
 var COLOR_ORANGE = "#cc9933";
 
+// ─── Icons ───────────────────────────────────────────────────────────────────
+/**
+ * A song's save button, wherever it is (rows, cards, the bar, the stage's
+ * Grab): + to save it, then, once it's in a playlist, a check in a disc,
+ * filled and in the room's accent (css/looks.css, .is-saved). The plain check
+ * alone has no filled form, and at a glance it looked like the +.
+ */
+var SAVE_ICON = "playlist_add";
+var SAVED_ICON = "playlist_add_check_circle";
+
 // ─── localStorage Keys ──────────────────────────────────────────────────────
 /**
  * All localStorage key strings in one place.

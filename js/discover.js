@@ -2023,7 +2023,7 @@ firetable.discover = (function () {
     setList("crate", "Your crate", c);
     var rows = c.map(function (t, i) {
       return '<li class="d-listrow pl-row' + (isPlaying("crate", i) ? " is-playing" : "") + '" data-list="crate" data-i="' + i + '"><span class="d-n">' + (i + 1) + "</span>" +
-        '<button type="button" class="d-mini-row" data-list="crate" data-i="' + i + '" aria-label="Play ' + esc(t.t) + '"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
+        '<button type="button" class="d-mini-row" data-list="crate" data-i="' + i + '"><span class="sr-only">Play </span><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span>' +
         '<span class="d-mini-text"><b>' + esc(t.t) + "</b><span>" + esc(t.a) + "</span></span></button>" +
         '<span class="pl-acts">' +
         (i ? '<button type="button" class="row-icon material-symbols-outlined pl-cratetop" data-i="' + i + '" title="Move to the top" aria-label="Move ' + esc(t.t) + ' to the top">vertical_align_top</button>' : "") +
@@ -2701,10 +2701,10 @@ firetable.discover = (function () {
     var keep = document.getElementById("pv-dkeep");
     var saved = t ? firetable.saved.where(t.type, t.cid) : "";
     if (kind === "discover" || kind === "pick") {
-      keep.innerHTML = '<button type="button" class="butt graybutt iconbutt d-savebtn pb-save' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "Saved in " + saved + ". Save again" : D.signedIn ? "Save to a playlist" : "Save to your crate") + '" aria-label="' + esc(saved ? "Saved in " + saved : "Save") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "</button>";
+      keep.innerHTML = '<button type="button" class="butt graybutt iconbutt d-savebtn pb-save' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "Saved in " + saved + ". Save again" : D.signedIn ? "Save to a playlist" : "Save to your crate") + '" aria-label="' + esc(saved ? "Saved in " + saved : "Save") + '">' + ms(saved ? SAVED_ICON : SAVE_ICON) + "</button>";
     } else if (live && !D.signedIn) {
       keep.innerHTML = '<button type="button" class="butt graybutt iconbutt pb-joinfire" title="Join to fire this song" aria-label="Join to fire this song">' + ms("mode_heat") + "</button>" +
-        '<button type="button" class="butt graybutt iconbutt pb-savelive' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "In your crate" : "Save to your crate") + '" aria-label="' + esc(saved ? "In your crate" : "Save to your crate") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "</button>";
+        '<button type="button" class="butt graybutt iconbutt pb-savelive' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "In your crate" : "Save to your crate") + '" aria-label="' + esc(saved ? "In your crate" : "Save to your crate") + '">' + ms(saved ? SAVED_ICON : SAVE_ICON) + "</button>";
     } else keep.innerHTML = "";
 
     // transport
@@ -3013,7 +3013,7 @@ firetable.discover = (function () {
     var url = t ? linkOf(t) : "";
     var openOn = t && Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud";
     if (disc) {
-      keep = '<button type="button" class="butt graybutt iconbutt d-savebtn' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "Saved in " + saved + ". Save again" : D.signedIn ? "Save to a playlist" : "Save to your crate") + '" aria-label="' + esc(saved ? "Saved in " + saved : "Save") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "</button>";
+      keep = '<button type="button" class="butt graybutt iconbutt d-savebtn' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "Saved in " + saved + ". Save again" : D.signedIn ? "Save to a playlist" : "Save to your crate") + '" aria-label="' + esc(saved ? "Saved in " + saved : "Save") + '">' + ms(saved ? SAVED_ICON : SAVE_ICON) + "</button>";
       var done = P.inRoom && String(P.inRoom.cid) === String(t.cid);
       var label = !D.signedIn ? "Join to play it in the room" : done ? "First in your DJ playlist" : "Play it in the room";
       keep += '<button type="button" class="butt graybutt iconbutt d-toroom' + (done ? " is-done" : "") + '" title="' + esc(label) + '" aria-label="' + esc(label) + '">' + ms(done ? "check" : "queue_play_next") + "</button>";
@@ -3021,7 +3021,7 @@ firetable.discover = (function () {
         '<button type="button" class="butt graybutt iconbutt d-more" title="More" aria-label="More about this song" aria-haspopup="menu">' + ms("more_vert") + "</button>";
     } else if (room && !D.signedIn) {
       keep = '<button type="button" class="butt graybutt iconbutt pb-joinfire" title="Join to fire this song" aria-label="Join to fire this song">' + ms("mode_heat") + "</button>" +
-        '<button type="button" class="butt graybutt iconbutt pb-savelive' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "In your crate" : "Save to your crate") + '" aria-label="' + esc(saved ? "In your crate" : "Save to your crate") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "</button>";
+        '<button type="button" class="butt graybutt iconbutt pb-savelive' + (saved ? " is-saved" : "") + '" title="' + esc(saved ? "In your crate" : "Save to your crate") + '" aria-label="' + esc(saved ? "In your crate" : "Save to your crate") + '">' + ms(saved ? SAVED_ICON : SAVE_ICON) + "</button>";
     }
     if (D.mode === "discover") acts += '<button type="button" class="butt graybutt iconbutt pvf-list" title="' + (D.signedIn ? "Playlists" : "Your crate") + '" aria-label="' + (D.signedIn ? "Playlists" : "Your crate") + '">' + ms("queue_music") + "</button>";
     var factsEl = document.getElementById("pv-facts");
@@ -4005,7 +4005,8 @@ firetable.discover = (function () {
       el.innerHTML = artistLinks(text);
     });
     root.querySelectorAll(".hist-track-title, .fresh-track-title, #track").forEach(function (el) {
-      if (el.closest("#dBrowse") || el.classList.contains("d-sheetlink")) return;
+      // (the stage card's title with no song on is words: there's nothing to open, js/stage-state.js)
+      if (el.closest("#dBrowse") || el.classList.contains("d-sheetlink") || (el.id === "track" && !liveTrack())) return;
       el.classList.add("d-sheetlink");
       el.setAttribute("role", "button");
       el.setAttribute("tabindex", "0");
@@ -4077,7 +4078,7 @@ firetable.discover = (function () {
       '<div class="d-tags" id="dSheetTags"></div></div></div>' +
       '<div class="d-hist" id="dSheetHist"><p>' + ms("hourglass_empty") + "Looking it up…</p></div>" +
       '<div class="d-actions"><button type="button" class="butt d-panelmain d-sheetplay">' + ms("play_arrow", true) + "<span>Play" + (D.mode === "discover" ? "" : " in Discover") + "</span></button>" +
-      '<button type="button" class="butt graybutt d-sheetsave' + (saved ? " is-saved" : "") + '">' + ms(saved ? "playlist_add_check" : "playlist_add") + "<span>" + (saved ? "Saved" : "Save") + "</span></button>" +
+      '<button type="button" class="butt graybutt d-sheetsave' + (saved ? " is-saved" : "") + '">' + ms(saved ? SAVED_ICON : SAVE_ICON) + "<span>" + (saved ? "Saved" : "Save") + "</span></button>" +
       (link ? '<a class="butt graybutt iconbutt" href="' + esc(link) + '" target="_blank" rel="noopener" title="Open on ' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + '" aria-label="Open on ' + (Number(t.type || 1) === MEDIA_YOUTUBE ? "YouTube" : "SoundCloud") + '">' + ms("open_in_new") + "</a>" +
         '<button type="button" class="butt graybutt iconbutt d-sheetcopy" title="Copy the song\'s link" aria-label="Copy the song\'s link">' + ms("link") + "</button>" : "") +
       "</div></div></div>";
@@ -4276,8 +4277,9 @@ firetable.discover = (function () {
     tabs.className = "tabs";
     tabs.setAttribute("role", "tablist");
     tabs.setAttribute("aria-label", "Discover or Live");
-    tabs.innerHTML = '<button type="button" role="tab" class="tab" data-mode="discover" aria-selected="false">Discover</button>' +
-      '<button type="button" role="tab" class="tab" data-mode="live" aria-selected="false"><i class="d-dot" aria-hidden="true"></i>Live</button>';
+    // named: the toolbar draws each one's icon as a word (css/rail.css ::before), which was read in its name
+    tabs.innerHTML = '<button type="button" role="tab" class="tab" data-mode="discover" aria-selected="false" aria-label="Discover">Discover</button>' +
+      '<button type="button" role="tab" class="tab" data-mode="live" aria-selected="false" aria-label="Live"><i class="d-dot" aria-hidden="true"></i>Live</button>';
     document.getElementById("topbar").appendChild(tabs);
     // one search for both sides: from Live, the button opens it in Discover
     var utils = document.getElementById("topbarUtils");
@@ -4546,13 +4548,14 @@ firetable.discover = (function () {
       // (SoundCloud's FINISH reaches onEnded through the widget's own binding, player.js)
       ftapi.events.on("loggedIn", function () { signedIn(true); });
       ftapi.events.on("loggedOut", function () { signedIn(false); });
-      ftapi.events.on("newSong", function () {
+      // after room.js's own (bound later, in ui.init), which sets firetable.song: the bar showed the song before
+      ftapi.events.on("newSong", function () { setTimeout(function () {
         mapMarks();
         renderFull(true);
         yourTurn();
         if (D.src === "live" && liveTrack()) mediaSession(liveTrack(), true);
         renderBar();
-      });
+      }, 0); });
       // a mod fixed the room song's tags: the bar and Now playing follow
       // (after room.js, whose handler corrects firetable.song first)
       ftapi.events.on("tagUpdate", function (data) { setTimeout(function () { tagsFixed(data); }, 0); });

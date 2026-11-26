@@ -639,9 +639,9 @@ firetable.tt = (function () {
     var playing = !!(song && song.cid && song.cid != 0);
     var title = ($id("track") && $id("track").textContent.trim()) || "";
     var artist = ($id("artist") && $id("artist").textContent.trim()) || "";
-    if (!playing) { title = "Nobody's playing"; artist = "Step up and play music"; }
-    setLed("tt-line1", artist || title);
-    setLed("tt-line2", artist ? title : "");
+    // nothing playing: the stage card's own words (js/stage-state.js), "Nothing playing" over what played last
+    setLed("tt-line1", playing ? artist || title : title);
+    setLed("tt-line2", playing ? (artist ? title : "") : artist);
     $id("tt-board").classList.toggle("tt-playing", playing);
     var artUrl = $id("albumArt") && $id("albumArt").dataset.albumArtCurrent;
     var art = playing && artUrl ? "url(" + JSON.stringify(abs(artUrl)) + ")" : "none";
@@ -813,6 +813,8 @@ firetable.tt = (function () {
     if (tab === "queue" && S.layout === "two") tab = "room";
     S.tab = tab;
     if ((tab === "queue" || S.layout === "two") && ftapi.uid && !S.sub) firetable.nav.setView("playlists");
+    // the phone's tab bar says Library for the Queue tab only: Room and Chat are Live (js/discover.js navTab)
+    else if (tab !== "queue" && window.matchMedia("(max-width: 639px)").matches && firetable.discover.state().tab === "library") firetable.nav.setMobileTab("mmchat");
     if (tab === "room" && S.sub) openSub(S.sub);
     document.body.setAttribute("data-tt-tab", tab);
     document.querySelectorAll("#tt-tabs .tt-tab").forEach(function (b) {
@@ -1299,16 +1301,10 @@ firetable.tt = (function () {
     $id("tt-grabPick").addEventListener("click", function () { $id("st-grabPick").click(); });
     $id("tt-link").addEventListener("click", function () { $id("songlink").click(); });
     bindLaptop();
-    $id("nav-ttLaptop").addEventListener("click", function () {
-      var menu = $id("nav-accountMenu");
-      try { if (menu && menu.matches(":popover-open")) menu.hidePopover(); } catch (e) { /* no popover */ }
-      openLaptop();
-    });
-    $id("nav-ttAvatar").addEventListener("click", function () {
-      var menu = $id("nav-accountMenu");
-      try { if (menu && menu.matches(":popover-open")) menu.hidePopover(); } catch (e) { /* no popover */ }
-      openPicker(false);
-    });
+    // the account menu's two items: the menu closes, then theirs opens
+    var closeMenu = function () { var m = $id("nav-accountMenu"); try { if (m && m.matches(":popover-open")) m.hidePopover(); } catch (e) { /* no popover */ } };
+    $id("nav-ttLaptop").addEventListener("click", function () { closeMenu(); openLaptop(); });
+    $id("nav-ttAvatar").addEventListener("click", function () { closeMenu(); openPicker(false); });
     $id("tt-exit").addEventListener("click", leave);
     $id("tt-layout").addEventListener("click", function () { setLayout(S.layout === "two" ? "one" : "two", true); });
 
@@ -1355,6 +1351,9 @@ firetable.tt = (function () {
     });
     document.addEventListener("click", function (e) {
       if (e.target.closest("[data-tt-signin]")) { var s = $id("nav-signin"); if (s) s.click(); }
+      // the phone's tab bar, after it has done its part (js/discover.js goTab): Library is the Queue tab here, Live the room
+      var nt = S.active && e.target.closest("#nav-tabs [data-tab]"), to = nt && { library: "queue", live: S.tab === "queue" ? "room" : S.tab }[nt.dataset.tab];
+      if (to) setTab(to);
     });
 
     var dlg = $id("tt-picker");

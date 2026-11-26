@@ -903,7 +903,7 @@ function buildQueueItemHTML(key, track, isPreview, pos) {
     '<div class="pvbarWrap">' +
     '<input type="checkbox" class="q-check" aria-label="Select ' + firetable.utilities.htmlEscape(showTitle || trackName) + '"' + (picked ? ' checked' : '') + ' />' +
     '<div class="' + artClass + '"' + artStyle + '></div>' +
-    '<button id="pv' + key + '" class="material-symbols-filled previewicon">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
+    '<button type="button" id="pv' + key + '" class="material-symbols-filled previewicon" aria-label="' + (isPreview ? 'Stop the preview' : 'Preview') + '">' + (isPreview ? '&#xE034;' : '&#xE037;') + '</button>' +
     (track.flagged ? flagHtml : '<span class="track-warning"></span>') +
     (pos ? '<span class="q-num" aria-hidden="true">' + pos + '</span>' : '') +
     '<div class="listwords">' + nameHtml + tagHtml + durationHtml + (track.from === "discover" ? '<span class="pl-from" title="Saved from Discover">Discover</span>' : '') + '</div>' +
@@ -1006,7 +1006,7 @@ firetable.ui.setupPlaylistEvents = function () {
       ftapi.actions.moveTrackToBottom(oldID, function (newID) {
         if (firetable.preview && firetable.preview === oldID) {
           firetable.preview = newID;
-          $('#pv' + newID).html('&#xE034;');
+          firetable.ui.previewIcon('pv' + newID, true);
         }
       }, $p.attr('data-cid'));
     })
@@ -1543,17 +1543,18 @@ firetable.ui.setupPlaylistEvents = function () {
   });
 
   // ── Delete launcher ──
-  $("#plDeleteLauncher").on("click", function () {
-    var val = $("#listpicker").val();
-    if (!val || val === "0") {
-      return; // nothing to delete
-    }
-    var name = $("#listpicker option:selected").text();
-    $("#deleteConfirmTarget").text(name);
-    $("#deleteConfirmInput").val('');
-    $("#pldeleteButton").prop('disabled', true);
+  /** Delete this playlist (its button, and the playlist's ⋮): you type the list's name to confirm. */
+  function openDeletePrompt() {
+    var pick = document.getElementById("listpicker");
+    if (!pick.value || pick.value === "0") return; // nothing to delete
+    // its name alone (the option's data-name): the option's words add its count
+    document.getElementById("deleteConfirmTarget").textContent = pick.options[pick.selectedIndex].getAttribute("data-name");
+    document.getElementById("deleteConfirmInput").value = "";
+    document.getElementById("pldeleteButton").disabled = true;
     document.getElementById("deletePromptBox").showModal();
-  });
+  }
+  var delLauncher = document.getElementById("plDeleteLauncher");
+  if (delLauncher) delLauncher.addEventListener("click", openDeletePrompt);
 
   // ── Add-new popover toggle ──
   function openPlAddMenu() {
@@ -1681,7 +1682,7 @@ firetable.ui.setupPlaylistEvents = function () {
   }
   $("#startMerge").on("click", function () {
     var source = $("#mergepicker").val();
-    var sourceName = $("#mergepicker option:selected").text();
+    var sourceName = $("#mergepicker option:selected").attr("data-name");
     var dest = $("#mergepicker2").val();
     $("#mergeSetup").hide();
     $("#mergeHappening").show();
@@ -1746,7 +1747,7 @@ firetable.ui.setupPlaylistEvents = function () {
       if (act === "import") return firetable.importer.open();
       if (act === "shuffle") return firetable.actions.shuffleQueuePrompt(listBtn);
       if (act === "merge") return toggleMerge(listBtn);
-      if (act === "delete") return $("#plDeleteLauncher").trigger("click");
+      if (act === "delete") return openDeletePrompt();
       if (act === "rename") return firetable.actions.openRenameList(id);
       if (act === "dupes") {
         return ftapi.actions.removeDuplicatesFromList(id, function (err, removed) {
@@ -1754,9 +1755,9 @@ firetable.ui.setupPlaylistEvents = function () {
           firetable.ui.toast(removed ? "Removed " + firetable.utilities.pluralize(removed, "duplicate", "duplicates") : "No duplicates in this playlist", "success");
         });
       }
-      if (act === "export") return firetable.actions.exportList(id, $("#listpicker option:selected").text());
+      if (act === "export") return firetable.actions.exportList(id, $("#listpicker option:selected").attr("data-name"));
       if (act === "check") {
-        firetable.ui.toast("Checking " + $("#listpicker option:selected").text() + " for broken tracks…", "notice");
+        firetable.ui.toast("Checking " + ($("#listpicker option:selected").attr("data-name") || "the playlist") + " for broken tracks…", "notice");
         firetable.actions.checkBrokenTracks(id).then(function (r) {
           firetable.ui.toast(firetable.utilities.brokenSummary(r), "success");
         }, function (err) {

@@ -740,9 +740,7 @@ firetable.ui.setupChatEvents = function () {
     // Resolve sender's display name and role
     if (ftapi.users[chatData.id]) {
       if (ftapi.users[chatData.id].username) namebo = ftapi.users[chatData.id].username;
-      if (ftapi.users[chatData.id].mod) utitle = "shield";
-      if (ftapi.users[chatData.id].supermod) utitle = "local_police";
-      if (ftapi.users[chatData.id].hostbot) utitle = "smart_toy";
+      utitle = firetable.people.roleOf(ftapi.users[chatData.id]); // Mod, Supermod, Room bot: as the people list has them
     } else if (chatData.name) {
       namebo = chatData.name;
     }
@@ -814,7 +812,9 @@ firetable.ui.setupChatEvents = function () {
         'background-image',
         "url(" + firetable.utilities.avatarURL(chatData.id, namebo) + ")"
       );
-      $chatthing.find('.utitle').html(utitle);
+      // the sender's role: a picture named for it, as in the people list (none: nothing to read, aria-hidden)
+      var ut = $chatthing[0].querySelector('.utitle');
+      if (utitle) { ut.textContent = utitle.icon; ut.removeAttribute('aria-hidden'); ut.setAttribute('role', 'img'); ut.setAttribute('aria-label', utitle.name); ut.title = utitle.name; }
       $chatthing.find('.chatTime')
         .attr('id', "chatTime" + chatData.chatID)
         .attr('data-time', chatData.time)

@@ -91,10 +91,11 @@ firetable.discoverQueue = (function () {
     document.body.classList.add("d-queue-here");
     host.addEventListener("click", onPlayClick, true);
     // Live draws the rows again on every change (and long lists a block at a time): mark them each time
-    var rows = document.getElementById("mainqueue");
+    var rows = document.getElementById("mainqueue"), found = document.getElementById("searchResults");
     if (rows && window.MutationObserver) {
       watcher = new MutationObserver(firetable.utilities.oncePerFrame(mark));
       watcher.observe(rows, { childList: true });
+      if (found) watcher.observe(found, { childList: true }); // Find tracks' results play here too
     }
     window.dispatchEvent(new Event("resize")); // the list measures its scrollbar again
   }
@@ -181,7 +182,7 @@ firetable.discoverQueue = (function () {
     deps.play("found", 0);
   }
 
-  /** The song playing here, and the songs saved this visit. */
+  /** The song playing here, the songs saved this visit, and what each play button does here. */
   function mark() {
     var rows = document.querySelector("#dSide #mainqueue");
     if (!rows) return;
@@ -193,22 +194,38 @@ firetable.discoverQueue = (function () {
     var session = (firetable.saved && firetable.saved.session) || {};
     rows.querySelectorAll(".pvbar[data-cid]").forEach(function (r) {
       r.classList.toggle("d-added", !!session[firetable.saved.key(r.getAttribute("data-type") || 1, r.getAttribute("data-cid"))]);
+      if (!r.classList.contains("d-playing")) playLabel(r.querySelector(".previewicon"), false, false);
     });
+    // Find tracks' results: the one sounding in the bar says Pause, as a playlist row does (playFound)
+    var found = deps.active() && p.list === "found" && p.track ? String(p.track.cid) : null;
+    document.querySelectorAll("#dSide #searchResults .pvbar").forEach(function (r) {
+      var on = found !== null && r.getAttribute("data-cid") === found;
+      playLabel(r.querySelector(".previewicon"), on, on && !p.paused);
+    });
+  }
+  /**
+   * A play button here plays its song in the bar, the whole song: Pause while
+   * it sounds, Play here otherwise (Live's own say Preview: js/player.js).
+   * Only what changed is written: this runs over the whole list on each redraw.
+   */
+  function playLabel(icon, on, sounding) {
+    if (!icon) return;
+    var glyph = on && sounding ? "\ue034" : "\ue037"; // pause / play_arrow
+    var label = on && sounding ? "Pause" : "Play here";
+    if (icon.textContent !== glyph) icon.textContent = glyph;
+    if (icon.getAttribute("aria-label") !== label) icon.setAttribute("aria-label", label);
   }
   function markRow(row, on, sounding) {
     row.classList.toggle("d-playing", on);
-    var icon = row.querySelector(".previewicon");
-    if (icon) {
-      icon.textContent = on && sounding ? "" : ""; // pause / play_arrow
-      if (on) icon.setAttribute("aria-label", sounding ? "Pause" : "Play here");
-      else icon.removeAttribute("aria-label");
-    }
+    playLabel(row.querySelector(".previewicon"), on, sounding);
     if (on) row.setAttribute("aria-current", "true"); else row.removeAttribute("aria-current");
   }
+  /** Back in Live: no marks, and every play button is Live's preview again. */
   function clearMarks() {
-    document.querySelectorAll("#mainqueue .pvbar.d-playing, #mainqueue .pvbar.d-added").forEach(function (r) {
-      markRow(r, false);
-      r.classList.remove("d-added");
+    document.querySelectorAll("#mainqueue .pvbar, #searchResults .pvbar").forEach(function (r) {
+      r.classList.remove("d-playing", "d-added");
+      r.removeAttribute("aria-current");
+      firetable.ui.previewIcon(r.querySelector(".previewicon"), !!firetable.preview && firetable.preview === r.getAttribute("data-key"));
     });
   }
 

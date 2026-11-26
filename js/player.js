@@ -101,9 +101,9 @@ function onPlayerReady(event) {
   player.setVolume(firetable.utilities.getEffectiveVolume());
 
   // ── Resume song if one was already playing when YT loaded ──
-  if (firetable.song && firetable.song.type === MEDIA_YOUTUBE) {
-    firetable.utilities.resumeCurrentSong();
-  }
+  // (with nothing playing, the player's placeholder video doesn't start: firetable.media.hush)
+  if (!firetable.song || firetable.song.cid == 0) firetable.media.hush();
+  else if (firetable.song.type === MEDIA_YOUTUBE) firetable.utilities.resumeCurrentSong();
 }
 
 // The YouTube API script can finish loading before this file defines
@@ -213,6 +213,24 @@ firetable.actions.muteToggle = function (zeroMute) {
 // ─── Track Preview ───────────────────────────────────────────────────────────
 
 /**
+ * A song's preview button (.previewicon: Live's playlist, Recent, Fresh, Find
+ * tracks): its glyph and its name follow the preview, "Preview" or "Stop the
+ * preview" (the glyph alone named it a private-use character). Only what
+ * changed is written: the preview's bar redraws it five times a second.
+ * @param {(Element|string|null)} el - the button, or its id ("pv" + key)
+ * @param {boolean} playing
+ */
+firetable.ui.previewIcon = function (el, playing) {
+  if (typeof el === "string") el = document.getElementById(el);
+  if (!el) return;
+  var glyph = playing ? "\ue034" : "\ue037"; // pause / play_arrow (escaped: tools/subset-icons.py finds them so)
+  var label = playing ? "Stop the preview" : "Preview";
+  if (el.textContent !== glyph) el.textContent = glyph;
+  if (el.getAttribute("aria-label") !== label) el.setAttribute("aria-label", label);
+  if (el.hasAttribute("title") && el.getAttribute("title") !== label) el.setAttribute("title", label);
+};
+
+/**
  * Preview a song for 30 seconds. If the same song is already being previewed,
  * stop the preview and resume the current room song.
  *
@@ -229,7 +247,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     // ── Already previewing this track → stop and resume room song ──
     clearTimeout(firetable.ptimeout);
     firetable.ptimeout = null;
-    $("#pv" + firetable.preview).html("&#xE037;"); // play_arrow
+    firetable.ui.previewIcon("pv" + firetable.preview, false);
     $("#pvbar" + firetable.preview).css("background-image", "none").removeClass("previewing");
     clearInterval(firetable.movePvBar);
     firetable.movePvBar = null;
@@ -241,7 +259,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
   } else {
     // ── Stop any existing preview ──
     if (firetable.preview) {
-      $("#pv" + firetable.preview).html("&#xE037;");
+      firetable.ui.previewIcon("pv" + firetable.preview, false);
       $("#pvbar" + firetable.preview).css("background-image", "none").removeClass("previewing");
     }
 
@@ -263,7 +281,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
     firetable.pvCount = 0;
     firetable.ptimeout = setTimeout(function () {
       firetable.ptimeout = null;
-      $("#pv" + firetable.preview).html("&#xE037;");
+      firetable.ui.previewIcon("pv" + firetable.preview, false);
       $("#pvbar" + firetable.preview).css("background-image", "none").removeClass("previewing");
       clearInterval(firetable.movePvBar);
       firetable.movePvBar = null;
@@ -277,7 +295,7 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
 
     // ── Show pause icon + animate progress bar ──
     $("#pvbar" + id).addClass("previewing");
-    $("#pv" + id).html("&#xE034;"); // pause icon
+    firetable.ui.previewIcon("pv" + id, true);
     firetable.movePvBar = setInterval(function () {
       var pcnt = (firetable.pvCount / 29) * 100; // 29 = PREVIEW_DURATION/1000 - 1
       firetable.pvCount += 0.2;
@@ -286,8 +304,8 @@ firetable.actions.pview = function (id, fromSearch, type, fromHist) {
       // style on the row that's playing, and off every other row (#62)
       var $row = $("#pvbar" + firetable.preview);
       $("#mainqueue .pvbar.previewing").not($row).removeClass("previewing")
-        .css("background-image", "none").find(".previewicon").html("&#xE037;");
-      $row.addClass("previewing").find(".previewicon").html("&#xE034;");
+        .css("background-image", "none").find(".previewicon").each(function () { firetable.ui.previewIcon(this, false); });
+      $row.addClass("previewing").find(".previewicon").each(function () { firetable.ui.previewIcon(this, true); });
       // Same accent as the rest of the app (not a separate hardcoded orange)
       $row.css(
         "background-image",
@@ -577,6 +595,19 @@ firetable.media = {
     m.revealed = false;
     // right away (refresh() runs later on purpose, to ignore short gaps)
     if (!m.directTap) document.body.classList.remove('yt-revealed');
+  },
+
+  /**
+   * Nothing playing in the room: its own players stop, unless a preview or
+   * Discover's song is using them (firetable.preview). The room emptying
+   * (js/stage-state.js), a preview ending in a quiet room
+   * (resumeCurrentSong), and the YouTube player's placeholder video when it's
+   * ready in one (onPlayerReady).
+   */
+  hush: function () {
+    if (firetable.preview) return;
+    if (firetable.ytLoaded && typeof player !== "undefined" && player && player.stopVideo) player.stopVideo();
+    if (firetable.scLoaded && firetable.scwidget) firetable.scwidget.pause();
   },
 
   /** A new room song started: forget the old player state. */

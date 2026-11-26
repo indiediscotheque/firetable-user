@@ -90,8 +90,8 @@
 			<h1 id="roomlogo" title="Indie Discotheque"><span class="sr-only">Indie Discotheque</span></h1>
 			<!-- Room theme; at 1024px+ it wraps onto its own row -->
 			<div id="themeSlot">
-				<button type="button" id="themePill" class="no-theme" popovertarget="themePopover" aria-haspopup="dialog">
-					<span class="themeLabel">Theme</span>
+				<button type="button" id="themePill" class="no-theme" popovertarget="themePopover" aria-haspopup="dialog" aria-labelledby="themePillLabel themePillText">
+					<span class="themeLabel" id="themePillLabel">Theme</span>
 					<span id="themePillText">none yet</span>
 				</button>
 			</div>
@@ -107,14 +107,15 @@
 					<i class="material-symbols-outlined nav-lookSun" aria-hidden="true">light_mode</i><i class="material-symbols-outlined nav-lookMoon" aria-hidden="true">dark_mode</i>
 				</button>
 				<span id="tip-nav-look" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-nav-look">Light mode</span>
+				<!-- The room's people elsewhere (Discord, Instagram…): diversity_3, not share (reads as "share this page") or groups ("People here") -->
 				<button id="socialTrigger" type="button" class="header_icon" aria-label="Community" popovertarget="socialPopover" style="anchor-name: --tip-socialTrigger" aria-describedby="tip-socialTrigger">
-					<i class="material-symbols-outlined">share</i>
+					<i class="material-symbols-outlined" aria-hidden="true">diversity_3</i>
 				</button>
 				<span id="tip-socialTrigger" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-socialTrigger">Community</span>
-				<a id="roomInfo" class="header_icon" aria-label="About" target="_blank" href="about" style="anchor-name: --tip-roomInfo" aria-describedby="tip-roomInfo"><i class="material-symbols-outlined">&#xE887;</i></a>
+				<a id="roomInfo" class="header_icon" aria-label="About" target="_blank" href="about" style="anchor-name: --tip-roomInfo" aria-describedby="tip-roomInfo"><i class="material-symbols-outlined" aria-hidden="true">&#xE887;</i></a>
 				<span id="tip-roomInfo" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-roomInfo">About</span>
 				<button id="inboxTrigger" type="button" class="header_icon" aria-label="Mentions" aria-haspopup="dialog" aria-expanded="false" popovertarget="inboxPopover" style="anchor-name: --tip-inboxTrigger" aria-describedby="tip-inboxTrigger">
-					<i class="material-symbols-outlined">alternate_email</i><span id="inboxBadge" hidden></span>
+					<i class="material-symbols-outlined" aria-hidden="true">alternate_email</i><span id="inboxBadge" hidden></span>
 				</button>
 				<span id="tip-inboxTrigger" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-inboxTrigger">Mentions</span>
 				<button type="button" id="loggedInUser" class="header_icon" popovertarget="nav-accountMenu" aria-label="Your account" aria-haspopup="menu" aria-expanded="false" style="anchor-name: --tip-loggedInUser" aria-describedby="tip-loggedInUser">
@@ -188,41 +189,41 @@
 			<div id="ondeck"></div>
 			<div id="stageTopRight">
 				<button class="butt graybutt iconbutt" id="screenControl" aria-label="Screen: synced" tabindex="0" style="anchor-name: --tip-screenControl" aria-describedby="screenControlTip">
-					<i class="material-symbols-outlined">live_tv</i><!-- synced; updateScreenBtn sets the glyph on init -->
+					<i class="material-symbols-outlined" aria-hidden="true">live_tv</i><!-- synced; updateScreenBtn sets the glyph on init -->
 				</button>
 				<span id="screenControlTip" role="tooltip" class="ft-tip" style="position-anchor: --tip-screenControl">Screen: synced</span>
 				<div id="volplace">
 					<input type="range" id="slider" min="0" max="100" step="5" value="80" aria-label="Volume" />
 				</div>
 				<button class="butt graybutt iconbutt" id="volstatus" aria-label="Mute" tabindex="0" style="anchor-name: --tip-volstatus" aria-describedby="tip-volstatus">
-					<i class="material-symbols-outlined"> &#xE050; </i>
+					<i class="material-symbols-outlined" aria-hidden="true"> &#xE050; </i>
 				</button>
 				<span id="tip-volstatus" role="tooltip" class="ft-tip" style="position-anchor: --tip-volstatus">Mute</span>
 				<button class="butt graybutt iconbutt" id="reloadtrack" aria-label="Reload audio" tabindex="0" style="anchor-name: --tip-reloadtrack" aria-describedby="tip-reloadtrack">
-					<i class="material-symbols-outlined"> refresh </i>
+					<i class="material-symbols-outlined" aria-hidden="true"> refresh </i>
 				</button>
 				<span id="tip-reloadtrack" role="tooltip" class="ft-tip" style="position-anchor: --tip-reloadtrack">Reload audio</span>
 				<button type="button" class="butt graybutt iconbutt" id="st-cast" aria-label="Play on a speaker or TV" aria-haspopup="dialog" style="anchor-name: --tip-st-cast" aria-describedby="tip-st-cast">
-					<i class="material-symbols-outlined">cast</i>
+					<i class="material-symbols-outlined" aria-hidden="true">cast</i>
 				</button>
 				<span id="tip-st-cast" role="tooltip" class="ft-tip" style="position-anchor: --tip-st-cast">Play on a speaker or TV</span>
 				<button class="butt graybutt iconbutt" id="fullscreenBtn" aria-label="Full screen" tabindex="0" hidden style="anchor-name: --tip-fullscreenBtn" aria-describedby="tip-fullscreenBtn">
-					<i class="material-symbols-outlined">fullscreen</i>
+					<i class="material-symbols-outlined" aria-hidden="true">fullscreen</i>
 				</button>
 				<span id="tip-fullscreenBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-fullscreenBtn">Full screen</span>
 			</div>
 			<div id="stageActions">
 				<button class="butt graybutt iconbutt" id="fire" aria-label="Fire!" tabindex="0" style="anchor-name: --tip-fire" aria-describedby="tip-fire">
-					<i class="material-symbols-outlined"> mode_heat </i>
+					<i class="material-symbols-outlined" aria-hidden="true"> mode_heat </i>
 					<span id="st-fireCount" class="st-fireCount" aria-hidden="true" hidden></span>
 				</button>
 				<span id="tip-fire" role="tooltip" class="ft-tip" style="position-anchor: --tip-fire">Fire!</span>
 				<button class="butt graybutt iconbutt" id="grab" aria-label="Add to playlist" tabindex="0" style="anchor-name: --tip-grab" aria-describedby="tip-grab">
-					<i class="material-symbols-outlined"> &#xE03B; </i>
+					<i class="material-symbols-outlined" aria-hidden="true"> &#xE03B; </i>
 				</button>
 				<span id="tip-grab" role="tooltip" class="ft-tip" style="position-anchor: --tip-grab">Add to playlist</span>
 				<button type="button" class="butt graybutt iconbutt" id="st-grabPick" aria-label="Choose the playlist" aria-haspopup="true" style="anchor-name: --tip-st-grabPick" aria-describedby="tip-st-grabPick">
-					<i class="material-symbols-outlined">arrow_drop_down</i>
+					<i class="material-symbols-outlined" aria-hidden="true">arrow_drop_down</i>
 				</button>
 				<span id="tip-st-grabPick" role="tooltip" class="ft-tip" style="position-anchor: --tip-st-grabPick">Choose the playlist</span>
 				<a target="_blank" role="button" class="butt graybutt iconbutt" id="songlink" rel="noopener" aria-label="Open the song" tabindex="0" style="anchor-name: --tip-songlink" aria-describedby="tip-songlink">
@@ -231,16 +232,16 @@
 				<span id="tip-songlink" role="tooltip" class="ft-tip" style="position-anchor: --tip-songlink">Open the song</span>
 				<!-- Only for the DJ playing now, to skip their own track; mods skip from Mod tools (#233) -->
 				<button id="skipTrigger" type="button" class="butt graybutt iconbutt" aria-label="Skip your track" popovertarget="skipPopover" tabindex="0" style="anchor-name: --tip-skipTrigger" aria-describedby="tip-skipTrigger">
-					<i class="material-symbols-outlined">skip_next</i>
+					<i class="material-symbols-outlined" aria-hidden="true">skip_next</i>
 				</button>
 				<span id="tip-skipTrigger" role="tooltip" class="ft-tip" style="position-anchor: --tip-skipTrigger">Skip your track</span>
 				<button id="npModBtn" type="button" class="butt graybutt iconbutt" aria-label="Mod tools" aria-haspopup="menu" popovertarget="npModMenu" style="anchor-name: --tip-npModBtn" aria-describedby="tip-npModBtn">
-					<i class="material-symbols-outlined">shield_person</i>
+					<i class="material-symbols-outlined" aria-hidden="true">shield_person</i>
 				</button>
 				<span id="tip-npModBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-npModBtn">Mod tools</span>
 			</div>
 			<button type="button" id="tapToPlay" class="butt">
-				<i class="material-symbols-filled">play_arrow</i>
+				<i class="material-symbols-filled" aria-hidden="true">play_arrow</i>
 				<span class="ttp-text"><b>Listen to the room</b><span id="tapToPlaySub"></span></span>
 			</button>
 			<!-- The decks' state (1.10): open, or the bot keeping the music going -->
@@ -275,7 +276,7 @@
 					<select id="djlistpicker" aria-labelledby="djlistpickerLabel">
 						<option value="0">Default Playlist</option>
 					</select>
-					<button type="button" id="djlistOpen" class="butt graybutt iconbutt" title="Open in Playlists" aria-label="Open the DJ playlist in Playlists"><i class="material-symbols-outlined">playlist_play</i></button>
+					<button type="button" id="djlistOpen" class="butt graybutt iconbutt" title="Open in Playlists" aria-label="Open the DJ playlist in Playlists"><i class="material-symbols-outlined" aria-hidden="true">playlist_play</i></button>
 					<div id="deckQueue"></div>
 				</div>
 			</div>
@@ -310,7 +311,7 @@
 							<div class="chatHead">
 								<div class="chatName"></div>
 								<div class="chatTime" id="chatTimeKEY"></div>
-								<span class="material-symbols-outlined utitle"></span>
+								<span class="material-symbols-outlined utitle" aria-hidden="true"></span>
 							</div>
 							<div id="chattxtKEY" class="chatText"></div>
 						</div>
@@ -359,13 +360,13 @@
 			<div id="chatbottom">
 				<form id="newchatForm" autocomplete="off">
 					<button type="button" class="butt iconbutt" id="pickEmoji" aria-label="Emoji" style="anchor-name: --tip-pickEmoji" aria-describedby="tip-pickEmoji">
-						<i class="material-symbols-outlined"> insert_emoticon </i>
+						<i class="material-symbols-outlined" aria-hidden="true"> insert_emoticon </i>
 					</button>
 					<span id="tip-pickEmoji" role="tooltip" class="ft-tip" style="position-anchor: --tip-pickEmoji">Emoji</span>
 					<textarea maxlength="240" autocomplete="off" name="newchat" placeholder="Chat a thing"
 						id="newchat" tabindex="0" rows="1" enterkeyhint="send" aria-autocomplete="list" aria-controls="ch-emojiSuggestList"></textarea>
 					<button type="submit" class="butt iconbutt" id="chatSend" aria-label="Send" style="anchor-name: --tip-chatSend" aria-describedby="tip-chatSend">
-						<i class="material-symbols-outlined"> arrow_upward </i>
+						<i class="material-symbols-outlined" aria-hidden="true"> arrow_upward </i>
 					</button>
 					<span id="tip-chatSend" role="tooltip" class="ft-tip" style="position-anchor: --tip-chatSend">Send</span>
 				</form>
@@ -378,8 +379,8 @@
 				</div>
 				<div id="morechats">
 					<button class="butt graybutt">
-						<i class="material-symbols-outlined">arrow_downward</i> new messages
-						<i class="material-symbols-outlined">arrow_downward</i>
+						<i class="material-symbols-outlined" aria-hidden="true">arrow_downward</i> new messages
+						<i class="material-symbols-outlined" aria-hidden="true">arrow_downward</i>
 					</button>
 				</div>
 				<div id="atPicker" role="listbox" aria-label="Mention someone"></div>
@@ -411,7 +412,7 @@
 					<div id="userKEY" class="prson">
 						<!-- template for users -->
 						<div class="ft-avatar">
-							<span class="material-symbols-outlined blockon"></span>
+							<span class="material-symbols-outlined blockon" aria-hidden="true"></span>
 						</div>
 						<div class="prsnNameRole">
 							<span class="prsnName"></span>
@@ -458,32 +459,32 @@
 					</div>
 					<div id="qControlButtons">
 						<button class="butt graybutt iconbutt" id="plIndexBtn" aria-label="All playlists" aria-haspopup="dialog" style="anchor-name: --tip-plIndexBtn" aria-describedby="tip-plIndexBtn">
-							<i class="material-symbols-outlined">library_music</i>
+							<i class="material-symbols-outlined" aria-hidden="true">library_music</i>
 						</button>
 						<span id="tip-plIndexBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-plIndexBtn">All playlists</span>
 						<button class="butt graybutt iconbutt" id="shuffleQueue" aria-label="Shuffle list" style="anchor-name: --tip-shuffleQueue" aria-describedby="tip-shuffleQueue">
-							<i class="material-symbols-outlined"> shuffle </i>
+							<i class="material-symbols-outlined" aria-hidden="true"> shuffle </i>
 						</button>
 						<span id="tip-shuffleQueue" role="tooltip" class="ft-tip" style="position-anchor: --tip-shuffleQueue">Shuffle list</span>
 						<button class="butt graybutt iconbutt" id="mergeLists" aria-label="Merge playlists" style="anchor-name: --tip-mergeLists" aria-describedby="tip-mergeLists">
-							<i class="material-symbols-outlined"> merge_type </i>
+							<i class="material-symbols-outlined" aria-hidden="true"> merge_type </i>
 						</button>
 						<span id="tip-mergeLists" role="tooltip" class="ft-tip" style="position-anchor: --tip-mergeLists">Merge playlists</span>
 						<button class="butt graybutt iconbutt" id="plAddLauncher" aria-label="New or Import playlist" aria-haspopup="menu" aria-expanded="false" style="anchor-name: --tip-plAddLauncher" aria-describedby="tip-plAddLauncher">
-							<i class="material-symbols-outlined">add</i>
+							<i class="material-symbols-outlined" aria-hidden="true">add</i>
 						</button>
 						<span id="tip-plAddLauncher" role="tooltip" class="ft-tip" style="position-anchor: --tip-plAddLauncher">New / Import playlist</span>
 						<button class="butt graybutt iconbutt" id="plDeleteLauncher" aria-label="Delete playlist" style="anchor-name: --tip-plDeleteLauncher" aria-describedby="tip-plDeleteLauncher">
-							<i class="material-symbols-outlined">delete</i>
+							<i class="material-symbols-outlined" aria-hidden="true">delete</i>
 						</button>
 						<span id="tip-plDeleteLauncher" role="tooltip" class="ft-tip" style="position-anchor: --tip-plDeleteLauncher">Delete playlist</span>
 						<!-- Everything about the playlist, in one menu (js/playlist.js): the buttons above stay for it to use -->
 						<button type="button" class="butt graybutt iconbutt" id="cr-listBtn" aria-label="Playlist options" aria-haspopup="menu" aria-expanded="false" popovertarget="cr-listMenu" style="anchor-name: --tip-cr-listBtn" aria-describedby="tip-cr-listBtn">
-							<i class="material-symbols-outlined">more_vert</i>
+							<i class="material-symbols-outlined" aria-hidden="true">more_vert</i>
 						</button>
 						<span id="tip-cr-listBtn" role="tooltip" class="ft-tip" style="position-anchor: --tip-cr-listBtn">Playlist options</span>
 						<button class="butt graybutt iconbutt" id="addToQueueBttn" aria-label="Find tracks" style="anchor-name: --tip-addToQueueBttn" aria-describedby="tip-addToQueueBttn">
-							<i class="material-symbols-outlined">add</i>
+							<i class="material-symbols-outlined" aria-hidden="true">add</i>
 						</button>
 						<span id="tip-addToQueueBttn" role="tooltip" class="ft-tip" style="position-anchor: --tip-addToQueueBttn">Find tracks</span>
 					</div>
@@ -496,7 +497,7 @@
 							<select id="mergepicker">
 								<option value="0">Default Playlist</option>
 							</select>
-							<i class="material-symbols-outlined"> arrow_right_alt </i>
+							<i class="material-symbols-outlined" aria-hidden="true"> arrow_right_alt </i>
 							<select id="mergepicker2">
 								<option value="0">Default Playlist</option>
 							</select>
@@ -676,10 +677,10 @@
 
 	<div id="plAddPopover" role="menu" aria-label="Playlist options">
 		<button role="menuitem" class="butt graybutt" id="plAddCreate">
-			<i class="material-symbols-outlined">library_add</i> Create Playlist
+			<i class="material-symbols-outlined" aria-hidden="true">library_add</i> Create Playlist
 		</button>
 		<button role="menuitem" class="butt graybutt" id="plAddImport">
-			<i class="material-symbols-outlined">download</i> Import Playlist
+			<i class="material-symbols-outlined" aria-hidden="true">download</i> Import Playlist
 		</button>
 	</div>
 
@@ -689,7 +690,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2 id="joinTitle">Join the room</h2>
-				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<div class="modalContent">
 				<p class="d-joinnote" id="au-note"></p>
@@ -762,7 +763,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2 id="installAppTitle">Get the app</h2>
-				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<div class="modalContent installGuide">
 				<p id="installIntro">Put the room on your phone's Home Screen. It opens full screen like any other app, and it can send you a notification when someone @mentions you.</p>
@@ -773,7 +774,7 @@
 					<summary><i class="material-symbols-outlined" aria-hidden="true">phone_iphone</i> iPhone and iPad</summary>
 					<ol>
 						<li>Open this page in <b>Safari</b> (Chrome and Edge work too on iOS 16.4 or newer).</li>
-						<li>Tap <b>Share</b> <i class="material-symbols-outlined inline" aria-label="the Share icon">ios_share</i> (on newer iPhones it's in the <b>•••</b> menu next to the address).</li>
+						<li>Tap <b>Share</b> <i class="material-symbols-outlined inline" role="img" aria-label="the Share icon">ios_share</i> (on newer iPhones it's in the <b>•••</b> menu next to the address).</li>
 						<li>Scroll down and tap <b>Add to Home Screen</b> <i class="material-symbols-outlined inline" aria-hidden="true">add_box</i>.</li>
 						<li>Leave <b>Open as Web App</b> on, then tap <b>Add</b>.</li>
 						<li>Open <b>Indie Disco</b> from your Home Screen and sign in. Notifications only work from the Home Screen app on iPhone and iPad.</li>
@@ -782,9 +783,9 @@
 				<details class="installSteps" data-platform="android">
 					<summary><i class="material-symbols-outlined" aria-hidden="true">android</i> Android</summary>
 					<ol>
-						<li><b>Chrome:</b> tap the menu <i class="material-symbols-outlined inline" aria-label="the menu icon">more_vert</i> and choose <b>Install app</b> (or <b>Add to Home screen</b>, then <b>Install</b>).</li>
-						<li><b>Samsung Internet:</b> tap the menu <i class="material-symbols-outlined inline" aria-label="the menu icon">menu</i>, then <b>Add page to</b> → <b>Home screen</b>.</li>
-						<li><b>Firefox:</b> tap the menu <i class="material-symbols-outlined inline" aria-label="the menu icon">more_vert</i>, then <b>Install</b>.</li>
+						<li><b>Chrome:</b> tap the menu <i class="material-symbols-outlined inline" role="img" aria-label="the menu icon">more_vert</i> and choose <b>Install app</b> (or <b>Add to Home screen</b>, then <b>Install</b>).</li>
+						<li><b>Samsung Internet:</b> tap the menu <i class="material-symbols-outlined inline" role="img" aria-label="the menu icon">menu</i>, then <b>Add page to</b> → <b>Home screen</b>.</li>
+						<li><b>Firefox:</b> tap the menu <i class="material-symbols-outlined inline" role="img" aria-label="the menu icon">more_vert</i>, then <b>Install</b>.</li>
 						<li>Open <b>Indie Disco</b> from your home screen or app drawer.</li>
 					</ol>
 				</details>
@@ -805,7 +806,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2 id="st-castTitle">Play on a speaker or TV</h2>
-				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<div class="modalContent installGuide">
 				<p>The room plays on this device, so send this device's sound to your speaker. You can still Fire, chat and DJ from here as usual.</p>
@@ -814,17 +815,17 @@
 						<summary><i class="material-symbols-outlined" aria-hidden="true">cast</i> Google Cast: Chromecast, Nest speakers, Google TV</summary>
 						<ol>
 							<li>Open the room in <b>Chrome</b> or <b>Edge</b> on a computer on the same Wi-Fi as the speaker.</li>
-							<li><b>Chrome:</b> menu <i class="material-symbols-outlined inline" aria-label="the menu icon">more_vert</i> → <b>Cast, save, and share</b> → <b>Cast…</b><br /><b>Edge:</b> menu <i class="material-symbols-outlined inline" aria-label="the menu icon">more_horiz</i> → <b>More tools</b> → <b>Cast media to device</b></li>
+							<li><b>Chrome:</b> menu <i class="material-symbols-outlined inline" role="img" aria-label="the menu icon">more_vert</i> → <b>Cast, save, and share</b> → <b>Cast…</b><br /><b>Edge:</b> menu <i class="material-symbols-outlined inline" role="img" aria-label="the menu icon">more_horiz</i> → <b>More tools</b> → <b>Cast media to device</b></li>
 							<li>If it shows <b>Sources</b>, choose <b>Cast tab</b>.</li>
 							<li>Pick your speaker, TV or speaker group. The room now plays there.</li>
-							<li>To stop, click <i class="material-symbols-outlined inline" aria-label="the Cast icon">cast</i> in the toolbar, then <b>Stop casting</b>.</li>
+							<li>To stop, click <i class="material-symbols-outlined inline" role="img" aria-label="the Cast icon">cast</i> in the toolbar, then <b>Stop casting</b>.</li>
 						</ol>
 					</details>
 					<details class="installSteps" data-way="airplay">
 						<summary><i class="material-symbols-outlined" aria-hidden="true">airplay</i> AirPlay: HomePod, Sonos, Apple TV</summary>
 						<ol>
-							<li><b>iPhone or iPad:</b> open <b>Control Center</b> (swipe down from the top-right corner), tap <i class="material-symbols-outlined inline" aria-label="the AirPlay icon">airplay</i> on the music card, then pick your speaker.</li>
-							<li><b>Mac:</b> click <b>Control Center</b> in the menu bar, then the <i class="material-symbols-outlined inline" aria-label="the AirPlay icon">airplay</i> next to <b>Sound</b>, and pick your speaker.</li>
+							<li><b>iPhone or iPad:</b> open <b>Control Center</b> (swipe down from the top-right corner), tap <i class="material-symbols-outlined inline" role="img" aria-label="the AirPlay icon">airplay</i> on the music card, then pick your speaker.</li>
+							<li><b>Mac:</b> click <b>Control Center</b> in the menu bar, then the <i class="material-symbols-outlined inline" role="img" aria-label="the AirPlay icon">airplay</i> next to <b>Sound</b>, and pick your speaker.</li>
 							<li>Keep the room open. On iPhone, if the sound stops when the screen locks, keep the room on screen.</li>
 						</ol>
 					</details>
@@ -855,7 +856,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2 id="plIndexTitle">Your Playlists <span id="cr-plTotal" class="plx-total"></span></h2>
-				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<div class="modalContent">
 				<div class="plx-tools">
@@ -864,7 +865,7 @@
 						<input type="search" id="cr-plFilter" placeholder="Find a playlist" autocomplete="off" enterkeyhint="search" aria-label="Find a playlist" aria-controls="plIndexList" />
 					</label>
 					<details class="plx-help">
-						<summary>How this works</summary>
+						<summary><i class="material-symbols-outlined" aria-hidden="true">help</i>How this works</summary>
 						<ul>
 							<li><i class="material-symbols-outlined" aria-hidden="true">star</i> <b>Default</b> opens first when you come in.</li>
 							<li><i class="material-symbols-outlined" aria-hidden="true">headphones</i> <b>DJ from</b> is the list the room plays from when you're on deck.</li>
@@ -902,18 +903,18 @@
 	<div id="cr-listMenu" popover="auto" class="ft-popover">
 		<div id="cr-listMenuArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box ft-menu" role="menu" aria-label="Playlist options">
-			<button type="button" role="menuitem" class="butt graybutt" data-act="all"><i class="material-symbols-outlined">library_music</i> All playlists…</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-act="new"><i class="material-symbols-outlined">library_add</i> New playlist</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-act="import"><i class="material-symbols-outlined">download</i> Import a playlist…</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="all"><i class="material-symbols-outlined" aria-hidden="true">library_music</i> All playlists…</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="new"><i class="material-symbols-outlined" aria-hidden="true">library_add</i> New playlist</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="import"><i class="material-symbols-outlined" aria-hidden="true">download</i> Import a playlist…</button>
 			<hr class="ft-menu-sep" />
-			<button type="button" role="menuitem" class="butt graybutt" data-act="rename"><i class="material-symbols-outlined">edit</i> Rename this playlist…</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-act="shuffle"><i class="material-symbols-outlined">shuffle</i> Shuffle this playlist</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-act="dupes"><i class="material-symbols-outlined">filter_none</i> Remove duplicates</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-act="merge"><i class="material-symbols-outlined">merge_type</i> Merge playlists…</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-act="check"><i class="material-symbols-outlined">troubleshoot</i> Check for broken tracks</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-act="export"><i class="material-symbols-outlined">file_download</i> Export as a list of songs</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="rename"><i class="material-symbols-outlined" aria-hidden="true">edit</i> Rename this playlist…</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="shuffle"><i class="material-symbols-outlined" aria-hidden="true">shuffle</i> Shuffle this playlist</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="dupes"><i class="material-symbols-outlined" aria-hidden="true">filter_none</i> Remove duplicates</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="merge"><i class="material-symbols-outlined" aria-hidden="true">merge_type</i> Merge playlists…</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="check"><i class="material-symbols-outlined" aria-hidden="true">troubleshoot</i> Check for broken tracks</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="export"><i class="material-symbols-outlined" aria-hidden="true">file_download</i> Export as a list of songs</button>
 			<hr class="ft-menu-sep" />
-			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete this playlist…</button>
+			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined" aria-hidden="true">delete</i> Delete this playlist…</button>
 		</div>
 	</div>
 
@@ -957,9 +958,9 @@
 	<div id="cr-plRowMenu" popover="auto" class="ft-popover">
 		<div id="cr-plRowMenuArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box ft-menu" role="menu" aria-label="Playlist options">
-			<button type="button" role="menuitem" class="butt graybutt" data-act="rename"><i class="material-symbols-outlined">edit</i> Rename</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-act="check"><i class="material-symbols-outlined">troubleshoot</i> Check for broken tracks</button>
-			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined">delete</i> Delete…</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="rename"><i class="material-symbols-outlined" aria-hidden="true">edit</i> Rename</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-act="check"><i class="material-symbols-outlined" aria-hidden="true">troubleshoot</i> Check for broken tracks</button>
+			<button type="button" role="menuitem" class="butt graybutt ft-menu-danger" data-act="delete"><i class="material-symbols-outlined" aria-hidden="true">delete</i> Delete…</button>
 		</div>
 	</div>
 
@@ -967,7 +968,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2 id="cr-renameTitle">Rename playlist</h2>
-				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<form class="modalContent" id="cr-renameForm" novalidate>
 				<label for="cr-renameInput">New name</label>
@@ -984,7 +985,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2>Delete Playlist</h2>
-				<button class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined">close</i></button>
+				<button class="butt graybutt iconbutt closeModal" title="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<div class="modalContent">
 				<p>This is <strong>irreversible.</strong> This playlist will be permanently deleted.</p>
@@ -1000,14 +1001,14 @@
 
 	<dialog id="cardViewLargerModal" aria-labelledby="cardViewLargerTitle">
 		<div class="modalBox">
-			<button class="butt graybutt iconbutt closeModal" id="cardViewLargerClose" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+			<button class="butt graybutt iconbutt closeModal" id="cardViewLargerClose" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			<div class="cardStage">
-				<button type="button" class="butt graybutt iconbutt cardNav" id="cardPrev" aria-label="Previous card"><i class="material-symbols-outlined">chevron_left</i></button>
+				<button type="button" class="butt graybutt iconbutt cardNav" id="cardPrev" aria-label="Previous card"><i class="material-symbols-outlined" aria-hidden="true">chevron_left</i></button>
 				<div class="cardTilt">
 					<canvas id="cardMakerViewLarger" width="900" height="1200" role="img"></canvas>
 					<div class="cardGlare" aria-hidden="true"></div>
 				</div>
-				<button type="button" class="butt graybutt iconbutt cardNav" id="cardNext" aria-label="Next card"><i class="material-symbols-outlined">chevron_right</i></button>
+				<button type="button" class="butt graybutt iconbutt cardNav" id="cardNext" aria-label="Next card"><i class="material-symbols-outlined" aria-hidden="true">chevron_right</i></button>
 			</div>
 			<div class="cardInfo">
 				<h3 id="cardViewLargerTitle"></h3>
@@ -1023,7 +1024,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2 id="bm-title">Build your Bouletmaton</h2>
-				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+				<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<div class="modalContent bm-builder">
 				<p class="settingHint" id="bm-intro"></p>
@@ -1062,7 +1063,7 @@
 				<button type="button" role="tab" class="tab" data-tab="account-tab" aria-controls="account-tab">Account</button>
 				<button type="button" role="tab" class="tab" data-tab="settings-tab" aria-controls="settings-tab">Settings</button>
 				<button type="button" role="tab" class="tab" data-tab="mod-tab" id="modTab" aria-controls="mod-tab">Mod</button>
-				<button type="button" class="butt graybutt iconbutt closeModal" id="accountSettingsClose" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+				<button type="button" class="butt graybutt iconbutt closeModal" id="accountSettingsClose" title="Close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<div class="modalContent">
 				<div id="profile-tab" class="tabPanel" role="tabpanel">
@@ -1310,7 +1311,7 @@
 		<div class="modalBox">
 			<div class="modalHeader">
 				<h2 id="helpTitle">Shortcuts and commands</h2>
-				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined">close</i></button>
+				<button class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
 			</div>
 			<div class="modalContent helpBox">
 				<h3>Keys</h3>
@@ -1568,12 +1569,12 @@
 	<div id="npModMenu" popover="auto" class="ft-popover">
 		<div id="npModArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box ft-menu" role="menu" aria-label="Mod tools">
-			<button type="button" role="menuitem" class="butt graybutt" id="npSkip"><i class="material-symbols-outlined">skip_next</i> Skip</button>
-			<button type="button" role="menuitem" class="butt graybutt" id="npFixTags"><i class="material-symbols-outlined">edit</i> Fix tags</button>
-			<button type="button" role="menuitem" class="butt graybutt" id="npFlag" aria-haspopup="menu"><i class="material-symbols-outlined">flag</i> Flag…</button>
+			<button type="button" role="menuitem" class="butt graybutt" id="npSkip"><i class="material-symbols-outlined" aria-hidden="true">skip_next</i> Skip</button>
+			<button type="button" role="menuitem" class="butt graybutt" id="npFixTags"><i class="material-symbols-outlined" aria-hidden="true">edit</i> Fix tags</button>
+			<button type="button" role="menuitem" class="butt graybutt" id="npFlag" aria-haspopup="menu"><i class="material-symbols-outlined" aria-hidden="true">flag</i> Flag…</button>
 			<!-- the decks (1.7): the playing DJ off, someone on -->
-			<button type="button" role="menuitem" class="butt graybutt" id="npRemoveDj" hidden><i class="material-symbols-outlined">person_remove</i> <span id="npRemoveDjText">Remove from the decks</span></button>
-			<button type="button" role="menuitem" class="butt graybutt" id="npAddDj" aria-haspopup="dialog"><i class="material-symbols-outlined">add_2</i> Add someone to the decks…</button>
+			<button type="button" role="menuitem" class="butt graybutt" id="npRemoveDj" hidden><i class="material-symbols-outlined" aria-hidden="true">person_remove</i> <span id="npRemoveDjText">Remove from the decks</span></button>
+			<button type="button" role="menuitem" class="butt graybutt" id="npAddDj" aria-haspopup="dialog"><i class="material-symbols-outlined" aria-hidden="true">add_2</i> Add someone to the decks…</button>
 		</div>
 	</div>
 
@@ -1591,9 +1592,9 @@
 		<div id="flagMenuArrow" class="ft-arrow"></div>
 		<div class="ft-popover-box ft-menu" role="menu" aria-label="Flag track as">
 			<div class="ft-menu-title" id="flagMenuTitle">Flag track as</div>
-			<button type="button" role="menuitem" class="butt graybutt" data-flag="broken"><i class="material-symbols-outlined">warning</i> Broken</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-flag="quality"><i class="material-symbols-outlined">disc_full</i> Low audio quality</button>
-			<button type="button" role="menuitem" class="butt graybutt" data-flag="offtheme"><i class="material-symbols-outlined">flag</i> Off theme</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-flag="broken"><i class="material-symbols-outlined" aria-hidden="true">warning</i> Broken</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-flag="quality"><i class="material-symbols-outlined" aria-hidden="true">disc_full</i> Low audio quality</button>
+			<button type="button" role="menuitem" class="butt graybutt" data-flag="offtheme"><i class="material-symbols-outlined" aria-hidden="true">flag</i> Off theme</button>
 		</div>
 	</div>
 
@@ -1636,12 +1637,12 @@
 		<div class="utt-facts"></div>
 		<div id="ft-user-tip-tooltip" role="tooltip"></div>
 		<div class="utt-actions">
-			<button class="utt-icon-btn utt-at-btn" data-action="chat-at" title="@ in chat"><i class="material-symbols-outlined">alternate_email</i></button>
-			<button class="utt-icon-btn utt-deck-btn" data-action="add-to-deck" title="Add to deck"><i class="material-symbols-outlined">add_2</i></button>
-			<button class="utt-icon-btn utt-remove-deck-btn" data-action="remove-from-deck" title="Remove from deck"><i class="material-symbols-outlined">person_remove</i></button>
-			<button class="utt-icon-btn utt-bus-btn" data-action="toggle-bus" aria-haspopup="menu" title="Catch the bus"><i class="material-symbols-outlined">departure_board</i></button>
-			<button class="utt-icon-btn utt-stepdown-btn" data-action="step-down" title="Step down from deck"><i class="material-symbols-outlined">logout</i></button>
-			<button class="utt-icon-btn utt-block-btn" data-action="toggle-block" title="Block"><i class="material-symbols-outlined">block</i></button>
+			<button class="utt-icon-btn utt-at-btn" data-action="chat-at" title="@ in chat"><i class="material-symbols-outlined" aria-hidden="true">alternate_email</i></button>
+			<button class="utt-icon-btn utt-deck-btn" data-action="add-to-deck" title="Add to deck"><i class="material-symbols-outlined" aria-hidden="true">add_2</i></button>
+			<button class="utt-icon-btn utt-remove-deck-btn" data-action="remove-from-deck" title="Remove from deck"><i class="material-symbols-outlined" aria-hidden="true">person_remove</i></button>
+			<button class="utt-icon-btn utt-bus-btn" data-action="toggle-bus" aria-haspopup="menu" title="Catch the bus"><i class="material-symbols-outlined" aria-hidden="true">departure_board</i></button>
+			<button class="utt-icon-btn utt-stepdown-btn" data-action="step-down" title="Step down from deck"><i class="material-symbols-outlined" aria-hidden="true">logout</i></button>
+			<button class="utt-icon-btn utt-block-btn" data-action="toggle-block" title="Block"><i class="material-symbols-outlined" aria-hidden="true">block</i></button>
 		</div>
 	</div>
 
@@ -1702,6 +1703,7 @@
 	<script type="text/javascript" src="js/people.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/avatar-builder.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/room.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/stage-state.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/ui.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/discover-queue.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/discover-shuffle.js?v=01.12.08"></script>

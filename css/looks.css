@@ -8227,7 +8227,7 @@ body.density-comfortable :is(#thehistory, .ft-rows) .histlink { font-size: 1rem;
     cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: .3rem;
     padding: .35rem .5rem; border-radius: var(--radius-md); color: var(--color-text-muted);
     &::-webkit-details-marker { display: none; }
-    &::before { content: "help"; font-family: 'Material Symbols Outlined'; font-size: 1.1rem; line-height: 1; }
+    & > i { font-size: 1.1rem; } /* its icon, aria-hidden in the markup (a ::before's word was read in the name) */
     &:hover { color: var(--color-text); background: rgba(var(--ink-rgb), .05); }
   }
   &[open] { flex-basis: 100%; order: 3; }
@@ -8649,12 +8649,18 @@ body.has-beat.dance-mode .ft-avatar:not(.skel) {
    Round five: one design language
    ============================================ */
 
-/* A song you already have: the + becomes a gold check, everywhere */
-:is(#thehistory, .ft-rows) button.histeal.is-saved,
-:is(#thediscovers, .ft-cards) button.histeal.is-saved,
-#searchResults button.queuetrack.is-saved,
-#grab.is-saved i {
+/* A song you already have: its save button turns the room's accent and its
+   check a filled disc (SAVED_ICON, js/constants.js), so saved and not saved
+   differ at a glance (round 5: the owner found them alike), wherever it is:
+   rows, cards, charts, Recent, Find tracks, the bar, the full player, the
+   song's sheet, the stage's Grab. Not saved stays the outlined +. (The first
+   lines outweigh the rows' own icon colour: :is(#thehistory, .ft-rows) button…) */
+:is(#thehistory, #thediscovers, #searchResults, .ft-rows, .ft-cards) button.is-saved:is(.material-symbols-outlined, .material-symbols-filled),
+#grab.is-saved i,
+html body .is-saved:is(.material-symbols-outlined, .material-symbols-filled),
+html body .is-saved :is(i, .material-symbols-outlined, .material-symbols-filled) {
     color: var(--color-accent);
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 /* Times, counts and timers in the numbers face */
