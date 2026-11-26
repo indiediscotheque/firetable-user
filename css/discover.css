@@ -11,7 +11,9 @@
     display: none;
 }
 
-/* The Discover / Live switch, under the theme (a row of the header) */
+/* The Discover / Live switch, in the header: a row of its own on phones (where
+   the tab bar stands in for it), in the header's row on tablets and on a phone
+   on its side, and the first row under the logo on computers */
 body.ft-has-discover #topbar {
     flex-wrap: wrap;
 }
@@ -1160,6 +1162,8 @@ body.ft-discover #dSide #actualChat {
     #dRail { grid-row: 1; padding-top: var(--topbar-h, 10rem); border-right: 1px solid var(--color-border); }
     #dBrowse { grid-row: 1; grid-column: 2; }
     #dSide { grid-row: 1; grid-column: 3; }
+    /* the switch: the first row under the logo, over the theme (css/looks.css) */
+    #modeTabs { order: 1; }
 }
 
 
@@ -2518,6 +2522,16 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     #topbarUtils { order: 11; }
     .pb { min-height: 3.25rem; padding-block: var(--pad1); gap: var(--pad2); }
     .pb .pb-art { width: 2.5rem; height: 2.5rem; }
+}
+/* Tablets (taller than a phone on its side): the switch sits in the header's
+   row too, between the theme and the icons, at its own width (a shrinking
+   one would cut DISCOVER short: the tabs clip what doesn't fit). The header
+   is a row across for members too (css/looks.css). The Turntable theme's bar
+   keeps its own */
+@media only screen and (min-width: 640px) and (max-width: 1023px) and (min-height: 401px) {
+    body:not(.tt-skin) #modeTabs { flex: none; width: auto; margin: 0 var(--pad1); border-bottom: 0; }
+    #modeTabs .tab { flex: none; padding: 0 var(--pad3); }
+    #topbarUtils { order: 11; }
 }
 @media only screen and (max-height: 400px) {
     .pvf-visual { display: none; }

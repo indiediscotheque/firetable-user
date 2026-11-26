@@ -2,7 +2,7 @@
  * discover.js — Discover: the library side of the site.
  *
  * Always on (it was the config.js option `discover: true` until 5.3). A
- * Discover / Live switch sits under the room theme. Visitors open the site on Discover,
+ * Discover / Live switch sits in the header, by the room theme. Visitors open the site on Discover,
  * members on Live, and each person's last choice is remembered.
  *
  * Discover is its own page with the site's own parts: the left column keeps
@@ -4147,7 +4147,7 @@ firetable.discover = (function () {
     // named: the toolbar draws each one's icon as a word (css/rail.css ::before), which was read in its name
     tabs.innerHTML = '<button type="button" role="tab" class="tab" data-mode="discover" aria-selected="false" aria-label="Discover">Discover</button>' +
       '<button type="button" role="tab" class="tab" data-mode="live" aria-selected="false" aria-label="Live"><i class="d-dot" aria-hidden="true"></i>Live</button>';
-    document.getElementById("topbar").appendChild(tabs);
+    document.getElementById("topbar").insertBefore(tabs, document.getElementById("topbarUtils")); // before the icons: Tab goes logo, theme, switch, icons
     // one search for both sides: from Live, the button opens it in Discover
     var utils = document.getElementById("topbarUtils");
     if (utils && !document.getElementById("dSearchOpen")) {

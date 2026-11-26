@@ -5,7 +5,8 @@
    takes the room it gives up; chat keeps its width. Everything the column
    holds stays one click away, as an icon with a tooltip:
    - at the top: the logo; then where you are (Discover | Live) and the
-     room (tonight's theme, and in Live who's here, with how many);
+     room (in Discover its theme: in Live that's on the stage, over the
+     song, js/theme-slot.js; and in Live who's here, with how many);
    - in the middle, in Live: who's on the decks, as faces (the one playing
      ringed, presence on each), the waitlist and Hop on. Everyone else is
      behind the count. In Discover: search and the views;
@@ -168,17 +169,19 @@
             & #modeTabs .tab:not(.on):hover,
             & #nav-railPeople:hover,
             & #nav-railBtn:hover,
-            & #themePill:hover,
+            & #topbar #themePill:hover,
             & #topbarUtils .header_icon:hover { background: var(--color-bg-t1); }
         }
 
-        /* The theme: its icon, lit when there is one tonight (the tooltip says which) */
-        & #themeSlot {
+        /* The theme: its icon, lit when there is one (the tooltip says which). In
+           Discover only: in Live it's on the stage, over the song (js/theme-slot.js) */
+        & #topbar > #themeSlot {
             order: 3;
             flex: none;
             width: auto;
+            margin: 0;
         }
-        & #themePill {
+        & #topbar #themePill {
             flex: none;
             position: relative;
             justify-content: center;
@@ -293,9 +296,10 @@
 
         /* Words the icons stand for: out of sight, still read by screen readers
            (the tooltips show them) */
-        & :is(#themePill .themeLabel, #themePillText, .d-nav span, .waitlist-empty-msg, .waitlist-name,
+        & :is(.d-nav span, .waitlist-empty-msg, .waitlist-name,
               #allUsers .prson .prsnNameRole, #allUsers .prson .prsnRole, #allUsers .prson .pe-you, #allUsers .prson .pe-meta,
-              #pe-here .pe-name, #pe-here .pe-role, #pe-here .pe-tag) {
+              #pe-here .pe-name, #pe-here .pe-role, #pe-here .pe-tag),
+        & #topbar :is(#themePill .themeLabel, #themePillText) {
             position: absolute;
             width: 1px;
             height: 1px;

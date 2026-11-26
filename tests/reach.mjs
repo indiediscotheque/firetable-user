@@ -61,7 +61,10 @@ const fullMore = [...full, '#pv-full [aria-label="More controls"]'];
 const FEATURES = [
   // ── the header (TB) ──
   { row: "TB-01", name: "The :id: logo", who: ALL, target: "#roomlogo" },
-  { row: "TB-02", name: "The theme, and Suggest a theme", who: ALL, via: ["#themePill"], target: "#themeSuggest" },
+  // in Live on a computer the theme is on the stage, over the song; in the header everywhere else (round 5, November 25, 2026)
+  { row: "TB-02", name: "The theme, and Suggest a theme (Live: on the stage)", who: ALL, widths: WIDE, via: ["#npText #themePill"], target: "#themeSuggest" },
+  { row: "TB-02", name: "The theme, and Suggest a theme (Live on a phone: the header)", who: ALL, widths: PHONE, via: ["#topbar #themePill"], target: "#themeSuggest" },
+  { row: "TB-02", name: "The theme, and Suggest a theme (Discover: the header)", who: ALL, mode: "discover", via: ["#topbar #themePill"], target: "#themeSuggest" },
   { row: "TB-03", name: "Community links", who: ALL, via: ["#socialTrigger"], target: "#socialPopover" },
   // a member's About and light mode are in the account menu, at every width; a visitor's (no account menu) in the header
   { row: "TB-04", name: "About (visitors: the header)", who: ["visitor"], target: "#roomInfo" },
