@@ -13,6 +13,7 @@
 //   <out>/pages.json        each page's content hash and that day, read back
 //                           from the live site on the next run
 //   <out>/new/feed.xml, <out>/charts/feed.xml   Atom feeds
+//   <out>/find/             Discover's song search (tools/song-search.mjs)
 //   <out>/<key>.txt         the IndexNow key (Bing, Yandex, Naver, Seznam),
 //                           and <out>/.changed, the addresses that changed
 //   --home <file>           the home page: index.html with what's new and this
@@ -41,6 +42,7 @@ import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { createHash } from "crypto";
 import { shareCards } from "./share-cards.mjs";
+import { songSearch } from "./song-search.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => { const i = args.indexOf("--" + name); return i === -1 ? fallback : args[i + 1]; };
@@ -727,6 +729,9 @@ if (weeks.length) {
     html: `<ol>${x.c.rows.slice(0, 10).map((t) => `<li>${esc(t.a)} - ${esc(t.t)} (${esc(plural(t.plays, "play", "plays"))})</li>`).join("")}</ol><p><a href="${esc(abs(x.path))}">The whole chart</a></p>`
   })), Math.min(weeks[0].c.to || Date.now(), Date.now()));
 }
+
+// Search's songs: every song played here, split by word for Discover (tools/song-search.mjs)
+await songSearch({ meta, read, getText, site: SITE, out: OUT });
 
 // IndexNow (Bing, Yandex, Naver, Seznam...): the key, and what changed since the last run for the deploy to tell them
 writeFileSync(join(OUT, INDEXNOW_KEY + ".txt"), INDEXNOW_KEY + "\n");
