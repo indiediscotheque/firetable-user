@@ -146,8 +146,8 @@ test("a post goes only where its keys are set, and fits the platform", () => {
   const env = { BLUESKY_HANDLE: "a", BLUESKY_APP_PASSWORD: "b", TIKTOK_CLIENT_KEY: "c", TIKTOK_CLIENT_SECRET: "d", TIKTOK_REFRESH_TOKEN: "e", INSTAGRAM_TOKEN: "f",
     FACEBOOK_PAGE_ID: "1", FACEBOOK_PAGE_TOKEN: "2", DISCORD_WEBHOOK_URL: "g", STUDIO_DISCORD_WEBHOOK: "h" };
   assert.deepEqual(configured(env).map((p) => p.name).sort(), ["bluesky", "discord", "facebook", "facebook_story", "instagram", "instagram_story", "studio", "tiktok"]);
-  // a song: a Reel, a TikTok draft and the kit; the older poster already sends new releases to Bluesky and Discord
-  assert.deepEqual(targetsFor(post(), env), ["instagram", "facebook", "tiktok", "studio"]);
+  // a song: a Reel, a TikTok draft, Bluesky, Discord and the kit
+  assert.deepEqual(targetsFor(post(), env), ["instagram", "facebook", "tiktok", "bluesky", "discord", "studio"]);
   // a list: carousels, the countdown through TikTok and the kit (the kit last: it reads what the others did)
   assert.deepEqual(targetsFor(post({ kind: "chart", targets: "list" }), env), ["instagram", "facebook", "tiktok", "bluesky", "discord", "studio"]);
   // no video (no ffmpeg): no TikTok, no kit
@@ -155,7 +155,7 @@ test("a post goes only where its keys are set, and fits the platform", () => {
   // "right now": Stories and the quick feeds only
   assert.deepEqual(targetsFor(post({ kind: "busy", targets: "live" }), env), ["instagram_story", "facebook_story", "bluesky", "discord"]);
   assert.deepEqual(targetsFor(post({ kind: "chart", targets: "list" }), { ...env, SOCIAL_PLATFORMS: "instagram" }), ["instagram"]);
-  assert.deepEqual(targetsFor(post(), { ...env, SOCIAL_SKIP: "" }), ["instagram", "facebook", "tiktok", "bluesky", "discord", "studio"]);
+  assert.deepEqual(targetsFor(post(), { ...env, SOCIAL_SKIP: "fresh:tiktok" }), ["instagram", "facebook", "bluesky", "discord", "studio"]);
 });
 
 test("budgets keep each platform to a steady few", () => {
@@ -170,6 +170,10 @@ test("budgets keep each platform to a steady few", () => {
   assert.ok(!withinBudget({ sent: [{ p: "threads", at: now - 2 * H }] }, "threads", now, {}));
   assert.deepEqual(budgets({ SOCIAL_BUDGET: "threads=3/15/2,x=0" }).threads, [3, 15, 2]);
   assert.ok(!withinBudget({ sent: [] }, "x", now, { SOCIAL_BUDGET: "x=0" }), "0 turns one off");
+  // Bluesky and Discord get every post, however many went out today
+  const many = (p) => ({ sent: Array.from({ length: 30 }, (_, i) => ({ p, at: now - i * 60000 })) });
+  for (const p of ["bluesky", "discord"]) assert.ok(withinBudget(many(p), p, now, {}), p);
+  assert.ok(!withinBudget(many("bluesky"), "bluesky", now, { SOCIAL_BUDGET: "bluesky=2" }), "SOCIAL_BUDGET can still set one");
 });
 
 test("the state forgets what's too old and keeps the rest", () => {

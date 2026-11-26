@@ -28,15 +28,15 @@
 //
 // Budgets: at most so many posts a day and a week on each platform, and so
 // many hours apart, so followers get a steady few rather than a flood. A post
-// that would go over leaves that platform out. SOCIAL_BUDGET changes them,
-// e.g. "threads=3/15/3,x=0" (a day / a week / hours apart; 0 turns one off).
+// that would go over leaves that platform out. Bluesky and Discord have no
+// budget: every post goes to both. SOCIAL_BUDGET changes them, e.g.
+// "threads=3/15/3,x=0" (a day / a week / hours apart; 0 turns one off).
 //
 // Settings (environment, all optional):
 //   TZ                     the room's time zone for the schedule (default America/Chicago)
 //   SOCIAL_SPOTLIGHT_HOUR  when the day's song goes out (default 18)
 //   SOCIAL_FRESH_DAYS      only releases out in the last N days (default 14)
-//   SOCIAL_SKIP            kind:platform pairs to leave out (default
-//                          fresh:bluesky,fresh:discord: the older poster covers those)
+//   SOCIAL_SKIP            kind:platform pairs to leave out, e.g. fresh:x (default none)
 //   SOCIAL_PLATFORMS       only these platforms (comma separated)
 //   SOCIAL_SECONDS         a song video's length (default 30; Reels do best at 30-60)
 //   SOCIAL_BUSY_MIN / SOCIAL_BUSY_HOURS  people online for a "the room is busy"
@@ -77,11 +77,13 @@ const ROUTES = {
 };
 
 // [a day, a week, hours apart] for each platform: a steady few, well under what the
-// research on unfollows and reach per post found to hurt (README "social posting")
+// research on unfollows and reach per post found to hurt (README "social posting").
+// Bluesky and Discord get every post, so they have none.
+const ALL = [Infinity, Infinity, 0];
 export const BUDGET = {
   instagram: [1, 5, 20], instagram_story: [2, 10, 4], facebook: [1, 4, 20], facebook_story: [1, 7, 8],
-  tiktok: [1, 5, 20], studio: [1, 6, 20], threads: [2, 10, 4], bluesky: [2, 12, 3], mastodon: [2, 10, 3],
-  x: [1, 6, 12], pinterest: [2, 10, 3], telegram: [2, 12, 3], discord: [2, 12, 3]
+  tiktok: [1, 5, 20], studio: [1, 6, 20], threads: [2, 10, 4], bluesky: ALL, mastodon: [2, 10, 3],
+  x: [1, 6, 12], pinterest: [2, 10, 3], telegram: [2, 12, 3], discord: ALL
 };
 const TRIES = 3;
 const HOUR = 3600000;
@@ -125,7 +127,7 @@ export function withinBudget(state, name, now, e = env) {
 
 /** Which platforms a post goes to: where its kind goes, keys are set, the file it needs exists. */
 export function targetsFor(post, e = env) {
-  const skip = new Set(list(e.SOCIAL_SKIP == null ? "fresh:bluesky,fresh:discord" : e.SOCIAL_SKIP));
+  const skip = new Set(list(e.SOCIAL_SKIP));
   const route = ROUTES[post.targets || "song"];
   const on = new Set(configured(e).map((p) => p.name));
   return route.filter((n) => on.has(n) && !skip.has(post.kind + ":" + n) && !skip.has(post.kind + ":" + n.replace(/_story$/, "")))
@@ -311,7 +313,8 @@ function platforms() {
   for (const p of Object.values(PLATFORMS)) {
     const b = budgets()[p.name];
     const why = p.name === "studio" ? "needs STUDIO_DISCORD_WEBHOOK or STUDIO_TELEGRAM_CHAT_ID" : "needs " + p.needs.filter((k) => !env[k]).join(", ");
-    console.log(`${on.has(p.name) ? "✓" : "·"} ${p.name.padEnd(16)} ${(b ? `${b[0]}/day ${b[1]}/week ${b[2]}h apart` : "").padEnd(24)} ${on.has(p.name) ? "keys set" : why}`);
+    const limit = !b ? "" : b.every((v, i) => v === ALL[i]) ? "every post" : `${b[0]}/day ${b[1]}/week ${b[2]}h apart`;
+    console.log(`${on.has(p.name) ? "✓" : "·"} ${p.name.padEnd(16)} ${limit.padEnd(24)} ${on.has(p.name) ? "keys set" : why}`);
   }
 }
 

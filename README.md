@@ -192,7 +192,7 @@ Posts name songs and artists, never the room's DJs.
 
 **One post per song.** A song gets a single post of its own a year. That holds whichever kind it comes up in (new release, the room's favourite, On This Day) and whichever upload it was played from. Lists (the chart, New Music Friday) can name it again. "(feat. …)", "(Official Video)", case and accents don't make a new song; a remix, edit or version does. Every post also has its own id that's never sent twice, a post that fails is retried only on the platforms that failed, and the workflow stops rather than start from nothing when it can't read what's been posted.
 
-**Budgets** (`tools/social/run.mjs`, `SOCIAL_BUDGET` to change one, e.g. `threads=3/15/3`; `x=0` turns one off). A post over budget skips that platform, and one over budget everywhere waits for another day:
+**Budgets** (`tools/social/run.mjs`, `SOCIAL_BUDGET` to change one, e.g. `threads=3/15/3`; `x=0` turns one off). Bluesky and Discord have none: every post goes to both. A post over budget skips that platform, and one over budget everywhere waits for another day:
 
 | | a day | a week | hours apart |
 |---|---|---|---|
@@ -201,7 +201,8 @@ Posts name songs and artists, never the room's DJs.
 | Facebook feed / Stories | 1 / 1 | 4 / 7 | 20 / 8 |
 | TikTok drafts, the post kit | 1 | 5–6 | 20 |
 | Threads, Mastodon | 2 | 10 | 3–4 |
-| Bluesky, Telegram, Discord | 2 | 12 | 3 |
+| Bluesky, Discord | every post | | |
+| Telegram | 2 | 12 | 3 |
 | X | 1 | 6 | 12 |
 | Pinterest | 2 | 10 | 3 |
 
@@ -238,7 +239,7 @@ Posts name songs and artists, never the room's DJs.
 | Telegram channel | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | a bot from @BotFather, made an admin of the channel (`@channelname`) |
 | Discord | `DISCORD_WEBHOOK_URL` | the channel → Edit → Integrations → Webhooks |
 
-`auth.mjs` needs the app's id and secret in the environment (named at the top of the file) and the app's redirect address set to `https://www.indiediscotheque.com/` (or `REDIRECT_URI`). It prints a link; allow the app and paste back the address the browser lands on. New releases skip Bluesky and Discord by default (`SOCIAL_SKIP`), which the older fresh-track poster already covers.
+`auth.mjs` needs the app's id and secret in the environment (named at the top of the file) and the app's redirect address set to `https://www.indiediscotheque.com/` (or `REDIRECT_URI`). It prints a link; allow the app and paste back the address the browser lands on. `SOCIAL_SKIP` leaves a kind out on a platform (`fresh:x`); by default nothing is skipped.
 
 **Trying it:** Actions → "Social posting" → Run workflow. "Dry run" (on by default) draws what's due and prints every platform's words and the post kit without uploading or posting; pick a kind and "Post even if it isn't due" to send one now. Locally, `node tools/social/run.mjs preview --site https://www.indiediscotheque.com/ --kind spotlight,chart --out /tmp/social` draws them and prints everything (needs ffmpeg for the videos).
 
