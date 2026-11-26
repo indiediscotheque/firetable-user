@@ -91,6 +91,7 @@ firetable.discover = (function () {
     chartGenre: null,    // the chart, narrowed to one genre
     chartNew: false,     // the chart, new releases only
     genreTab: "fav",     // fav | newHere | deep
+    genreView: "grid",   // Genres as grid | map (the sound map: js/discover-map.js); kept for the visit, never stored
     djTab: null,         // most | firstHere; null: Brought here first when they have any (2.7)
     showAll: {},         // long lists opened past their top 10, by list and page
     djSort: "plays",     // plays | firsts | fires | since | name
@@ -494,9 +495,15 @@ firetable.discover = (function () {
   function head(title, link, linkTo) {
     return '<div class="d-head"><h2>' + esc(title) + "</h2>" + (link ? '<a href="' + hrefTo(linkTo) + '">' + esc(link) + "</a>" : "") + "</div>";
   }
-  function chips(name, options, on) {
-    return '<div class="d-chips" role="group">' + options.map(function (o) {
+  function chips(name, options, on, label) {
+    return '<div class="d-chips" role="group"' + (label ? ' aria-label="' + esc(label) + '"' : "") + ">" + options.map(function (o) {
       return '<button type="button" class="d-chip' + (o[0] === on ? " on" : "") + '" data-' + name + '="' + esc(o[0]) + '" aria-pressed="' + (o[0] === on) + '">' + esc(o[1]) + "</button>";
+    }).join("") + "</div>";
+  }
+  /** One of a few ways to see a page, as one control (Charts' period, Genres' Grid | Map). */
+  function seg(name, label, options, on) {
+    return '<div class="d-seg" role="group" aria-label="' + esc(label) + '">' + options.map(function (o) {
+      return '<button type="button" class="d-segbtn' + (o[0] === on ? " on" : "") + '" data-' + name + '="' + esc(o[0]) + '" aria-pressed="' + (o[0] === on) + '">' + esc(o[1]) + "</button>";
     }).join("") + "</div>";
   }
   function layoutButtons(on) {
@@ -602,11 +609,27 @@ firetable.discover = (function () {
       if (/class="d-loading"/.test(h)) return;
       D.prerendered = false;
     }
+    var keep = pressed(el);
     el.innerHTML = h;
+    if (keep && el.querySelector(keep)) el.querySelector(keep).focus({ preventScroll: true });
     writeTitle(); // a page's name can arrive with its data
     if (v === "genres" && !D.sub) layoutMap();
     if (v === "djs" && D.sub) drawCards();
     firetable.ui.markSaved();
+  }
+
+  // A control that draws the page again keeps the focus once it's drawn
+  // (Genres' Grid | Map and decades, Charts' period, steps and drop-downs, the
+  // other chips, a genre's radio on the map's card); it stays where it was on
+  // screen, so the page doesn't scroll to it
+  var REDRAWS = ["data-gview", "data-decade", "data-period", "data-step", "data-gtab", "data-djtab", "data-djsort", "data-layout", "data-more", "data-slug"];
+  /** The focused control in the page, as a selector that finds it again; null when it's none of those. */
+  function pressed(el) {
+    var a = document.activeElement;
+    if (!a || a === el || !el.contains(a) || !a.matches("button, select")) return null;
+    if (a.id) return "#" + CSS.escape(a.id);
+    var at = REDRAWS.filter(function (x) { return a.hasAttribute(x); })[0];
+    return at ? a.tagName.toLowerCase() + (a.classList.length ? "." + CSS.escape(a.classList[0]) : "") + "[" + at + '="' + CSS.escape(a.getAttribute(at)) + '"]' : null;
   }
 
   /** A shelf on Home: the first few, and the rest a tap away. */
@@ -719,10 +742,7 @@ firetable.discover = (function () {
     ((D.data.new && D.data.new.tracks) || []).forEach(function (t) { fresh[t.cid] = true; });
     var rows = all.filter(function (r) { return (!D.chartGenre || r.g === D.chartGenre) && (!D.chartNew || fresh[r.cid]); });
     setList("chart", "Room chart · " + chartTitle(period, id) + (D.chartNew ? " · new releases" : "") + (D.chartGenre ? " · " + D.chartGenre : ""), rows);
-    h += '<div class="d-headrow"><h2>Room chart</h2><div class="d-seg" role="group" aria-label="Period">' +
-      [["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All time"]].map(function (o) {
-        return '<button type="button" class="d-segbtn' + (o[0] === period ? " on" : "") + '" data-period="' + o[0] + '" aria-pressed="' + (o[0] === period) + '">' + o[1] + "</button>";
-      }).join("") + "</div></div>";
+    h += '<div class="d-headrow"><h2>Room chart</h2>' + seg("period", "Period", [["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All time"]], period) + "</div>";
     var stepper = "";
     if (period !== "all") {
       var ids = Object.keys(D.data.chartIds[period] || {}).sort();
@@ -749,12 +769,11 @@ firetable.discover = (function () {
   // ─── The library: genres, DJs, artists, years ───────────────────────────
 
   var libData = {};
-  var libAsked = {};
+  var libAsked = {}; // path -> the read, done once it's in libData
   /** discover/lib/<path>, read once: undefined while it loads, null if there's none. */
   function lib(path) {
     if (!libAsked[path]) {
-      libAsked[path] = true;
-      db().ref("discover/lib/" + path).once("value").then(function (s) { libLoaded(path, s.val()); }, function (err) { quiet(err); libLoaded(path, null); });
+      libAsked[path] = db().ref("discover/lib/" + path).once("value").then(function (s) { libLoaded(path, s.val()); }, function (err) { quiet(err); libLoaded(path, null); });
     }
     return libData[path];
   }
@@ -874,10 +893,7 @@ firetable.discover = (function () {
     var wait = libWaiting(all, "Genres arrive with the weekly play history update.");
     if (wait) return '<div class="d-headrow"><h2>Genres</h2></div>' + wait;
     var list = genreList();
-    var bpms = list.map(function (g) { return g.bpm; }).filter(Boolean);
-    var lo = Math.min.apply(null, bpms.length ? bpms : [100]), hi = Math.max.apply(null, bpms.length ? bpms : [130]);
-    if (hi - lo < 10) { lo -= 5; hi += 5; }
-    // a decade: each genre sized by its plays then (all time: every play)
+    // a decade: each genre ordered (and on the map sized) by its plays then (all time: every play)
     var decs = {};
     list.forEach(function (g) { Object.keys(g.dec || {}).forEach(function (d) { decs[d] = (decs[d] || 0) + g.dec[d]; }); });
     var decList = Object.keys(decs).filter(function (d) { return decs[d] > 0; }).sort().reverse();
@@ -885,141 +901,51 @@ firetable.discover = (function () {
     var weight = function (g) { return D.mapDecade ? ((g.dec || {})[D.mapDecade] || 0) : (g.plays || 0); };
     list = list.slice().sort(function (a, b) { return weight(b) - weight(a); });
     var top = list.length ? weight(list[0]) || 1 : 1;
-    var h = '<div class="d-headrow"><h2>Genres</h2>' + (decList.length > 1 ? chips("decade", [["", "All time"]].concat(decList.map(function (d) { return [d, d + "s"]; })), D.mapDecade || "") : "") + "</div>" +
-      '<p class="d-fact">' + esc(list.length) + " sounds the room plays" + (D.mapDecade ? ", sized by plays in the " + D.mapDecade + "s" : "") + ". Across: played by a band, or made on machines. Up: faster.</p>";
-    h += '<div class="d-map" role="list" aria-label="Sound map">' +
-      '<span class="d-axis d-axis-up">' + esc(hi) + " BPM</span>" +
-      '<span class="d-axis d-axis-down">' + esc(lo) + " BPM</span>" +
-      '<span class="d-axis d-axis-left">Band-made</span><span class="d-axis d-axis-right">Machine-made</span>' +
-      list.map(function (g) {
-        var x = 6 + (g.x == null ? 0.5 : g.x) * 88;
-        var y = g.bpm ? 8 + (1 - (g.bpm - lo) / (hi - lo)) * 80 : 48;
-        var size = Math.sqrt(weight(g) / top);
-        return '<a role="listitem" class="d-mapg' + (D.mapDecade && !weight(g) ? " d-quiet" : "") + (D.mapPick === g.slug ? " is-picked" : "") + '" href="' + hrefTo("discover/genres/" + g.slug) + '" data-slug="' + esc(g.slug) + '"' + (D.mapPick === g.slug ? ' aria-current="true"' : "") + ' data-y="' + y.toFixed(1) + '" style="left:' + x.toFixed(1) + "%;top:" + y.toFixed(1) + "%;--s:" + size.toFixed(2) + '" title="' +
-          esc(g.name + " · " + n(g.plays) + " plays" + (g.bpm ? " · usually " + g.bpm + " BPM" : "")) + '">' + esc(g.name) + "</a>";
-      }).join("") + "</div>";
-    // what the marks mean (the room's genre and yours are found after the page draws: mapMarks)
-    h += '<p class="d-maplegend" id="dMapLegend"><span class="d-mlsize">Bigger: played here more</span><span class="d-mlroom">The room is playing</span><span class="d-mltonight">Played tonight (brighter: more)</span><span class="d-mlhear">You\'re hearing</span><span class="d-mlpick">Picked: its card is below</span></p>';
-    h += '<div class="d-mapcard" id="dMapCard" aria-live="polite">' + mapCard(D.mapPick) + "</div>";
-    h += '<div class="d-gcards">' + list.map(function (g) {
+    // the grid, or the sound map behind Map (the owner, November 25, 2026); the decades drive both
+    var h = '<div class="d-headrow"><h2>Genres</h2>' + seg("gview", "Show genres as", [["grid", "Grid"], ["map", "Map"]], D.genreView) + "</div>" +
+      (decList.length > 1 ? chips("decade", [["", "All time"]].concat(decList.map(function (d) { return [d, d + "s"]; })), D.mapDecade || "", "Decade") : "");
+    if (D.genreView === "map") return h + (soundMap ? soundMap.html(list, weight, top) : mapWaiting());
+    // the grid, in the plain page's words (/music/genres/)
+    h += '<p class="d-fact">' + esc(list.length) + " sounds the room plays, most played " + (D.mapDecade ? "in the " + esc(D.mapDecade) + "s " : "") + "first</p>";
+    return h + '<div class="d-gcards">' + list.map(function (g) {
       return '<a class="d-gcard" href="' + hrefTo("discover/genres/" + g.slug) + '">' + mosaic(g.covers) +
         '<span class="d-gname">' + esc(g.name) + '</span><span class="d-gfact d-num">' + (D.mapDecade ? esc(n(weight(g))) + " plays in the " + esc(D.mapDecade) + "s" : esc(n(g.songs)) + " songs · " + esc(n(g.plays)) + " plays") + "</span></a>";
     }).join("") + "</div>";
-    return h;
   }
 
-  /** Spread the map's labels so none sit on top of another (or the axis labels). */
-  var mapWatch = null;
-  function layoutMap() {
-    var box = document.querySelector("#dBrowse .d-map");
-    if (!box) return;
-    if (window.ResizeObserver && mapWatch !== box) {
-      mapWatch = box;
-      new ResizeObserver(function () { if (box.isConnected) spreadMap(box); }).observe(box);
-    }
-    spreadMap(box);
-    mapMarks();
-  }
-
-  /**
-   * The sound map's marks: a red dot on the room song's genre, a gold outline
-   * on the genre you're hearing (the room's, unless Discover is playing).
-   * The genre comes from the song's library record (loadDetails).
-   */
-  var marking = 0;
-  var TONIGHT_MS = 8 * 3600000;
-  function mapMarks() {
-    var box = document.querySelector("#dBrowse .d-map");
-    if (!box) return;
-    var turn = ++marking;
-    var room = liveTrack();
-    var mine = discoverActive() ? P.track : room;
-    var genreOf = function (t) {
-      if (!t) return Promise.resolve(null);
-      if (t.g) return Promise.resolve(genreSlug(t.g));
-      return loadDetails(t).then(function (d) { return d.genres && d.genres[0] ? genreSlug(d.genres[0]) : null; });
-    };
-    // tonight: the genres of the room's plays in the last 8 hours (the bot adds g to each Recent row)
-    var history = ftapi.watchFeed ? ftapi.watchFeed("history").catch(function () {}) : Promise.resolve();
-    Promise.all([genreOf(room), genreOf(mine), history]).then(function (gs) {
-      if (turn !== marking || !box.isConnected) return;
-      var since = Date.now() - TONIGHT_MS, tonight = {};
-      (firetable._historyCache || []).forEach(function (h) {
-        if (h && h.g && (h.when || 0) >= since) tonight[genreSlug(h.g)] = (tonight[genreSlug(h.g)] || 0) + 1;
+  // The sound map (js/discover-map.js): loaded the first time Map is pressed,
+  // then kept for the visit. Until it's here the page shows the site's
+  // skeleton in the map's shape; if it can't load, Genres goes back to its
+  // grid and a note says so (pressing Map again tries again).
+  var soundMap = null, mapWait = null;
+  function onGenres() { return D.mode === "discover" && D.view === "genres" && !D.sub; }
+  function mapReady() {
+    if (mapWait) return mapWait;
+    mapWait = ftLazy.own("map-js", "js/discover-map.js").then(function () {
+      soundMap = firetable.discoverMap({
+        esc: esc, ms: ms, n: n, hrefTo: hrefTo, mosaic: mosaic, lib: lib, genreSlug: genreSlug, liveTrack: liveTrack, loadDetails: loadDetails,
+        hearing: function () { return discoverActive() ? P.track : liveTrack(); },
+        decade: function () { return D.mapDecade; },
+        picked: function () { return D.mapPick; },
+        setPicked: function (slug) { D.mapPick = slug; }
       });
-      var most = Math.max.apply(null, Object.keys(tonight).map(function (k) { return tonight[k]; }).concat(1));
-      box.querySelectorAll(".d-mapg").forEach(function (el) {
-        var slug = el.getAttribute("data-slug");
-        el.classList.toggle("d-room", !!gs[0] && slug === gs[0]);
-        el.classList.toggle("d-hear", !!gs[1] && slug === gs[1]);
-        el.classList.toggle("d-tonight", !!tonight[slug]);
-        // the ring is brighter the more of tonight was this genre: on a full
-        // evening nearly every genre has one, and they all looked the same
-        if (tonight[slug]) el.style.setProperty("--t", (tonight[slug] / most).toFixed(2));
-        else el.style.removeProperty("--t");
-      });
-      var legend = document.getElementById("dMapLegend");
-      if (legend) {
-        legend.classList.toggle("has-room", !!gs[0] && !!box.querySelector(".d-room"));
-        legend.classList.toggle("has-hear", !!gs[1] && !!box.querySelector(".d-hear"));
-        legend.classList.toggle("has-tonight", !!box.querySelector(".d-tonight"));
-      }
-    });
+    }).catch(function (err) {
+      mapWait = null; // try again next time
+      console.error("[firetable] the sound map:", err);
+      D.genreView = "grid";
+      if (onGenres()) firetable.ui.toast("The map didn't load. Try again in a moment.", "error");
+    }).then(function () { if (onGenres()) renderBrowse(); });
+    return mapWait;
   }
-
-  /** A genre's card under the sound map: what it is, its numbers, next door, its radio and its page. */
-  function mapCard(slug) {
-    var all = lib("genres") || {};
-    var g = slug && all[slug];
-    if (!g) return '<p class="d-fact">Pick a genre on the map to see it here.</p>';
-    var facts = [n(g.songs) + " songs", n(g.plays) + " plays"];
-    if (g.bpm) facts.push("usually " + g.bpm + " BPM");
-    if (g.first) facts.push("played here since " + g.first);
-    var next = (g.next || []).filter(function (k) { return all[k]; });
-    return '<div class="d-mapcardin">' + mosaic(g.covers) + '<div class="d-mapcardtext"><h3>' + esc(g.name) + "</h3>" +
-      (g.about ? '<p class="d-about">' + esc(g.about) + "</p>" : "") + '<p class="d-fact">' + esc(facts.join(" · ")) + "</p>" +
-      (next.length ? '<p class="d-fact">Next door: ' + next.map(function (k) { return '<a class="d-mapnext" href="' + hrefTo("discover/genres/" + k) + '" data-slug="' + esc(k) + '">' + esc(all[k].name) + "</a>"; }).join(", ") + "</p>" : "") + "</div>" +
-      '<div class="d-actions"><button type="button" class="butt d-panelmain d-radio" data-slug="' + esc(slug) + '">' + ms("radio") + "<span>" + esc(g.name) + " radio</span></button>" +
-      '<a class="butt graybutt" href="' + hrefTo("discover/genres/" + slug) + '">' + ms("arrow_forward") + "<span>Open " + esc(g.name) + "</span></a></div></div>";
+  function mapWaiting() {
+    mapReady();
+    // a line for the map's fact, then its frame: the map arrives where its frame was
+    return '<div class="d-loading" role="status" aria-label="Loading"><span class="d-skeltext" aria-hidden="true"><span class="skel"></span></span></div><div class="d-map skel" aria-hidden="true"></div>';
   }
-  /** Pick a genre on the map: its card shows under the map, and the page stays. */
-  function pickGenre(slug) {
-    D.mapPick = slug;
-    var box = document.querySelector("#dBrowse .d-map");
-    if (box) box.querySelectorAll(".d-mapg").forEach(function (el) {
-      var on = el.getAttribute("data-slug") === slug;
-      el.classList.toggle("is-picked", on);
-      if (on) el.setAttribute("aria-current", "true"); else el.removeAttribute("aria-current");
-    });
-    var card = document.getElementById("dMapCard");
-    if (card) card.innerHTML = mapCard(slug);
-  }
-  function spreadMap(box) {
-    var W = box.clientWidth, H = box.clientHeight;
-    if (!W || !H) return;
-    var labels = Array.prototype.slice.call(box.querySelectorAll(".d-mapg"));
-    labels.forEach(function (el) { el.style.top = el.getAttribute("data-y") + "%"; });
-    var outer = box.getBoundingClientRect();
-    var placed = Array.prototype.slice.call(box.querySelectorAll(".d-axis")).map(function (a) {
-      var r = a.getBoundingClientRect();
-      return { l: r.left - outer.left, r: r.right - outer.left, t: r.top - outer.top, b: r.bottom - outer.top };
-    });
-    var hits = function (r) { return placed.some(function (p) { return r.l < p.r && r.r > p.l && r.t < p.b && r.b > p.t; }); };
-    labels.forEach(function (el) {
-      var w = el.offsetWidth, h = el.offsetHeight;
-      var cx = el.offsetLeft, cy = el.offsetTop; // the label's centre (it's moved back by half its size)
-      var at = function (y) { return { l: cx - w / 2 - 2, r: cx + w / 2 + 2, t: y - h / 2, b: y + h / 2 }; };
-      var y = cy;
-      var step = Math.max(4, h * 0.5);
-      // the nearest free spot above or below; where it's full, it stays put
-      for (var k = 1; hits(at(y)) && Math.ceil(k / 2) * step <= H; k++) {
-        var c = cy + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * step;
-        if (c >= h / 2 && c <= H - h / 2 && !hits(at(c))) { y = c; break; }
-      }
-      el.style.top = y + "px";
-      placed.push(at(y));
-    });
-  }
+  /** The map's labels spread and marked, once it's drawn. */
+  function layoutMap() { if (soundMap) soundMap.layout(); }
+  /** The room's marks on the map (its song's genre, tonight's, yours), when it's showing. */
+  function mapMarks() { if (soundMap) soundMap.marks(); }
 
   function viewGenre(slug) {
     var all = lib("genres");
@@ -3601,9 +3527,9 @@ firetable.discover = (function () {
     if (barTapOpens(t)) { e.preventDefault(); return openFull(document.getElementById("pv-art")); }
     if ((b = t.closest("#modeTabs [data-mode]"))) return setMode(b.getAttribute("data-mode"), { remember: true });
     if ((b = t.closest("#nav-tabs [data-tab]"))) return goTab(b.getAttribute("data-tab"));
-    if ((b = t.closest("#dBrowse .d-mapg, #dBrowse .d-mapnext")) && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+    if (soundMap && (b = t.closest("#dBrowse .d-mapg, #dBrowse .d-mapnext")) && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
       e.preventDefault();
-      return pickGenre(b.getAttribute("data-slug"));
+      return soundMap.pick(b.getAttribute("data-slug"));
     }
     if ((b = t.closest("#dNav [data-view]"))) return setView(b.getAttribute("data-view"));
     if ((b = t.closest(".d-listen"))) return listenIn();
@@ -3680,6 +3606,7 @@ firetable.discover = (function () {
     }
     if ((b = t.closest(".d-chip[data-djsort]"))) { D.djSort = b.getAttribute("data-djsort"); return renderBrowse(); }
     if ((b = t.closest(".d-chip[data-decade]"))) { D.mapDecade = b.getAttribute("data-decade") || null; return renderBrowse(); }
+    if ((b = t.closest(".d-segbtn[data-gview]"))) { D.genreView = b.getAttribute("data-gview"); return renderBrowse(); }
     if ((b = t.closest(".d-homemore"))) { var k = b.getAttribute("data-more"); D.homeMore[k] = !D.homeMore[k]; return renderBrowse(); }
     if ((b = t.closest("#dSearchOpen"))) return openSearch();
     if (t.closest(".d-import")) return D.importMeta && firetable.importer.open(D.importMeta);
@@ -3802,11 +3729,19 @@ firetable.discover = (function () {
     if (to) to.focus();
   }
 
-  /** A genre's radio: its favorites, new finds and deep cuts, shuffled. */
+  /**
+   * A genre's radio: its favorites, new finds and deep cuts, shuffled. From
+   * the map's card its songs may not be read yet: read them (once, as its page
+   * does), then play, unless something else was asked for meanwhile: another
+   * radio (the last one asked for plays), a song, Listen in, a pause, the room
+   * stopped.
+   */
+  var radioAsk = 0;
   function playRadio(slug) {
-    var page = libData["genre/" + slug];
+    var page = lib("genre/" + slug), ask = ++radioAsk, was = P.play + "|" + D.src + "|" + P.paused;
+    if (page === undefined) return libAsked["genre/" + slug].then(function () { if (ask === radioAsk && P.play + "|" + D.src + "|" + P.paused === was) playRadio(slug); });
     var g = (libData.genres || {})[slug];
-    if (!page || !g) return;
+    if (!page || !g) return firetable.ui.toast("There's no radio for this genre yet. " + LIB_LATER);
     var seen = {};
     var all = withType([].concat(page.fav || [], page.newHere || [], page.deep || [])).filter(function (t) {
       var k = t.type + "_" + t.cid;

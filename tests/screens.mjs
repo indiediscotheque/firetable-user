@@ -72,6 +72,16 @@ const hash = (h) => async (page) => go(page, h);
 async function go(page, h) {
   if (await page.evaluate(() => firetable.discover.address()) !== h) await page.evaluate((x) => { location.hash = x; }, h);
 }
+// Genres: its grid, or the sound map behind Grid | Map (js/discover-map.js, loaded the first time),
+// with a genre's card open under it (its radio, Open and Next door)
+const genresAs = (view) => async (page) => {
+  await go(page, "#discover/genres");
+  await page.locator('#dBrowse .d-segbtn[data-gview="' + view + '"]').click();
+  await page.locator(view === "map" ? "#dBrowse .d-map .d-mapg" : "#dBrowse .d-gcard").first().waitFor();
+  if (view !== "map") return;
+  await page.evaluate(() => document.querySelector('#dBrowse .d-mapg[data-slug="nu-disco"]').click());
+  await page.locator("#dMapCard .d-radio").waitFor();
+};
 const VIEWS = [
   // Live, under the stage and beside it (at 1024 and up chat and people are always there)
   { name: "live-playlists", run: liveTab("mm-playlists") },
@@ -84,7 +94,8 @@ const VIEWS = [
   { name: "d-home", run: hash("#discover") },
   { name: "d-new", run: hash("#discover/new") },
   { name: "d-charts", run: hash("#discover/charts") },
-  { name: "d-genres", run: hash("#discover/genres") },
+  { name: "d-genres", run: genresAs("grid") },
+  { name: "d-genres-map", run: genresAs("map"), after: (role, page) => genresAs("grid")(page) },
   { name: "d-genre", run: hash("#discover/genres/nu-disco") },
   { name: "d-genre-year", run: hash("#discover/genres/nu-disco/2026") },
   { name: "d-djs", run: hash("#discover/djs") },

@@ -200,7 +200,9 @@ const FEATURES = [
   { row: "DI-01", name: "Home", who: ALL, mode: "discover", target: "#dBrowse .ft-cards .pvbar" },
   { row: "DI-02", name: "New", who: ALL, mode: "discover", via: pages("new"), hash: "#discover/new", target: "#dBrowse .pvbar" },
   { row: "DI-03", name: "Charts", who: ALL, mode: "discover", via: pages("charts"), hash: "#discover/charts", target: "#dBrowse .pvbar" },
-  { row: "DI-04", name: "Genres", who: ALL, mode: "discover", via: pages("genres"), hash: "#discover/genres", target: "#dBrowse .d-mapg" },
+  // Genres opens on its grid; the sound map is behind Grid | Map (the owner, November 25, 2026)
+  { row: "DI-04", name: "Genres (its grid)", who: ALL, mode: "discover", via: pages("genres"), hash: "#discover/genres", target: "#dBrowse .d-gcard" },
+  { row: "DI-26", name: "Genres: the sound map (Map)", who: ALL, mode: "discover", via: [...pages("genres"), '#dBrowse .d-segbtn[data-gview="map"]'], hash: "#discover/genres", target: "#dBrowse .d-mapg" },
   { row: "DI-06", name: "DJs", who: ALL, mode: "discover", via: pages("djs"), hash: "#discover/djs", target: "#dBrowse" },
   { row: "DI-08", name: "Years", who: ALL, mode: "discover", via: pages("years"), hash: "#discover/years", target: "#dBrowse" },
   { row: "DI-13", name: "The player bar", who: ALL, mode: "discover", target: "#dMini .pb-main" },

@@ -3559,7 +3559,7 @@ try {
     await wait(200);
     location.hash = "#discover/charts";
     await until(() => document.getElementById("dChartWhich") && [...document.querySelectorAll("#dBrowse .hist-track-title")].some((e) => e.textContent === "Three"));
-    return {
+    const out = {
       ranks: [...document.querySelectorAll("#dBrowse .ft-rows .hist-timestamp")].map((e) => e.textContent).join(),
       note: !!document.querySelector("#dBrowse .d-tienote"),
       period: [...document.querySelectorAll("#dBrowse .d-seg .d-segbtn")].map((b) => b.textContent + (b.classList.contains("on") ? "*" : "")).join(),
@@ -3568,10 +3568,28 @@ try {
       acts: [...document.querySelectorAll("#dBrowse .d-chartacts button span")].map((e) => e.textContent).join("|"),
       first: (document.querySelector("#dBrowse .d-firsthere") || {}).textContent || ""
     };
+    // the period and the drop-downs draw the chart again, from the keyboard too: the focus stays on what was pressed
+    const month = document.querySelector('#dBrowse .d-segbtn[data-period="month"]');
+    month.focus();
+    month.click();
+    await wait(300);
+    out.kept = document.activeElement.matches('#dBrowse .d-segbtn[data-period="month"][aria-pressed="true"]');
+    document.querySelector('#dBrowse .d-segbtn[data-period="week"]').click();
+    await wait(300);
+    const which = document.getElementById("dChartWhich");
+    which.focus();
+    which.value = "new";
+    which.dispatchEvent(new Event("change", { bubbles: true }));
+    await wait(300);
+    out.kept += "|" + (document.activeElement.id === "dChartWhich" && document.activeElement !== which && document.activeElement.value === "new");
+    document.getElementById("dChartWhich").value = "";
+    document.getElementById("dChartWhich").dispatchEvent(new Event("change", { bubbles: true }));
+    return out;
   });
   check(ties.ranks === "=1,=1,#3" && ties.note, "songs with the same plays share a rank, and the chart says so (" + JSON.stringify(ties) + ")");
   check(ties.period === "Week*,Month,Year,All time" && !ties.chips && ties.which === "All songs|New releases only" && ties.acts === "Play the chart|Save as playlist|Share" && /^dj1 · /.test(ties.first),
     "the chart's period is one control, genre and new releases are drop-downs, with Play the chart, Save as playlist and Share, and who played each first (" + JSON.stringify(ties) + ")");
+  check(ties.kept === "true|true", "a period or drop-down pressed from the keyboard keeps the focus when the chart is drawn again (" + ties.kept + ")");
   await put("/discover/chartIds/week/2026-W46", null);
   await put("/discover/charts/week/2026-W46", null);
   await dPage.evaluate(() => { location.hash = "#discover/home"; });
@@ -3791,23 +3809,64 @@ try {
     "in Live the header and the welcome's Join open the same dialog; Live has no form of its own (" + JSON.stringify(header.live) + ")");
   check(header.named === "Join or log in|Join or log in", "the header's Join is named Join or log in, and its tooltip says the same (" + header.named + ")");
 
-  console.log("-- Discover: the sound map marks the room's genre, and a genre's card opens under it");
+  console.log("-- Discover: Genres opens on its grid; the sound map is behind Map (js/discover-map.js, loaded the first time)");
   // the room's song, as this page knows it, is one whose library record says Nu-Disco (put back after);
   // the database's song stays, so no player anywhere is cut short
   await put("/globalTracks/1mapsong0001", { artist: "Smoke Artist", title: "Map Song", type: 1, song: "sMap" });
   await put("/globalSongs/sMap", { artist: "Smoke Artist", title: "Map Song", plays: 3, genres: ["Nu-Disco"] });
   // a play from tonight whose Recent row carries its genre (the bot's g)
   await put("/songHistory/-zzzmap0001", { type: 1, cid: "maptonight1", artist: "Somebody", title: "Tonight's Soul", dj: "dj2", djid: "dj2", when: Date.now() - 3600000, g: "Soul & R&B" });
+  // a genre's songs this page hasn't read: the map card's radio reads them before it plays
+  await put("/discover/lib/genre/soul-and-randb", { fav: [{ type: 1, cid: "lib0000002", a: "Gamma", t: "Fav Two", plays: 20, first: now - 400 * 86400000, dj: "dj1", djid: "dj1" }] });
   await dPage.evaluate(() => {
     window.__songBefore = firetable.song;
     firetable.song = Object.assign({}, firetable.song, { type: 1, cid: "mapsong0001", title: "Map Song", artist: "Smoke Artist" });
     ftapi.events.emit("newSong", firetable.song);
   });
+  // the map's script can't load: Genres stays on its grid and says so, the focus still on Map;
+  // the first press of Map below, once it can, is the next try
+  const MAP_JS = /\/js\/discover-map\.js/;
+  await dPage.route(MAP_JS, (r) => r.abort());
+  const noMap = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
+    const toast = () => (document.getElementById("ft-toast") || {}).textContent || "";
+    location.hash = "#discover/genres";
+    await until(() => document.querySelector("#dBrowse .d-gcard"));
+    const map = document.querySelector('#dBrowse .d-segbtn[data-gview="map"]');
+    map.focus();
+    map.click();
+    await until(() => /The map didn't load/.test(toast()));
+    await wait(200);
+    return [document.querySelectorAll("#dBrowse .d-gcard").length, !document.querySelector("#dBrowse .d-map"),
+      document.querySelector('#dBrowse .d-segbtn[data-gview="grid"]').getAttribute("aria-pressed"), toast(),
+      !document.querySelector('script[src*="discover-map.js"]'), document.activeElement.matches('#dBrowse .d-segbtn[data-gview="map"]')].join("|");
+  });
+  await dPage.unroute(MAP_JS);
+  check(noMap === "2|true|true|The map didn't load. Try again in a moment.|true|true",
+    "when the map's script can't load, Genres stays on its grid with a note, the focus on Map (" + noMap + ")");
   const soundMap = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const until = async (fn) => { for (let i = 0; i < 50 && !fn(); i++) await wait(100); return fn(); };
     const out = {};
+    const loaded = () => !!document.querySelector('script[src*="discover-map.js"]');
+    const toggle = () => [...document.querySelectorAll('#dBrowse .d-seg[aria-label="Show genres as"] .d-segbtn')].map((b) => b.textContent + ":" + b.getAttribute("aria-pressed")).join();
+    const focused = (sel) => !!document.activeElement && document.activeElement.matches(sel);
+    const fact = () => (document.querySelector("#dBrowse > .d-fact") || {}).textContent;
     location.hash = "#discover/genres";
+    await until(() => document.querySelector("#dBrowse .d-gcard"));
+    // the grid first: every genre, most played first, in the plain page's words; no map, and none of its script
+    out.grid = [...document.querySelectorAll("#dBrowse .d-gcard .d-gname")].map((e) => e.textContent).join() + "|" + fact() + "|" + toggle() + "|" +
+      !!document.querySelector("#dBrowse .d-map") + "|" + loaded();
+    // Map, pressed from the keyboard (focused, then Enter's click): the site's skeleton until the
+    // map's script is here, then the map; the focus stays on Map all along
+    const mapBtn = document.querySelector('#dBrowse .d-segbtn[data-gview="map"]');
+    mapBtn.focus();
+    mapBtn.click();
+    out.waiting = !!document.querySelector("#dBrowse .d-loading .d-skeltext .skel") + "|" + !!document.querySelector('#dBrowse > .d-map.skel[aria-hidden="true"]') + "|" +
+      toggle() + "|" + focused('#dBrowse .d-segbtn[data-gview="map"]');
+    await until(() => document.querySelector("#dBrowse .d-map .d-mapg"));
+    out.arrived = loaded() + "|" + focused('#dBrowse .d-segbtn[data-gview="map"]') + "|" + !document.querySelector("#dBrowse .d-gcard") + "|" + fact();
     await until(() => document.querySelector("#dBrowse .d-map .d-mapg.d-room"));
     out.room = [...document.querySelectorAll("#dBrowse .d-mapg.d-room")].map((a) => a.getAttribute("data-slug")).join();
     out.hear = [...document.querySelectorAll("#dBrowse .d-mapg.d-hear")].map((a) => a.getAttribute("data-slug")).join();
@@ -3816,6 +3875,13 @@ try {
     out.rings = [...document.querySelectorAll("#dBrowse .d-mapg.d-tonight")].map((a) => a.style.getPropertyValue("--t")).join();
     out.halo = getComputedStyle(document.querySelector("#dBrowse .d-mapg")).textShadow !== "none";
     out.legend = [...document.querySelectorAll("#dMapLegend > span")].filter((x) => getComputedStyle(x).display !== "none").map((x) => x.textContent).join("|");
+    // the decades drive the map too: each name sized by its plays then, the quiet ones faded; the focus stays on the chip
+    const decade = document.querySelector('#dBrowse .d-chip[data-decade="2020"]');
+    decade.focus();
+    decade.click();
+    out.decade = [...document.querySelectorAll("#dBrowse .d-mapg")].map((a) => a.textContent + (a.classList.contains("d-quiet") ? "(quiet)" : "")).join() + "|" +
+      fact().split(".")[0] + "|" + focused('#dBrowse .d-chip[data-decade="2020"]');
+    document.querySelector('#dBrowse .d-chip[data-decade=""]').click();
     const before = firetable.discover.address();
     document.querySelector('#dBrowse .d-mapg[data-slug="soul-and-randb"]').click();
     await wait(100);
@@ -3823,17 +3889,62 @@ try {
     const card = document.getElementById("dMapCard");
     out.card = (card.querySelector("h3") || {}).textContent + "|" + !!card.querySelector('.d-radio[data-slug="soul-and-randb"]') + "|" + (card.querySelector('a[href="/music/genres/soul-and-randb/"]') ? "open" : "");
     out.picked = document.querySelector("#dBrowse .d-mapg.is-picked").getAttribute("data-slug") + "|" + document.querySelector("#dBrowse .d-mapg.is-picked").getAttribute("aria-current");
+    // Ctrl/Cmd-click on a name is left to the browser, which opens the genre's page in a new
+    // tab: nothing on the way stops it (the window's listener runs last, and stops it here)
+    let left = null;
+    const spy = (e) => { left = !e.defaultPrevented; e.preventDefault(); };
+    window.addEventListener("click", spy);
+    const nu = document.querySelector('#dBrowse .d-mapg[data-slug="nu-disco"]');
+    nu.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true }));
+    window.removeEventListener("click", spy);
+    out.ctrl = left + "|" + nu.getAttribute("href") + "|" + document.querySelector("#dBrowse .d-mapg.is-picked").getAttribute("data-slug");
+    // the card's radio, from the keyboard: the genre's songs aren't read yet, so it reads them, then
+    // plays; the focus stays on it (the test's videos aren't real: keep the player from skipping them)
+    const skip = firetable.discover.onFailed;
+    firetable.discover.onFailed = () => {};
+    const radio = document.querySelector("#dMapCard .d-radio");
+    radio.focus();
+    radio.click();
+    await until(() => firetable.discover.state().list === "radio");
+    await wait(200);
+    out.radio = firetable.discover.state().list + "|" + firetable.discover.state().playing + "|" + (document.getElementById("pv-src") || {}).textContent + "|" +
+      focused('#dMapCard .d-radio[data-slug="soul-and-randb"]');
+    if (firetable.discover.state().playing) document.querySelector("#dMini .pb-main")?.click();
+    // Open, then Back: Genres is still on its map (the view is kept for the visit); then Grid
+    document.querySelector('#dMapCard a[href="/music/genres/soul-and-randb/"]').click();
+    await until(() => (document.querySelector("#dBrowse .d-pagehead h2") || {}).textContent === "Soul & R&B");
+    out.opened = firetable.discover.address();
+    history.back();
+    await until(() => document.querySelector("#dBrowse .d-map .d-mapg"));
+    out.back = (firetable.discover.address() === before) + "|" + toggle() + "|" + !!document.querySelector("#dBrowse .d-map .d-mapg");
+    document.querySelector('#dBrowse .d-segbtn[data-gview="grid"]').click();
+    out.gridAgain = toggle() + "|" + document.querySelectorAll("#dBrowse .d-gcard").length + "|" + !document.querySelector("#dBrowse .d-map");
+    await wait(800);
+    firetable.discover.onFailed = skip;
     return out;
   });
+  check(soundMap.grid === "Nu-Disco,Soul & R&B|2 sounds the room plays, most played first|Grid:true,Map:false|false|false",
+    "Genres opens on its grid: every genre, most played first, in the plain page's words, under Grid | Map, with nothing of the map loaded (" + soundMap.grid + ")");
+  check(soundMap.waiting === "true|true|Grid:false,Map:true|true" && /^true\|true\|true\|2 sounds the room plays\. Across: played by a band, or made on machines\. Up: faster\.$/.test(soundMap.arrived || ""),
+    "Map loads the sound map (js/discover-map.js, tried again after it couldn't), with the site's skeleton in the map's shape until it's here; then the map and its fact take the grid's place, the focus on Map all along (" + soundMap.waiting + " / " + soundMap.arrived + ")");
   check(soundMap.room === "nu-disco" && soundMap.hear === "nu-disco" && /The room is playing/.test(soundMap.legend) && /You're hearing/.test(soundMap.legend),
     "the sound map: the room song's genre has the room's dot, and the one you're hearing its outline, with a legend (" + JSON.stringify(soundMap) + ")");
   check(/(^|,)1\.00(,|$)/.test(soundMap.rings || "") && (soundMap.rings || "").split(",").every((t) => Number(t) > 0 && Number(t) <= 1) && soundMap.halo && /Bigger: played here more/.test(soundMap.legend),
     "the sound map: a ring is brighter the more of tonight was its genre, names have a halo so the middle lines pass behind them, and the legend says what size means (" + soundMap.rings + " / " + soundMap.legend + ")");
   check(/soul-and-randb/.test(soundMap.tonight || "") && /Played tonight/.test(soundMap.legend),
     "the sound map rings the genres played tonight, from the Recent rows' genre (" + soundMap.tonight + " / " + soundMap.legend + ")");
+  check(soundMap.decade === "Nu-Disco,Soul & R&B(quiet)|2 sounds the room plays, sized by plays in the 2020s|true",
+    "the decades drive the map too: sized by plays then, the quiet ones faded, the focus kept on the chip (" + soundMap.decade + ")");
   check(soundMap.stayed && /^Soul & R&B\|true\|open$/.test(soundMap.card) && soundMap.picked === "soul-and-randb|true",
     "picking a genre on the map shows its card under the map (radio, Open) and stays on the page (" + JSON.stringify(soundMap) + ")");
+  check(soundMap.ctrl === "true|/music/genres/nu-disco/|soul-and-randb",
+    "Ctrl/Cmd-click on a genre on the map is left to the browser, which opens its page; it isn't picked (" + soundMap.ctrl + ")");
+  check(/^radio\|lib0000002\|.*Soul & R&B radio.*\|true$/.test(soundMap.radio || ""),
+    "the map card's radio reads the genre's songs when they aren't here yet, then plays them, the focus kept on it (" + soundMap.radio + ")");
+  check(soundMap.opened === "#discover/genres/soul-and-randb" && soundMap.back === "true|Grid:false,Map:true|true" && soundMap.gridAgain === "Grid:true,Map:false|2|true",
+    "Back from a genre's page returns to Genres as you left it (the map), and Grid brings the grid back (" + [soundMap.opened, soundMap.back, soundMap.gridAgain].join(" / ") + ")");
   await dPage.evaluate(() => { firetable.song = window.__songBefore; ftapi.events.emit("newSong", firetable.song); });
+  await put("/discover/lib/genre/soul-and-randb", null); // the library as the rest of the test knows it
 
   console.log("-- Discover: genres, DJs, artists and years from the weekly library");
   const libPages = await dPage.evaluate(async () => {
@@ -3841,10 +3952,12 @@ try {
     const until = async (fn) => { for (let i = 0; i < 40 && !fn(); i++) await wait(100); return fn(); };
     const out = {};
     location.hash = "#discover/genres";
-    await until(() => document.querySelector("#dBrowse .d-map .d-mapg"));
-    out.genres = [...document.querySelectorAll("#dBrowse .d-mapg")].map((a) => a.textContent).join() + "|" + document.querySelectorAll("#dBrowse .d-gcard").length;
+    await until(() => document.querySelector("#dBrowse .d-gcard"));
+    out.genres = [...document.querySelectorAll("#dBrowse .d-gcard .d-gname")].map((a) => a.textContent).join() + "|" + document.querySelectorAll("#dBrowse .d-gcard").length;
+    // the decades drive the grid: most played then first, each card's plays then
     document.querySelector('.d-chip[data-decade="2020"]').click();
-    out.decade = [...document.querySelectorAll("#dBrowse .d-mapg")].map((a) => a.textContent + (a.classList.contains("d-quiet") ? "(quiet)" : "")).join() + "|" + document.querySelector("#dBrowse .d-gcard .d-gfact").textContent;
+    out.decade = [...document.querySelectorAll("#dBrowse .d-gcard .d-gname")].map((a) => a.textContent).join() + "|" + document.querySelector("#dBrowse > .d-fact").textContent + "|" +
+      [...document.querySelectorAll("#dBrowse .d-gcard .d-gfact")].map((e) => e.textContent).join();
     document.querySelector('.d-chip[data-decade=""]').click();
     out.navOn = document.querySelector("#dNav .d-nav.on").getAttribute("data-view");
     document.querySelector('#dBrowse .d-gcard[href="/music/genres/nu-disco/"]').click();
@@ -3910,9 +4023,9 @@ try {
     out.menuClosed = document.getElementById("dMenu").hidden;
     return out;
   });
-  check(libPages.genres === "Nu-Disco,Soul & R&B|2" && libPages.navOn === "genres", "Genres: the sound map and a card for each (" + libPages.genres + ")");
-  check(libPages.decade === "Nu-Disco,Soul & R&B(quiet)|100 plays in the 2020s" && libPages.about === "Disco's grooves rebuilt with modern synths.",
-    "the sound map by decade, and a genre's line (" + libPages.decade + " / " + libPages.about + ")");
+  check(libPages.genres === "Nu-Disco,Soul & R&B|2" && libPages.navOn === "genres", "Genres: a card for each (" + libPages.genres + ")");
+  check(libPages.decade === "Nu-Disco,Soul & R&B|2 sounds the room plays, most played in the 2020s first|100 plays in the 2020s,0 plays in the 2020s" && libPages.about === "Disco's grooves rebuilt with modern synths.",
+    "Genres' grid by decade: the most played then first, in the plain page's words, each with its plays then; and a genre's line (" + libPages.decade + " / " + libPages.about + ")");
   check(libPages.ytm === "https://music.youtube.com/playlist?list=PLsmokeNuDisco", "a genre page links to its YouTube Music playlist (" + libPages.ytm + ")");
   check(/, \d{4}\|true$/.test(libPages.dateClear), "a dated row's first-play date clears the DJ's face (" + libPages.dateClear + ")");
   check(libPages.genre === "Nu-Disco|2|#discover/genres/nu-disco" && libPages.newHere === "New One", "a genre page, its favorites and New here (" + libPages.genre + " / " + libPages.newHere + ")");
