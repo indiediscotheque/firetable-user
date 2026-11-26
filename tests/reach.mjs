@@ -63,14 +63,12 @@ const FEATURES = [
   { row: "TB-01", name: "The :id: logo", who: ALL, target: "#roomlogo" },
   { row: "TB-02", name: "The theme, and Suggest a theme", who: ALL, via: ["#themePill"], target: "#themeSuggest" },
   { row: "TB-03", name: "Community links", who: ALL, via: ["#socialTrigger"], target: "#socialPopover" },
-  // wide screens: a member's About and light mode are in the account menu; a visitor's (no account menu) in the header
-  { row: "TB-04", name: "About", who: ALL, widths: PHONE, target: "#roomInfo" },
-  { row: "TB-04", name: "About (visitors)", who: ["visitor"], widths: WIDE, target: "#roomInfo" },
-  { row: "TB-04", name: "About (the account menu)", who: IN, widths: WIDE, via: account, target: "#nav-acctAbout" },
+  // a member's About and light mode are in the account menu, at every width; a visitor's (no account menu) in the header
+  { row: "TB-04", name: "About (visitors: the header)", who: ["visitor"], target: "#roomInfo" },
+  { row: "TB-04", name: "About (the account menu)", who: IN, via: account, target: "#nav-acctAbout" },
   { row: "TB-05", name: "Mentions inbox", who: IN, via: ["#inboxTrigger"], target: "#inboxList", notFor: ["visitor"], notTarget: "#inboxTrigger" },
   { row: "TB-06", name: "The account menu", who: IN, via: account, target: "#nav-accountMenu" },
-  { row: "TB-10", name: "Light mode (the header's sun)", who: ALL, widths: PHONE, target: "#nav-look" },
-  { row: "TB-10", name: "Light mode (the header's sun, visitors)", who: ["visitor"], widths: WIDE, target: "#nav-look" },
+  { row: "TB-10", name: "Light mode (visitors: the header's sun)", who: ["visitor"], target: "#nav-look" },
   { row: "TB-10", name: "Light mode (the account menu)", who: IN, via: account, target: "#nav-acctLook" },
   { row: "TB-08", name: "Discover / Live: to Live", who: ALL, widths: WIDE, mode: "discover", via: ['#modeTabs [data-mode="live"]'], target: "#stage", hash: "#live" },
   { row: "TB-08", name: "Discover / Live: to Discover", who: ALL, widths: WIDE, via: ['#modeTabs [data-mode="discover"]'], target: "#dBrowse", hash: "#discover" },
