@@ -2608,7 +2608,8 @@ try {
     const tabs = [...document.querySelectorAll("#minimodeoptions .tab")].filter((t) => t.offsetParent)
       .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left).map((t) => t.id);
     out.first = tabs[0];
-    // with the bottom tab bar, Playlists is Library: Live keeps the rest, the stage hides in Library
+    // with the bottom tab bar, a member's Playlists is Library: Live keeps the rest but Fresh (a tile on
+    // Discover's Home), and the stage hides in Library
     const keepView = firetable.nav.view;
     firetable.nav.view = "playlists";
     firetable.nav.apply();
@@ -2658,12 +2659,12 @@ try {
     await page.evaluate(() => { ftapi.uid = window.__realUid; ftapi.events.emit("tableChanged", firetable.tableData); });
   }
   await page.setViewportSize({ width: 1280, height: 720 });
-  check(phoneFix.library && phoneFix.liveTabs === "Chat,Recent,Fresh,Cards,People" && phoneFix.liveLit,
-    "phone, a member: Playlists is the Library tab; Live keeps Chat, Recent, Fresh, Cards and People (" + JSON.stringify(phoneFix) + ")");
+  check(phoneFix.library && phoneFix.liveTabs === "Chat,Recent,Cards,People" && phoneFix.liveLit,
+    "phone, a member: Playlists is the Library tab; Live keeps Chat, Recent, Cards and People (Fresh is a tile on Discover's Home) (" + JSON.stringify(phoneFix) + ")");
   check(/^−\d+:\d\d$/.test(phoneFix.left) && /^\d+:\d\d$/.test(phoneFix.played), "time left has a minus, time played doesn't (" + phoneFix.played + " / " + phoneFix.left + ")");
   check(phoneFix.first === "mmchat", "Chat is the first phone tab (" + phoneFix.first + ")");
   check(/^on\|\d{3}$/.test(phoneFix.stageChat) && /^off\|\d$/.test(phoneFix.stagePeople) && /^off\|\d\|\S/.test(phoneFix.stageList),
-    "phone, a member: the stage stays with Chat; Recent, Fresh, Cards and People get the screen, and the bar names the song (" + JSON.stringify([phoneFix.stageChat, phoneFix.stagePeople, phoneFix.stageList]) + ")");
+    "phone, a member: the stage stays with Chat; Recent, Cards and People get the screen, and the bar names the song (" + JSON.stringify([phoneFix.stageChat, phoneFix.stagePeople, phoneFix.stageList]) + ")");
   check(phoneFix.labelHidden && phoneFix.labelledBy === "djlistpickerLabel", "on a phone the DJ playlist's label is for screen readers only, and still names the picker");
   check(phoneFix.btn && phoneFix.armed && phoneFix.afterOne.length === 0 && phoneFix.afterTwo.join() === "!remove dj1",
     "a mod's first tap on the plate's remove asks again; the second removes (" + JSON.stringify(phoneFix) + ")");
@@ -3516,52 +3517,93 @@ try {
     await wait(200);
     return out;
   });
-  console.log("-- the bottom tab bar on a phone: Home, Discover, Live, Library, You");
+  console.log("-- the bottom tab bar on a phone, a visitor: Discover (its pages as tiles on its Home), Live, Library (the crate), You");
   const tabs = await dPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const tap = async (t) => { document.querySelector('#nav-tabs [data-tab="' + t + '"]').click(); await wait(450); };
     const seen = (sel) => { const el = document.querySelector(sel); if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth; };
     const lit = () => [...document.querySelectorAll("#nav-tabs .nt-tab.on")].map((b) => b.dataset.tab + (b.getAttribute("aria-current") === "page" ? "" : "!")).join();
+    const where = () => firetable.discover.address();
     const out = {};
     const bar = document.getElementById("nav-tabs").getBoundingClientRect(), pb = document.getElementById("dMini").getBoundingClientRect();
     out.bar = { labels: [...document.querySelectorAll("#nav-tabs .nt-tab span")].map((s) => s.textContent).join(","), bottom: Math.round(innerHeight - bar.bottom), underPlayer: bar.top >= pb.bottom - 1,
-      tall: Math.round(bar.height) >= 56, oldGone: !seen("#modeTabs") };
-    await tap("home");
-    out.home = { lit: lit(), hash: firetable.discover.address(), view: firetable.discover.state().view, rowGone: !seen("#dNav"), search: seen("#dQ") };
+      tall: Math.round(bar.height) >= 56, oldGone: !seen("#modeTabs"), even: new Set([...document.querySelectorAll("#nav-tabs .nt-tab")].map((b) => Math.round(b.getBoundingClientRect().width))).size === 1 };
+    // Discover from Live: back to the page you left; pressed again, its Home, from the top
+    location.hash = "#discover/charts";
+    await wait(400);
+    await tap("live");
     await tap("discover");
-    out.list = { lit: lit(), browse: document.body.classList.contains("nt-browse"), pages: [...document.querySelectorAll("#dNav .d-nav")].filter((b) => seen("#dNav") && b.getBoundingClientRect().height >= 44).length,
-      browseHidden: !seen("#dBrowse") };
-    document.querySelector('#dNav [data-view="charts"]').click();
+    out.back = { lit: lit(), hash: where() };
+    document.getElementById("dBrowse").scrollTop = 200;
+    await tap("discover");
+    const browse = document.getElementById("dBrowse"), tiles = [...browse.querySelectorAll(".d-tiles .d-tile")];
+    out.home = { lit: lit(), hash: where(), top: browse.scrollTop, rowGone: !seen("#dNav"), search: seen("#dQ"), first: browse.firstElementChild.classList.contains("d-tiles"),
+      tiles: tiles.map((a) => a.querySelector("span").textContent).join(","), rows: new Set(tiles.map((a) => Math.round(a.getBoundingClientRect().top))).size,
+      fit: tiles.every((a) => { const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.height >= 56; }), sideways: browse.scrollWidth > browse.clientWidth };
+    // a tile opens its page under the Discover tab
+    document.querySelector('#dBrowse .d-tile[data-view="years"]').click();
     await wait(450);
-    out.page = { lit: lit(), hash: firetable.discover.address(), browse: document.body.classList.contains("nt-browse"), shown: seen("#dBrowse") };
+    out.page = { lit: lit(), hash: where(), shown: seen("#dBrowse"), tiles: seen("#dBrowse .d-tiles") };
+    // Recent plays: no way into Live's Recent for a visitor (its tools are for members)
+    location.hash = "#discover/recent";
+    await wait(400);
+    out.page.noLink = !document.querySelector('#dBrowse a[data-live="history"]');
     await tap("discover");
-    out.again = { lit: lit(), browse: document.body.classList.contains("nt-browse") };
+    // Fresh's tile: Live's Fresh, with the screen to itself and its heading, still under Discover;
+    // the phone's Back comes back to Discover's Home
+    document.querySelector('#dBrowse .d-tile[data-view="fresh"]').click();
+    await wait(600);
+    out.fresh = { lit: lit(), hash: where(), on: document.body.classList.contains("nt-fresh"), list: seen("#thediscovers"), heading: seen("#freshIntro h2"), stageGone: !seen("#djStage"), welcomeGone: !seen("#welcomeInfo") };
+    history.back();
+    await wait(600);
+    out.freshBack = { lit: lit(), hash: where(), off: !document.body.classList.contains("nt-fresh"), tiles: seen("#dBrowse .d-tiles") };
+    // Live: the stage and the welcome (not Fresh)
     await tap("live");
-    out.live = { lit: lit(), hash: firetable.discover.address(), stage: seen("#djStage"), join: seen("#login") };
+    out.live = { lit: lit(), hash: where(), stage: seen("#djStage"), join: seen("#login"), freshGone: !seen("#thediscovers") };
+    // the welcome's "learn more about this station" shows the same Fresh, under Discover too; Live's tab, or
+    // going to Discover and back, is the welcome again (Fresh isn't one of Live's tabs on a phone)
+    document.getElementById("minidiscover").click();
+    await wait(600);
+    out.learn = { lit: lit(), on: document.body.classList.contains("nt-fresh"), list: seen("#thediscovers"), heading: seen("#freshIntro h2"), stageGone: !seen("#djStage") };
+    await tap("live");
+    out.learnLive = { lit: lit(), join: seen("#login"), stage: seen("#djStage"), view: firetable.nav.view };
+    document.getElementById("minidiscover").click();
+    await wait(600);
+    await tap("discover");
+    await tap("live");
+    out.learnBack = { lit: lit(), off: !document.body.classList.contains("nt-fresh"), join: seen("#login"), stage: seen("#djStage"), view: firetable.nav.view };
+    // Library: a visitor's crate, over Discover; Discover closes it
     await tap("library");
-    out.library = { lit: lit(), stageGone: !seen("#djStage"), join: seen("#login"), view: firetable.nav.view, section: firetable.nav.mobileSection };
+    out.library = { lit: lit(), hash: where(), sheet: document.body.classList.contains("d-sheet-open"), crate: seen("#dSide .d-listpanel") };
+    await tap("discover");
+    out.closed = { lit: lit(), sheet: document.body.classList.contains("d-sheet-open"), hash: where() };
     await tap("live");
-    out.back = { lit: lit(), section: firetable.nav.mobileSection, stage: seen("#djStage") };
-    // You: the account menu, or join / log in
+    // You: join / log in
     await tap("you");
     const menu = document.getElementById("nav-accountMenu"), join = document.getElementById("joinBox");
     out.you = menu.matches(":popover-open") ? "menu" : join.open ? "join" : "";
     if (menu.matches(":popover-open")) menu.hidePopover();
     if (join.open) { join.close(); await wait(300); }
     out.youNotLit = lit() === "live";
-    // the Discover page row and the Live tabs come back on a computer
     return out;
   });
-  check(tabs.bar.labels === "Home,Discover,Live,Library,You" && tabs.bar.bottom === 0 && tabs.bar.underPlayer && tabs.bar.tall && tabs.bar.oldGone,
-    "phone: the tab bar sits along the bottom under the player, and the Discover / Live switch steps aside (" + JSON.stringify(tabs.bar) + ")");
-  check(tabs.home.lit === "home" && /^#discover/.test(tabs.home.hash) && tabs.home.view === "home" && tabs.home.rowGone && tabs.home.search,
-    "phone: Home is Discover's Home, with search and without the row of pages (" + JSON.stringify(tabs.home) + ")");
-  check(tabs.list.lit === "discover" && tabs.list.browse && tabs.list.pages >= 8 && tabs.list.browseHidden && tabs.page.lit === "discover" && tabs.page.hash === "#discover/charts" && !tabs.page.browse && tabs.page.shown &&
-    tabs.again.browse, "phone: Discover lists its pages, a page opens under the same tab, and the tab again goes back to the list (" + JSON.stringify([tabs.list, tabs.page, tabs.again]) + ")");
-  check(tabs.live.lit === "live" && tabs.live.hash === "#live" && tabs.live.stage && tabs.live.join &&
-    tabs.library.lit === "library" && tabs.library.stageGone && tabs.library.join && tabs.library.view === "playlists" && tabs.library.section === "view" &&
-    tabs.back.lit === "live" && tabs.back.section !== "view" && tabs.back.stage,
-    "phone, a visitor: Live is the stage; Library is what joining opens, on its own; Live goes back to its tab (" + JSON.stringify([tabs.live, tabs.library, tabs.back]) + ")");
+  check(tabs.bar.labels === "Discover,Live,Library,You" && tabs.bar.bottom === 0 && tabs.bar.underPlayer && tabs.bar.tall && tabs.bar.oldGone && tabs.bar.even,
+    "phone: the tab bar's four tabs sit along the bottom under the player, and the Discover / Live switch steps aside (" + JSON.stringify(tabs.bar) + ")");
+  check(tabs.back.lit === "discover" && tabs.back.hash === "#discover/charts" && tabs.home.lit === "discover" && tabs.home.hash === "#discover" && tabs.home.top === 0 &&
+    tabs.home.rowGone && tabs.home.search && tabs.home.first, "phone: Discover goes back to the page you left; pressed again, its Home from the top, with search and without the row of pages (" + JSON.stringify([tabs.back, tabs.home]) + ")");
+  check(tabs.home.tiles === "New,Charts,Genres,DJs,Years,Theme nights,Recent plays,Fresh" && tabs.home.rows === 2 && tabs.home.fit && !tabs.home.sideways &&
+    tabs.page.lit === "discover" && tabs.page.hash === "#discover/years" && tabs.page.shown && !tabs.page.tiles && tabs.page.noLink,
+    "phone: Home starts with Discover's pages and Fresh as tiles, two rows of four, and a tile opens its page under the Discover tab (" + JSON.stringify([tabs.home, tabs.page]) + ")");
+  check(tabs.fresh.lit === "discover" && tabs.fresh.hash === "#live" && tabs.fresh.on && tabs.fresh.list && tabs.fresh.heading && tabs.fresh.stageGone && tabs.fresh.welcomeGone &&
+    tabs.freshBack.lit === "discover" && tabs.freshBack.hash === "#discover" && tabs.freshBack.off && tabs.freshBack.tiles,
+    "phone, a visitor: Fresh's tile opens Fresh with the screen to itself under the Discover tab, and Back comes back to Home (" + JSON.stringify([tabs.fresh, tabs.freshBack]) + ")");
+  check(tabs.live.lit === "live" && tabs.live.hash === "#live" && tabs.live.stage && tabs.live.join && tabs.live.freshGone,
+    "phone, a visitor: Live is the stage with the welcome (" + JSON.stringify(tabs.live) + ")");
+  check(tabs.learn.lit === "discover" && tabs.learn.on && tabs.learn.list && tabs.learn.heading && tabs.learn.stageGone &&
+    [tabs.learnLive, tabs.learnBack].every((l) => l.lit === "live" && l.join && l.stage && l.view === "playlists") && tabs.learnBack.off,
+    "phone, a visitor: the welcome's \"learn more\" shows Fresh under Discover too; Live's tab, or Discover and back, is the welcome again (" + JSON.stringify([tabs.learn, tabs.learnLive, tabs.learnBack]) + ")");
+  check(tabs.library.lit === "library" && /^#discover/.test(tabs.library.hash) && tabs.library.sheet && tabs.library.crate && tabs.closed.lit === "discover" && !tabs.closed.sheet,
+    "phone, a visitor: Library is their crate, over Discover, and Discover closes it (" + JSON.stringify([tabs.library, tabs.closed]) + ")");
   check(tabs.you === "join" && tabs.youNotLit, "phone, a visitor: You opens join and log in (" + tabs.you + ")");
   // a narrow desktop (the stage's middle column under 520px) keeps the DJ in the middle
   await dPage.setViewportSize({ width: 1024, height: 768 });
@@ -4932,6 +4974,9 @@ try {
       "|bar:" + (document.querySelector("#nav-tabs .nt-tab.on") || { getAttribute: () => "" }).getAttribute("data-tab");
     const tab = async (t) => { document.querySelector('#tt-tabs [data-tab="' + t + '"]').click(); await wait(400); return look(); };
     const bar = async (t) => { document.querySelector('#nav-tabs [data-tab="' + t + '"]').click(); await wait(500); return document.body.getAttribute("data-tt-tab") + "|" + look(); };
+    // a member (the tab bar's Library is a member's playlists: a visitor's is the crate, below)
+    ftapi.uid = "smoke";
+    firetable.discover.testSignedIn(true);
     firetable.nav.setView("playlists"); // as the Queue tab, or the tab bar's Library, leaves it
     await wait(400);
     const out = { queue: await tab("queue") };
@@ -4941,11 +4986,26 @@ try {
     out.chat = await tab("chat");
     out.library = await bar("library");
     out.live = await bar("live");
+    // Discover's Fresh tile: the Room's Fresh page, as the theme comes back with Live; the tab bar says Live
+    await bar("discover");
+    out.left = !document.body.classList.contains("tt-skin");
+    document.querySelector('#dBrowse .d-tile[data-view="fresh"]').click();
+    for (let i = 0; i < 40 && !(document.body.classList.contains("tt-skin") && firetable.nav.view === "discover"); i++) await wait(100);
+    await wait(500);
+    out.fresh = document.body.getAttribute("data-tt-tab") + "/" + document.body.getAttribute("data-tt-sub") + "|" + look();
+    // a visitor's Library is their crate, in Discover: the theme's own tab stays as it was
+    ftapi.uid = null;
+    firetable.discover.testSignedIn(false);
+    await bar("library");
+    out.visitor = { ttTab: document.body.getAttribute("data-tt-tab"), crate: document.body.classList.contains("ft-discover") && document.body.classList.contains("d-sheet-open"),
+      lit: (document.querySelector("#nav-tabs .nt-tab.on") || { getAttribute: () => "" }).getAttribute("data-tab"), skin: document.body.classList.contains("tt-skin") };
     return out;
   });
   check(ttPhone.queue === "queuebox|stage:true|bar:library" && ttPhone.room === "tt-pane|stage:true|bar:live" && ttPhone.chat === "actualChat|stage:true|bar:live" &&
     ttPhone.library === "queue|queuebox|stage:true|bar:library" && ttPhone.live === "room|tt-pane|stage:true|bar:live" && ttPhone.djFrom,
     "the Turntable theme on a phone: each tab shows its own page alone under the room, the DJ picker says You DJ from, and the tab bar's Library is the Queue tab (" + JSON.stringify(ttPhone) + ")");
+  check(ttPhone.left && ttPhone.fresh === "room/fresh|tt-pane+discover|stage:true|bar:live" && ttPhone.visitor.ttTab === "room" && ttPhone.visitor.crate && ttPhone.visitor.lit === "library" && !ttPhone.visitor.skin,
+    "...Discover's Fresh tile opens the Room's Fresh page there (the tab bar says Live), and a visitor's Library is their crate, the theme's tab left as it was (" + JSON.stringify([ttPhone.fresh, ttPhone.visitor]) + ")");
   await kPage.evaluate(() => { document.getElementById("newchat").blur(); firetable.tt.leave(); }); // the theme is kept per device: out again for the pages after this
   check(ttTyping.tall.skin && !ttTyping.tall.on && ttTyping.tall.stage && ttTyping.up.on && !ttTyping.up.stage && ttTyping.up.playerSize === "640x360" && ttTyping.up.tabsTop <= 48 &&
     ttTyping.up.chat >= 200 && ttTyping.up.boxInView && !ttTyping.up.bottomTabs && !ttTyping.down.on && ttTyping.down.stage && ttTyping.down.screen === ttTyping.tall.screen,
@@ -5046,6 +5106,162 @@ try {
   check(chatHere.moved && chatHere.visible, "the room's chat, with its message box, opens in Discover's panel (" + JSON.stringify(chatHere) + ")");
   check(chatHere.backOnNow && chatHere.unread === "1" && chatHere.cleared, "on another tab, new messages from others are counted, and cleared on Chat (" + JSON.stringify(chatHere) + ")");
   check(chatHere.live.home && !chatHere.live.here, "Live gets its chat back (" + JSON.stringify(chatHere.live) + ")");
+
+  console.log("-- the bottom tab bar on a phone, a member: Live without Fresh, Fresh's tile, Library is Live's playlists, You; Discover's chat from the full-screen player");
+  await dPage.setViewportSize({ width: 390, height: 844 });
+  const mTabs = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const tap = async (t) => { document.querySelector('#nav-tabs [data-tab="' + t + '"]').click(); await wait(450); };
+    const seen = (sel) => { const el = document.querySelector(sel); if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth; };
+    const lit = () => [...document.querySelectorAll("#nav-tabs .nt-tab.on")].map((b) => b.dataset.tab + (b.getAttribute("aria-current") === "page" ? "" : "!")).join();
+    const where = () => firetable.discover.address();
+    const strip = () => [...document.querySelectorAll("#minimodeoptions .tab")].filter((t) => t.offsetParent)
+      .sort((x, y) => x.getBoundingClientRect().left - y.getBoundingClientRect().left).map((t) => t.textContent.trim()).join();
+    const out = {};
+    await tap("live");
+    firetable.nav.setMobileTab("mm-history"); // Recent, then Chat: Live's view is Recent's
+    await wait(450);
+    firetable.nav.setMobileTab("mmchat");
+    await wait(450);
+    out.live = { lit: lit(), hash: where(), stage: seen("#djStage"), chat: seen("#newchat"), strip: strip(), type: Math.min(...[...document.querySelectorAll("#minimodeoptions .tab")].filter((t) => t.offsetParent).map((t) => parseFloat(getComputedStyle(t).fontSize))) };
+    await tap("discover");
+    await tap("discover");
+    out.home = { lit: lit(), hash: where(), tiles: seen("#dBrowse .d-tiles") };
+    // Fresh's tile: Live's Fresh with its heading (no Join for a member), the screen to itself, under Discover
+    const before = firetable.nav.view;
+    document.querySelector('#dBrowse .d-tile[data-view="fresh"]').click();
+    await wait(600);
+    out.fresh = { lit: lit(), hash: where(), on: document.body.classList.contains("nt-fresh"), list: seen("#thediscovers"), heading: seen("#freshIntro h2"), join: seen("#minijoin"),
+      strip: seen("#minimodeoptions"), stageGone: !seen("#djStage") };
+    // Live: back to its own tabs (Chat, the last one), and its view as it was before Fresh, kept so (Fresh isn't
+    // Live's on a phone: on its side, or after a reload on a wider screen, it would be picked under the stage)
+    await tap("live");
+    out.back = { lit: lit(), off: !document.body.classList.contains("nt-fresh"), section: firetable.nav.mobileSection, stage: seen("#djStage"), freshGone: !seen("#thediscovers"),
+      before, view: firetable.nav.view, kept: localStorage.getItem(STORAGE.navView) };
+    // another way out of Fresh to one of Live's tabs (a mention's jump to Chat) puts Live's view back too
+    await tap("discover");
+    document.querySelector('#dBrowse .d-tile[data-view="fresh"]').click();
+    await wait(600);
+    firetable.nav.setMobileTab("mmchat");
+    await wait(600);
+    out.mention = { lit: lit(), off: !document.body.classList.contains("nt-fresh"), section: firetable.nav.mobileSection, view: firetable.nav.view, kept: localStorage.getItem(STORAGE.navView) };
+    await tap("library");
+    out.library = { lit: lit(), hash: where(), list: seen("#queuebox"), stageGone: !seen("#djStage"), strip: seen("#minimodeoptions") };
+    await tap("live");
+    out.again = { lit: lit(), section: firetable.nav.mobileSection, stage: seen("#djStage") };
+    // a Fresh left from before (Live's Fresh tab on a wider screen, or this phone before Round 5): on a phone
+    // Live puts it away for its own first tab
+    firetable.nav.view = "discover";
+    firetable.nav.mobileSection = "view";
+    firetable.nav.apply();
+    await wait(300);
+    out.left = { lit: lit(), view: firetable.nav.view, section: firetable.nav.mobileSection, fresh: document.body.classList.contains("nt-fresh"), stage: seen("#djStage") };
+    // Fresh lasts the visit to it: Back to Discover, and Live (here the header's switch, as the bar's Go to Live) is as it was
+    const was = { view: firetable.nav.view, section: firetable.nav.mobileSection };
+    await tap("discover");
+    document.querySelector('#dBrowse .d-tile[data-view="fresh"]').click();
+    await wait(600);
+    history.back();
+    await wait(600);
+    out.after = { was, lit: lit(), hash: where(), view: firetable.nav.view, section: firetable.nav.mobileSection, kept: localStorage.getItem(STORAGE.navView) };
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await wait(450);
+    Object.assign(out.after, { live: lit(), fresh: document.body.classList.contains("nt-fresh"), stage: seen("#djStage") });
+    await tap("you");
+    const menu = document.getElementById("nav-accountMenu");
+    out.you = menu.matches(":popover-open");
+    if (out.you) menu.hidePopover();
+    out.youNotLit = lit() === "live";
+    // the chat in Discover, on a phone: the full-screen player's More, then Playlists and Chat (over Charts)
+    await tap("discover");
+    location.hash = "#discover/charts";
+    await wait(400);
+    firetable.discover.openFull();
+    await wait(500);
+    document.querySelector("#pv-full .pvf-morebtn").click();
+    await wait(300);
+    document.querySelector("#pv-full .pvf-list").click();
+    await wait(500);
+    document.querySelector('#dSide [data-sidetab="chat"]').click();
+    await wait(300);
+    out.chat = { sheet: document.body.classList.contains("d-sheet-open"), lit: lit(), box: seen("#dSide #newchat") };
+    // the Discover tab closes the sheet, and the page under it stays (pressed again, Home)
+    await tap("discover");
+    Object.assign(out.chat, { closed: !document.body.classList.contains("d-sheet-open"), stayed: where() });
+    // Discover's Recent plays: "See every play in Live" opens Live's Recent (where the mods' tools are)
+    location.hash = "#discover/recent";
+    await wait(400);
+    const every = document.querySelector('#dBrowse a[data-live="history"]');
+    out.every = { link: every ? every.textContent : "" };
+    if (every) every.click();
+    await wait(600);
+    Object.assign(out.every, { lit: lit(), hash: where(), view: firetable.nav.view, section: firetable.nav.mobileSection, list: seen("#thehistoryWrap"), strip: strip() });
+    await tap("live");
+    return out;
+  });
+  await dPage.setViewportSize(desk);
+  check(mTabs.live.lit === "live" && mTabs.live.hash === "#live" && mTabs.live.stage && mTabs.live.chat && mTabs.live.strip === "Chat,Recent,Cards,People" && mTabs.live.type >= 10,
+    "phone, a member: Live is the stage with Chat, Recent, Cards and People (Fresh isn't one), its type 10px at the least (" + JSON.stringify(mTabs.live) + ")");
+  check(mTabs.home.lit === "discover" && mTabs.home.hash === "#discover" && mTabs.home.tiles &&
+    mTabs.fresh.lit === "discover" && mTabs.fresh.hash === "#live" && mTabs.fresh.on && mTabs.fresh.list && mTabs.fresh.heading && !mTabs.fresh.join && !mTabs.fresh.strip && mTabs.fresh.stageGone &&
+    mTabs.back.lit === "live" && mTabs.back.off && mTabs.back.section === "chat" && mTabs.back.stage && mTabs.back.freshGone,
+    "phone, a member: Fresh's tile opens Fresh with its heading and the screen to itself under Discover; Live goes back to Chat (" + JSON.stringify([mTabs.home, mTabs.fresh, mTabs.back]) + ")");
+  check(mTabs.back.before === "history" && mTabs.back.view === mTabs.back.before && mTabs.back.kept === mTabs.back.before &&
+    mTabs.mention.lit === "live" && mTabs.mention.off && mTabs.mention.section === "chat" && mTabs.mention.view === mTabs.back.before && mTabs.mention.kept === mTabs.back.before,
+    "phone, a member: leaving Fresh for Live (its tab, or a mention's jump to Chat) puts Live's view back as it was, and Fresh isn't kept (" + JSON.stringify([mTabs.back, mTabs.mention]) + ")");
+  check(mTabs.after.was.view === "playlists" && mTabs.after.lit === "discover" && mTabs.after.hash === "#discover" && mTabs.after.view === mTabs.after.was.view &&
+    mTabs.after.section === mTabs.after.was.section && mTabs.after.kept === mTabs.after.was.view && mTabs.after.live === "live" && !mTabs.after.fresh && mTabs.after.stage,
+    "phone, a member: Back from Fresh puts Live back as it was (Fresh isn't kept), so Live opens on its own tab (" + JSON.stringify(mTabs.after) + ")");
+  check(mTabs.library.lit === "library" && mTabs.library.hash === "#live" && mTabs.library.list && mTabs.library.stageGone && !mTabs.library.strip &&
+    mTabs.again.lit === "live" && mTabs.again.section !== "view" && mTabs.again.stage,
+    "phone, a member: Library is Live's playlists with the screen to themselves; Live goes back to its tab (" + JSON.stringify([mTabs.library, mTabs.again]) + ")");
+  check(mTabs.left.lit === "live" && mTabs.left.view === "playlists" && mTabs.left.section === "chat" && !mTabs.left.fresh && mTabs.left.stage,
+    "phone, a member: a Fresh left from before isn't one of Live's tabs: Live opens on Chat (" + JSON.stringify(mTabs.left) + ")");
+  check(mTabs.you && mTabs.youNotLit, "phone, a member: You opens the account menu (" + JSON.stringify([mTabs.you, mTabs.youNotLit]) + ")");
+  check(mTabs.chat.sheet && mTabs.chat.lit === "discover" && mTabs.chat.box && mTabs.chat.closed && mTabs.chat.stayed === "#discover/charts",
+    "phone, a member: Discover's chat opens from the full-screen player's More, Playlists, then Chat; the Discover tab closes it, on the page under it (" + JSON.stringify(mTabs.chat) + ")");
+  check(mTabs.every.link === "See every play in Live" && mTabs.every.lit === "live" && mTabs.every.hash === "#live" && mTabs.every.view === "history" && mTabs.every.section === "view" &&
+    mTabs.every.list && mTabs.every.strip === "Chat,Recent,Cards,People",
+    "phone, a member: Discover's Recent plays links to every play in Live's Recent, a visitor's doesn't (" + JSON.stringify(mTabs.every) + ")");
+
+  console.log("-- the bottom tab bar on a phone: a visitor who joins from Fresh's Join or log in, then Live");
+  const jContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const jPage = await jContext.newPage();
+  jPage.on("pageerror", (e) => { if (theirs(e)) return; pageErrors.push("Join from Fresh: " + e.message); });
+  await openPage(jPage, SITE);
+  const joined = await jPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const tap = async (t) => { document.querySelector('#nav-tabs [data-tab="' + t + '"]').click(); await wait(450); };
+    const seen = (sel) => { const el = document.querySelector(sel); if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth; };
+    const lit = () => (document.querySelector("#nav-tabs .nt-tab.on") || { dataset: {} }).dataset.tab;
+    const here = () => ({ lit: lit(), section: firetable.nav.mobileSection, stage: seen("#djStage"), strip: seen("#minimodeoptions") });
+    for (let i = 0; i < 80 && !document.querySelector('#dBrowse .d-tile[data-view="fresh"]'); i++) await wait(100);
+    document.querySelector('#dBrowse .d-tile[data-view="fresh"]').click();
+    await wait(600);
+    // Fresh's Join or log in: the welcome's view (Playlists') under the dialog
+    document.getElementById("minijoin").click();
+    await wait(400);
+    const join = document.getElementById("joinBox"), out = { asked: join.open };
+    if (join.open) { join.close(); await wait(300); }
+    // signed in with no reload, as firetable.actions.loggedIn does it
+    if (firetable.$appShell && !document.getElementById("appShell")) document.getElementById("mainGrid").appendChild(firetable.$appShell[0]);
+    document.getElementById("mainGrid").classList.remove("login", "pre-auth");
+    ftapi.uid = "smoke";
+    firetable.discover.testSignedIn(true);
+    firetable.nav.restore();
+    firetable.nav.apply();
+    await wait(450);
+    out.in = lit();
+    await tap("live");
+    out.live = here();
+    await tap("discover");
+    await tap("live");
+    out.again = here();
+    return out;
+  });
+  await jContext.close();
+  check(joined.asked && joined.in === "library" && [joined.live, joined.again].every((l) => l.lit === "live" && l.section === "chat" && l.stage && l.strip),
+    "phone: a visitor who joins from Fresh's Join or log in lands on Library, as it left them, and Live is then Chat with the stage, not Library again (" + JSON.stringify(joined) + ")");
 
   console.log("-- Discover: members play a song in the room, and manage the playlist beside the player");
   await put("/queues/smoke", { "-a1": { type: 1, cid: "plA000001", name: "Ay - One" }, "-a2": { type: 1, cid: "plB000002", name: "Bee - Two" }, "-a3": { type: 1, cid: "plC000003", name: "Cee - Three" } });
@@ -5581,6 +5797,7 @@ try {
     document.querySelector('#dNav [data-view="home"]').click();
     await wait(300);
     out.home = location.pathname + location.hash;
+    out.tiles = (document.querySelector("#dBrowse .d-tiles") || {}).outerHTML || "";
     // an old link, with its #, becomes the page's address
     location.hash = "#discover/djs/dj1";
     await wait(600);
@@ -5665,6 +5882,10 @@ try {
   check(/id="dBrowse" class="scroll-view" data-prerendered="discover"/.test(homeBuilt) && /href="\/music\/genres\/nu-disco\/"/.test(homeBuilt) && /href="\/music\/charts\/"/.test(homeBuilt) &&
     !/<body[^>]*ft-discover/.test(homeBuilt) && homeBuilt.split('<link rel="canonical"').length === 2 && homeBuilt.split("<base ").length === 2,
     "the home page is built with this week's songs and links into the library, its own tags untouched");
+  // Discover's pages as tiles first (on a phone), the same the site draws at the top of its Home, so they're there from the first paint
+  const builtTiles = (homeBuilt.match(/data-prerendered="discover">(<nav class="d-tiles"[\s\S]*?<\/nav>)/) || [])[1] || "";
+  check(builtTiles && builtTiles === walk.tiles && (builtTiles.match(/class="d-tile"/g) || []).length === 8 && /<a class="d-tile" data-view="fresh" href="\/#live" data-live="discover">/.test(builtTiles),
+    "the home page as built starts with Discover's pages and Fresh as tiles, the same the site draws on its Home (" + JSON.stringify([builtTiles.slice(0, 160), walk.tiles.slice(0, 160)]) + ")");
   const feedXml = readFileSync(join(ROOT, "music/charts/feed.xml"), "utf8");
   check(/<feed xmlns="http:\/\/www\.w3\.org\/2005\/Atom">/.test(feedXml) && /<entry><title>Week 45, 2026/.test(feedXml) && /href="[^"]+\/music\/charts\/week\/2026-W45\/"/.test(feedXml),
     "the weekly chart has a feed");

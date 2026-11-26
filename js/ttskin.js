@@ -813,7 +813,7 @@ firetable.tt = (function () {
     if (tab === "queue" && S.layout === "two") tab = "room";
     S.tab = tab;
     if ((tab === "queue" || S.layout === "two") && ftapi.uid && !S.sub) firetable.nav.setView("playlists");
-    // the phone's tab bar says Library for the Queue tab only: Room and Chat are Live (js/discover.js navTab)
+    // the phone's tab bar says Library for the Queue tab only: Room and Chat are Live (js/discover-tabs.js lit)
     else if (tab !== "queue" && window.matchMedia("(max-width: 639px)").matches && firetable.discover.state().tab === "library") firetable.nav.setMobileTab("mmchat");
     if (tab === "room" && S.sub) openSub(S.sub);
     document.body.setAttribute("data-tt-tab", tab);
@@ -1351,9 +1351,12 @@ firetable.tt = (function () {
     });
     document.addEventListener("click", function (e) {
       if (e.target.closest("[data-tt-signin]")) { var s = $id("nav-signin"); if (s) s.click(); }
-      // the phone's tab bar, after it has done its part (js/discover.js goTab): Library is the Queue tab here, Live the room
-      var nt = S.active && e.target.closest("#nav-tabs [data-tab]"), to = nt && { library: "queue", live: S.tab === "queue" ? "room" : S.tab }[nt.dataset.tab];
-      if (to) setTab(to);
+      // the phone's tab bar, after it has done its part (js/discover-tabs.js go): Library is a member's Queue tab here (a
+      // visitor's is their crate, in Discover), Live the room; a link from Discover into Live's Fresh or Recent (data-live:
+      // Fresh's tile, "See every play in Live") opens the Room's page for it, as the theme comes back with Live (a
+      // click with a key held opens the link in a new tab, as js/discover-tabs.js toPanel leaves it: this one stays as it was)
+      var nt = S.active && e.target.closest("#nav-tabs [data-tab]"), to = nt && { library: ftapi.uid ? "queue" : null, live: S.tab === "queue" ? "room" : S.tab }[nt.dataset.tab];
+      if (to) setTab(to); else if (S.pref && !e.defaultPrevented && !e.button && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) && (nt = e.target.closest("a[data-live]"))) { S.tab = "room"; S.sub = { discover: "fresh", history: "recent" }[nt.dataset.live] || null; }
     });
 
     var dlg = $id("tt-picker");

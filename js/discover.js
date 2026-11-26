@@ -601,7 +601,7 @@ firetable.discover = (function () {
     else if (v === "recent") {
       var rt = recentTracks();
       setList("recent", "Recent plays", rt);
-      h += '<div class="d-headrow"><h2>Recent plays</h2></div><p class="d-fact">The last 100 songs played live</p>';
+      h += '<div class="d-headrow"><h2>Recent plays</h2></div><p class="d-fact">The last 100 songs played live' + (D.signedIn ? ' · <a href="' + hrefTo("live") + '" data-live="history">See every play in Live</a>' : "") + "</p>";
       h += recentList(rt, "recent");
     }
     // a page from search keeps its filled-in copy until the live one has its data
@@ -639,7 +639,7 @@ firetable.discover = (function () {
   }
 
   function viewHome() {
-    var h = "";
+    var h = tabBar.tiles(); // Discover's pages, on phones (js/discover-tabs.js)
     // the newest 18 releases: this month's, then the rest of the last 90 days
     var nt = homeNew();
     var monthOnly = nt.every(function (t) { return t.rel && Date.now() - new Date(t.rel).getTime() <= NEW_MONTH_DAYS * 86400000; });
@@ -1609,80 +1609,6 @@ firetable.discover = (function () {
     renderTabs();
   }
 
-  // ─── The bottom tab bar, on phones (4.1) ─────────────────────────────────
-  // Home (Discover's Home) · Discover (search and the list of its pages) ·
-  // Live (the stage with Chat, Recent, Fresh, Cards, People) · Library (the
-  // playlists, full screen) · You (the account menu, or join / log in). Which
-  // tab is lit comes from where you are, so it never disagrees with the page;
-  // under 640px it stands in for #modeTabs, Discover's row of pages and Live's
-  // Playlists tab, which stay in the page for wider screens.
-
-  var NAV_TABS = [
-    { id: "home", label: "Home", icon: "home" },
-    { id: "discover", label: "Discover", icon: "explore" },
-    { id: "live", label: "Live", icon: "sensors" },
-    { id: "library", label: "Library", icon: "library_music" },
-    { id: "you", label: "You", icon: "account_circle" }
-  ];
-  var lastLiveTab = "mmchat";
-
-  function tabsHtml() {
-    return '<nav id="nav-tabs" aria-label="Sections">' + NAV_TABS.map(function (t) {
-      return '<button type="button" class="nt-tab" data-tab="' + t.id + '"' + (t.id === "you" ? ' aria-haspopup="menu"' : "") + ">" +
-        ms(t.icon) + "<span>" + esc(t.label) + "</span>" + (t.id === "live" ? '<i class="d-dot nt-dot" aria-hidden="true"></i>' : "") + "</button>";
-    }).join("") + "</nav>";
-  }
-
-  /** The tab that's lit: where you are now. */
-  function navTab() {
-    if (D.mode === "discover") return D.browse || D.view !== "home" ? "discover" : "home";
-    var n = firetable.nav;
-    return n && n.mobileSection === "view" && n.view === "playlists" ? "library" : "live";
-  }
-
-  function renderTabs() {
-    var tab = navTab();
-    document.body.classList.toggle("nt-browse", D.mode === "discover" && !!D.browse);
-    document.body.classList.toggle("nt-library", tab === "library");
-    document.querySelectorAll("#nav-tabs .nt-tab").forEach(function (b) {
-      var on = b.getAttribute("data-tab") === tab;
-      b.classList.toggle("on", on);
-      if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
-    });
-    var n = firetable.nav;
-    if (n && D.mode === "live" && tab === "live") lastLiveTab = n.mobileSection === "chat" ? "mmchat" : n.mobileSection === "people" ? "mmusrs" : n._viewTabMap[n.view] || "mmchat";
-  }
-
-  function goTab(tab) {
-    var n = firetable.nav;
-    var here = navTab();
-    closeMenu();
-    if (tab === "you") {
-      var who = document.getElementById(D.signedIn ? "loggedInUser" : "nav-signin");
-      if (who) who.click();
-      return;
-    }
-    if (tab === "home") {
-      D.browse = false;
-      if (D.mode === "discover") setView("home");
-      else { D.view = "home"; D.sub = null; setMode("discover", { remember: true }); }
-    } else if (tab === "discover") {
-      // the tab you're on goes back to its list; from elsewhere, back to the page you left
-      D.browse = here === "discover" || D.view === "home";
-      if (D.mode !== "discover") setMode("discover", { remember: true });
-      renderTabs();
-      var b = document.getElementById(D.browse ? "dRail" : "dBrowse");
-      if (b) b.scrollTop = 0;
-    } else if (tab === "live") {
-      if (D.mode !== "live") setMode("live", { remember: true });
-      if (here === "library" || navTab() === "library") n.setMobileTab(lastLiveTab);
-    } else if (tab === "library") {
-      if (D.mode !== "live") setMode("live", { remember: true });
-      if (navTab() !== "library") n.setView("playlists");
-    }
-    renderTabs();
-  }
-
   // ─── The room ────────────────────────────────────────────────────────────
 
   function peopleHere() {
@@ -1802,6 +1728,13 @@ firetable.discover = (function () {
     renderBar();
     renderFull();
     firetable.ui.markSaved();
+  }
+
+  /** One of the right column's tabs; on phones and tablets the column is a sheet over the page. */
+  function showSide(tab) {
+    D.sideTab = tab;
+    renderSide();
+    if (matchMedia("(max-width: 1023px)").matches) document.body.classList.add("d-sheet-open");
   }
 
   /** After play, pause or next: the list keeps its scroll and filter, only the marks move. */
@@ -1965,6 +1898,9 @@ firetable.discover = (function () {
       joinButtons() + "</div>";
   }
 
+  /** A visitor's Library on a phone (the tab bar): Discover, with the crate's sheet over it. */
+  function openCrate() { if (D.mode !== "discover") setMode("discover", { remember: true }); showSide("list"); }
+
   function joinButtons() {
     var google = firetable.utilities.signInProviders().indexOf("google") !== -1;
     var g = document.querySelector('#oauthBox .oauthBttn[data-provider="google"] svg');
@@ -2046,6 +1982,12 @@ firetable.discover = (function () {
     play: function (list, i) { play(list, i); },
     render: function () { renderBar(); renderFull(); }
   });
+  // The bottom tab bar, on phones (4.1): js/discover-tabs.js
+  var tabBar = firetable.discoverTabs({
+    esc: esc, ms: ms, hrefTo: hrefTo, closeMenu: closeMenu, setMode: setMode, setView: setView, openCrate: openCrate,
+    state: function () { return D; }, views: function () { return VIEWS; }
+  });
+  function renderTabs() { tabBar.render(); }
   function djList() { return queue.djList(); }
 
   // ─── The room, as Discover plays alongside it ───────────────────────────
@@ -3366,7 +3308,6 @@ firetable.discover = (function () {
     D.view = view;
     D.sub = sub || null;
     D.year = (view === "genres" && sub && year) || null;
-    D.browse = false;
     renderRail();
     renderBrowse();
     writeAddress();
@@ -3537,7 +3478,7 @@ firetable.discover = (function () {
     var b;
     if (barTapOpens(t)) { e.preventDefault(); return openFull(document.getElementById("pv-art")); }
     if ((b = t.closest("#modeTabs [data-mode]"))) return setMode(b.getAttribute("data-mode"), { remember: true });
-    if ((b = t.closest("#nav-tabs [data-tab]"))) return goTab(b.getAttribute("data-tab"));
+    if ((b = t.closest("#nav-tabs [data-tab]"))) return tabBar.go(b.getAttribute("data-tab"));
     if (soundMap && (b = t.closest("#dBrowse .d-mapg, #dBrowse .d-mapnext")) && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
       e.preventDefault();
       return soundMap.pick(b.getAttribute("data-slug"));
@@ -3565,13 +3506,7 @@ firetable.discover = (function () {
       if (document.fullscreenElement) return document.exitFullscreen().catch(function () {});
       return document.documentElement.requestFullscreen().catch(function () { firetable.ui.toast("This browser won't fill the screen from here."); });
     }
-    if ((b = t.closest(".pvf-list"))) {
-      closeFull();
-      D.sideTab = "list";
-      renderSide();
-      if (matchMedia("(max-width: 1023px)").matches) document.body.classList.add("d-sheet-open");
-      return;
-    }
+    if ((b = t.closest(".pvf-list"))) { closeFull(); return showSide("list"); }
     if ((b = t.closest(".d-stepdown"))) {
       var was = deckState();
       ftapi.actions.sendBotCommand("!removeme");
@@ -3597,7 +3532,7 @@ firetable.discover = (function () {
       return renderSide();
     }
     if ((b = t.closest("#dLocked [data-locked]"))) { lockedTab = b.getAttribute("data-locked"); return lockedTabs(); }
-    if ((b = t.closest(".d-chatnav"))) { D.sideTab = "chat"; D.unread = 0; renderSide(); document.body.classList.add("d-sheet-open"); return; }
+    if ((b = t.closest(".d-chatnav"))) { D.unread = 0; return showSide("chat"); }
     if ((b = t.closest(".d-chip[data-new]"))) { D.newFilter = b.getAttribute("data-new"); return renderBrowse(); }
     // Home's links into New pick its filter, then the address takes them there
     if ((b = t.closest("a[data-newfilter]"))) D.newFilter = b.getAttribute("data-newfilter");
@@ -4180,7 +4115,7 @@ firetable.discover = (function () {
     grid.insertAdjacentHTML("afterend", barHtml());
     var oldTabs = document.getElementById("nav-tabs");
     if (oldTabs) oldTabs.parentNode.removeChild(oldTabs);
-    document.getElementById("dMini").insertAdjacentHTML("afterend", tabsHtml());
+    document.getElementById("dMini").insertAdjacentHTML("afterend", tabBar.html());
     if (filledHtml) {
       document.getElementById("dBrowse").innerHTML = filledHtml;
       D.prerendered = true;
@@ -4318,7 +4253,6 @@ firetable.discover = (function () {
           typed = setTimeout(function () {
             D.view = "search";
             D.sub = v.trim() || null;
-            D.browse = false;
             renderRail();
             renderBrowse();
             writeAddress();
@@ -4435,8 +4369,10 @@ firetable.discover = (function () {
       ["tableChanged", "waitlistChanged", "spotlightStateChanged"].forEach(function (ev) { ftapi.events.on(ev, seats); });
       // the browser holding the room's sound back (or letting it go) changes what the bar says
       // (and the stage's screen going up or down changes the full player's view)
-      var wasBlocked = blocked(), wasScreen = fullView();
+      // (and the right column's sheet opening or closing lights the tab bar: a visitor's crate is their Library)
+      var wasBlocked = blocked(), wasScreen = fullView(), wasSheet = false;
       new MutationObserver(function () {
+        if (document.body.classList.contains("d-sheet-open") !== wasSheet) { wasSheet = !wasSheet; renderTabs(); }
         if (blocked() === wasBlocked && fullView() === wasScreen) return;
         wasBlocked = blocked();
         wasScreen = fullView();
@@ -4530,6 +4466,6 @@ firetable.discover = (function () {
     address: function () { return addressFor(); },
     /** Its address in the address bar. */
     url: function () { return urlFor(); },
-    state: function () { return { tab: navTab(), browse: !!D.browse, mode: D.mode, view: D.view, listening: D.listening, playing: P.track && P.track.cid, list: P.list, i: P.i, full: F.open, fullView: fullView() }; }
+    state: function () { return { tab: tabBar.lit(), mode: D.mode, view: D.view, listening: D.listening, playing: P.track && P.track.cid, list: P.list, i: P.i, full: F.open, fullView: fullView() }; }
   };
 })();

@@ -1497,9 +1497,10 @@ a.sociallogo[href] {
     grid-area: nav;
 }
 
-/* Phones: Live's five tabs (Playlists is the tab bar's Library) share one
-   fixed row. They size to their labels and the type scales down with the
-   bar's width, so nothing clips or scrolls. */
+/* Phones: Live's four tabs (Playlists is the tab bar's Library, and Fresh a
+   tile on Discover's Home) share one fixed row. They size to their labels and
+   the type scales down with the bar's width, to the 10px floor, so nothing
+   clips or scrolls. */
 @media only screen and (max-width: 639px) {
     #minimodeoptions {
         container-type: inline-size;
@@ -1512,7 +1513,7 @@ a.sociallogo[href] {
         flex: 1 1 auto;
         min-width: 0;
         padding-inline: 0.2rem;
-        font-size: clamp(0.5625rem, 3.05cqi, 0.75rem);
+        font-size: clamp(0.625rem, 3.05cqi, 0.75rem);
         letter-spacing: 0.04em;
         white-space: nowrap;
     }
