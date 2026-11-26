@@ -1,4 +1,4 @@
-// Bluesky, Mastodon, X, Pinterest, Telegram and Discord: pictures (a song's
+// Bluesky, Mastodon, Pinterest, Telegram and Discord: pictures (a song's
 // 4:5 card, or a list's hook and list slides). Their videos would be silent, as
 // music is only added in the apps that license it.
 //
@@ -8,8 +8,6 @@
 //            (Preferences → Development → New application, scope write:statuses write:media).
 //            Tick "This is an automated account" in the profile; some servers
 //            limit bots' posts (Hachyderm: 5 a day) or want a tag (SOCIAL_MASTODON_TAGS)
-// X:         X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET (an app with
-//            read and write access at developer.x.com). The link goes in a reply
 // Pinterest: PINTEREST_BOARD_ID and PINTEREST_APP_ID, PINTEREST_APP_SECRET,
 //            PINTEREST_REFRESH_TOKEN (tools/social/auth.mjs pinterest)
 // Telegram:  TELEGRAM_BOT_TOKEN (from @BotFather), TELEGRAM_CHAT_ID (the channel,
@@ -17,10 +15,9 @@
 // Discord:   DISCORD_WEBHOOK_URL (channel → Edit → Integrations → Webhooks)
 // Never deployed (tools/).
 
-import { createHmac, randomBytes } from "crypto";
 import sharp from "sharp";
 import { http, form, sleep } from "../util.mjs";
-import { caption, blueskyFacets, pinTitle, linkFor, altText, xReply } from "../captions.mjs";
+import { caption, blueskyFacets, pinTitle, linkFor, altText } from "../captions.mjs";
 
 const alt = altText;
 /** The pictures for a platform that takes four: a list's hook and its list slides; else the one picture. */
@@ -87,47 +84,6 @@ export const mastodon = {
     const st = await http(base + "/api/v1/statuses", { method: "POST", retry: true, headers: { ...auth, "Content-Type": "application/json", "Idempotency-Key": post.id },
       body: JSON.stringify({ status: caption(post, "mastodon") + (ctx.env.SOCIAL_MASTODON_TAGS ? " " + ctx.env.SOCIAL_MASTODON_TAGS : ""), media_ids: ids, visibility: "public", language: "en" }) });
     return { id: st.id, url: st.url };
-  }
-};
-
-// ---------------------------------------------------------------- X
-
-const pct = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
-
-/** An OAuth 1.0a header (the request's own body isn't signed: JSON and multipart bodies never are). */
-export function oauth1(method, url, keys, extra = {}) {
-  const o = { oauth_consumer_key: keys.key, oauth_nonce: extra.nonce || randomBytes(16).toString("hex"), oauth_signature_method: "HMAC-SHA1",
-    oauth_timestamp: extra.timestamp || String(Math.floor(Date.now() / 1000)), oauth_token: keys.token, oauth_version: "1.0" };
-  const u = new URL(url);
-  const params = [...Object.entries(o), ...u.searchParams.entries()].map(([k, v]) => [pct(k), pct(v)]).sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] < b[1] ? -1 : 1);
-  const base = [method.toUpperCase(), pct(u.origin + u.pathname), pct(params.map(([k, v]) => k + "=" + v).join("&"))].join("&");
-  o.oauth_signature = createHmac("sha1", pct(keys.secret) + "&" + pct(keys.tokenSecret)).update(base).digest("base64");
-  return "OAuth " + Object.entries(o).sort().map(([k, v]) => `${pct(k)}="${pct(v)}"`).join(", ");
-}
-
-export const x = {
-  name: "x",
-  needs: ["X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_SECRET"],
-  async publish(post, ctx) {
-    const keys = { key: ctx.env.X_API_KEY, secret: ctx.env.X_API_SECRET, token: ctx.env.X_ACCESS_TOKEN, tokenSecret: ctx.env.X_ACCESS_SECRET };
-    const ids = [];
-    for (const name of four(post)) {
-      const url = "https://api.x.com/2/media/upload";
-      const fd = new FormData();
-      fd.append("media", new Blob([await ctx.file(name)], { type: "image/jpeg" }), name);
-      fd.append("media_category", "tweet_image");
-      const m = await http(url, { method: "POST", tries: 1, headers: { Authorization: oauth1("POST", url, keys) }, body: fd });
-      ids.push((m.data && m.data.id) || m.media_id_string);
-    }
-    const url = "https://api.x.com/2/tweets";
-    const t = await http(url, { method: "POST", headers: { Authorization: oauth1("POST", url, keys), "Content-Type": "application/json" },
-      body: JSON.stringify({ text: caption(post, "x"), media: { media_ids: ids } }) });
-    // the link in a reply: X shows posts with links to fewer people
-    try {
-      await http(url, { method: "POST", headers: { Authorization: oauth1("POST", url, keys), "Content-Type": "application/json" },
-        body: JSON.stringify({ text: xReply(post), reply: { in_reply_to_tweet_id: t.data.id } }) });
-    } catch (err) { ctx.log("x: posted, but the reply with the link failed: " + err.message); }
-    return { id: t.data.id, url: `https://x.com/i/status/${t.data.id}` };
   }
 };
 

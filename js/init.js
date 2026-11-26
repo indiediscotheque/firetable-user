@@ -55,7 +55,6 @@ firetable.init = function () {
   var socialLinks = [
     { cls: "facebook",   url: ftconfigs.facebookURL },
     { cls: "instagram",  url: ftconfigs.instagramURL },
-    { cls: "x",          url: ftconfigs.xURL },
     { cls: "reddit",     url: ftconfigs.redditURL },
     { cls: "threads",    url: ftconfigs.threadsURL },
     { cls: "discord",    url: ftconfigs.discordURL },

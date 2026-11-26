@@ -5,8 +5,7 @@
  * - Which links are pictures: a direct http(s) link to an image file
  *   (jpg, png, gif, webp, avif, svg, bmp, apng), plus page links whose
  *   picture is at a known address: Imgur ("imgur.com/abc123", ".gifv"),
- *   Giphy ("giphy.com/gifs/…-id"), X/Twitter photos ("pbs.twimg.com/media/…
- *   ?format=jpg") and Unsplash's image host.
+ *   Giphy ("giphy.com/gifs/…-id") and Unsplash's image host.
  * - The picture still links to what was posted, opens in a new tab, and has
  *   a × to fold it away (chat.js). Pictures load lazily and without a
  *   Referer, so other sites don't learn where they were shown (and Imgur,
@@ -41,8 +40,6 @@ firetable.chatImages = (function () {
       m = GIPHY_ID.exec(u.pathname);
       if (m) return "https://media.giphy.com/media/" + m[1] + "/giphy.gif";
     }
-    if (host === "pbs.twimg.com" && /^\/media\//.test(u.pathname) &&
-        /^(?:jpe?g|png|gif|webp)$/i.test(u.searchParams.get("format") || "")) return u.href;
     if (host === "images.unsplash.com" && u.pathname.length > 1) return u.href;
     return null;
   }

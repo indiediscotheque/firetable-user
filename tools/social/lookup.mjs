@@ -125,7 +125,6 @@ const SOCIAL = [
   ["instagram", /instagram\.com\/([A-Za-z0-9_.]{1,30})\/?$/],
   ["tiktok", /tiktok\.com\/@([A-Za-z0-9_.]{2,24})\/?$/],
   ["bluesky", /bsky\.app\/profile\/([A-Za-z0-9.-]+\.[a-z]{2,})\/?$/],
-  ["x", /(?:twitter|x)\.com\/([A-Za-z0-9_]{1,15})\/?$/],
   ["threads", /threads\.(?:net|com)\/@([A-Za-z0-9_.]{1,30})\/?$/],
   ["youtube", /youtube\.com\/@([A-Za-z0-9_.-]{3,30})\/?$/],
   ["facebook", /facebook\.com\/([A-Za-z0-9.]{5,50})\/?$/]

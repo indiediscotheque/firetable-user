@@ -107,10 +107,6 @@ jobs:
       BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
       MASTODON_URL: ${{ secrets.MASTODON_URL }}
       MASTODON_TOKEN: ${{ secrets.MASTODON_TOKEN }}
-      X_API_KEY: ${{ secrets.X_API_KEY }}
-      X_API_SECRET: ${{ secrets.X_API_SECRET }}
-      X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
-      X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
       PINTEREST_BOARD_ID: ${{ secrets.PINTEREST_BOARD_ID }}
       PINTEREST_APP_ID: ${{ secrets.PINTEREST_APP_ID }}
       PINTEREST_APP_SECRET: ${{ secrets.PINTEREST_APP_SECRET }}
