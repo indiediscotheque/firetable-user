@@ -2713,6 +2713,14 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     #dBrowse :is(.d-compact, .d-newgrid) .listwords .row-icon:not(.is-saved) { color: var(--color-icon); }
     #dBrowse :is(.d-compact, .d-newgrid) .listwords .d-more { margin-left: auto; }
     #dBrowse .d-newgrid .fresh-meta { min-height: calc(var(--pad1) + 1.35rem); } /* its padding and a robot (looks.css) */
+    /* one line, as Home's covers keep it: a date that wrapped made its card's
+       line taller and lifted that card's buttons out of the row's line */
+    #dBrowse .d-newgrid :is(.histdate, .histtime) {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 }
 
 /* ============================================
