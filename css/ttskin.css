@@ -71,19 +71,22 @@ html body.tt-skin #mainGrid > #tt-pane { grid-column: 2; grid-row: 2 / 4; }
    the others (People here) are the pane, down to the bottom */
 html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { grid-row: 2; }
 
-/* the panel's pages: one at a time, by the tab (and the Room tab's page) */
-html body.tt-skin #mainGrid #minimodeoptions,
-html body.tt-skin #mainGrid #sidepanel-tabs,
-html body.tt-skin #mainGrid #usersbox,
-html body.tt-skin #mainGrid #login,
-html body.tt-skin #mainGrid #queuebox,
-html body.tt-skin #mainGrid #actualChat,
-html body.tt-skin #mainGrid #thehistoryWrap,
-html body.tt-skin #mainGrid #cardsWrap,
-html body.tt-skin #mainGrid #discover,
-html body.tt-skin #mainGrid #tt-pane,
-html body.tt-skin #mainGrid #tt-qhead,
-html body.tt-skin #mainGrid .tt-guestNote { display: none; }
+/* the panel's pages: one at a time, by the tab (and the Room tab's page). [data-tt-tab]
+   (always there in the theme) makes these outweigh the room's own rules that show a
+   panel by its view (on a phone #mainGrid.mmqueue.view-playlists #queuebox, looks.css):
+   the Queue tab picks Playlists, and the crate stayed on over the Room and Chat tabs */
+html body.tt-skin[data-tt-tab] #mainGrid #minimodeoptions,
+html body.tt-skin[data-tt-tab] #mainGrid #sidepanel-tabs,
+html body.tt-skin[data-tt-tab] #mainGrid #usersbox,
+html body.tt-skin[data-tt-tab] #mainGrid #login,
+html body.tt-skin[data-tt-tab] #mainGrid #queuebox,
+html body.tt-skin[data-tt-tab] #mainGrid #actualChat,
+html body.tt-skin[data-tt-tab] #mainGrid #thehistoryWrap,
+html body.tt-skin[data-tt-tab] #mainGrid #cardsWrap,
+html body.tt-skin[data-tt-tab] #mainGrid #discover,
+html body.tt-skin[data-tt-tab] #mainGrid #tt-pane,
+html body.tt-skin[data-tt-tab] #mainGrid #tt-qhead,
+html body.tt-skin[data-tt-tab] #mainGrid .tt-guestNote { display: none; }
 
 html body.tt-skin #mainGrid #queuebox,
 html body.tt-skin #mainGrid #actualChat,
@@ -393,6 +396,34 @@ body.tt-skin #queuebox > #djlistpickerWrap {
     font-size: 0.8rem;
 }
 body.tt-skin #queuebox > #djlistpickerWrap select { flex: 1; min-width: 0; }
+/* ...told apart from the crate's own picker under it: the headphones and "You DJ from"
+   stand beside it at every width (Live's stage bar keeps only the name on a phone, and
+   draws the words over the box's left end) */
+body.tt-skin #queuebox > #djlistpickerWrap > .st-djIcon { display: inline-block; color: var(--tt-gold); }
+body.tt-skin #queuebox > #djlistpickerWrap > #djlistpickerLabel {
+    position: static;
+    flex: none;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    color: var(--tt-muted);
+}
+body.tt-skin #queuebox > #djlistpickerWrap > #djlistpicker { padding-inline-start: 0.5em; }
+/* The crate's own row, in a column no wider than a phone's: the playlist's name gets
+   the room, as on a phone (its picker read "★ D"). The DJ tag is its glyph (its words
+   stay for screen readers) and Shuffle is in the playlist's ⋮ menu. */
+body.tt-skin #queuebox #shuffleQueue { display: none; }
+body.tt-skin #queuebox .cr-djtag { padding: 0.15rem; }
+body.tt-skin #queuebox .cr-djtag:not(.on) { border-color: transparent; }
+body.tt-skin #queuebox .cr-djtag > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 .tt-yellow {

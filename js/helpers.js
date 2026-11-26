@@ -253,14 +253,16 @@ firetable.utilities = {
    * @param {string} value - Option value (playlist key)
    * @param {*} name - Playlist name
    * @param {string} [id] - Optional element id
-   * @returns {jQuery}
+   * @returns {HTMLOptionElement} its name alone is its data-name too, as fillPlaylistSelect's
+   *   (the words shown gain the list's count: js/playlists.js listLabel)
    */
   playlistOption: function (value, name, id) {
     var tpl = document.createElement('template');
     tpl.innerHTML = String(name);
-    var $opt = $('<option></option>').val(value).text(tpl.content.textContent);
-    if (id) $opt.attr('id', id);
-    return $opt;
+    var opt = new Option(tpl.content.textContent, value);
+    opt.setAttribute('data-name', tpl.content.textContent);
+    if (id) opt.id = id;
+    return opt;
   },
 
   /**
@@ -930,7 +932,7 @@ firetable.utilities = {
     var prefix = String(firetable.preview).slice(0, 5);
     if (prefix !== "ytcid" && prefix !== "sccid") return false;
 
-    $("#pv" + firetable.preview).html("&#xE037;");
+    firetable.ui.previewIcon("pv" + firetable.preview, false);
     clearTimeout(firetable.ptimeout);
     firetable.ptimeout = null;
     $("#pvbar" + firetable.preview).css("background-image", "none").removeClass("previewing");
@@ -953,13 +955,11 @@ firetable.utilities = {
    *
    * Calculates how much time has elapsed since the song started,
    * then loads either the YouTube player or SoundCloud widget at that offset.
-   *
-   * @param {Object} [opts] - Optional overrides
-   * @param {boolean} [opts.forceVolume=false] - Also set volume after loading
    */
-  resumeCurrentSong: function (opts) {
-    opts = opts || {};
-    if (!firetable.song) return;
+  resumeCurrentSong: function () {
+    // nothing playing (the bot's stand-in for none has cid 0): a preview that ends, or is
+    // stopped, stops the room's players too, rather than playing on to its end (js/player.js)
+    if (!firetable.song || firetable.song.cid == 0) return firetable.media.hush();
     if (firetable.preview) return; // don't interrupt a preview
 
     var data = firetable.song;
@@ -1223,11 +1223,11 @@ firetable.songMenu = {
   /** One item of a song menu. */
   item: function (act, it) {
     if (act === "open") {
-      return '<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><i class="material-symbols-outlined">' + it.icon + '</i> <span class="ft-menu-open-label">Open track</span></a>';
+      return '<a role="menuitem" class="butt graybutt" data-act="open" target="_blank" rel="noopener"><i class="material-symbols-outlined" aria-hidden="true">' + it.icon + '</i> <span class="ft-menu-open-label">Open track</span></a>';
     }
     return '<button type="button" role="menuitem" class="butt graybutt' + (it.danger ? " ft-menu-danger" : "") + '" data-act="' + act + '"' +
       (it.popup ? ' aria-haspopup="menu"' : "") + (act === "swap" || act === "copy" ? " hidden" : "") + ">" +
-      '<i class="material-symbols-outlined">' + it.icon + "</i> " + it.label + "</button>";
+      '<i class="material-symbols-outlined" aria-hidden="true">' + it.icon + "</i> " + it.label + "</button>";
   },
 
   /** Copy a song's link, saying so (or showing it where copying isn't allowed). */

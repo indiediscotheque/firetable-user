@@ -300,8 +300,9 @@ firetable.actions.openStealPicker = function ($btn, target, placement) {
 };
 
 // ─── Saved songs (round five: one save icon with two states) ──────────────────
-// The + on a song becomes a gold check once it's in your playlists, and stays
-// that way: in Recent, Fresh, search results and on the stage. The site never
+// The + on a song becomes a filled check in a disc, in the room's accent
+// (SAVED_ICON, js/constants.js; css/looks.css .is-saved), once it's in your
+// playlists, and stays that way: in Recent, Fresh, search results and on the stage. The site never
 // downloads all your playlists (only their counts), so "saved" means the list
 // you have open in Playlists (usually your DJ playlist) or saved to during
 // this visit.
@@ -349,10 +350,10 @@ firetable.utilities.listName = function (listID) {
 /** Draw one add button as saved or not. */
 function drawSaveButton(btn, where) {
   var icon = btn.querySelector("i, .material-symbols-filled, .material-symbols-outlined") || btn;
-  var want = where ? "playlist_add_check" : "playlist_add";
+  var want = where ? SAVED_ICON : SAVE_ICON; // js/constants.js
   if (icon.textContent.trim() !== want) icon.textContent = want;
   btn.classList.toggle("is-saved", !!where);
-  var label = where ? "In " + where + ". Add to another playlist" : "Add to playlist";
+  var label = !where ? "Add to playlist" : where === "your crate" ? "Saved in your crate" : "Saved in " + where + ". Add to another playlist"; // a visitor has no playlists
   btn.setAttribute("aria-label", label);
   btn.setAttribute("title", label);
 }

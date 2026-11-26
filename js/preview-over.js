@@ -62,7 +62,7 @@ firetable.overlayPreview = (function () {
       row.style.backgroundImage = pcnt == null ? "none" : pcnt === 0 ? "" :
         "linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 27%, transparent) " + pcnt + "%, var(--color-bg-t1) " + pcnt + "%)";
     }
-    if (icon) icon.textContent = pcnt == null ? "\ue037" : "\ue034"; // play_arrow / pause
+    firetable.ui.previewIcon(icon, pcnt != null); // its glyph and its name (js/player.js)
   }
   function stop() {
     if (!state.id) return;

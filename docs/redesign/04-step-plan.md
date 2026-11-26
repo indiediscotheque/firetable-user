@@ -14,6 +14,8 @@ Every step lists:
 
 Mark each step `✅ shipped in #PR` when it merges.
 
+> **Round 5 (November 25, 2026).** After a fresh-eyes review the owner lifted some of the earlier rules and decisions behind these steps (no big filled gold, Roboto Mono for numbers, Live's frozen look, the five phone tabs, Fresh kept in Live and more). The changes ship one pull request at a time, outside this plan, which stays closed. The list is the "Round 5" block in [01-ground-rules.md](01-ground-rules.md#the-owners-standing-preferences-from-the-mockup-reviews), under the owner's standing preferences.
+
 ---
 
 ## Phase 0 · Foundations (no visible change)

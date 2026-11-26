@@ -78,7 +78,7 @@ firetable.init = function () {
         socialPopoverEl.style.visibility = 'hidden';
         firetable.ui.positionPopover(btn, socialPopoverEl, document.getElementById('socialArrow'));
       } else {
-        if (icon) icon.textContent = 'share';
+        if (icon) icon.textContent = 'diversity_3'; // the room's people elsewhere (index.html)
       }
     });
   }
@@ -162,7 +162,8 @@ firetable.init = function () {
   // Chrome suppresses audible autoplay in background tabs.  When the user
   // returns, retry playback so they don't have to click "refresh audio".
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden || firetable.disableMediaPlayback) return;
+    // (nothing playing, the bot's cid 0 too: nothing to start again, or the last song loaded would play)
+    if (document.hidden || firetable.disableMediaPlayback || !firetable.song || firetable.song.cid == 0) return;
     var vol = firetable.utilities.getEffectiveVolume();
     if (firetable.song && firetable.song.type == MEDIA_YOUTUBE && firetable.ytLoaded && !firetable.preview) {
       if (player.getPlayerState() !== 1) {

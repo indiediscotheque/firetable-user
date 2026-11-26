@@ -128,12 +128,13 @@ firetable.utilities.sortedLists = function (allPlaylists) {
 firetable.listCounts = firetable.listCounts || {};
 
 /**
- * Option text for a list: a star marks the default, and the track count
- * (with any flagged ones) follows the name once it's known.
+ * Option text for a list: a star marks the default, and once it's known the
+ * count follows the name in words, "★ Friday set · 8 songs, 1 broken" (it
+ * was "(8, 1 ⚠)"). The list's name alone is the option's data-name.
  */
 firetable.utilities.listLabel = function (listID, name) {
   var c = firetable.listCounts[String(listID)];
-  var count = c ? " (" + c.n.toLocaleString() + (c.broken ? ", " + c.broken.toLocaleString() + " ⚠" : "") + ")" : "";
+  var count = c ? " · " + firetable.utilities.pluralize(c.n, "song", "songs") + (c.broken ? ", " + c.broken.toLocaleString("en-US") + " broken" : "") : "";
   return (firetable.utilities.isDefaultList(listID) ? "★ " : "") + name + count;
 };
 
@@ -332,15 +333,15 @@ firetable.ui.renderPlaylistIndex = function () {
       $fmt.append($("<option></option>").val(k).text(firetable.utilities.LIST_FORMATS[k].name));
     });
     $fmt.val(fmt).appendTo($row);
-    $('<button type="button" class="plx-icon plx-star"><i class="material-symbols-outlined">star</i></button>')
+    $('<button type="button" class="plx-icon plx-star"><i class="material-symbols-outlined" aria-hidden="true">star</i></button>')
       .attr({ "aria-pressed": isDefault ? "true" : "false", "aria-label": isDefault ? l.name + " is your default" : "Make " + l.name + " your default", title: isDefault ? "Your default: it opens first" : "Make this your default" })
       .appendTo($row);
-    $('<button type="button" class="plx-icon plx-dj"><i class="material-symbols-outlined">headphones</i></button>')
+    $('<button type="button" class="plx-icon plx-dj"><i class="material-symbols-outlined" aria-hidden="true">headphones</i></button>')
       .attr({ "aria-pressed": isDj ? "true" : "false", "aria-label": "DJ from " + l.name, title: isDj ? "You DJ from this list" : "DJ from this list" })
       .appendTo($row);
-    $('<button type="button" class="plx-icon plx-open"><i class="material-symbols-outlined">arrow_forward</i></button>')
+    $('<button type="button" class="plx-icon plx-open"><i class="material-symbols-outlined" aria-hidden="true">arrow_forward</i></button>')
       .attr({ "aria-label": "Open " + l.name, title: "Open" }).appendTo($row);
-    $('<button type="button" class="plx-icon plx-more" aria-haspopup="menu" aria-expanded="false"><i class="material-symbols-outlined">more_vert</i></button>')
+    $('<button type="button" class="plx-icon plx-more" aria-haspopup="menu" aria-expanded="false"><i class="material-symbols-outlined" aria-hidden="true">more_vert</i></button>')
       .attr({ "aria-label": "More for " + l.name, title: "Rename, check for broken tracks, delete" })
       .attr("data-empty", s.n ? null : "1").appendTo($row);
     $list.append($row);

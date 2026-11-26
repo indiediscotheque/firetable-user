@@ -115,9 +115,16 @@ firetable.people = (function () {
     if (p.playing) html += '<span class="material-symbols-outlined pe-now" role="img" title="Playing now" aria-label="Playing now">graphic_eq</span>';
     else if (p.next) html += '<span class="pe-next">Next</span>';
     if (p.leaving) html += '<span class="material-symbols-filled pe-leaving" role="img" title="Steps down ' + esc(p.leaving) + '" aria-label="Steps down ' + esc(p.leaving) + '">departure_board</span>';
-    var limit = firetable.playlimit || "∞";
-    var plays = p.plays | 0;
-    return html + '<span class="pe-plays" title="' + plays + " of " + limit + ' plays this turn">' + plays + "/" + esc(limit) + "</span>";
+    return html + playsHTML(p.plays | 0, firetable.playlimit);
+  }
+
+  /** Plays this turn, in words: "2 plays" with no limit, "1 of 3" with one (it was "1/∞"); the tooltip says the rest. */
+  function playsHTML(plays, limit) {
+    var max = Number(limit); // the bot's limit: a number, or "∞" when there's none
+    var capped = max > 0 && isFinite(max);
+    var shown = capped ? plays + " of " + max : firetable.utilities.pluralize(plays, "play");
+    var tip = capped ? plays + " of " + max + " plays this turn" : firetable.utilities.pluralize(plays, "play") + " this turn, no limit";
+    return '<span class="pe-plays" title="' + esc(tip) + '">' + esc(shown) + "</span>";
   }
 
   /**
@@ -139,7 +146,7 @@ firetable.people = (function () {
       (since ? '<span class="pe-away" data-since="' + since + '"' + (away ? ' title="Away for ' + away + '"' : "") + ">" + away + "</span>" : "");
     return '<div class="ft-avatar" role="button" tabindex="0" aria-label="' + name + ' — profile" style="background-image:url(' +
       esc(firetable.utilities.avatarURL(p.id, p.name)) + ');">' +
-      '<span class="material-symbols-outlined blockon">' + (u.blocked ? "block" : "") + "</span></div>" +
+      '<span class="material-symbols-outlined blockon" aria-hidden="true">' + (u.blocked ? "block" : "") + "</span></div>" +
       (p.ghost ? "" : '<span class="pe-dot" aria-hidden="true"></span>') +
       (role ? '<span class="material-symbols-filled prsnRole" role="img" title="' + role.name + '" aria-label="' + role.name + '">' + role.icon + "</span>" : "") +
       '<div class="prsnNameRole"><span class="prsnName">' + name + "</span>" + (idle ? '<span class="sr-only"> (away)</span>' : "") + "</div>" +
@@ -258,6 +265,8 @@ firetable.people = (function () {
     render: render,
     status: status,
     bus: bus,
+    /** A member's role that differs from a member's: {icon, name}, or null (chat names it the same, js/chat.js). */
+    roleOf: roleOf,
     /** For tests: "12m" for a time `ms` ago. */
     awayFor: awayFor
   };
