@@ -1858,12 +1858,18 @@ firetable.ui.setupMiscEvents = function () {
   // Grab (1.6): one tap adds the room's song to the playlist you grabbed to
   // last, with Undo and Change; the first grab, or the ▾ beside it
   // (#st-grabPick), opens the picker.
+  // The picker closes, and what opened it (Grab, or a row's Add or ⋮) loses
+  // its mark: a playlist row keeps its actions up while one is marked (looks.css)
+  var closeStealPicker = function () {
+    if (firetable.stealSourceBtn) firetable.stealSourceBtn.removeClass('on');
+    firetable.stealSourceBtn = firetable.stealTarget = null;
+    document.getElementById('grab').classList.remove('on');
+    document.getElementById('stealContain').style.display = 'none';
+  };
   // Grab toggles the picker; the ▾ and Change only ever open it (keepOpen)
   var openGrabPicker = function (keepOpen) {
     if (!$("#stealContain").is(":hidden")) {
-      if (keepOpen === true) return;
-      $('#grab').removeClass('on');
-      $("#stealContain").hide();
+      if (keepOpen !== true) closeStealPicker();
       return;
     }
     ftapi.lookup.listNames(function (allPlaylists) {
@@ -2028,16 +2034,7 @@ firetable.ui.setupMiscEvents = function () {
   // ── Close steal popover when clicking outside it ──
   $(document).on('click', function (e) {
     if ($("#stealContain").is(':hidden')) return;
-    if (!$(e.target).closest('#stealContain, .histeal, .queuetrack, #grab, #st-grabPick').length) {
-      if (firetable.stealSourceBtn) {
-        firetable.stealSourceBtn.removeClass('on');
-        firetable.stealSourceBtn = null;
-      } else {
-        $("#grab").removeClass('on');
-      }
-      firetable.stealTarget = null;
-      $("#stealContain").hide();
-    }
+    if (!$(e.target).closest('#stealContain, .histeal, .queuetrack, #grab, #st-grabPick').length) closeStealPicker();
   });
 
   $(window).on('popstate', function () {

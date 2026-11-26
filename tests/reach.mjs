@@ -160,6 +160,11 @@ const FEATURES = [
   { row: "CR-02", name: "Playlist rows", who: IN, via: playlists, target: "#mainqueue .pvbar" },
   { row: "CR-03", name: "Row: send to top", who: IN, via: playlists, target: "#mainqueue .pvbar .bumpsongs" },
   { row: "CR-04", name: "Row: ⋮ menu (bottom, add, edit tags, swap, open, delete)", who: IN, via: [...playlists, "#mainqueue .pvbar .row-more"], target: "#trackMenuPopover" },
+  // Bottom, Open, Add and Delete are on the row only where a mouse points (round 5, November 25, 2026); ⋮ has them everywhere
+  { row: "CR-03", name: "Row: send to bottom (⋮)", who: IN, via: [...playlists, "#mainqueue .pvbar .row-more"], target: '#trackMenuPopover [data-act="bottom"]' },
+  { row: "CR-03", name: "Row: open on YouTube or SoundCloud (⋮)", who: IN, via: [...playlists, "#mainqueue .pvbar .row-more"], target: '#trackMenuPopover [data-act="open"]' },
+  { row: "CR-03", name: "Row: add to another playlist (⋮)", who: IN, via: [...playlists, "#mainqueue .pvbar .row-more", '#trackMenuPopover [data-act="add"]'], target: "#stealpicker" },
+  { row: "CR-03", name: "Row: delete (⋮)", who: IN, via: [...playlists, "#mainqueue .pvbar .row-more", '#trackMenuPopover [data-act="delete"]'], target: "#deleteSongPopover .deleteSongConfirm" },
   { row: "CR-07", name: "Filter the playlist", who: IN, via: playlists, target: "#queueFilter" },
   { row: "CR-07", name: "Show only: Remixes, Broken", who: IN, via: [...playlists, "#cr-showOnly"], target: "#cr-showOnlyMenu" },
   { row: "CR-08", name: "Find tracks", who: IN, via: [...playlists, "#addToQueueBttn"], target: "#qsearch", close: ["#cancelqsearch"] },
@@ -203,6 +208,9 @@ const FEATURES = [
   { row: "DI-27", name: "The full-screen player", who: ALL, widths: WIDE, mode: "discover", via: ["#fullscreenBtn"], target: "#pv-full" },
   { row: "DI-27", name: "The full-screen player (phone: tap the bar)", who: ALL, widths: PHONE, mode: "discover", via: full, target: "#pv-full" },
   { row: "DI-19", name: "A song's ⋮ menu", who: ALL, mode: "discover", via: ["#dBrowse .pvbar .d-more"], target: "#dMenu" },
+  // a cover's ⋮ and save: over its corner with a mouse, under the song's name on a touch screen (round 5, November 25, 2026)
+  { row: "DI-19", name: "A cover's ⋮ (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", via: ["#dBrowse .d-compact .pvbar .d-more"], target: "#dMenu" },
+  { row: "DI-01", name: "A cover's save (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", target: "#dBrowse .d-compact .pvbar .histeal" },
   { row: "DI-17", name: "Members' playlist beside the player", who: IN, widths: WIDE, mode: "discover", target: "#dSide" },
   { row: "DI-15", name: "Visitors' crate", who: ["visitor"], widths: WIDE, mode: "discover", target: "#dSide" }
 ].filter((f) => !ONLY || ONLY.some((o) => f.row.startsWith(o)));

@@ -809,6 +809,116 @@ try {
     "a mouse drags a row below another and the new order is saved; a click doesn't (" + JSON.stringify(drag) + ")");
   check(drag.keys === "k2,k3,k4,k1" && drag.focusKept === "k4", "Alt+↑ moves the focused row up, keeping focus (" + drag.keys + ")");
 
+  // a computer with a mouse (round 5, November 25, 2026): Top and ⋮ on every row; Bottom, Open, Add
+  // and Delete on the row under the pointer or holding the keyboard's focus, left of Top, so Top and ⋮
+  // (and × while the tags are edited) never move. Not while ticking songs or dragging one, nor on rows
+  // under 28rem (⋮ has them all)
+  const rowActs = (key) => page.evaluate((key) => {
+    const row = document.querySelector('#mainqueue .pvbar[data-key="' + key + '"]');
+    const x = (sel) => Math.round(row.querySelector(sel).getBoundingClientRect().left);
+    return { shown: [...row.querySelectorAll(".row-icon")].filter((el) => getComputedStyle(el).display !== "none").map((el) => el.classList[2]).join(),
+      top: x(".bumpsongs"), more: x(".row-more"), words: Math.round(row.querySelector(".listwords").getBoundingClientRect().width) };
+  }, key);
+  const SIX = "deletesong,histeal,tracklink-btn,bottomsongs,bumpsongs,row-more";
+  const away = async () => { await page.mouse.move(1, 1); await page.evaluate(() => document.activeElement && document.activeElement.blur()); };
+  await away();
+  const acts = { rest: await rowActs("k2") };
+  await page.hover('#mainqueue .pvbar[data-key="k2"] .listwords');
+  acts.hover = await rowActs("k2");
+  acts.next = (await rowActs("k3")).shown;
+  // the keyboard: Tab into the row (from what's before it, onto its play button), then on through its
+  // actions in the order they're on screen
+  await away();
+  await page.focus('#mainqueue .pvbar[data-key="k2"] .previewicon');
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  acts.focus = await rowActs("k2");
+  acts.focusAt = await page.evaluate(() => document.activeElement.matches('#mainqueue .pvbar[data-key="k2"] .previewicon'));
+  acts.tabs = [];
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press("Tab");
+    acts.tabs.push(await page.evaluate(() => document.activeElement.closest('#mainqueue .pvbar[data-key="k2"]') ? document.activeElement.classList[2] : "out"));
+  }
+  // a click on ▶ leaves the focus on it (Chrome's way), but only the keyboard's focus keeps the four up:
+  // once the pointer goes, the song being previewed has its whole name again (no sound: media off)
+  await away();
+  const mediaWas = await page.evaluate(() => { const was = firetable.disableMediaPlayback; firetable.disableMediaPlayback = true; return was; });
+  await page.click('#mainqueue .pvbar[data-key="k2"] .previewicon');
+  await page.mouse.move(1, 1);
+  acts.clicked = (await rowActs("k2")).shown + "|" + await page.evaluate(() => document.activeElement.matches('#mainqueue .pvbar[data-key="k2"] .previewicon'));
+  await page.click('#mainqueue .pvbar[data-key="k2"] .previewicon'); // stops the preview
+  await page.evaluate((was) => { firetable.disableMediaPlayback = was; }, mediaWas);
+  // × (closing the tags editor) is with the ones that never move: the pointer on its way to it brings
+  // the four up on its left, and it stays where it was
+  await away();
+  await page.evaluate(() => {
+    const row = document.querySelector('#mainqueue .pvbar[data-key="k2"]');
+    firetable.actions.editTagsPrompt("k2", row.getAttribute("data-tags"), row.querySelector(".row-more"));
+  });
+  const closeX = () => page.evaluate(() => Math.round(document.querySelector('#mainqueue .pvbar[data-key="k2"] .closeeditor').getBoundingClientRect().left));
+  acts.editing = [(await rowActs("k2")).shown, await closeX()];
+  await page.hover('#mainqueue .pvbar[data-key="k2"] .listwords');
+  acts.editing.push((await rowActs("k2")).shown, await closeX());
+  await page.evaluate(() => document.getElementById("tagEditorPopover").hidePopover());
+  // Delete's question keeps them on the row once the pointer has gone to it
+  await away();
+  await page.hover('#mainqueue .pvbar[data-key="k2"] .listwords');
+  await page.click('#mainqueue .pvbar[data-key="k2"] .deletesong');
+  await page.mouse.move(1, 1);
+  acts.deleting = (await rowActs("k2")).shown + "|" + await page.evaluate(() => document.getElementById("deleteSongPopover").matches(":popover-open"));
+  await page.evaluate(() => document.getElementById("deleteSongPopover").hidePopover());
+  // ...and so does Add's playlist picker, opened from the row (where browsers have :has())
+  await away();
+  await page.hover('#mainqueue .pvbar[data-key="k2"] .listwords');
+  await page.click('#mainqueue .pvbar[data-key="k2"] .histeal');
+  await page.waitForFunction(() => $("#stealContain").is(":visible"));
+  await away();
+  acts.adding = (await rowActs("k2")).shown;
+  await page.evaluate(() => document.querySelector('#mainqueue .pvbar[data-key="k2"] .histeal').click());
+  acts.added = (await rowActs("k2")).shown + "|" + await page.evaluate(() => $("#stealContain").is(":hidden"));
+  // ...and when Grab (or G) closes that picker instead, the row's Add loses its mark and the four go
+  await page.hover('#mainqueue .pvbar[data-key="k2"] .listwords');
+  await page.click('#mainqueue .pvbar[data-key="k2"] .histeal');
+  await page.waitForFunction(() => getComputedStyle(document.getElementById("stealContain")).display !== "none");
+  await away();
+  await page.evaluate(() => firetable.actions.openGrabPicker());
+  acts.grabbed = (await rowActs("k2")).shown + "|" + await page.evaluate(() =>
+    getComputedStyle(document.getElementById("stealContain")).display === "none" && !document.querySelector("#mainqueue .row-icon.on") && !firetable.stealSourceBtn);
+  // ticking songs (Select several): a click on a row ticks it, so nothing comes up under the pointer
+  await page.evaluate(() => document.getElementById("cr-select").click());
+  await page.hover('#mainqueue .pvbar[data-key="k2"] .listwords');
+  acts.ticking = (await rowActs("k2")).shown;
+  await page.evaluate(() => document.getElementById("cr-select").click());
+  // dragging a row: nothing comes up on the rows it passes
+  await away();
+  const dragAt = await box('#mainqueue .pvbar[data-key="k2"] .listwords');
+  await page.mouse.move(dragAt.x, dragAt.y);
+  await page.mouse.down();
+  await page.mouse.move(dragAt.x, dragAt.y + 6);
+  await page.mouse.move(dragAt.x, dragAt.y + 8);
+  acts.dragging = (await rowActs("k2")).shown + "|" + await page.evaluate(() => document.getElementById("mainqueue").classList.contains("is-sorting"));
+  await page.mouse.up();
+  // a row under 28rem (Discover's side column, the Turntable Queue): Top and ⋮, pointed at or not
+  await away();
+  await page.evaluate(() => { document.getElementById("queuelist").style.width = "26rem"; });
+  await page.hover('#mainqueue .pvbar[data-key="k2"] .listwords');
+  acts.narrow = (await rowActs("k2")).shown;
+  await page.evaluate(() => { document.getElementById("queuelist").style.width = ""; });
+  await away();
+  check(acts.rest.shown === "bumpsongs,row-more" && acts.hover.shown === SIX && acts.next === "bumpsongs,row-more" && acts.focus.shown === SIX && acts.focusAt &&
+    acts.hover.top === acts.rest.top && acts.hover.more === acts.rest.more && acts.focus.top === acts.rest.top && acts.focus.more === acts.rest.more &&
+    acts.rest.words - acts.hover.words >= 100,
+    "a computer's playlist rows show Top and ⋮; Bottom, Open, Add and Delete come up beside them on the row pointed at or with the keyboard's focus, and Top and ⋮ stay where they were (" + JSON.stringify(acts) + ")");
+  check(acts.tabs.join() === SIX, "Tab walks a row's actions in the order they're on screen (" + acts.tabs.join() + ")");
+  check(acts.clicked === "bumpsongs,row-more|true",
+    "a click on a row's ▶ leaves the focus there, but once the pointer goes the row has Top and ⋮ again: a click's focus doesn't keep the four up (" + acts.clicked + ")");
+  check(acts.editing.join() === ["closeeditor,bumpsongs,row-more", acts.editing[1], "deletesong,histeal,tracklink-btn,bottomsongs,closeeditor,bumpsongs,row-more", acts.editing[1]].join(),
+    "while a row's tags are edited, × shows beside Top and stays where it was when the pointer brings up the four (" + JSON.stringify(acts.editing) + ")");
+  check(acts.deleting === SIX + "|true" && acts.adding === SIX && acts.added === "bumpsongs,row-more|true" && acts.grabbed === "bumpsongs,row-more|true",
+    "they stay up while Delete's question or Add's picker opened from them is open, and go when it closes, by Add or by Grab (" + JSON.stringify(acts) + ")");
+  check(acts.ticking === "bumpsongs,row-more" && acts.dragging === "bumpsongs,row-more|true" && acts.narrow === "bumpsongs,row-more",
+    "not while ticking songs or dragging one, nor on a row under 28rem (" + JSON.stringify(acts) + ")");
+
   // a phone: hold a row, then move it; a quick swipe scrolls instead
   const touchPhone = await browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true });
   const tPage = await touchPhone.newPage();
@@ -884,6 +994,19 @@ try {
   await tPage.keyboard.press("Escape");
   check(sheet.open && sheet.bottom === 0 && sheet.left === 0 && sheet.wide && sheet.rows >= 4 && sheet.tall && sheet.dim !== "rgba(0, 0, 0, 0)",
     "on a phone ⋮ opens as a sheet from the bottom, the whole width, with 48px rows over a dimmed page (" + JSON.stringify(sheet) + ")");
+  // a touch screen as wide as a computer's (round 5, November 25, 2026): Top and ⋮ too, even on the row
+  // last touched (a touch leaves the row "hovered") or holding focus; ⋮ has the rest
+  await tPage.setViewportSize({ width: 1280, height: 800 });
+  await sleep(300);
+  await tPage.hover('#mainqueue .pvbar[data-key="k4"] .listwords', { timeout: 5000 }).catch(() => {});
+  const wideTouch = await tPage.evaluate(() => {
+    const row = document.querySelector('#mainqueue .pvbar[data-key="k4"]');
+    row.querySelector(".previewicon").focus();
+    return { list: Math.round(document.getElementById("queuelist").getBoundingClientRect().width), hovered: row.matches(":hover"), focused: row.matches(":focus-within"),
+      shown: [...row.querySelectorAll(".row-icon")].filter((el) => getComputedStyle(el).display !== "none").map((el) => el.classList[2]).join() };
+  });
+  check(wideTouch.list >= 448 && wideTouch.hovered && wideTouch.focused && wideTouch.shown === "bumpsongs,row-more",
+    "a touch screen as wide as a computer's shows Top and ⋮ on a row it touched or focused, the rest in ⋮ (" + JSON.stringify(wideTouch) + ")");
   await touchPhone.close();
 
   console.log("-- playlist rows: number, Title · Artist, Next / Broken / Remix, and ⋮'s Delete and search for another");
@@ -4172,6 +4295,48 @@ try {
   check(taps.coarse && taps.more && taps.more[0] >= 40 && taps.more[1] >= 44 && taps.play && taps.play[0] >= 40 && taps.play[1] >= 40,
     "on a touch screen a row's ⋮ can be tapped over 40×44px and its play button over the whole cover, at the size they were (" + JSON.stringify(taps) + ")");
   check(!taps.loose.length && taps.joinOnTop, "no tap area hangs loose from a control that isn't positioned, on Charts or Home, and nothing covers Join (" + JSON.stringify({ loose: taps.loose, join: taps.joinOnTop }) + ")");
+  // touch screens (round 5, November 25, 2026): a cover on Home (.d-compact) and New (.d-newgrid) keeps
+  // only its play button; ⋮ and save sit under the song's name, in the card, the size of a tap
+  const covers = await tPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const box = (el) => el.getBoundingClientRect();
+    const inside = (b, o) => b.left >= o.left - 0.5 && b.right <= o.right + 0.5 && b.top >= o.top - 0.5 && b.bottom <= o.bottom + 0.5;
+    // what a colour of the palette is, where the card is
+    const tone = (card, v) => { const s = card.appendChild(document.createElement("span")); s.style.color = "var(" + v + ")"; const c = getComputedStyle(s).color; s.remove(); return c; };
+    const look = async (hash, grid) => {
+      location.hash = hash;
+      for (let i = 0; i < 50 && !document.querySelector("#dBrowse " + grid + " .pvbar .histeal"); i++) await wait(100);
+      const card = document.querySelector("#dBrowse " + grid + " .pvbar");
+      if (!card) return "no " + grid;
+      const c = box(card), art = box(card.querySelector(".discart")), words = box(card.querySelector(".fresh-title"));
+      const more = card.querySelector(".d-more"), save = card.querySelector(".histeal"), m = box(more), s = box(save), b = getComputedStyle(save, "::before");
+      const onCover = [...card.querySelectorAll("button, a, [role=button]")].filter((el) => { const r = box(el); return r.width && r.top < art.bottom && r.bottom > art.top; });
+      return { cover: onCover.map((el) => (el.classList.contains("d-play") ? "play" : el.className)).join(), under: Math.min(m.top, s.top) >= Math.max(words.bottom, art.bottom) - 0.5,
+        inCard: inside(m, c) && inside(s, c), size: [m.width, m.height, s.width, s.height].map(Math.round),
+        tap: [Math.round(s.width - parseFloat(b.left) - parseFloat(b.right)), Math.round(s.height - parseFloat(b.top) - parseFloat(b.bottom))],
+        grey: getComputedStyle(more).color === tone(card, "--color-icon") && getComputedStyle(save).color === tone(card, "--color-icon") };
+    };
+    const out = { home: await look("#discover", ".d-compact"), newGrid: await look("#discover/new", ".d-newgrid") };
+    // a row of New's covers has them level, a robot or "Be the first" under them
+    const rows = {};
+    for (const card of document.querySelectorAll("#dBrowse .d-newgrid .pvbar")) {
+      const top = Math.round(box(card).top);
+      (rows[top] = rows[top] || []).push({ more: box(card.querySelector(".d-more")).top, robot: !!card.querySelector(".fresh-meta .pv-dj-avatar"), first: !!card.querySelector(".fresh-meta .d-befirst") });
+    }
+    const spread = (r) => Math.max(...r.map((c) => c.more)) - Math.min(...r.map((c) => c.more));
+    out.level = { spread: Math.round(Math.max(0, ...Object.values(rows).map(spread))), mixed: Object.values(rows).some((r) => r.some((c) => c.robot) && r.some((c) => c.first)) };
+    // a saved song keeps its mark's accent (a visitor's save goes to the crate)
+    const save = document.querySelector("#dBrowse .d-newgrid .pvbar .histeal");
+    save.click();
+    for (let i = 0; i < 20 && !save.classList.contains("is-saved"); i++) await wait(100);
+    out.saved = save.classList.contains("is-saved") && getComputedStyle(save).color === tone(save.closest(".pvbar"), "--color-accent");
+    return out;
+  });
+  const coverOk = (c) => c && c.cover === "play" && c.under && c.inCard && c.size.every((n) => n >= 40) && c.tap[0] >= 40 && c.tap[1] >= 44 && c.grey;
+  check(coverOk(covers.home) && coverOk(covers.newGrid),
+    "on a touch screen a cover on Home and New keeps only its play button; ⋮ and save are under the song's name, in the card, each a tap's size (" + JSON.stringify(covers) + ")");
+  check(covers.saved, "...and a saved song's mark keeps its accent there (" + JSON.stringify(covers.saved) + ")");
+  check(covers.level.spread <= 1, "...and along a row of New's covers they're level, whether a robot or \"Be the first\" is under them (" + JSON.stringify(covers.level) + ")");
   await tContext.close();
   await cPage.close();
 
@@ -4309,6 +4474,14 @@ try {
     "Discover: Tab goes from song to song, one stop each, and the stop names its song (" + JSON.stringify([one.from, one.name, one.tabs]) + ")");
   check(one.arrows.slice(0, 2).join() === "title,artist" && one.arrows.indexOf("more") !== -1 && one.menu && one.back === "more" && one.ring === "solid",
     "Discover: ← and → reach a song's title, artist, ⋮ and Add, the menu key opens ⋮, and the ring goes round the whole song (" + JSON.stringify(one) + ")");
+  // with a mouse, Home's covers keep ⋮ and save over the cover's corner (a touch screen has them under the name)
+  const mouseCover = await sPage.evaluate(() => {
+    const b = document.querySelector("#dBrowse .d-compact .pvbar .d-more");
+    if (!b) return null;
+    const art = b.closest(".pvbar").querySelector(".discart").getBoundingClientRect(), r = b.getBoundingClientRect();
+    return { pos: getComputedStyle(b).position, onCover: r.top >= art.top && r.bottom <= art.bottom && r.right <= art.right };
+  });
+  check(mouseCover && mouseCover.pos === "absolute" && mouseCover.onCover, "with a mouse, Home's covers keep ⋮ and save over the cover's corner (" + JSON.stringify(mouseCover) + ")");
   await sPage.close();
 
   console.log("-- Discover: members chat with the room from Discover");
