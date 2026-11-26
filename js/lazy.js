@@ -274,7 +274,7 @@ firetable.recentPlays = (function () {
  * css/rail.css, loaded the first time it's folded; where it was left folded,
  * js/head.js put both on before the first paint and the script loads with
  * the page). Its ways in stay here, so they work before it's loaded and go
- * to the real thing once it is: the button by the logo, the [ key and
+ * to the real thing once it is: the button at the column's bottom, the [ key and
  * Settings' switch.
  */
 firetable.rail = (function () {

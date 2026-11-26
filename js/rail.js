@@ -1,7 +1,7 @@
 /**
  * rail.js — the left column folded into a toolbar, on wide screens (1024px
  * and up). Loaded by its stand-in in js/lazy.js (which keeps its ways in:
- * the button by the logo, the [ key and Settings' switch); css/rail.css
+ * the button at the column's bottom, the [ key and Settings' switch); css/rail.css
  * draws it. This keeps it working:
  * - folding and opening (set, toggle): html.rail, kept on this device
  *   (STORAGE.rail, which js/head.js reads before the first paint next time),
@@ -11,13 +11,14 @@
  *   --rail-foot), measured from the top part and the buttons at the bottom;
  * - peek: who's here (the people button, or a visitor's faces) or search
  *   opens the column whole, over the middle, for a moment (html.rail-peek).
- *   Escape, a click or the focus going outside, or choosing a view, puts it
- *   away; the button by the logo keeps it open;
+ *   Escape, a click or the focus going outside, choosing a view, or the
+ *   button (a collapse button while the column shows) puts it away;
  * - one tooltip, beside the icon or face under the pointer or the keyboard:
  *   what it does, or who it is and what they're up to;
  * - the count on the people button, and who that is in its tooltip;
- * - More: light mode, community, about and the shortcuts, in one menu at
- *   the bottom, so the toolbar keeps to what's used all the time;
+ * - the account menu, folded, also has About the room and Open the column
+ *   (light mode and the shortcuts are in it already), so the toolbar keeps
+ *   to what's used all the time; community stays on it;
  * - the desk: when Live's middle is wide (66rem and up), your playlist down
  *   the left and the room's Recent, Fresh or Cards beside it, under the
  *   stage (html.rail-desk; css/rail.css lays it out).
@@ -29,9 +30,9 @@ firetable.rail = (function () {
   var wide = window.matchMedia("(min-width: 1024px)");
   var hover = window.matchMedia("(hover: hover)");
   // what makes up the column: the header (the toolbar itself) and the lists under it
-  var COLUMN = "#topbar, #usersbox, #pe-here, #dRail";
+  var COLUMN = "#topbar, #usersbox, #pe-here, #dRail, #nav-railBtn";
   // the toolbar's top part, which the list starts under
-  var TOP = ["roomlogo", "nav-railBtn", "modeTabs", "themeSlot", "nav-railPeople"];
+  var TOP = ["roomlogo", "modeTabs", "themeSlot", "nav-railPeople"];
   // where the focus goes when the people list opens over the middle
   var FIRST_PERSON = "#allUsers .prson .ft-avatar[role=button], #pe-here";
   var $id = function (id) { return document.getElementById(id); };
@@ -127,17 +128,26 @@ firetable.rail = (function () {
     window.dispatchEvent(new Event("resize"));
   }
 
-  /** Every control shows the state: the button (its icon is CSS's), its tooltip, Settings' switch. */
-  function show() {
-    var folded = on();
+  /**
+   * The button says what a press does (its icon is CSS's): collapse while the
+   * column shows, open or peeking over the middle; open while it's the toolbar.
+   */
+  function label() {
+    var shut = on() && !peeking();
     var btn = $id("nav-railBtn");
     var tip = $id("tip-nav-railBtn");
-    var box = $id("railToggle");
     if (btn) {
-      btn.setAttribute("aria-expanded", String(!folded));
-      btn.setAttribute("aria-label", folded ? "Open the column" : "Collapse the column into a toolbar");
+      btn.setAttribute("aria-expanded", String(!shut));
+      btn.setAttribute("aria-label", shut ? "Open the column" : "Collapse the column into a toolbar");
     }
-    if (tip) tip.textContent = folded ? "Open the column ([)" : "Collapse the column ([)";
+    if (tip) tip.textContent = shut ? "Open the column ([)" : "Collapse the column ([)";
+  }
+
+  /** Every control shows the state: the button, Settings' switch, the account menu's extras. */
+  function show() {
+    var folded = on();
+    var box = $id("railToggle");
+    label();
     if (box) box.checked = folded;
     // a visitor's faces scroll in the toolbar: the keyboard reaches them too (Enter shows the names)
     var here = $id("pe-here");
@@ -145,7 +155,7 @@ firetable.rail = (function () {
       if (showing()) here.setAttribute("tabindex", "0");
       else here.removeAttribute("tabindex");
     }
-    if (folded) moreMenu();
+    accountItems();
     count();
     desk();
   }
@@ -202,6 +212,7 @@ firetable.rail = (function () {
     peekFrom = from || document.activeElement;
     root.classList.add("rail-peek");
     hideTip();
+    label();
     var btn = $id("nav-railPeople");
     if (btn) btn.setAttribute("aria-expanded", "true");
     var to = focus && document.querySelector(focus);
@@ -215,6 +226,7 @@ firetable.rail = (function () {
   function closePeek(back) {
     if (!peeking()) return;
     root.classList.remove("rail-peek");
+    label();
     var btn = $id("nav-railPeople");
     if (btn) btn.setAttribute("aria-expanded", "false");
     var from = peekFrom;
@@ -403,76 +415,34 @@ firetable.rail = (function () {
     });
   }
 
-  // ── More: light mode, community, about, shortcuts ───────────────────────
+  // ── The account menu, folded: About the room, Open the column ─────────────
 
-  var menuItem = function (role, act, icon, words, extra) {
-    return '<button type="button" role="' + role + '" class="butt graybutt nav-acctItem" data-rail="' + act + '">' +
-      '<i class="material-symbols-outlined" aria-hidden="true">' + icon + "</i>" + words + (extra || "") + "</button>";
-  };
-
-  /** The More button at the toolbar's bottom, and its menu (made the first time it's folded). */
-  function moreMenu() {
-    var utils = $id("topbarUtils");
-    if ($id("nav-railMore") || !utils) return;
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.id = "nav-railMore";
-    btn.className = "header_icon";
-    btn.setAttribute("aria-label", "More: light mode, community, about, shortcuts");
-    btn.setAttribute("aria-haspopup", "menu");
-    btn.setAttribute("aria-expanded", "false");
-    btn.setAttribute("popovertarget", "nav-railMenu");
-    btn.innerHTML = '<i class="material-symbols-outlined" aria-hidden="true">more_horiz</i>';
-    utils.appendChild(btn);
-    var menu = document.createElement("div");
-    menu.id = "nav-railMenu";
-    menu.className = "ft-popover";
-    menu.setAttribute("popover", "auto");
-    menu.innerHTML = '<div id="nav-railMenuArrow" class="ft-arrow"></div>' +
-      '<div class="ft-popover-box ft-menu nav-acctBox" role="menu" aria-label="More">' +
-      menuItem("menuitemcheckbox", "look", "light_mode", "Light mode", '<span class="nav-lookSwitch" aria-hidden="true"></span>') +
-      menuItem("menuitem", "community", "share", "Community") +
-      '<a role="menuitem" class="butt graybutt nav-acctItem" data-rail="about" target="_blank" rel="noopener" href="about">' +
-      '<i class="material-symbols-outlined" aria-hidden="true">help</i>About the room</a>' +
-      menuItem("menuitem", "help", "keyboard", "Shortcuts and commands") +
-      '<div class="nav-acctSep" role="separator"></div>' +
-      menuItem("menuitem", "open", "left_panel_open", "Open the column") + "</div>";
-    document.body.appendChild(menu);
-    menu.addEventListener("toggle", function (e) {
-      var open = e.newState === "open";
-      btn.setAttribute("aria-expanded", String(open));
-      if (!open) return;
-      hideTip();
-      var about = $id("roomInfo"); // the room's own About address (ftconfigs.roomInfoUrl)
-      if (about) menu.querySelector('[data-rail="about"]').href = about.href;
-      menu.style.visibility = "hidden";
-      firetable.ui.positionPopover(btn, menu, $id("nav-railMenuArrow"), "right-end");
-    });
-    menu.addEventListener("click", function (e) { moreChosen(e.target.closest && e.target.closest("[data-rail]"), menu); });
-    // light mode's state, as the account menu shows it
-    if (window.ftLook) ftLook.onChange(function (look) {
-      var item = menu.querySelector('[data-rail="look"]');
-      item.setAttribute("aria-checked", look === "light" ? "true" : "false");
-      item.querySelector("i").textContent = look === "light" ? "light_mode" : "dark_mode";
-    });
-    // Community opens from here while its own button is folded away
-    var social = $id("socialPopover");
-    if (social) social.addEventListener("toggle", function (e) {
-      if (e.newState !== "open" || !showing() || $id("socialTrigger").offsetParent) return;
-      social.style.visibility = "hidden";
-      firetable.ui.positionPopover(btn, social, $id("socialArrow"), "right-end");
-    });
-  }
-
-  /** A choice in More. */
-  function moreChosen(item, menu) {
-    if (!item) return;
-    var act = item.getAttribute("data-rail");
-    if (act === "look") { firetable.ui.toggleLook(); return; } // a switch: the menu stays open
-    menu.hidePopover();
-    if (act === "community") { var social = $id("socialPopover"); if (social) social.showPopover(); }
-    else if (act === "help") firetable.ui.openHelp();
-    else if (act === "open") set(false);
+  /**
+   * Folded, the header's About is off the toolbar: the account menu has it
+   * (beside its Light mode and Shortcuts), and Open the column. Hidden while
+   * the column shows, and in the Turntable theme.
+   */
+  function accountItems() {
+    var help = $id("nav-acctHelp");
+    if (!help) return;
+    if (!$id("nav-acctAbout")) {
+      var icon = function (name) { return '<i class="material-symbols-outlined" aria-hidden="true">' + name + "</i>"; };
+      help.insertAdjacentHTML("afterend",
+        '<a role="menuitem" class="butt graybutt nav-acctItem" id="nav-acctAbout" target="_blank" rel="noopener" href="about" hidden>' + icon("help") + "About the room</a>" +
+        '<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-acctRail" hidden>' + icon("left_panel_open") + "Open the column</button>");
+      var menu = $id("nav-accountMenu");
+      menu.addEventListener("toggle", function (e) {
+        var about = $id("roomInfo"); // the room's own About address (ftconfigs.roomInfoUrl)
+        if (e.newState === "open" && about) $id("nav-acctAbout").href = about.href;
+      });
+      menu.addEventListener("click", function (e) {
+        var item = e.target.closest && e.target.closest("#nav-acctAbout, #nav-acctRail");
+        if (!item) return;
+        menu.hidePopover();
+        if (item.id === "nav-acctRail") set(false);
+      });
+    }
+    $id("nav-acctAbout").hidden = $id("nav-acctRail").hidden = !showing();
   }
 
   // ── The desk: Live's middle, when it's wide ─────────────────────────────
@@ -561,7 +531,11 @@ firetable.rail = (function () {
     isOn: on,
     set: set,
     /** Fold it, or open it, whichever it isn't. */
-    toggle: function () { return set(!wanted()); },
+    toggle: function () {
+      // over the middle for a moment: put it away, the toolbar again
+      if (peeking()) { closePeek(false); return Promise.resolve(true); }
+      return set(!wanted());
+    },
     /** The column whole over the middle, for a moment (the people, or search). */
     peek: openPeek,
     unpeek: closePeek

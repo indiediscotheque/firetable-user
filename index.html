@@ -86,12 +86,6 @@
 	<div id="mainGrid" class="pre-auth">
 		<header id="topbar">
 			<h1 id="roomlogo" title="Indie Discotheque"><span class="sr-only">Indie Discotheque</span></h1>
-			<!-- Wide screens: fold this column into a toolbar, and open it again ([ does the same; js/rail.js).
-			     Its icon is what a click does, picked by CSS from html.rail, so it's right before any script runs -->
-			<button type="button" id="nav-railBtn" class="header_icon" aria-label="Collapse the column into a toolbar" aria-expanded="true" style="anchor-name: --tip-nav-railBtn" aria-describedby="tip-nav-railBtn">
-				<i class="material-symbols-outlined nav-railClose" aria-hidden="true">left_panel_close</i><i class="material-symbols-outlined nav-railOpen" aria-hidden="true">left_panel_open</i>
-			</button>
-			<span id="tip-nav-railBtn" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-nav-railBtn">Collapse the column ([)</span>
 			<!-- Room theme; at 1024px+ it wraps onto its own row -->
 			<div id="themeSlot">
 				<button type="button" id="themePill" class="no-theme" popovertarget="themePopover" aria-haspopup="dialog">
@@ -623,6 +617,14 @@
 		</div>
 
 		</div><!-- /#appShell -->
+
+		<!-- Wide screens: fold the left column into a toolbar, and open it again ([ does the same; js/rail.js).
+		     At the column's bottom right; folded, at the toolbar's bottom above your account (css/rail.css).
+		     Its icon is what a click does, picked by CSS from html.rail, so it's right before any script runs -->
+		<button type="button" id="nav-railBtn" class="header_icon" aria-label="Collapse the column into a toolbar" aria-expanded="true" style="anchor-name: --tip-nav-railBtn" aria-describedby="tip-nav-railBtn">
+			<i class="material-symbols-outlined nav-railClose" aria-hidden="true">left_panel_close</i><i class="material-symbols-outlined nav-railOpen" aria-hidden="true">left_panel_open</i>
+		</button>
+		<span id="tip-nav-railBtn" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-nav-railBtn">Collapse the column ([)</span>
 
 		<div id="discover" class="scroll-view" role="region" aria-label="Fresh in the room">
 			<!-- Shown only while logged out, when Fresh sits next to the sign-up form -->
@@ -1235,7 +1237,7 @@
 							<input type="checkbox" id="railToggle" name="railToggle" aria-describedby="railHint">
 							<label for="railToggle">Fold the left column into a toolbar</label>
 						</div>
-						<p class="settingHint" id="railHint">More room for the stage, your playlists and Discover. Its icons do everything the column does, and who's here or search opens it for a moment. <kbd>[</kbd> or the button by the logo switches it too. Kept on this device.</p>
+						<p class="settingHint" id="railHint">More room for the stage, your playlists and Discover. Its icons do everything the column does, and who's here or search opens it for a moment. <kbd>[</kbd> or the button at the column's bottom switches it too. Kept on this device.</p>
 					</section>
 					<section class="ac-section" aria-labelledby="se-privacyLabel">
 						<h3 class="ac-label" id="se-privacyLabel">Privacy</h3>

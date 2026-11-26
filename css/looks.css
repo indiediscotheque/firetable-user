@@ -7549,12 +7549,34 @@ html#about body {
     #mainGrid.login #nav-signin { margin-left: var(--pad1); padding: 0 0.625rem; }
     #mainGrid.login #nav-signin [class*="material-symbols-"] { display: none; }
 
-    /* Fold the column into a toolbar, and back (js/rail.js, css/rail.css):
-       beside the logo, its icon showing what a click does. Not in the
-       Turntable theme, which has its own layout. */
-    body:not(.tt-skin) #nav-railBtn { display: inline-flex; min-width: 2.125rem; margin-left: calc(-1 * var(--pad2)); }
-    :root.rail body:not(.tt-skin) #nav-railBtn .nav-railClose,
-    :root:not(.rail) body:not(.tt-skin) #nav-railBtn .nav-railOpen { display: none; }
+    /* Fold the column into a toolbar, and back (js/rail.js, css/rail.css): at
+       the column's bottom right (its lists end with room for it), its icon
+       showing what a click does: collapse while the column shows, open while
+       it's the toolbar. Not in the Turntable theme, which has its own layout. */
+    body:not(.tt-skin) #nav-railBtn {
+        grid-area: people;
+        align-self: end;
+        justify-self: end;
+        position: relative;
+        z-index: 5;
+        display: inline-flex;
+        width: 2.25rem;
+        min-width: 0;
+        height: 2.25rem;
+        min-height: 0;
+        margin: 0 var(--pad3) var(--pad3) 0;
+        border-radius: var(--radius-md);
+        background: var(--color-bg);
+    }
+    @media (hover: hover) {
+        body:not(.tt-skin) #nav-railBtn:hover { background: var(--color-bg-t1); }
+    }
+    :root.rail:not(.rail-peek) body:not(.tt-skin) #nav-railBtn .nav-railClose,
+    :root:is(:not(.rail), .rail-peek) body:not(.tt-skin) #nav-railBtn .nav-railOpen { display: none; }
+    /* the column's lists end with room for it (not in the Turntable theme: its
+       layout is its own, and stays exactly as it is) */
+    body:not(.tt-skin) :is(#allUsersWrap, #dRail) { padding-bottom: 3rem; }
+    body:not(.tt-skin) #mainGrid.login:not(.pre-auth) #pe-here:not(:empty) { padding-bottom: 3.5rem; }
 
     /* The column is narrow, so the theme takes a full row under the logo */
     #themeSlot {
