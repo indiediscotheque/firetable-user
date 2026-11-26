@@ -917,6 +917,30 @@ test("chat lines: a heading between two days, a flame on the bot's fire lines, q
   assert.equal(r.dance, "1|0", "the bot's gift line gets one DANCE button");
 });
 
+test("a visitor's people list (#pe-here) shows in Live's left column, and never in the Turntable theme's grid", async () => {
+  const r = await run(() => {
+    const here = document.getElementById("pe-here");
+    const grid = document.getElementById("mainGrid");
+    const was = { html: here.innerHTML, login: grid.classList.contains("login"), pre: grid.classList.contains("pre-auth"), discover: document.body.classList.contains("ft-discover") };
+    grid.classList.add("login");
+    grid.classList.remove("pre-auth");
+    document.body.classList.remove("ft-discover");
+    here.innerHTML = '<h2 class="pe-head">In the room <span class="pe-count">1</span></h2><ul class="pe-list"><li class="pe-row"><span class="pe-name">dj1</span></li></ul>';
+    const out = { wide: innerWidth >= 1024, live: getComputedStyle(here).display };
+    document.body.classList.add("tt-skin");
+    out.turntable = getComputedStyle(here).display;
+    document.body.classList.remove("tt-skin");
+    here.innerHTML = was.html;
+    grid.classList.toggle("login", was.login);
+    grid.classList.toggle("pre-auth", was.pre);
+    document.body.classList.toggle("ft-discover", was.discover);
+    return out;
+  });
+  assert.equal(r.wide, true, "the test page is a computer's width");
+  assert.equal(r.live, "block", "Live: in the left column");
+  assert.equal(r.turntable, "none", "the Turntable theme has its own People here: an area its grid doesn't name made an extra row and column");
+});
+
 test("no page errors while the site loaded and ran these", () => {
   assert.deepEqual(errors, []);
 });

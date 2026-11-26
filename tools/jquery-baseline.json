@@ -1,6 +1,6 @@
 {
   "//": "jQuery calls per script; may only go down (node tools/jquery-budget.mjs, --write after taking some out)",
-  "total": 1234,
+  "total": 1233,
   "js/avatar-builder.js": 35,
   "js/cards.js": 49,
   "js/cast.js": 1,
@@ -10,7 +10,7 @@
   "js/glitch.js": 4,
   "js/helpers.js": 18,
   "js/import.js": 17,
-  "js/init.js": 15,
+  "js/init.js": 14,
   "js/install.js": 10,
   "js/lastfm.js": 5,
   "js/player.js": 18,

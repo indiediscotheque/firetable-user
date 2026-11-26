@@ -193,7 +193,7 @@ test("keys typed in a text box stay text; a narrow screen or the Turntable theme
     const folded = sig();
     const cols = parseFloat(getComputedStyle(document.getElementById("mainGrid")).gridTemplateColumns);
     const hidden = ["nav-railBtn", "nav-railPeople", "railLine"].every((id) => getComputedStyle(document.getElementById(id)).display === "none");
-    const extras = document.getElementById("nav-acctAbout").hidden && document.getElementById("nav-acctRail").hidden;
+    const extras = getComputedStyle(document.getElementById("nav-acctAbout")).display === "none" && document.getElementById("nav-acctRail").hidden;
     root.classList.remove("rail");
     const open = sig();
     root.classList.add("rail");
@@ -246,8 +246,20 @@ test("the toolbar's bottom: search, community, then the button that opens the co
   assert.equal(menu.about, true, "About goes where the header's About does");
   await page.evaluate(() => document.getElementById("nav-acctRail").click()); // a visitor's page: the menu has no face to open from
   await waitFolded(false);
-  const open = await page.evaluate(() => ({ menu: document.getElementById("nav-accountMenu").matches(":popover-open"), about: document.getElementById("nav-acctAbout").hidden, rail: document.getElementById("nav-acctRail").hidden }));
-  assert.deepEqual(open, { menu: false, about: true, rail: true }, "with the column open, the menu is as it was");
+  const open = await page.evaluate(() => {
+    const grid = document.getElementById("mainGrid");
+    grid.classList.remove("login", "pre-auth");
+    const out = {
+      menu: document.getElementById("nav-accountMenu").matches(":popover-open"),
+      about: getComputedStyle(document.getElementById("nav-acctAbout")).display !== "none",
+      rail: document.getElementById("nav-acctRail").hidden,
+      // a member's header, the column open: light mode and About are in the account menu
+      header: ["nav-look", "roomInfo"].map((id) => !!document.getElementById(id).offsetParent)
+    };
+    grid.classList.add("login");
+    return out;
+  });
+  assert.deepEqual(open, { menu: false, about: true, rail: true, header: [false, false] }, "with the column open: About stays in the menu, Open the column doesn't; the header has no sun or About");
   await page.click("#nav-railBtn");
   await waitFolded(true);
 });

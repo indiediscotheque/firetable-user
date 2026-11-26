@@ -89,8 +89,9 @@ firetable.init = function () {
   // The page's own title stands when it already names the room (index.html,
   // and each library page under /music/); otherwise the room's name.
   if (ftconfigs.roomName && document.title.indexOf(ftconfigs.roomName) === -1) document.title = ftconfigs.roomName + " | firetable";
+  // About: the header's, and the account menu's (wide screens)
   if (ftconfigs.roomInfoUrl.length) {
-    $("#roomInfo").attr("href", ftconfigs.roomInfoUrl);
+    document.querySelectorAll("#roomInfo, #nav-acctAbout").forEach(function (a) { a.setAttribute("href", ftconfigs.roomInfoUrl); });
   }
   $("#version").text("You're running firetable v" + firetable.version + ".");
 
