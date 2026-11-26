@@ -533,7 +533,7 @@ section .d-chips a.d-chip {
 .d-mosaic i { background: var(--color-bg-t2) center / cover no-repeat; }
 .d-mosaic.big { width: 9rem; box-shadow: var(--shadow-drop); }
 
-/* Genres: the sound map, then every genre */
+/* Genres: every genre as a grid (.d-gcards), or the sound map behind Grid | Map (js/discover-map.js) */
 .d-map {
     flex: none;
     position: relative;
@@ -570,7 +570,8 @@ section .d-chips a.d-chip {
 }
 .d-mapg:hover, .d-mapg.is-picked { text-shadow: none; }
 @media only screen and (max-width: 639px) {
-    .d-mapg { font-size: calc(0.6rem + var(--s, 0) * 0.5rem); }
+    /* the smallest name is 10px, the type floor (1.2) */
+    .d-mapg { font-size: calc(0.625rem + var(--s, 0) * 0.5rem); }
 }
 @media (hover: hover) {
     .d-mapg:hover { z-index: 1; color: var(--color-on-accent); background: var(--color-accent); }

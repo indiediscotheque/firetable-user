@@ -57,10 +57,22 @@ const kind = (target) => target.replace(/\[([\w-]+)="[^"]*"\]/g, "[$1]").replace
 // ── the views ───────────────────────────────────────────────────────────────
 const hash = (h) => (page) => page.evaluate((x) => { if (firetable.discover.address() !== x) location.hash = x; }, h);
 const liveTab = (id) => async (page) => { await hash("#live")(page); await page.evaluate((t) => firetable.nav.setMobileTab(t), id); };
+// Genres: its grid, or the sound map behind Grid | Map (js/discover-map.js, loaded the first time),
+// with a genre's card open under it, so the card's radio, Open and Next door are checked too
+const genresAs = (view) => async (page) => {
+  await hash("#discover/genres")(page);
+  await page.locator('#dBrowse .d-segbtn[data-gview="' + view + '"]').click();
+  await page.locator(view === "map" ? "#dBrowse .d-map .d-mapg" : "#dBrowse .d-gcard").first().waitFor();
+  if (view !== "map") return;
+  await page.evaluate(() => document.querySelector('#dBrowse .d-mapg[data-slug="nu-disco"]').click());
+  await page.locator("#dMapCard .d-radio").waitFor();
+};
 const VIEWS = [
   { name: "d-home", run: hash("#discover") },
   { name: "d-new", run: hash("#discover/new") },
   { name: "d-charts", run: hash("#discover/charts") },
+  { name: "d-genres", run: genresAs("grid") },
+  { name: "d-genres-map", run: genresAs("map"), after: (page) => page.evaluate(() => document.querySelector('#dBrowse .d-segbtn[data-gview="grid"]')?.click()) },
   { name: "d-genre", run: hash("#discover/genres/nu-disco") },
   { name: "d-dj", run: hash("#discover/djs/dj1") },
   { name: "live-playlists", run: liveTab("mm-playlists") },
