@@ -1267,7 +1267,8 @@ button.track-warning {
 #topbarUtils { margin-left: auto; }
 /* A member's light mode and About are in the account menu (the bottom sheet
    on a phone, the You tab's), at every width, so the header keeps to the
-   theme, search, community, mentions and you. Visitors have no account menu:
+   theme (in Live on a computer it's on the stage, over the song), search,
+   community, mentions and you. Visitors have no account menu:
    theirs stay in the header. Not in the Turntable theme, whose bar and menu
    are its own. */
 body:not(.tt-skin) #mainGrid:not(.login):not(.pre-auth) :is(#nav-look, #tip-nav-look, #roomInfo, #tip-roomInfo) { display: none; }
@@ -4555,7 +4556,8 @@ body.d-queue-here .cr-djtag > span {
 
 /* ============================================
    Room Theme (#87)
-   A pill in the top bar; at 1024px+ it gets its own row under the logo.
+   A pill in the header; at 1024px+ a row of its own under Discover | Live,
+   and in Live there it's on the stage, over the song (js/theme-slot.js).
    Tapping it opens #themePopover.
    ============================================ */
 #themeSlot {
@@ -4644,6 +4646,43 @@ body.d-queue-here .cr-djtag > span {
         height: 0.5rem;
         padding: 0;
         font-size: 0; /* still read out as "Theme" */
+    }
+}
+
+/* The theme on Live's stage, over the song (js/theme-slot.js: in Live on a
+   computer). The stage is dark in both looks and its accent is the song's
+   colour, so the pill is see-through black and the THEME mark the room's own
+   gold with black words (8:1) whatever the song. It sits in the card's top
+   margin (20px tall, 4px from the stage's edge), so the song's words and its
+   cover stay where they were, no nearer the DJ's head */
+#npText > #themeSlot {
+    order: 0;
+    flex: none;
+    margin: -1.25rem 0 0;
+}
+#npText #themePill {
+    flex: none;
+    height: auto;
+    min-height: 1.25rem;
+    padding-block: 0;
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(0, 0, 0, 0.45);
+    font-size: var(--fs-meta);
+}
+#npText #themePill:is(:hover, [aria-expanded="true"]) {
+    border-color: rgba(255, 255, 255, 0.32);
+    background: rgba(0, 0, 0, 0.6);
+}
+#npText .themeLabel { padding-block: 0.1rem; background: var(--color-orange); color: #000; }
+#npText .no-theme .themeLabel { background: rgba(255, 255, 255, 0.16); color: #fff; }
+/* a touch screen's tap reaches up to the stage's edge (24px), never into the
+   title, a button of its own: 44px would push the song 20px nearer the DJ */
+@media (pointer: coarse) {
+    #npText #themePill { position: relative; }
+    #npText #themePill::before {
+        content: "";
+        position: absolute;
+        inset: -0.5rem 0 0;
     }
 }
 
@@ -7502,6 +7541,21 @@ html#about body {
             "view     people";
     }
 
+    /* Tablets (not a phone on its side): the header is a row across, with
+       the Discover | Live switch in it (css/discover.css), and the stage and
+       the side tabs under it. The tabs' row keeps its 2.5rem, so the stage's
+       height goes to the row beside it, the chat's */
+    @media (max-width: 1023px) and (min-height: 401px) {
+        #mainGrid,
+        #mainGrid.mmqueue,
+        #mainGrid.mmchat,
+        #mainGrid.mmusrs {
+            grid-template-rows: auto 2.5rem auto auto 1fr;
+            grid-template-areas: "head head" "stage sidenav" "stage chat" "nav chat" "view chat";
+        }
+        #mainGrid.mmusrs { grid-template-areas: "head head" "stage sidenav" "stage people" "nav people" "view people"; }
+    }
+
     #mainGrid.login {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         grid-template-rows: auto auto 1fr;
@@ -7604,10 +7658,13 @@ html#about body {
     body:not(.tt-skin) #mainGrid.login:not(.pre-auth) #pe-here:not(:empty) { padding-bottom: 3.5rem; }
 
 
-    /* The column is narrow, so the theme takes a full row under the logo */
+    /* The column is narrow: under the logo, Discover | Live takes the first
+       row (css/discover.css), then the theme one of its own (in Discover: in
+       Live it's on the stage, over the song, js/theme-slot.js) */
     #themeSlot {
-        order: 1;
+        order: 2;
         flex: 1 0 100%;
+        margin-top: var(--pad1);
     }
     #themePill {
         flex: 1;

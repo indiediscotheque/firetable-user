@@ -4510,6 +4510,226 @@ try {
     "a phone on its side: the Discover | Live switch is in the header's row, the stage ends above the bar under it, the player bar is slim, Discover's page has 150px or more (" + JSON.stringify(side) + ")");
   await lPage.close();
 
+  console.log("-- the Discover | Live switch in the header, and the theme on Live's stage on a computer (round 5)");
+  {
+    // (the owner, November 25, 2026): the switch in the header's row on a tablet, the left column's
+    // first row under the logo on a computer; in Live on a computer the theme sits on the stage, over
+    // the song (js/theme-slot.js), and it's in the header everywhere else.
+    // A tablet first, in a browser of its own: a visitor's header, then a member's (the room's panels in, as above)
+    const tabCtx0 = await browser.newContext({ viewport: { width: 640, height: 900 } });
+    const tPage0 = await tabCtx0.newPage();
+    tPage0.on("pageerror", (e) => { if (!theirs(e)) pageErrors.push("header (tablet): " + e.message); });
+    await openPage(tPage0, SITE + "#live");
+    await tPage0.waitForFunction(() => document.getElementById("modeTabs") && /smoke tests/.test(document.getElementById("themePillText").textContent) && firetable.$appShell !== undefined,
+      null, { timeout: 30000 }).catch(() => {});
+    await sleep(800);
+    const tabletRow = (member) => tPage0.evaluate(async (member) => {
+      if (member && !document.getElementById("appShell")) {
+        if (firetable.$appShell) $("#mainGrid").append(firetable.$appShell);
+        $("#mainGrid").removeClass("login pre-auth");
+        firetable.nav.apply(); // as signing in does: the side panel's class (chat), so People steps aside
+      }
+      await new Promise((r) => setTimeout(r, 300));
+      const r = (id) => document.getElementById(id).getBoundingClientRect();
+      const head = r("topbar"), mode = r("modeTabs"), theme = r("themeSlot"), logo = r("roomlogo"), page = document.documentElement.clientWidth;
+      const icons = [...document.querySelectorAll("#topbarUtils > :is(button, a)")].filter((el) => el.getClientRects().length && el.getBoundingClientRect().width).map((el) => el.getBoundingClientRect());
+      const tabs = [...document.querySelectorAll("#modeTabs .tab")];
+      const out = { w: page, head: Math.round(head.height), across: Math.round(head.left) === 0 && Math.round(head.width) === page,
+        inRow: mode.top >= head.top && mode.bottom <= head.bottom && mode.height < head.height,
+        between: theme.left >= logo.right && mode.left >= theme.right && icons.every((i) => i.left >= mode.right - 0.5 && i.bottom <= head.bottom + 0.5),
+        whole: tabs.map((t) => t.textContent.trim() + (t.scrollWidth <= t.clientWidth + 1 ? "" : " (cut)")).join(),
+        theme: Math.round(theme.width), fits: document.getElementById("topbar").scrollWidth <= document.getElementById("topbar").clientWidth + 1,
+        home: document.getElementById("themeSlot").parentNode.id, wide: document.documentElement.scrollWidth - page };
+      if (member) {
+        const s = r("sidepanel-tabs"), stage = r("stage");
+        out.side = Math.round(s.top - head.bottom) + "|" + Math.round(s.height) + "|" + Math.round(stage.top - head.bottom) + "|" + (s.left >= stage.right - 0.5);
+      }
+      // what's in the header's row, if it doesn't fit
+      if (!out.across || !out.between || out.head > 64) out.parts = [...document.querySelectorAll("#topbar > *, #topbarUtils > *")].filter((el) => el.getClientRects().length)
+        .map((el) => { const b = el.getBoundingClientRect(); return (el.id || el.className) + ":" + [b.left, b.top, b.width].map(Math.round).join(","); }).join(" ");
+      return out;
+    }, member);
+    /** Tab from the theme: the switch's two tabs, then the icons. */
+    const tabFrom = async (pg) => {
+      await pg.focus("#themePill");
+      const seen = [];
+      for (let i = 0; i < 3; i++) {
+        await pg.keyboard.press("Tab");
+        seen.push(await pg.evaluate(() => { const a = document.activeElement; return a.getAttribute("data-mode") || a.id || a.className; }));
+      }
+      return seen.join();
+    };
+    const tablet = [];
+    for (const member of [false, true]) {
+      for (const w of [640, 800]) {
+        await tPage0.setViewportSize({ width: w, height: 900 });
+        tablet.push(await tabletRow(member));
+      }
+    }
+    tablet[3].tab = await tabFrom(tPage0);
+    await tabCtx0.close();
+    check(tablet.every((t) => t.across && t.inRow && t.between && t.fits && t.theme >= 100 && t.whole === "Discover,Live" && t.home === "topbar" && t.head <= 64 && t.wide <= 0) &&
+      tablet.filter((t) => t.side).every((t) => t.side === "0|40|0|true") && tablet[3].tab === "discover,live,dSearchOpen",
+      "a tablet (640 and 800 wide): the Discover | Live switch sits in the header's row between the theme and the icons, whole, for a visitor and a member, whose header is a row across with the side tabs beside the stage under it; Tab goes from the theme to the switch, then the icons (" + JSON.stringify(tablet) + ")");
+
+    const hPage = await context.newPage();
+    hPage.on("pageerror", (e) => { if (!theirs(e)) pageErrors.push("header: " + e.message); });
+    await hPage.setViewportSize({ width: 1440, height: 900 });
+    await openPage(hPage, SITE + "#discover");
+    await hPage.waitForFunction(() => document.getElementById("modeTabs") && /smoke tests/.test(document.getElementById("themePillText").textContent), null, { timeout: 30000 }).catch(() => {});
+    await sleep(800);
+    // a computer: the left column reads logo and icons, the switch, then the theme (Discover);
+    // Tab goes logo, theme, switch, icons
+    const column = await hPage.evaluate(() => {
+      const r = (id) => document.getElementById(id).getBoundingClientRect();
+      const head = r("topbar"), logo = r("roomlogo"), mode = r("modeTabs"), theme = r("themeSlot"), utils = r("topbarUtils");
+      const ids = ["roomlogo", "themeSlot", "modeTabs", "topbarUtils"].map((id) => document.getElementById(id));
+      return { home: ids[1].parentNode.id, rows: utils.top < logo.bottom && mode.top >= logo.bottom && theme.top >= mode.bottom && theme.bottom <= head.bottom,
+        dom: ids.every((el, i) => !i || !!(ids[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)) };
+    });
+    column.tab = await tabFrom(hPage);
+    check(column.home === "topbar" && column.rows && column.dom && column.tab === "discover,live,dSearchOpen",
+      "a computer, in Discover: the left column has the logo and its icons, then Discover | Live, then the theme; Tab goes from the theme to the switch, then the icons (" + JSON.stringify(column) + ")");
+
+    // in Live the theme is on the stage, over the song: its mark the room's gold, black on it, whatever the song's colour
+    // (a red song's here, whatever the seed's song has: the stage's accent is the song's colour, css/room-colors.css)
+    await hPage.evaluate(() => { document.querySelector('#modeTabs [data-mode="live"]').click(); });
+    await sleep(800);
+    const stage = await hPage.evaluate(async () => {
+      const slot = document.getElementById("themeSlot"), pill = document.getElementById("themePill"), mark = pill.querySelector(".themeLabel");
+      const lum = (c) => { const v = c.match(/[\d.]+/g).slice(0, 3).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const ratio = (a, b) => { const x = lum(a), y = lum(b); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 10) / 10; };
+      // (the stage eases into a new song's colour over 1.5s: at once here)
+      const root = document.documentElement, st = document.getElementById("stage"), was = root.style.getPropertyValue("--room-color"), had = root.classList.contains("room-colors");
+      st.style.transition = "none";
+      root.style.setProperty("--room-color", "rgb(200, 30, 40)");
+      root.classList.add("room-colors");
+      const m = getComputedStyle(mark);
+      const out = { home: slot.parentNode.id, beforeTrack: slot.nextElementSibling && slot.nextElementSibling.id, inHeader: !!document.querySelector("#topbar #themeSlot"),
+        mark: m.backgroundColor + "|" + m.color, contrast: ratio(m.backgroundColor, m.color), song: getComputedStyle(st).getPropertyValue("--color-accent").trim() };
+      if (was) root.style.setProperty("--room-color", was); else root.style.removeProperty("--room-color");
+      root.classList.toggle("room-colors", had);
+      getComputedStyle(st).getPropertyValue("--color-accent"); // the song's own colour back, at once too
+      st.style.transition = "";
+      // its popover opens from the stage, beside it
+      pill.click();
+      await new Promise((r) => setTimeout(r, 400));
+      const pop = document.getElementById("themePopover"), p = pop.getBoundingClientRect(), b = pill.getBoundingClientRect();
+      out.pop = pop.matches(":popover-open") && p.top >= b.bottom - 1 && p.left < b.right && p.right > b.left && !!document.getElementById("themeSuggest").getClientRects().length;
+      out.expanded = pill.getAttribute("aria-expanded");
+      pop.hidePopover();
+      return out;
+    });
+    check(stage.home === "npText" && stage.beforeTrack === "track" && !stage.inHeader && stage.song === "rgb(200, 30, 40)" && stage.mark === "rgb(204, 153, 51)|rgb(0, 0, 0)" &&
+      stage.contrast >= 4.5 && stage.pop && stage.expanded === "true",
+      "in Live on a computer the theme is on the stage, over the song: its THEME mark the room's gold with black words on a red song, and its popover opens from there (" + JSON.stringify(stage) + ")");
+
+    // the theme's line costs the song nothing: it sits in the card's top margin, so the song's words and
+    // its cover are exactly where they are without it (the theme moved home for a moment, in the same
+    // frame), and as clear of the DJ's head: the song with its plays (one line of facts) at 1024 by 768
+    // and 1440 by 900, with its first and last plays too (three lines) at 1440 by 900. (At 1024 by 768
+    // three lines reached the top of the DJ's picture before the theme came: there it's "not lower".)
+    const clearOfDj = async (w, h, lines) => {
+      await hPage.setViewportSize({ width: w, height: h });
+      await sleep(600);
+      return hPage.evaluate((lines) => {
+        const ids = ["track", "playCount", "firstPlay", "lastPlay"], keep = ids.map((id) => document.getElementById(id).innerHTML);
+        ["Smoke Song", "67 plays", "first Apr 14, 2013 by matt", "last Nov 20, 2026 by dj2"].forEach((t, i) => { document.getElementById(ids[i]).textContent = i < 1 + lines ? t : ""; });
+        // the DJ as they stand, between bobs (the beat moves them down, never up)
+        const avatar = document.querySelector("#deck .avtr");
+        avatar.style.animation = "none";
+        const look = () => { const w = document.getElementById("npText").getBoundingClientRect(), a = document.getElementById("albumArt").getBoundingClientRect(); return [w.top, w.bottom, a.top]; };
+        const words = document.getElementById("npText").getBoundingClientRect(), dj = avatar.getBoundingClientRect(), now = look();
+        const slot = document.getElementById("themeSlot"), home = document.createComment("smoke");
+        slot.parentNode.insertBefore(home, slot);
+        document.getElementById("topbar").insertBefore(slot, document.getElementById("topbarUtils"));
+        const was = look();
+        home.parentNode.insertBefore(slot, home);
+        home.remove();
+        avatar.style.animation = "";
+        ids.forEach((id, i) => { document.getElementById(id).innerHTML = keep[i]; });
+        return { gap: Math.round(dj.top - words.bottom), side: words.right <= dj.left || words.left >= dj.right, same: now.every((v, i) => Math.abs(v - was[i]) < 0.5), on: slot.parentNode.id };
+      }, lines);
+    };
+    const djClear = { at1024: await clearOfDj(1024, 768, 1), at1440: await clearOfDj(1440, 900, 1), every1440: await clearOfDj(1440, 900, 3), every1024: await clearOfDj(1024, 768, 3) };
+    check(Object.values(djClear).every((c) => c.same && c.on === "npText") && [djClear.at1024, djClear.at1440, djClear.every1440].every((c) => c.gap >= 0 || c.side),
+      "with the theme over it, the song's words and its cover are where they are without it, and end above the DJ's head at 1024 by 768 and 1440 by 900, and with every play fact at 1440 by 900 (" + JSON.stringify(djClear) + ")");
+
+    // back in the header: on a tablet, in Discover, in the Turntable theme; on the stage again in Live,
+    // with the column folded into the toolbar too (whose top then has no theme)
+    const where = () => hPage.evaluate(() => document.getElementById("themeSlot").parentNode.id);
+    const moves = {};
+    await hPage.setViewportSize({ width: 900, height: 900 });
+    await sleep(300);
+    moves.tablet = await where();
+    await hPage.setViewportSize({ width: 1440, height: 900 });
+    await sleep(300);
+    moves.live = await where();
+    // the keyboard's place stays with it: Tab from the pill into its popover, then the window narrower
+    // than a computer's: the popover closes and the focus is on the pill, in the header
+    await hPage.focus("#themePill");
+    await hPage.keyboard.press("Enter");
+    await sleep(300);
+    await hPage.keyboard.press("Tab");
+    moves.inPopover = await hPage.evaluate(() => document.activeElement.id);
+    await hPage.setViewportSize({ width: 900, height: 900 });
+    await sleep(300);
+    moves.focus = await hPage.evaluate(() => document.activeElement.id + "|" + document.getElementById("themeSlot").parentNode.id + "|" + document.getElementById("themePopover").matches(":popover-open"));
+    await hPage.evaluate(() => document.activeElement.blur());
+    await hPage.setViewportSize({ width: 1440, height: 900 });
+    await sleep(300);
+    await hPage.evaluate(() => firetable.rail.set(true));
+    await hPage.waitForFunction(() => document.documentElement.classList.contains("rail") && document.querySelector('script[src*="rail.js"]'), null, { timeout: 10000 }).catch(() => {});
+    await sleep(700);
+    moves.folded = await hPage.evaluate(() => {
+      const top = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--rail-top")), people = document.getElementById("nav-railPeople").getBoundingClientRect();
+      return document.getElementById("themeSlot").parentNode.id + "|" + (top > 0 && Math.abs(top - (people.bottom - document.getElementById("topbar").getBoundingClientRect().top + 6)) <= 2);
+    });
+    await hPage.evaluate(() => { document.querySelector('#modeTabs [data-mode="discover"]').click(); });
+    await sleep(500);
+    moves.foldedDiscover = await hPage.evaluate(() => document.getElementById("themeSlot").parentNode.id + "|" + getComputedStyle(document.getElementById("themePill"), "::before").content);
+    await hPage.evaluate(() => firetable.rail.set(false));
+    await hPage.waitForFunction(() => !document.documentElement.classList.contains("rail"), null, { timeout: 5000 }).catch(() => {});
+    moves.discover = await where();
+    await hPage.evaluate(() => { document.querySelector('#modeTabs [data-mode="live"]').click(); });
+    await sleep(300);
+    moves.liveAgain = await where();
+    await hPage.evaluate(async () => {
+      firetable.tt.enter();
+      for (let i = 0; i < 80 && !document.body.classList.contains("tt-skin"); i++) await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 400));
+      document.querySelectorAll("dialog[open]").forEach((d) => d.close()); // the first time in, it asks for an avatar
+    });
+    moves.turntable = await hPage.evaluate(() => document.body.classList.contains("tt-skin") + "|" + document.getElementById("themeSlot").parentNode.id);
+    await hPage.evaluate(() => { firetable.tt.leave(); localStorage.removeItem("firetableTurntable"); });
+    await sleep(300);
+    moves.afterTurntable = await where();
+    check(moves.tablet === "topbar" && moves.live === "npText" && moves.inPopover === "themeSuggest" && moves.focus === "themePill|topbar|false" &&
+      moves.folded === "npText|true" && moves.foldedDiscover === 'topbar|"nightlife"' && moves.discover === "topbar" &&
+      moves.liveAgain === "npText" && moves.turntable === "true|topbar" && moves.afterTurntable === "npText",
+      "the theme goes back to the header at 900 wide (the focus in its popover goes with it, to the pill), in Discover (folded: the toolbar's theme icon) and in the Turntable theme, and onto the stage again in Live, the column folded too (the toolbar's top then measured without it) (" + JSON.stringify(moves) + ")");
+    await hPage.close();
+
+    // a touch screen as wide as a computer's (an iPad on its side): the theme's tap reaches up to the
+    // stage's edge, and the song's title (a button: About this song) keeps every tap on its own line
+    const tabCtx = await browser.newContext({ viewport: { width: 1024, height: 768 }, isMobile: true, hasTouch: true });
+    const tabPage = await tabCtx.newPage();
+    await openPage(tabPage, SITE + "#live");
+    await tabPage.waitForFunction(() => document.querySelector("#npText > #themeSlot"), null, { timeout: 30000 }).catch(() => {});
+    await sleep(500);
+    const tap = await tabPage.evaluate(() => {
+      const pill = document.getElementById("themePill"), track = document.getElementById("track"), r = pill.getBoundingClientRect(), x = r.left + r.width / 2;
+      const card = document.getElementById("nowplaying").getBoundingClientRect(), t = track.getBoundingClientRect();
+      const hit = (y) => { const el = document.elementFromPoint(x, y); return !el ? "-" : el === pill || pill.contains(el) ? "pill" : el === track || track.contains(el) ? "title" : el.id || el.className; };
+      return { coarse: matchMedia("(pointer: coarse)").matches, pill: Math.round(r.height), area: Math.round(t.top - card.top),
+        // the stage's edge, the gap over the pill, the pill's foot, and the title's top line
+        edge: hit(card.top + 0.5), over: hit(r.top - 1), foot: hit(r.bottom - 0.5), title: hit(t.top + 1) };
+    });
+    await tabCtx.close();
+    check(tap.coarse && tap.pill < 24 && tap.area >= 24 && tap.edge === "pill" && tap.over === "pill" && tap.foot === "pill" && tap.title === "title",
+      "on a touch screen the stage's theme is a compact pill whose tap reaches up to the stage's edge (24px), and the song's title keeps its own taps (" + JSON.stringify(tap) + ")");
+  }
+
   // the Turntable theme isn't in the page's scripts (js/lazy.js stands in for it): the Konami code in Live loads it
   const ttLoaded = (p) => p.evaluate(() => ({ real: typeof firetable.tt._coverBox === "function",
     fetched: performance.getEntriesByType("resource").some((e) => /js\/ttskin\.js/.test(e.name)) }));
