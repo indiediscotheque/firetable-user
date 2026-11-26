@@ -16,9 +16,9 @@
  * - one tooltip, beside the icon or face under the pointer or the keyboard:
  *   what it does, or who it is and what they're up to;
  * - the count on the people button, and who that is in its tooltip;
- * - the account menu, folded, also has About the room and Open the column
- *   (light mode and the shortcuts are in it already), so the toolbar keeps
- *   to what's used all the time; community stays on it;
+ * - the account menu, folded, also has Open the column (light mode, the
+ *   shortcuts and About are in it already), so the toolbar keeps to what's
+ *   used all the time; community stays on it;
  * - the desk: when Live's middle is wide (66rem and up), your playlist down
  *   the left and the room's Recent, Fresh or Cards beside it, under the
  *   stage (html.rail-desk; css/rail.css lays it out).
@@ -415,34 +415,25 @@ firetable.rail = (function () {
     });
   }
 
-  // ── The account menu, folded: About the room, Open the column ─────────────
+  // ── The account menu, folded: Open the column ──────────────────────────
 
   /**
-   * Folded, the header's About is off the toolbar: the account menu has it
-   * (beside its Light mode and Shortcuts), and Open the column. Hidden while
-   * the column shows, and in the Turntable theme.
+   * Folded, the account menu also has Open the column (beside its Light mode,
+   * Shortcuts and About, there at every width). Hidden while the column
+   * shows, and in the Turntable theme.
    */
   function accountItems() {
-    var help = $id("nav-acctHelp");
-    if (!help) return;
-    if (!$id("nav-acctAbout")) {
-      var icon = function (name) { return '<i class="material-symbols-outlined" aria-hidden="true">' + name + "</i>"; };
-      help.insertAdjacentHTML("afterend",
-        '<a role="menuitem" class="butt graybutt nav-acctItem" id="nav-acctAbout" target="_blank" rel="noopener" href="about" hidden>' + icon("help") + "About the room</a>" +
-        '<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-acctRail" hidden>' + icon("left_panel_open") + "Open the column</button>");
-      var menu = $id("nav-accountMenu");
-      menu.addEventListener("toggle", function (e) {
-        var about = $id("roomInfo"); // the room's own About address (ftconfigs.roomInfoUrl)
-        if (e.newState === "open" && about) $id("nav-acctAbout").href = about.href;
-      });
-      menu.addEventListener("click", function (e) {
-        var item = e.target.closest && e.target.closest("#nav-acctAbout, #nav-acctRail");
-        if (!item) return;
-        menu.hidePopover();
-        if (item.id === "nav-acctRail") set(false);
+    var about = $id("nav-acctAbout") || $id("nav-acctHelp");
+    if (!about) return;
+    if (!$id("nav-acctRail")) {
+      about.insertAdjacentHTML("afterend", '<button type="button" role="menuitem" class="butt graybutt nav-acctItem" id="nav-acctRail" hidden>' +
+        '<i class="material-symbols-outlined" aria-hidden="true">left_panel_open</i>Open the column</button>');
+      $id("nav-acctRail").addEventListener("click", function () {
+        $id("nav-accountMenu").hidePopover();
+        set(false);
       });
     }
-    $id("nav-acctAbout").hidden = $id("nav-acctRail").hidden = !showing();
+    $id("nav-acctRail").hidden = !showing();
   }
 
   // ── The desk: Live's middle, when it's wide ─────────────────────────────

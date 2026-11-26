@@ -10,8 +10,8 @@
      ringed, presence on each), the waitlist and Hop on. Everyone else is
      behind the count. In Discover: search and the views;
    - at the bottom: search, mentions, community, the button that opens the
-     column again, and your account (whose menu has light mode, about and
-     the shortcuts), or for visitors light mode, about and Join.
+     column again, and your account (whose menu has light mode, About, the
+     shortcuts and Open the column), or for visitors light mode, about and Join.
    On a wide middle (html.rail-desk, js/rail.js), Live's middle becomes a
    desk: the stage across the top, your playlist down the left and the
    room's Recent, Fresh or Cards beside it.
@@ -255,8 +255,7 @@
             & #loggedInUser,
             & #nav-signin { order: 7; margin-top: calc(var(--rail-btn) + 2px); }
         }
-        /* a member's light mode and about are in the account menu, with the shortcuts */
-        & #mainGrid:not(.login) :is(#nav-look, #tip-nav-look, #roomInfo, #tip-roomInfo) { display: none; }
+        /* (a member's light mode and About are in the account menu: css/looks.css) */
         /* Open the column again: at the bottom, above your account (a grid item
            of its own, laid over the space the account leaves for it) */
         & #nav-railBtn {

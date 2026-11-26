@@ -4332,7 +4332,7 @@ try {
     dlg.close();
     return out;
   });
-  check(acct.signinHidden && acct.menuOpen && acct.expanded === "true" && acct.items === "Profile|Account and sign-in|Settings|Shortcuts and commands|Get the app|Log out" && acct.focused === "Profile" && acct.arrow === "Account and sign-in",
+  check(acct.signinHidden && acct.menuOpen && acct.expanded === "true" && acct.items === "Profile|Account and sign-in|Settings|Shortcuts and commands|About the room|Get the app|Log out" && acct.focused === "Profile" && acct.arrow === "Account and sign-in",
     "the header avatar opens the account menu, with the keyboard (" + JSON.stringify(acct) + ")");
   check(acct.dialog && acct.menuClosed && acct.tab === "Account|true" && acct.logout, "Account and sign-in opens the Account tab, with Log out (" + acct.tab + ")");
   check(/current password/.test(acct.passMsg) && acct.shortPass === "bad", "changing the password checks what's typed first (" + acct.passMsg + " / " + acct.shortPass + ")");
@@ -4350,7 +4350,8 @@ try {
     await wait(150);
     out.on = root.getAttribute("data-look");
     out.pressed = head.getAttribute("aria-pressed");
-    out.icon = [...head.querySelectorAll("i")].filter((i) => i.offsetParent !== null).map((i) => i.textContent).join("|");
+    // the icon CSS picks (a member's header on a computer has it in the account menu instead: visitors' and phones' show it)
+    out.icon = [...head.querySelectorAll("i")].filter((i) => getComputedStyle(i).display !== "none").map((i) => i.textContent).join("|");
     out.scheme = document.querySelector('meta[name="color-scheme"]').content;
     out.stored = localStorage.getItem("firetableLook");
     out.bar = document.querySelector('meta[name="theme-color"]').content;

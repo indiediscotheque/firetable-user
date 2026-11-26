@@ -1263,6 +1263,8 @@ button.track-warning {
 #topbarUtils { flex-shrink: 0; }
 #topbar > .flexpacer { flex: 0 0 0; } /* the theme slot takes the free space */
 #topbarUtils { margin-left: auto; }
+/* the account menu's About: wide screens only (below) */
+#nav-acctAbout { display: none; }
 /* the toolbar's buttons: wide screens only (below, and css/rail.css) */
 #nav-railBtn,
 #nav-railPeople { display: none; }
@@ -7578,6 +7580,13 @@ html#about body {
     body:not(.tt-skin) :is(#allUsersWrap, #dRail) { padding-bottom: 3rem; }
     body:not(.tt-skin) #mainGrid.login:not(.pre-auth) #pe-here:not(:empty) { padding-bottom: 3.5rem; }
 
+    /* A member's light mode and About are in the account menu (Light mode is
+       there at every width), so the header keeps to search, community, mentions
+       and you. Visitors have no account menu: theirs stay. Not in the Turntable
+       theme, whose bar is its own. */
+    body:not(.tt-skin) #mainGrid:not(.login):not(.pre-auth) :is(#nav-look, #tip-nav-look, #roomInfo, #tip-roomInfo) { display: none; }
+    body:not(.tt-skin) #nav-acctAbout { display: flex; }
+
     /* The column is narrow, so the theme takes a full row under the logo */
     #themeSlot {
         order: 1;
@@ -7740,17 +7749,20 @@ body.media-off .q-art.no-art {
 
 /* Who is in the room, in the left column of a visitor's Live on a wide
    screen (it was empty: the members' people list isn't on the page for them).
-   The line of faces above Create account says the same, so it steps aside. */
+   The line of faces above Create account says the same, so it steps aside.
+   Not in the Turntable theme: its grid has no left column (an area it doesn't
+   name became an extra row and column, which squeezed its room), and its
+   Room panel has People here of its own. */
 #pe-here { display: none; }
 @media only screen and (min-width: 1024px) {
-    #mainGrid.login:not(.pre-auth) #pe-here:not(:empty) {
+    body:not(.tt-skin) #mainGrid.login:not(.pre-auth) #pe-here:not(:empty) {
         display: block;
         grid-area: people;
         min-height: 0;
         overflow: auto;
         padding: var(--topbar-h, 10rem) var(--pad4) var(--pad4);
     }
-    #mainGrid.login:not(.pre-auth):has(#pe-here:not(:empty)) #roomPulse { display: none; }
+    body:not(.tt-skin) #mainGrid.login:not(.pre-auth):has(#pe-here:not(:empty)) #roomPulse { display: none; }
 }
 body.ft-discover #pe-here { display: none !important; }
 .pe-head {
