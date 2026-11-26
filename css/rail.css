@@ -190,6 +190,7 @@
             border-color: transparent;
             border-radius: var(--radius-md);
             background: none;
+            box-shadow: none; /* flat, as the toolbar's other icons (a new theme still glows) */
             &::before {
                 content: "nightlife";
                 font-family: 'Material Symbols Outlined';
