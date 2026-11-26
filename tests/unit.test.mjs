@@ -941,6 +941,33 @@ test("a visitor's people list (#pe-here) shows in Live's left column, and never 
   assert.equal(r.turntable, "none", "the Turntable theme has its own People here: an area its grid doesn't name made an extra row and column");
 });
 
+test("a member's light mode and About are in the account menu at every width; a visitor's stay in the header", async () => {
+  const sizes = [[390, 844], [800, 1024], [1440, 900]];
+  const out = [];
+  for (const [width, height] of sizes) {
+    await page.setViewportSize({ width, height });
+    out.push(await run((w) => {
+      const grid = document.getElementById("mainGrid");
+      const was = { login: grid.classList.contains("login"), pre: grid.classList.contains("pre-auth") };
+      const shown = (id) => !!document.getElementById(id).offsetParent;
+      const display = (id) => getComputedStyle(document.getElementById(id)).display !== "none";
+      grid.classList.add("login");
+      grid.classList.remove("pre-auth");
+      const visitor = [shown("nav-look"), shown("roomInfo")];
+      grid.classList.remove("login");
+      const member = [shown("nav-look"), shown("roomInfo"), display("nav-acctAbout")];
+      document.body.classList.add("tt-skin");
+      const turntable = display("nav-acctAbout");
+      document.body.classList.remove("tt-skin");
+      grid.classList.toggle("login", was.login);
+      grid.classList.toggle("pre-auth", was.pre);
+      return w + ": visitor " + visitor + " member " + member + " turntable " + turntable;
+    }, width));
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+  assert.deepEqual(out, sizes.map(([w]) => w + ": visitor true,true member false,false,true turntable false"));
+});
+
 test("no page errors while the site loaded and ran these", () => {
   assert.deepEqual(errors, []);
 });
