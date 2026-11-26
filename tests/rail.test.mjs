@@ -84,7 +84,8 @@ test("[ folds it: the middle gets the room, chat keeps its width; kept on this d
     tip: document.getElementById("tip-nav-railBtn").textContent,
     rail: document.getElementById("dRail").getBoundingClientRect().width,
     search: document.getElementById("dSearch").getBoundingClientRect().width,
-    navWords: getComputedStyle(document.querySelector("#dNav .d-nav span")).clipPath
+    navWords: getComputedStyle(document.querySelector("#dNav .d-nav span")).clipPath,
+    themeFlat: getComputedStyle(document.getElementById("themePill")).boxShadow
   }));
   assert.equal(r.script, true, "js/rail.js loads the first time");
   assert.equal(r.css, true, "and its stylesheet");
@@ -98,6 +99,7 @@ test("[ folds it: the middle gets the room, chat keeps its width; kept on this d
   assert.ok(r.rail <= 64, "Discover's views are icons");
   assert.ok(r.search < 50, "search is an icon");
   assert.equal(r.navWords, "inset(50%)", "the views' words are out of sight, still there for screen readers");
+  assert.equal(r.themeFlat, "none", "the theme is a flat icon, as the toolbar's others (no button shadow)");
 });
 
 test("a visitor's Live: the room goes to Fresh; the people button counts and opens the list over the middle", async () => {
