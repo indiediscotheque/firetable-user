@@ -108,6 +108,14 @@ Options -Indexes
     Header unset Expires
   </If>
 
+  # Discover's song search (music/find/, tools/song-search.mjs): each word's
+  # file is linked with ?v=<the songs' hash>, so a copy can be kept for a year
+  # (a new week's songs get new links); the index beside them is checked on
+  # each visit's first search (js/discover-find.js)
+  <If "%{REQUEST_URI} =~ m#^/music/find/w-[^/]+\.json$# && %{QUERY_STRING} =~ /(?:^|&)v=[0-9a-f]{16}(?:&|$)/">
+    Header always set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+
   # The room's settings (config.js, server-only): checked on every load, so a
   # change there (like discover: true) reaches installed apps right away
   <Files "config.js">

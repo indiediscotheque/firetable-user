@@ -71,7 +71,9 @@
 # robots.txt on the server gets a line pointing at music/sitemap.xml. The same
 # build fills the home page (index.html) with what's new, this week's chart
 # and links into the library, writes two feeds, and draws each page's share
-# image (card.jpg, what a pasted link shows). They're rebuilt on every
+# image (card.jpg, what a pasted link shows), and music/find/, Discover's song
+# search (tools/song-search.mjs: it reads the bot's song list from the database
+# only in a week it changed). They're rebuilt on every
 # publish and once a day (new releases and the chart change daily; on Mondays
 # that's after firetable-hostbot's weekly Play history job, which is when new
 # artists, DJs and genres get their pages). The addresses whose pages changed

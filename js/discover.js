@@ -1238,13 +1238,31 @@ firetable.discover = (function () {
 
   // ─── One search for both sides ──────────────────────────────────────────
   // The room's own library answers at once: artists (the 5,000 most played),
-  // genres, DJs, theme nights and songs already loaded here. Members can also
-  // look on YouTube (Enter): each search costs the site's YouTube quota, so
-  // it's for people who can add what they find.
+  // genres, DJs and theme nights. Songs come from js/discover-find.js, loaded
+  // on the first search: every song played here (static files, no database),
+  // members' own playlists, and YouTube on Enter (each search costs the
+  // site's YouTube quota, so it's for people who can add what they find).
 
   var fold = function (x) { return String(x || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); };
   function matches(q, text) { return fold(text).indexOf(q) !== -1; }
-  var yt = { q: null, rows: null };
+  var finder = null;
+  /** Search's song finder (js/discover-find.js), loaded once; resolves with it. */
+  function findReady() {
+    return finder ? Promise.resolve(finder) : ftLazy.own("find-js", "js/discover-find.js").then(function () {
+      finder = finder || firetable.discoverFind({
+        esc: esc, ms: ms, head: head, row: row, emptyNote: emptyNote, loading: loading, djShown: djShown, setList: setList,
+        signedIn: function () { return D.signedIn; },
+        // songs on pages opened this visit: new releases, charts and the rest
+        loaded: function () {
+          var pool = (D.data.new && D.data.new.tracks) || [];
+          Object.keys(lists).forEach(function (name) { if (!/^search/.test(name)) pool = pool.concat(lists[name].tracks || []); });
+          return pool;
+        },
+        changed: function () { if (D.mode === "discover" && D.view === "search") renderBrowse(); }
+      });
+      return finder;
+    });
+  }
 
   function viewSearch(query) {
     var q = fold(query).trim();
@@ -1289,58 +1307,13 @@ firetable.discover = (function () {
     // theme nights
     var nights = nightIndex().filter(function (n) { return matches(q, n.theme); }).slice(0, 6);
     h += section("Theme nights", '<div class="d-nights">' + nights.map(nightRow).join("") + "</div>", nights.length);
-    // songs already here: new releases, charts and every page opened this visit
-    var seen = {};
-    var songs = [];
-    var pool = (((D.data.new && D.data.new.tracks) || []).map(function (t) { return Object.assign({ type: 1 }, t); }));
-    Object.keys(lists).forEach(function (name) { if (name !== "search" && name !== "search-yt") pool = pool.concat(lists[name].tracks || []); });
-    pool.forEach(function (t) {
-      var k = (t.type || 1) + "_" + t.cid;
-      if (seen[k] || !t.cid || songs.length >= 30) return;
-      if (matches(q, t.t) || matches(q, t.a)) { seen[k] = true; songs.push(t); }
-    });
-    setList("search", "Search: " + query, songs);
-    h += section("Songs", '<div class="ft-rows d-rowlist">' + songs.map(function (t, i) {
-      return row(t, "search", i, { dj: djShown(t.djid, t.dj), right: t.plays ? '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + "</span>" : "" });
-    }).join("") + "</div>", songs.length);
-    // YouTube, for members
-    if (D.signedIn) {
-      if (yt.q === query && yt.rows) {
-        setList("search-yt", "YouTube: " + query, yt.rows);
-        h += "<section>" + head("On YouTube") + (yt.rows.length ? '<div class="ft-rows d-rowlist">' + yt.rows.map(function (t, i) {
-          return row(t, "search-yt", i, { right: t.plays ? '<span class="d-num">' + esc(firetable.utilities.pluralize(t.plays, "play", "plays")) + " here</span>" : '<span class="d-new">not played here</span>' });
-        }).join("") + "</div>" : emptyNote("Nothing on YouTube for that.")) + "</section>";
-      } else {
-        h += '<section><button type="button" class="butt graybutt d-ytsearch">' + ms("travel_explore") + "<span>Search YouTube for “" + esc(query) + "”</span></button></section>";
-      }
-    }
-    if (!found && !D.signedIn) h += emptyNote("Nothing in the room's library for that yet.");
+    // songs: the whole library, your playlists, then YouTube (js/discover-find.js)
+    if (!finder) findReady().then(function () { if (D.view === "search") renderBrowse(); }, quiet);
+    var songs = finder ? finder.sections(query) : { html: loading(), found: 0, pending: true };
+    h += songs.html;
+    found += songs.found;
+    if (!found && !songs.pending && !D.signedIn) h += emptyNote("Nothing in the room's library for that yet.");
     return h;
-  }
-
-  /** YouTube's results for a search, with the room's plays for each. */
-  function searchYouTube(query) {
-    if (typeof ytAPI !== "function") return;
-    yt = { q: query, rows: null };
-    renderBrowse();
-    ytAPI("search", { q: query, type: "video", part: "snippet", maxResults: SEARCH_MAX_RESULTS }, function (res) {
-      var rows = ((res && res.items) || []).map(function (item) {
-        var cid = item.id && (item.id.videoId || item.id);
-        var p = firetable.utilities.parseArtistTitle(firetable.ui.strip(firetable.utilities.youtubeTrackName(item.snippet.title, item.snippet.channelTitle, item.snippet.description)));
-        return { type: MEDIA_YOUTUBE, cid: cid, a: p.artist, t: p.title };
-      }).filter(function (t) { return t.cid; });
-      Promise.all(rows.map(function (t) {
-        return db().ref("globalTracks/1" + t.cid).once("value").then(function (s) {
-          var v = s.val();
-          if (!v || !v.song) return;
-          return db().ref("globalSongs/" + v.song + "/plays").once("value").then(function (pl) { t.plays = pl.val() || 0; });
-        }).catch(function () {});
-      })).then(function () {
-        if (yt.q !== query) return;
-        yt.rows = rows;
-        if (D.view === "search") renderBrowse();
-      });
-    });
   }
 
   // ─── Theme nights (discover/themes, from the bot) ──────────────────────
@@ -3431,6 +3404,7 @@ firetable.discover = (function () {
     var input = document.getElementById("dQ");
     if (input) { input.focus(); input.select(); keepFocusFromPlayers(input); }
     lib("artistIndex"); // ready for the first letters
+    findReady().then(function (f) { f.warm(); }, quiet);
   }
 
   /**
@@ -3714,7 +3688,7 @@ firetable.discover = (function () {
       var key = djKey(b.getAttribute("data-avatar-uid"), b.getAttribute("aria-label"));
       if (key) return goTo("discover/djs/" + key);
     }
-    if ((b = t.closest(".d-ytsearch"))) return searchYouTube(D.sub || "");
+    if ((b = t.closest(".d-ytsearch"))) return findReady().then(function (f) { f.youtube(D.sub || ""); }, quiet);
     if ((b = t.closest(".d-playall"))) return shuffle.playAll(b.getAttribute("data-list"));
     if ((b = t.closest(".d-saveall"))) return saveAll(b.getAttribute("data-list"));
     if (t.closest(".d-pickcards")) {
@@ -4404,7 +4378,7 @@ firetable.discover = (function () {
   function signedIn(on) {
     D.signedIn = on;
     document.body.classList.toggle("d-member", !!on);
-    if (!on) { chatBack(); queue.back(); if (D.sideTab === "chat") D.sideTab = "list"; }
+    if (!on) { chatBack(); queue.back(); if (D.sideTab === "chat") D.sideTab = "list"; if (finder) finder.forget(); }
     if (on) firetable.ui.closeAuth();
     if (on) {
       firetable.saved.session = {};
@@ -4544,7 +4518,7 @@ firetable.discover = (function () {
         if (!v) return;
         clearTimeout(typed);
         setView("search", v);
-        if (D.signedIn && yt.q !== v && !(firetable.importer && firetable.importer.parseLink(v))) searchYouTube(v);
+        if (D.signedIn && !(firetable.importer && firetable.importer.parseLink(v))) findReady().then(function (f) { f.youtube(v); }, quiet);
       });
       window.addEventListener("resize", function () { closeMenu(); });
       document.addEventListener("scroll", function () { closeMenu(); }, true);
