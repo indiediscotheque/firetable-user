@@ -519,7 +519,7 @@ firetable.tt = (function () {
       var st = firetable.people.status(d.id);
       seat.classList.toggle("tt-idle", st.away);
       seat.querySelector(".tt-dj").setAttribute("aria-label", nameOf(d.id, d.name) + ", DJ" + (st.away ? ", " + st.label.toLowerCase() : ""));
-      seat.querySelector(".tt-plays").textContent = d.plays + "/" + (firetable.playlimit || "∞");
+      seat.querySelector(".tt-plays").textContent = firetable.people.plays(d.plays | 0, firetable.playlimit).shown; // the people list's words
     }
     // a DJ who left takes their menu with them
     if (M.uid && !keep[M.uid]) closeDjMenu();
@@ -1443,7 +1443,7 @@ firetable.tt = (function () {
     var menu = $id("tt-djmenu"), them = (ftapi.users || {})[d.id] || {};
     var role = them.hostbot ? "Bot" : them.supermod ? "Supermod" : them.mod ? "Moderator" : "";
     var fires = firetable.fireReactors && firetable.fireReactors[d.id] ? " · gave it an Awesome" : "";
-    menu.innerHTML = '<div class="tt-djhead"><b>' + esc(nameOf(d.id, d.name)) + "</b><span>" + d.plays + "/" + esc(firetable.playlimit || "∞") + " plays" +
+    menu.innerHTML = '<div class="tt-djhead"><b>' + esc(nameOf(d.id, d.name)) + "</b><span>" + esc(firetable.people.plays(d.plays | 0, firetable.playlimit).tip) +
       (role ? " · " + role : "") + fires + "</span></div>" +
       djMenuItems(d).map(function (it) {
         var attrs = ' role="menuitem" class="tt-djitem' + (it[4] ? " tt-danger" : "") + '" data-act="' + it[0] + '"' + (it[2] ? ' data-ask="' + esc(it[2]) + '"' : "");

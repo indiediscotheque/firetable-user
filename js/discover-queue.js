@@ -15,7 +15,9 @@
  *     rest of the playlist), where Live plays a 30-second preview; a search
  *     result in Find tracks plays here the same way
  *   - where you stand on the decks, under the list (which list you DJ from
- *     is Live's own: the DJ list tag by the picker, and All playlists)
+ *     is chosen as in Live: the crate's DJ switch by the picker, "You DJ from
+ *     this" on that list, or All playlists' headphones, each through
+ *     firetable.actions.djFrom)
  *   - the song playing here, and the songs saved this visit, are marked
  *
  * discover.js makes the one there is with firetable.discoverQueue(deps): deps
@@ -143,7 +145,7 @@ firetable.discoverQueue = (function () {
     if (d.on) return '<p class="d-fact">' + ms("headphones") + " You're on the decks. The room plays from the top of this list.</p>";
     if (d.waiting) return '<p class="d-fact">' + ms("queue_music") + " You're #" + esc(d.place) + " in line for the decks.</p>";
     if (!n) return "";
-    return '<button type="button" class="butt darkbutt d-joinwait">' + ms("queue_music") + "<span>" + (d.open ? "Hop on the decks" : "Join the waitlist") + "</span></button>" +
+    return '<button type="button" class="butt darkbutt d-joinwait">' + ms("queue_music") + "<span>Hop on the decks</span></button>" +
       '<p class="d-fact d-center">' + (d.open ? "A spot is open. The room plays this list, from the top." : "You'll take the decks when a spot opens.") + "</p>";
   }
 

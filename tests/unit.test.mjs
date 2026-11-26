@@ -817,6 +817,26 @@ test("the people list: DJs in deck order (playing, next, plays, leaving), then t
   assert.equal(r.noDjs, "true|true|d2:Duo[]|0", "with nobody DJing it's one list with no headings");
 });
 
+test("a DJ's plays in words, the same everywhere they show (the card, the stage, the Turntable theme)", async () => {
+  const r = await run(() => [[1, 3], [2, "∞"], [1, "∞"], [0, undefined]].map(([n, lim]) => { const w = firetable.people.plays(n, lim); return w.shown + "=" + w.tip; }));
+  assert.deepEqual(r, ["1 of 3=1 of 3 plays this turn", "2 plays=2 plays this turn, no limit", "1 play=1 play this turn, no limit", "0 plays=0 plays this turn, no limit"],
+    "with a limit \"1 of 3\", with none (the bot's ∞) \"2 plays\"; never \"1/∞\"");
+});
+
+test("a playlist's name: the built-in list by the name its owner gave it, older escaped names decoded", async () => {
+  const r = await run(() => {
+    const was = { prefs: firetable.plPrefs.defaultName, lists: firetable.allPlaylists };
+    firetable.allPlaylists = { p1: { name: "Rock &amp; Roll" }, p2: { name: "Tom's <b>" }, p3: {} };
+    const out = [firetable.utilities.listName("0")];
+    firetable.plPrefs.defaultName = "Smoke Crate";
+    out.push(firetable.utilities.listName("0"), firetable.utilities.listName(0), firetable.utilities.listName("p1"), firetable.utilities.listName("p2"), firetable.utilities.listName("p3"));
+    firetable.plPrefs.defaultName = was.prefs; firetable.allPlaylists = was.lists;
+    return out;
+  });
+  assert.deepEqual(r, ["Default Playlist", "Smoke Crate", "Smoke Crate", "Rock & Roll", "Tom's <b>", "your playlist"],
+    "its own name, as plain text (callers escape it, a toast shows it as text)");
+});
+
 test("the people header and the waitlist's card say only what there is", async () => {
   const r = await run(() => {
     const shell = firetable.$appShell[0];

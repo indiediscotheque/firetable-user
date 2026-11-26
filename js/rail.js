@@ -313,9 +313,9 @@ firetable.rail = (function () {
   /** What the tooltip says for `el`. */
   function tipText(el) {
     if (el.matches(".prson")) return person(el);
-    if (el.matches(".waitlist-addme-row")) return "Join the DJ waitlist";
+    if (el.matches(".waitlist-addme-row")) return "Hop on the decks";
     if (el.matches(".waitlist-item")) return text(el, ".waitlist-name") + " · " + text(el, ".wl-pos-num, .waitlist-pos") + " in line";
-    if (el.matches(".wlAddMeBtn")) return "Hop on the DJ waitlist";
+    if (el.matches(".wlAddMeBtn")) return "Hop on the decks";
     if (el.matches(".pe-row")) return [text(el, ".pe-name"), attr(el, ".pe-role", "aria-label"), el.classList.contains("is-dj") ? "DJ" : ""].filter(Boolean).join(" · ");
     if (el.id === "themePill") return el.classList.contains("no-theme") ? "No theme yet" : "Theme: " + text(el, "#themePillText");
     if (el.id === "dSearch") return "Search (/)";

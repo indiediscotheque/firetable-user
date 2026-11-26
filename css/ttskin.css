@@ -476,7 +476,7 @@ body.tt-skin #djStage > #stageSnow,
 body.tt-skin #djStage > #stageActions,
 body.tt-skin #djStage > #stageTopRight,
 body.tt-skin #djStage > #ft-eq { display: none; }
-/* the browser holding the room's sound back: Live's "Listen to the room" as a plain Turntable button
+/* the browser holding the room's sound back: Live's "Listen live" as a plain Turntable button
    on the stage's base, between the front speakers (x 523 to 945, y 530 to 590), sized with the stage
    (never smaller than reads); no pill, no shadow, no who's-playing line: the stage shows that */
 body.tt-skin.media-blocked #djStage > #tapToPlay { display: inline-flex; }

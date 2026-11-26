@@ -118,13 +118,23 @@ firetable.people = (function () {
     return html + playsHTML(p.plays | 0, firetable.playlimit);
   }
 
-  /** Plays this turn, in words: "2 plays" with no limit, "1 of 3" with one (it was "1/∞"); the tooltip says the rest. */
-  function playsHTML(plays, limit) {
+  /**
+   * Plays this turn, in words (it was "1/∞"): `shown`, "2 plays" with no limit
+   * or "1 of 3" with one, and `tip`, the rest ("1 of 3 plays this turn"). The
+   * same words wherever a DJ's plays show: this list, their card, the stage's
+   * name tooltip, its on-deck faces' tooltip and the Turntable theme.
+   */
+  function plays(n, limit) {
     var max = Number(limit); // the bot's limit: a number, or "∞" when there's none
     var capped = max > 0 && isFinite(max);
-    var shown = capped ? plays + " of " + max : firetable.utilities.pluralize(plays, "play");
-    var tip = capped ? plays + " of " + max + " plays this turn" : firetable.utilities.pluralize(plays, "play") + " this turn, no limit";
-    return '<span class="pe-plays" title="' + esc(tip) + '">' + esc(shown) + "</span>";
+    return {
+      shown: capped ? n + " of " + max : firetable.utilities.pluralize(n, "play"),
+      tip: capped ? n + " of " + max + " plays this turn" : firetable.utilities.pluralize(n, "play") + " this turn, no limit"
+    };
+  }
+  function playsHTML(n, limit) {
+    var w = plays(n, limit);
+    return '<span class="pe-plays" title="' + esc(w.tip) + '">' + esc(w.shown) + "</span>";
   }
 
   /**
@@ -267,6 +277,8 @@ firetable.people = (function () {
     bus: bus,
     /** A member's role that differs from a member's: {icon, name}, or null (chat names it the same, js/chat.js). */
     roleOf: roleOf,
+    /** A DJ's plays this turn in words: {shown: "1 of 3", tip: "1 of 3 plays this turn"}. */
+    plays: plays,
     /** For tests: "12m" for a time `ms` ago. */
     awayFor: awayFor
   };

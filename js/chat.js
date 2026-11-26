@@ -515,7 +515,7 @@ firetable.actions.claimGrab = function (cardid) {
 };
 
 firetable.actions.grabCard = function (cardid) {
-  if (!ftapi.uid) return firetable.ui.toast("Sign in to grab cards.", "error");
+  if (!ftapi.uid) return firetable.ui.toast("Join to grab cards.", "error");
   firetable.ui.setGrabState(cardid, "pending");
   ftapi.actions.sendBotCommand(cardid ? "!grab " + cardid : "!grab");
   // no answer (the bot is restarting?): let them try again

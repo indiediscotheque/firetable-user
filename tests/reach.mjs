@@ -145,6 +145,10 @@ const FEATURES = [
 
   // ── decks, people, chat (DJ, PE, CH) ──
   { row: "DJ-01", name: "Which playlist you DJ from", who: IN, via: chatTab, target: "#djlistpicker" },
+  // the same choice from the crate, the only one-tap way in Discover and a phone's Library, and from All playlists
+  { row: "DJ-01", name: "DJ from the list on screen (the crate's switch)", who: IN, via: playlists, target: "#cr-djTag" },
+  { row: "DJ-01", name: "DJ from the list on screen (the crate's switch, in Discover)", who: IN, widths: WIDE, mode: "discover", target: "#cr-djTag" },
+  { row: "DJ-01", name: "DJ from any list (All playlists' headphones)", who: IN, via: [...listMenu, '#cr-listMenu [data-act="all"]'], target: "#plIndexList .plx-dj" },
   { row: "DJ-03", name: "The waitlist", who: IN, via: peopleTab, target: "#usersWaitlist" },
   { row: "PE-01", name: "The people in the room", who: IN, via: peopleTab, target: "#allUsers" },
   { row: "CH-01", name: "Chat", who: IN, via: chatTab, target: "#chats" },
@@ -195,7 +199,7 @@ const FEATURES = [
   { row: "DI-06", name: "DJs", who: ALL, mode: "discover", via: pages("djs"), hash: "#discover/djs", target: "#dBrowse" },
   { row: "DI-08", name: "Years", who: ALL, mode: "discover", via: pages("years"), hash: "#discover/years", target: "#dBrowse" },
   { row: "DI-13", name: "The player bar", who: ALL, mode: "discover", target: "#dMini .pb-main" },
-  { row: "DI-14", name: "Listen in / stop the room", who: ALL, mode: "discover", target: "#dMini .pb-main" },
+  { row: "DI-14", name: "Listen live / stop the room", who: ALL, mode: "discover", target: "#dMini .pb-main" },
   { row: "DI-27", name: "The full-screen player", who: ALL, widths: WIDE, mode: "discover", via: ["#fullscreenBtn"], target: "#pv-full" },
   { row: "DI-27", name: "The full-screen player (phone: tap the bar)", who: ALL, widths: PHONE, mode: "discover", via: full, target: "#pv-full" },
   { row: "DI-19", name: "A song's ⋮ menu", who: ALL, mode: "discover", via: ["#dBrowse .pvbar .d-more"], target: "#dMenu" },

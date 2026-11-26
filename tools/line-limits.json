@@ -30,15 +30,15 @@
     "longFunctions": 1
   },
   "js/playlist.js": {
-    "lines": 1995,
+    "lines": 1994,
     "longFunctions": 3
   },
   "js/playlists.js": {
-    "lines": 516,
+    "lines": 515,
     "longFunctions": 1
   },
   "js/room.js": {
-    "lines": 1286,
+    "lines": 1283,
     "longFunctions": 5
   },
   "js/search.js": {
@@ -53,7 +53,7 @@
     "longFunctions": 4
   },
   "js/users.js": {
-    "lines": 799,
+    "lines": 795,
     "longFunctions": 3
   }
 }

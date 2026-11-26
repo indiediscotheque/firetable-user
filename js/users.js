@@ -237,7 +237,7 @@ firetable.actions.showLoginScreen = function () {
   $("#grab").css("display", "none");
 
   if (firetable.loginForm && !$("#login").html()) {
-    $("#mainGrid").append('<div id="login" class="scroll-view" role="region" aria-label="Log in or sign up">' + firetable.loginForm + '</div>');
+    $("#mainGrid").append('<div id="login" class="scroll-view" role="region" aria-label="Join or log in">' + firetable.loginForm + '</div>');
     firetable.ui.loginEventsInit();
   }
   firetable.ui.renderRoomPulse();
@@ -279,7 +279,6 @@ firetable.actions.loggedIn = function (user) {
   firetable.actions.loadPlaylistPrefs().then(function () { ftapi.lookup.listNames(function (allPlaylists) {
     var viewListStorageKey = "firetable.viewList." + ftapi.uid;
     $("#listpicker").off("change");
-    $("#djlistpicker").off("change");
     firetable.ui.fillPlaylistPickers(allPlaylists);
     firetable.actions.loadListCounts(allPlaylists);
     var defaultList = firetable.plPrefs.defaultList;
@@ -314,11 +313,8 @@ firetable.actions.loggedIn = function (user) {
         firetable.actions.switchViewList(val);
         firetable.ui.matchSearchSource(val);
       });
-      $("#djlistpicker").change(function () {
-        ftapi.actions.switchDjList($(this).val());
-      });
 
-      // Initialize both pickers after handlers are attached.
+      // Initialize both pickers after handlers are attached (the stage's "You DJ from ▾" has its own: js/dj-switch.js).
       $("#djlistpicker").val(safeSelected);
       $("#listpicker").val(viewSelected).trigger("change");
     });
@@ -719,11 +715,11 @@ firetable.ui.titleAuth = function (which) {
     : which === "login" ? "Log in to chat, play your playlists and take a turn on the decks." : ""));
 };
 
-/** The header's button says Log in to people who've signed in here before. */
+/** The header's button says Log in to people who've signed in here before (its tooltip says what its name says). */
 firetable.ui.labelSignIn = function () {
-  var known = firetable.ui.authDefault() === "login";
-  $("#nav-signinLabel").text(known ? "Log in" : "Join");
-  $("#nav-signin").attr({ "aria-label": known ? "Log in or join" : "Join or log in", title: known ? "Log in or create an account" : "Create an account or log in" });
+  var known = firetable.ui.authDefault() === "login", btn = document.getElementById("nav-signin"), label = document.getElementById("nav-signinLabel");
+  if (label) label.textContent = known ? "Log in" : "Join";
+  if (btn) { btn.setAttribute("aria-label", known ? "Log in or join" : "Join or log in"); btn.title = btn.getAttribute("aria-label"); }
 };
 
 // ─── Your account: the menu, and Profile · Account · Settings ──────────────

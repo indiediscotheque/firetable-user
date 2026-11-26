@@ -408,6 +408,24 @@ try {
     out.picker = $('#plIndexList .plx-row[data-id="scList"] .plx-format').val();
     out.pickerNone = $('#plIndexList .plx-row[data-id="0"] .plx-format').val();
     out.options = $('#plIndexList .plx-row[data-id="0"] .plx-format option').length;
+    // a row's headphones: on the list you already DJ from they do nothing, as the crate's switch;
+    // on another they go through djFrom (saves it, says so)
+    const me = ftapi.users[ftapi.uid], keepSel = me ? me.selectedList : ftapi.selectedListThing, stagePick = document.getElementById("djlistpicker"), keepStage = stagePick.value;
+    const setSel = (v) => { if (me) me.selectedList = v; else ftapi.selectedListThing = v; };
+    const realSwitch = ftapi.actions.switchDjList, realToast = firetable.ui.toast, djCalls = [];
+    ftapi.actions.switchDjList = (id) => djCalls.push("switch:" + id);
+    firetable.ui.toast = (t) => djCalls.push("toast:" + t);
+    setSel("vidList");
+    firetable.ui.renderPlaylistIndex();
+    document.querySelector('#plIndexList .plx-row[data-id="vidList"] .plx-dj').click();
+    out.djSame = document.querySelector('#plIndexList .plx-row[data-id="vidList"] .plx-dj').getAttribute("aria-pressed") + "|" + djCalls.join("|");
+    document.querySelector('#plIndexList .plx-row[data-id="scList"] .plx-dj').click();
+    out.djOther = djCalls.join("|");
+    ftapi.actions.switchDjList = realSwitch;
+    firetable.ui.toast = realToast;
+    setSel(keepSel);
+    stagePick.value = keepStage;
+    firetable.ui.renderPlaylistIndex();
     // Find a playlist narrows the rows and stops reordering; select-all takes the rows shown
     $("#cr-plFilter").val("sc f").trigger("input");
     out.shown = $("#plIndexList .plx-row:not([hidden])").map(function () { return this.getAttribute("data-id"); }).get().join(",");
@@ -433,6 +451,8 @@ try {
   check(formats.sc === "sc" && formats.none === "" && formats.ytInSc && formats.scInSc && formats.scInVideos && formats.anyTakesBoth,
     "a SoundCloud list takes SoundCloud only, a videos list YouTube only, an unset list anything (" + JSON.stringify(formats) + ")");
   check(formats.picker === "sc" && formats.pickerNone === "" && formats.options === 4, "All Playlists shows each list's setting, with four choices");
+  check(formats.djSame === "true|" && formats.djOther === "switch:scList|toast:You DJ from SC finds now",
+    "All Playlists' headphones: nothing on the list you already DJ from, as the crate's switch; another list's say You DJ from … now (" + JSON.stringify([formats.djSame, formats.djOther]) + ")");
   check(formats.shown === "scList" && formats.filtered && formats.selected === "scList", "All Playlists: Find a playlist shows the matches, and select-all takes only those (" + JSON.stringify(formats) + ")");
   check(formats.menuOpen && formats.confirm && formats.builtInLocked, "All Playlists: a row's ⋮ menu deletes that list after a confirm; the built-in list can't be deleted");
   check(formats.videoHelp && formats.viewingVideos && !formats.viewingAny, "a videos list gets the artist's videos as swaps, and its swap card says so (" + JSON.stringify(formats) + ")");
@@ -713,6 +733,14 @@ try {
     document.getElementById("cr-renameSave").click();
     await until(() => firetable.plPrefs && firetable.plPrefs.defaultName === "Smoke Crate");
     out.renamed = firetable.plPrefs.defaultName + "|" + !box.open;
+    // renamed, the built-in list goes by its own name when you DJ from it (the stage's picker; it said "Default Playlist")
+    const realSwitch = ftapi.actions.switchDjList, stagePicker = document.getElementById("djlistpicker"), stageWas = stagePicker.value;
+    ftapi.actions.switchDjList = () => {};
+    stagePicker.value = "0";
+    stagePicker.dispatchEvent(new Event("change", { bubbles: true }));
+    out.djToast = document.getElementById("ft-toast").textContent;
+    ftapi.actions.switchDjList = realSwitch;
+    stagePicker.value = stageWas;
     await firetable.actions.renameList("0", "Default Playlist");
     // Remove duplicates: the later copy goes, in one write
     await pick("dupes");
@@ -730,6 +758,7 @@ try {
     "a song the room plays leaves Not played here yet, and Show all puts every song back (" + JSON.stringify(listTools) + ")");
   check(listTools.exported === "Aa - One|Bb - Two|Aa - One", "Export downloads the list as Artist - Title lines in play order (" + listTools.exported + ")");
   check(listTools.renameOpen === "Default Playlist" && listTools.renamed === "Smoke Crate|true", "Rename opens with the list's name and saves the new one (" + JSON.stringify(listTools) + ")");
+  check(listTools.djToast === "You DJ from Smoke Crate now", "the built-in list, renamed, goes by its name when you DJ from it (" + listTools.djToast + ")");
   check(/Removed 1 duplicate/.test(listTools.toast) && listTools.left === "dupe000001,dupe000002", "Remove duplicates keeps the first copy and says how many went (" + JSON.stringify(listTools) + ")");
   await put("/queues/smoke", listBefore);
   await page.evaluate(async () => {
@@ -887,7 +916,7 @@ try {
     firetable.ui.previewIcon(pv(), false);
     out.preview.push(pv().getAttribute("aria-label") + (pv().textContent === "\ue037" ? ":play" : ""));
     // the two pickers: the stage's is a status line (no box, as wide as its name, its label beside it),
-    // and the crate's says "DJ list" while it shows the list you DJ from
+    // and the crate's says "You DJ from this" while it shows the list you DJ from
     const stagePick = document.getElementById("djlistpicker"), sp = getComputedStyle(stagePick), tag = document.getElementById("cr-djTag");
     const lab = document.getElementById("djlistpickerLabel").getBoundingClientRect(), pick = stagePick.getBoundingClientRect();
     out.status = { box: sp.backgroundColor + "|" + sp.borderTopColor + "|" + sp.boxShadow, hugs: pick.width < 0.8 * document.getElementById("djlistpickerWrap").getBoundingClientRect().width,
@@ -903,10 +932,19 @@ try {
     let switched = null;
     ftapi.actions.switchDjList = (id) => { switched = id; };
     tag.click();
+    out.status.switched = switched === document.getElementById("listpicker").value;
+    out.status.tagToast = document.getElementById("ft-toast").textContent;
+    // the stage's picker ("You DJ from ▾") does the same, through the same djFrom: it says so, and the
+    // crate's switch is pressed once the list it names is the one on screen
+    switched = null;
+    ftapi.actions.switchDjList = (id) => { switched = id; ftapi.selectedListThing = id; ftapi.events.emit("djListChanged", id); };
+    const stagePicker = document.getElementById("djlistpicker");
+    stagePicker.value = String(firetable._queueList);
+    stagePicker.dispatchEvent(new Event("change", { bubbles: true }));
+    out.status.stage = [switched === stagePicker.value, document.getElementById("ft-toast").textContent, tag.getAttribute("aria-pressed"), tag.querySelector("span").textContent].join("|");
     ftapi.actions.switchDjList = realSwitch;
     document.getElementById("djlistpicker").value = stageWas;
     me.selectedList = meWas;
-    out.status.switched = switched === document.getElementById("listpicker").value;
     ftapi.selectedListThing = realDj;
     firetable.ui.markDjList();
     // ⋮ → Delete and search for another
@@ -931,8 +969,10 @@ try {
     "a row's play button is called Preview, and Stop the preview while its preview plays (" + JSON.stringify(rowLook.preview) + ")");
   check(/^rgba\(0, 0, 0, 0\)\|rgba\(0, 0, 0, 0\)\|none$/.test(rowLook.status.box) && rowLook.status.hugs && rowLook.status.beside && rowLook.status.select === "SELECT",
     "under the stage, the playlist you DJ from reads as a status: no box, as wide as its name, still the same select (" + JSON.stringify(rowLook.status) + ")");
-  check(rowLook.status.tag === "DJ list" && rowLook.status.tagOff === "DJ from this" && rowLook.status.switched,
-    "the crate's DJ switch says DJ list on the list you DJ from, DJ from this on another, and a tap makes that one the DJ list (" + JSON.stringify(rowLook.status) + ")");
+  check(rowLook.status.tag === "You DJ from this" && rowLook.status.tagOff === "DJ from this" && rowLook.status.switched && rowLook.status.tagToast === "You DJ from Default Playlist now",
+    "the crate's DJ switch says You DJ from this on the list you DJ from, DJ from this on another, and a tap makes that one the list you DJ from (" + JSON.stringify(rowLook.status) + ")");
+  check(rowLook.status.stage === "true|You DJ from Default Playlist now|true|You DJ from this",
+    "the stage's You DJ from ▾ goes the same way: it says You DJ from … now, and the crate's switch is pressed on that list (" + rowLook.status.stage + ")");
 
   console.log("-- one song menu: the same items, words and order in each ⋮");
   const oneMenu = await page.evaluate(async () => {
@@ -1389,7 +1429,7 @@ try {
     "keys: H fires, G grabs, M mutes and ? lists them; in the chat box H is just an h (" + JSON.stringify(hotkeys) + ")");
   await page.keyboard.press("m"); // unmute again
 
-  console.log("-- the stage's states: the decks open, nothing with only the bot on, Listen to the room");
+  console.log("-- the stage's states: the decks open, nothing with only the bot on, Listen live");
   const tableBefore = await (await fetch(DB + "/table.json?ns=" + NS)).json();
   const stageState = async () => page.evaluate(() => {
     const box = document.getElementById("st-state");
@@ -1420,10 +1460,20 @@ try {
   const liftAfter = await deckLift();
   check(!liftBot.shown && !liftAfter.shown && liftBot.gap === liftAfter.gap,
     "no note over the stage with only the bot on, and the deck sits at the stage's bottom either way (" + JSON.stringify({ liftBot, liftAfter }) + ")");
-  states.listen = await page.evaluate(() => { firetable.ui.renderStageState(); return document.querySelector("#tapToPlay b").textContent + "|" + document.getElementById("tapToPlaySub").textContent; });
-  check(/^st-empty\|The decks are open\. Hop on and the room plays from your ★ playlist\./.test(states.open) && states.bot === "|" && states.after === "|",
-    "the stage says when the decks are open, and nothing otherwise, the bot on its own included (" + JSON.stringify(states) + ")");
-  check(states.listen === "Listen to the room|", "audio blocked: Listen to the room, and nothing under it (the stage and the bar say who's playing what) (" + states.listen + ")");
+  states.listen = await page.evaluate(() => { firetable.ui.renderStageState(); return document.querySelector("#tapToPlay b").textContent + "|" + document.getElementById("tapToPlaySub").textContent + "|" + document.querySelector("#tapToPlay i").getAttribute("aria-hidden"); });
+  // the playing DJ's plays this turn, in the people list's words (the tooltip on their name; it was "1/∞"), and again when the limit changes
+  states.plays = await page.evaluate(() => {
+    const words = () => { const p = document.querySelector("#deck .playcount"); return p ? p.textContent : "none"; };
+    const was = firetable.playlimit, out = [];
+    ftapi.events.emit("playLimitChanged", 3); out.push(words());
+    ftapi.events.emit("playLimitChanged", "∞"); out.push(words());
+    ftapi.events.emit("playLimitChanged", was);
+    return out.join("|");
+  });
+  check(/^st-empty\|The decks are open\. Hop on and the room plays the playlist you DJ from\. \d+ (person|people) here\.$/.test(states.open) && states.bot === "|" && states.after === "|",
+    "the stage says when the decks are open (the playlist you DJ from, then who's here), and nothing otherwise, the bot on its own included (" + JSON.stringify(states) + ")");
+  check(states.listen === "Listen live||true", "audio blocked: Listen live (its icon unread), and nothing under it (the stage and the bar say who's playing what) (" + states.listen + ")");
+  check(/^(\d+) of 3 plays this turn\|\1 plays? this turn, no limit$/.test(states.plays), "the stage's DJ: plays this turn in the people list's words, kept up when the limit changes (" + states.plays + ")");
 
   console.log("-- Fire's count on its button");
   const fires = await page.evaluate(async () => {
@@ -1589,6 +1639,8 @@ try {
     djBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
     const menu = document.getElementById("tt-djmenu");
     out.djMenu = !menu.hidden && [...menu.querySelectorAll(".tt-djitem")].map((b) => b.textContent).join("|");
+    // a DJ's plays this turn, in the people list's words (they were "2/∞"): on their seat, and in full at the menu's head
+    out.ttPlays = [...document.querySelectorAll("#tt-table .tt-seat[data-who] .tt-plays")].map((p) => p.textContent).join(",") + "|" + (menu.querySelector(".tt-djhead span") || {}).textContent;
     menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     out.djMenuClosed = menu.hidden;
     // art tracks: a cover inside flat bars zooms on the right screen; a video's frame doesn't
@@ -1662,7 +1714,7 @@ try {
     const back = [...document.querySelectorAll("#tt-lapLid .tt-sticker")].map((el) => parseFloat(el.style.left));
     out.bleedBack = back.length === 2 && back[1] < 0 && Math.abs(back[1] - parseFloat(out.bleedInfo)) < 1;
     document.querySelector('#tt-laptopEdit [data-lap="cancel"]').click();
-    // the sound held back: Live's "Listen to the room" is a plain Turntable button, centred on the floor,
+    // the sound held back: Live's "Listen live" is a plain Turntable button, centred on the floor,
     // and still starts the sound
     document.body.classList.add("media-blocked");
     const ttp = document.getElementById("tapToPlay"), tb = ttp.getBoundingClientRect(), sb = document.getElementById("djStage").getBoundingClientRect();
@@ -1698,7 +1750,7 @@ try {
     out.off = !document.body.classList.contains("tt-skin") && getComputedStyle(document.getElementById("tt-room")).display === "none" &&
       document.getElementById("djlistpickerWrap").closest("#themebox") !== null && localStorage.getItem("firetableTurntable") === null;
     out.after = document.getElementById("playerArea") === player && player.getAttribute("src") === src;
-    // and Live's own Listen to the room again: its pill, on one line, none of the theme's
+    // and Live's own Listen live again: its pill, on one line, none of the theme's
     document.body.classList.add("media-blocked");
     const live = getComputedStyle(document.getElementById("tapToPlay"));
     out.liveListen = live.display !== "none" && !/241, 207, 58/.test(live.backgroundImage) && parseFloat(live.borderRadius) > 20 &&
@@ -1736,10 +1788,12 @@ try {
   check(tt.peopleFull, "People here fills the panel to the bottom, however short the list (" + tt.peopleInfo + ")");
   check(tt.turnBefore && tt.held && tt.turn && tt.turnBack, "a song change moves the spotlight and the nodding head to the DJ now playing (" + [tt.turnBefore, tt.held, tt.turn, tt.turnBack] + ")");
   check(/^@ Mention\|Their card/.test(tt.djMenu || "") && tt.djMenuClosed, "a DJ's menu: the room's own actions for who's looking, and Escape closes it (" + tt.djMenu + ")");
+  check(/^(\d+ plays?|\d+ of \d+)(,(\d+ plays?|\d+ of \d+))*\|\d+ (plays? this turn, no limit|of \d+ plays this turn)/.test(tt.ttPlays || ""),
+    "the Turntable theme says a DJ's plays in the people list's words, on their seat and at their menu's head (" + tt.ttPlays + ")");
   check(tt.artTrack, "an art track's cover fills the right screen (one with a flat background of its own too); a video's frame is left as it is");
   check(tt.ledScroll && tt.ledStill, "the songboard scrolls a line too long to fit, a dot column at a time; a short one stays put");
   check(tt.ledQuiet === "Nothing playing|Last played: Smoke Song · Smoke Artist", "with nobody playing, the songboard says what the stage's card says: Nothing playing over what played last (" + tt.ledQuiet + ")");
-  check(tt.liveListen, "Back in Live, Listen to the room is Live's own (its pill, on one line) (" + tt.liveListenInfo + ")");
+  check(tt.liveListen, "Back in Live, Listen live is Live's own (its pill, on one line) (" + tt.liveListenInfo + ")");
   check(tt.off && tt.liveFace && tt.noTtFaceInLive, "Back to Live: Live as it was, with Live's avatars");
 
   console.log("-- the stage's volume slider (a native range input)");
@@ -2291,6 +2345,11 @@ try {
     out.wl = { open: tip.matches(":popover-open"), facts: facts(), actions: actions() };
     await open('#ondeck .ondeck-slot[data-djid="dj2"]');
     out.deck = { open: tip.matches(":popover-open"), facts: facts(), actions: actions() };
+    // the face's tooltip on the stage says the plays the same way (it said "dj2 · 2/∞")
+    const deckFace = document.querySelector('#ondeck .ondeck-slot[data-djid="dj2"]');
+    deckFace.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+    out.deckTip = document.getElementById("ft-tooltip").textContent;
+    deckFace.dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
     await open('#usersWaitlist .waitlist-item[data-userid="boss"] .ft-avatar');
     out.boss = actions();
     await open('#usersWaitlist .waitlist-item[data-userid="smokeMod"] .ft-avatar');
@@ -2303,6 +2362,17 @@ try {
     const anchor = document.querySelector('#usersWaitlist .waitlist-item[data-userid="wl1"] .ft-avatar');
     out.redraw = { open: tip.matches(":popover-open"), anchored: anchor.style.getPropertyValue("anchor-name") === "--ft-user-anchor", facts: facts() };
     tip.hidePopover();
+    // someone not in line: the waitlist's own add-me face is a button named Hop on the decks, and Enter hops on
+    ftapi.uid = "notInLineYet";
+    ftapi.events.emit("waitlistChanged", firetable.waitlistData);
+    const addMe = document.querySelector("#usersWaitlist .waitlist-addme-row .ft-avatar");
+    const sent = [], realSend = ftapi.actions.sendBotCommand;
+    ftapi.actions.sendBotCommand = (c) => sent.push(c);
+    if (addMe) { addMe.focus(); addMe.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); }
+    ftapi.actions.sendBotCommand = realSend;
+    out.addMe = addMe ? [addMe.getAttribute("role"), addMe.tabIndex, addMe.getAttribute("aria-label"), document.activeElement === addMe, sent.join()].join("|") : "none";
+    // and the stage's open spots say what they do (they said "Add to DJ list", which is your DJ playlist everywhere else)
+    out.openSpot = [...document.querySelectorAll("#ondeck .ondeck-slot.empty")].map((b) => b.getAttribute("aria-label")).join();
     ftapi.uid = realUid;
     firetable.$appShell = $("#appShell").detach();
     return out;
@@ -2310,9 +2380,12 @@ try {
   check(wlCard.wl.open && wlCard.wl.facts === "Name=wl1|Role=Member|Status=Here|DJ=Waitlist, 1 of 3", "a waitlist avatar's card shows their place in line (" + JSON.stringify(wlCard.wl) + ")");
   check(wlCard.wl.actions === "chat-at:@ in chat|remove-from-deck:Remove from waitlist|toggle-bus:Send wl1 home: after a song or more, or in a while|toggle-block:Block",
     "mods get the deck's actions on the waitlist: remove and the bus, no \"Add to deck\" (" + wlCard.wl.actions + ")");
-  check(wlCard.deck.open && /DJ=On deck\|Session plays=2\/∞\|Leaving=After next play/.test(wlCard.deck.facts) && /remove-from-deck:Remove from deck\|toggle-bus:dj2 steps down after next play: change or let them stay/.test(wlCard.deck.actions),
-    "the on-deck card still shows plays and its actions (" + JSON.stringify(wlCard.deck) + ")");
+  check(wlCard.deck.open && /DJ=On deck\|This turn=2 plays\|Leaving=After next play/.test(wlCard.deck.facts) && /remove-from-deck:Remove from deck\|toggle-bus:dj2 steps down after next play: change or let them stay/.test(wlCard.deck.actions),
+    "the on-deck card still shows plays, in the people list's words (it was 2/∞), and its actions (" + JSON.stringify(wlCard.deck) + ")");
+  check(wlCard.deckTip === "dj2 · 2 plays", "the on-deck face's tooltip says its plays in the same words (it was \"dj2 · 2/∞\"): " + wlCard.deckTip);
   check(!/remove-from-deck|toggle-bus/.test(wlCard.boss), "no remove or bus for someone who outranks you (" + wlCard.boss + ")");
+  check(wlCard.addMe === "button|0|Hop on the decks|true|!addme", "the waitlist's add-me face is a button a keyboard reaches, named Hop on the decks, and Enter hops on (" + wlCard.addMe + ")");
+  check(/^Hop on the decks(,Hop on the decks)*$/.test(wlCard.openSpot), "the stage's open spots are named Hop on the decks (" + wlCard.openSpot + ")");
   check(wlCard.self.facts === "Name=smokeMod|Role=Mod|Status=Here|DJ=Waitlist, 2 of 3|Leaving=After next play" &&
     wlCard.self.actions === "toggle-bus:You're stepping down after next play: change or stay|step-down:Leave the waitlist",
     "your own waitlist card lets you take the bus or leave the waitlist (" + JSON.stringify(wlCard.self) + ")");
@@ -2472,7 +2545,8 @@ try {
     await wait(400);
     const size = (el) => { const r = el.getBoundingClientRect(); return el.offsetParent ? Math.round(r.width) + "x" + Math.round(r.height) : "hidden"; };
     const out = { fire: size(document.getElementById("fire")), main: size(bar.querySelector(".pb-main")), open: bar.querySelector(".pb-expand") ? size(bar.querySelector(".pb-expand")) : "gone",
-      pick: size(document.getElementById("st-grabPick")), inBar: !!document.getElementById("st-grabPick").closest("#dMini") };
+      pick: size(document.getElementById("st-grabPick")), inBar: !!document.getElementById("st-grabPick").closest("#dMini"),
+      fireWord: getComputedStyle(document.querySelector("#fire .st-fireLabel")).display };
     const grab = document.getElementById("grab");
     out.grab = grab.closest("#dMini") ? (getComputedStyle(grab).display === "none" ? "44x44" : size(grab)) : "moved";
     // the room the song has: the bar's song area, less the cover and the buttons beside it
@@ -2516,6 +2590,7 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 });
   check(phoneRow.inBar && phoneRow.fire === "44x44" && phoneRow.main === "44x44" && phoneRow.grab === "44x44" && phoneRow.pick === "hidden" && phoneRow.open === "gone" && phoneRow.text >= 140,
     "phone: Fire, Grab and play are 44px, the ▾ and ⌃ are gone from the bar, and the song has more room (" + JSON.stringify(phoneRow) + ")");
+  check(phoneRow.fireWord === "none", "phone: Fire is its flame alone, the word stays for computers (" + phoneRow.fireWord + ")");
   check(phoneRow.keepFixed, "phone: Fire and Grab stay at the right, however long the title (" + phoneRow.keepAt + ")");
   check(phoneRow.lines && phoneRow.mainPlain === "rgba(0, 0, 0, 0)", "phone: the song in two lines with the room's mark beside the artist, and play/stop a plain icon (" + JSON.stringify(phoneRow) + ")");
   check(phoneRow.titleOpens && phoneRow.barOpens && phoneRow.fireStays, "phone: tapping the bar or its title opens the full-screen player; Fire does its own thing (" + JSON.stringify(phoneRow) + ")");
@@ -2549,6 +2624,37 @@ try {
   check(wideBar.expand === "gone" && wideBar.pill === 0 && /^1:true$/.test(wideBar.status),
     "computer: no ⌃ and no LIVE pill on the bar; who's on deck stays for screen readers (" + JSON.stringify(wideBar) + ")");
   check(wideBar.spaceOpens && wideBar.titleSheet, "computer: a click on the bar opens the full-screen player; the title still opens the song's page (" + JSON.stringify(wideBar) + ")");
+
+  console.log("-- the bar's Fire says its word from 1440px, as the bar's other words (the owner, November 25, 2026)");
+  const fireWord = async (w, h) => {
+    await page.setViewportSize({ width: w, height: h });
+    return page.evaluate(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const bar = document.getElementById("dMini"), fire = document.getElementById("fire"), word = fire.querySelector(".st-fireLabel");
+      // a member hearing the room, as the bar is for a signed-in listener
+      bar.classList.add("is-member", "is-room");
+      await wait(300);
+      const r = fire.getBoundingClientRect();
+      const out = { inBar: !!fire.closest("#dMini"), shown: word.getClientRects().length > 0 && word.getBoundingClientRect().width > 0, text: word.textContent,
+        name: fire.getAttribute("aria-label"), size: Math.round(r.width) + "x" + Math.round(r.height), wider: r.width > r.height + 8 };
+      // lit (as when you've fired this song): the word and the flame in the colour made for the gold (white on it fails)
+      const wasOn = fire.classList.contains("on");
+      fire.classList.add("on");
+      await wait(300); // a button's colour eases in (140ms), and the word takes the button's
+      const want = document.createElement("span");
+      want.style.color = "var(--color-on-accent)";
+      bar.appendChild(want);
+      out.lit = getComputedStyle(word).color + "|" + getComputedStyle(want).color + "|" + getComputedStyle(fire.querySelector("i")).color;
+      want.remove();
+      fire.classList.toggle("on", wasOn);
+      return out;
+    });
+  };
+  const fire1440 = await fireWord(1440, 900), fire1280 = await fireWord(1280, 720);
+  check(fire1440.inBar && fire1440.shown && fire1440.text === "Fire" && /^Fire!/.test(fire1440.name) && fire1440.wider,
+    "at 1440 the bar's Fire shows the word Fire beside its flame, the button as wide as it needs, still named Fire! (" + JSON.stringify(fire1440) + ")");
+  check(new Set(fire1440.lit.split("|")).size === 1, "lit, Fire's word and flame are the colour made for the gold, one colour on the chip, not white (" + fire1440.lit + ")");
+  check(fire1280.inBar && !fire1280.shown && fire1280.size === "36x36", "at 1280 the bar's Fire is its flame alone, as before (" + JSON.stringify(fire1280) + ")");
 
   console.log("-- a SoundCloud song: the album-art glitch loads p5.js");
   await put("/songToPlay", Object.assign({}, youtubeSong, { type: 2, cid: "13158665", title: "Smoke SC", started: Date.now(),
@@ -2669,6 +2775,8 @@ try {
     stageHidden: getComputedStyle(document.getElementById("stage")).opacity === "0",
     noLine: !document.getElementById("dLive"),
     bar: document.getElementById("pv-src").textContent + "|" + document.querySelector("#dMini .pb-main").getAttribute("aria-label"),
+    // the way to the room's page: Go to Live, with the Live tab's own icon (it was Step inside); it changes the page, not the sound
+    goLive: (() => { const b = document.querySelector("#dMini .d-stepin"); return b ? b.querySelector("span").textContent + "|" + b.querySelector("i").textContent + "|" + b.title : "none"; })(),
     // the room in full: the full-screen player, opened and closed again
     card: await (async () => {
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -2683,8 +2791,9 @@ try {
   check(home.on && home.tabs === "Discover*,Live" && home.cards === 4 && home.befirst === "1:Be the first:All 1" && home.chart === "#1,#2" && home.unplayed && home.stageHidden,
     "a visitor lands on Discover: new releases, the week's chart, the stage out of sight (" + JSON.stringify(home) + ")");
   check(!/messages this hour|great tune/.test(home.card), "the chat is for members: a visitor's full-screen player shows none of it");
-  check(home.noLine && /On air|Live/.test(home.bar) && /Listen in|Stop listening/.test(home.bar) && /here/.test(home.card),
-    "the room is in the bar (On air / Live, Listen in) and the full-screen player (who is here), with no second room line above search (" + JSON.stringify({ bar: home.bar, line: !home.noLine }) + ")");
+  check(home.noLine && /On air|Live/.test(home.bar) && /Listen live|Stop listening/.test(home.bar) && /here/.test(home.card),
+    "the room is in the bar (On air / Live, Listen live) and the full-screen player (who is here), with no second room line above search (" + JSON.stringify({ bar: home.bar, line: !home.noLine }) + ")");
+  check(home.goLive === "Go to Live|sensors|Go to Live: the stage, the DJs, everyone", "in Discover the bar's way to the room reads Go to Live, with the Live tab's icon (" + home.goLive + ")");
 
   console.log("-- Discover Home leads with New this week: the most played, who found it, Play the week's");
   {
@@ -2774,6 +2883,9 @@ try {
     document.querySelector("#dBrowse .ft-cards .pvbar .d-play").click();
     await new Promise((r) => setTimeout(r, 300));
     const during = { preview: firetable.preview, state: firetable.discover.state(), title: document.getElementById("pv-title").textContent };
+    // the room one tap away, beside the pick: Listen live (it was Listen in), named for the room's song
+    const other = document.querySelector("#pv-switch .d-listen");
+    during.other = other ? other.querySelector(".pb-otherdo").textContent + "|" + other.title : "none";
     location.hash = "#discover/charts";
     await new Promise((r) => setTimeout(r, 300));
     const chart = { rows: document.querySelectorAll("#dBrowse .ft-rows .pvbar").length, mv: [...document.querySelectorAll("#dBrowse .d-mv")].map((e) => e.textContent).join() };
@@ -2794,8 +2906,9 @@ try {
     const nl = document.getElementById("st-notlive");
     const stage = document.getElementById("djStage").getBoundingClientRect(), card = nl.getBoundingClientRect();
     after.notLive = { shown: !nl.hidden && nl.offsetParent !== null, text: nl.textContent, lowerLeft: card.left - stage.left < stage.width / 2 && stage.bottom - card.bottom < stage.height / 2 && card.width > 0,
-      inside: card.right <= stage.right + 1 && card.bottom <= stage.bottom + 1 };
-    // Listen in, from the bar: the room
+      inside: card.right <= stage.right + 1 && card.bottom <= stage.bottom + 1,
+      go: (() => { const g = nl.querySelector(".st-nl-go"); return g ? g.textContent.trim() + "|" + g.title : "none"; })() };
+    // Listen live, from the bar: the room
     document.querySelector("#pv-switch .d-listen").click();
     await new Promise((r) => setTimeout(r, 300));
     after.listened = firetable.preview === false && /is-(live|onair)/.test(bar.className);
@@ -2810,14 +2923,16 @@ try {
   });
   check(playing.during.preview === "discover" && playing.during.state.playing === "newrel0001" && playing.during.title === "First Single",
     "a song plays in Discover's player (" + JSON.stringify(playing.during) + ")");
+  check(/^Listen live\|Listen live: \S/.test(playing.during.other), "beside a Discover pick, the room is one tap away: Listen live, named for the room's song (" + playing.during.other + ")");
   check(playing.chart.rows === 3 && playing.chart.mv === "▲2,new", "the chart shows movement (" + JSON.stringify(playing.chart) + ")");
   check(playing.after.preview === "discover" && !playing.after.mode && playing.after.hash === "#live" && playing.after.playing === "newrel0001" && playing.after.bar && playing.after.stageUp,
     "going to Live keeps the Discover song playing: the bar along the bottom says so, and the stage's screen stays up (" + JSON.stringify(playing.after) + ")");
   check(playing.after.tools && playing.after.stageEmpty, "the stage's screen, reload, full screen, Fire and Grab are in the bar; the stage is left to the DJs (" + JSON.stringify(playing.after) + ")");
-  check(playing.after.listened, "Listen in, in the bar, takes them to the room (" + JSON.stringify(playing.after) + ")");
-  check(playing.after.notLive.shown && /not listening live/.test(playing.after.notLive.text) && /First Single/.test(playing.after.notLive.text) && playing.after.notLive.lowerLeft && playing.after.notLive.inside,
+  check(playing.after.listened, "Listen live, in the bar, takes them to the room (" + JSON.stringify(playing.after) + ")");
+  check(playing.after.notLive.shown && /not listening live/.test(playing.after.notLive.text) && /First Single/.test(playing.after.notLive.text) && playing.after.notLive.lowerLeft && playing.after.notLive.inside &&
+    /^Listen live\|Listen live: \S/.test(playing.after.notLive.go),
     "in Live while a Discover song plays, the stage's lower left says they aren't listening live (" + JSON.stringify(playing.after.notLive) + ")");
-  check(playing.after.notLive.goneOnListen, "the stage's not-live card goes once they listen in (" + JSON.stringify(playing.after.notLive) + ")");
+  check(playing.after.notLive.goneOnListen, "the stage's not-live card goes once they listen live (" + JSON.stringify(playing.after.notLive) + ")");
   check(playing.after.notLive.notInDiscover, "the not-live card is Live's only (" + JSON.stringify(playing.after.notLive) + ")");
   check(playing.after.avatar.drawn > 0 && playing.after.avatar.asked >= playing.after.avatar.drawn, "the DJ on the stage is never drawn past the picture asked for (" + JSON.stringify(playing.after.avatar) + ")");
 
@@ -2941,12 +3056,12 @@ try {
     "a pick: the bar says Discover and the list, takes its colour from that song's art, can seek, and offers the room one tap away (" + JSON.stringify(bar.disc) + ")");
   check(/is-paused/.test(bar.paused) !== /is-paused/.test(bar.disc.cls), "the big button pauses and plays a Discover song (" + bar.disc.cls + " → " + bar.paused + ")");
   check(/is-room/.test(bar.live.cls) && bar.live.preview === false && bar.live.state === true && !bar.live.fireHere && bar.live.joinFire && bar.live.tone === bar.live.roomKey && bar.live.seek && /d-mypick/.test(bar.live.other),
-    "Listen in: the room plays, the bar takes the room song's colour, a visitor gets Join to fire (not the stage's Fire), and the pick waits one tap away (" + JSON.stringify(bar.live) + ")");
+    "Listen live: the room plays, the bar takes the room song's colour, a visitor gets Join to fire (not the stage's Fire), and the pick waits one tap away (" + JSON.stringify(bar.live) + ")");
   check(!!bar.live.color && bar.live.color === bar.live.stageColor, "playing the room, the bar takes the stage's own colour (" + bar.live.color + " / " + bar.live.stageColor + ")");
   check(bar.fixed.bar === "Fixed Title|Fixed Artist" && bar.fixed.panel === "Fixed Title",
     "fixed tags reach the bar and the full-screen player at once (" + JSON.stringify(bar.fixed) + ")");
-  check(/is-onair/.test(bar.stopped.cls) && bar.stopped.preview === "discover" && bar.stopped.main === "Listen in to the room",
-    "stop listening: the room goes quiet and the bar offers Listen in (" + JSON.stringify(bar.stopped) + ")");
+  check(/is-onair/.test(bar.stopped.cls) && bar.stopped.preview === "discover" && bar.stopped.main === "Listen live" && /Not listening · press play to listen live/.test(bar.stopped.src),
+    "stop listening: the room goes quiet and the bar offers Listen live (" + JSON.stringify(bar.stopped) + ")");
   check(/is-discover/.test(bar.back.cls) && /^newrel000/.test(bar.back.playing || ""), "Back to it plays the pick again (or the next, if the test video can't play) (" + JSON.stringify(bar.back) + ")");
   check(bar.join, "a visitor's Play it in the room opens the join dialog");
   check(bar.fireHome === "pv-livekeep", "in Live the stage's buttons stay in the bar (" + bar.fireHome + ")");
@@ -2961,6 +3076,39 @@ try {
     "the progress is a line along the bar's whole top edge, and the transport is previous, play, next (" + JSON.stringify(bar.edge) + ")");
   check(bar.edge.tip === "1:40" && bar.edge.drag === "25%|true|0:50" && bar.edge.let && bar.live.noTip,
     "pointing at the progress shows the time under the pointer, dragging moves the fill, and the room's song shows neither (" + JSON.stringify(bar.edge) + ")");
+
+  console.log("-- at 1440, where the bar's words show, play stays in its exact middle beside a pick's tools, in Discover and in Live");
+  const barSize = dPage.viewportSize();
+  await dPage.setViewportSize({ width: 1440, height: 900 });
+  const middle1440 = await dPage.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const skip = firetable.discover.onFailed;
+    firetable.discover.onFailed = () => {};
+    const off = () => { const b = document.getElementById("dMini").getBoundingClientRect(), m = document.querySelector("#dMini .pb-main").getBoundingClientRect(); return Math.round(m.left + m.width / 2 - (b.left + b.width / 2)); };
+    const screen = () => getComputedStyle(document.getElementById("screenControl")).display !== "none" && !!document.getElementById("screenControl").closest("#dMini");
+    location.hash = "#discover";
+    await wait(400);
+    document.querySelector("#dBrowse .ft-cards .pvbar .d-play").click();
+    await wait(400);
+    const out = { disc: off(), chip: (document.querySelector("#pv-switch .pb-otherdo") || {}).textContent };
+    document.querySelector('#modeTabs [data-mode="live"]').click();
+    await wait(500);
+    // a pick in Live: the stage's screen stays up while it plays, so its button steps out of the bar
+    out.live = off();
+    out.pick = /is-discover/.test(document.getElementById("dMini").className) && document.body.classList.contains("pb-elsewhere");
+    out.screen = screen();
+    document.querySelector("#pv-switch .d-listen").click();
+    await wait(500);
+    out.room = off();
+    out.roomScreen = screen();
+    firetable.discover.onFailed = skip;
+    return out;
+  });
+  await dPage.setViewportSize(barSize);
+  check(middle1440.disc === 0 && middle1440.live === 0 && middle1440.room === 0 && middle1440.chip === "Listen live",
+    "at 1440 play is in the bar's middle with a pick in Discover and in Live, beside LISTEN LIVE, and on the room (" + JSON.stringify(middle1440) + ")");
+  check(middle1440.pick && !middle1440.screen && middle1440.roomScreen,
+    "the stage's screen button is in the bar while you hear the room in Live, not while a pick plays there (the stage's screen stays up then) (" + JSON.stringify(middle1440) + ")");
 
   console.log("-- Discover: the full-screen player grows out of the bar, shows Audio or Video, and closes back into it");
   const full = await dPage.evaluate(async () => {
@@ -3024,7 +3172,7 @@ try {
     firetable.screenControl = "sync";
     firetable.ui.applyScreenSetting();
     firetable.ui.updateScreenBtn("sync");
-    // Listen in, under the song: the room, with a visitor's Join to fire (the stage's Fire stays out of sight)
+    // Listen live, under the song: the room, with a visitor's Join to fire (the stage's Fire stays out of sight)
     el.querySelector("#pv-fnext .d-listen").click();
     await wait(300);
     out.room = { cls: el.className, src: document.getElementById("pv-fsrc").textContent, title: document.getElementById("pv-ftitle").textContent, song: firetable.song.title,
@@ -3052,6 +3200,7 @@ try {
     out.live.open = !el.hidden;
     out.live.cls = el.className;
     out.live.main = (el.querySelector(".pvf-main") || {}).getAttribute("aria-label");
+    out.live.mainTitle = (el.querySelector(".pvf-main") || {}).title === out.live.main + " (Space)";
     out.live.same = out.live.main === document.querySelector("#dMini .pb-main").getAttribute("aria-label");
     out.live.noSkipping = !el.querySelector("#pv-ftransport .d-prev, #pv-ftransport .d-next") && document.getElementById("pv-fseek").disabled;
     out.live.reload = !!el.querySelector(".pvf-reloadroom");
@@ -3067,8 +3216,8 @@ try {
   check(full.open.logo, "the :id: logo is on the full-screen player");
   check(/is-discover/.test(full.disc.cls) && full.disc.title === "First Single" && full.disc.transport === 4 && full.disc.seek && full.disc.acts && full.disc.toggled && full.disc.noBars,
     "a Discover song in full: previous, play, next, reload, seek, Save, Play it in the room, ⋮, and no made-up level bars (" + JSON.stringify(full.disc) + ")");
-  check(full.disc.noSide && /^NextUnplayed/i.test(full.disc.next) && /Play now/.test(full.disc.next) && /The room.*Listen in/i.test(full.disc.next) && /smoke tests/.test(full.disc.theme),
-    "no side panel: under the song, the next one (Play now) and the room (Listen in); the room's theme at the top (" + JSON.stringify({ next: full.disc.next, theme: full.disc.theme }) + ")");
+  check(full.disc.noSide && /^NextUnplayed/i.test(full.disc.next) && /Play now/.test(full.disc.next) && /The room.*Listen live$/i.test(full.disc.next) && /smoke tests/.test(full.disc.theme),
+    "no side panel: under the song, the next one (Play now) and the room (Listen live); the room's theme at the top (" + JSON.stringify({ next: full.disc.next, theme: full.disc.theme }) + ")");
   check(full.screenHere && full.video.cls && full.video.body && full.video.stage && full.video.under && full.video.screen && full.video.down && full.video.upWhileStalled && full.video.saved === "on" && full.audio,
     "the stage's screen button is in the player: on lowers the room's own screen behind it (up while YouTube stalls), off raises it, one setting with the stage (" + JSON.stringify(full.video) + ")");
   check(full.art.square && /mqdefault|newrel0001/.test(full.art.img) && !/maxresdefault/.test(full.art.img), "screen off shows the song's own artwork, square (" + JSON.stringify(full.art) + ")");
@@ -3076,12 +3225,12 @@ try {
   check(full.room.tone && full.room.tone === full.room.roomColor, "the background takes the room song's colour, the stage's (" + full.room.tone + " / " + full.room.roomColor + ")");
   check(full.room.name === "Indie Discotheque", "the room is named as the site's logo has it (" + full.room.name + ")");
   check(/is-room/.test(full.room.cls) && /Live|On air/.test(full.room.src) && full.room.title === full.room.song && full.room.joinFire && full.room.fireHidden && full.room.seek && full.room.pick,
-    "Listen in shows the room in full: a visitor gets Join to fire, not the stage's Fire, can't seek, and their pick waits (" + JSON.stringify(full.room) + ")");
+    "Listen live shows the room in full: a visitor gets Join to fire, not the stage's Fire, can't seek, and their pick waits (" + JSON.stringify(full.room) + ")");
   check(full.room.noSide && /Your pick.*Back to it/i.test(full.room.next),
     "the room in full: no DJs or chat panel, just the paused pick under the song with Back to it (" + full.room.next + ")");
   check(full.closed.hidden && !full.closed.on && !full.closed.inert && full.closed.fire === "pv-livekeep" && full.closed.focus && full.fKey,
     "Escape closes it into the bar (the stage's buttons go back there, focus to the button that opened it); F opens it (" + JSON.stringify(full.closed) + ")");
-  check(full.live.shown && full.live.label === "Full-screen player" && full.live.open && /is-room|is-quiet/.test(full.live.cls) && full.live.noSkipping && /Stop listening|Listen in/.test(full.live.main || "") && full.live.same && full.live.reload && full.live.back === "pv-livekeep" && full.live.bar,
+  check(full.live.shown && full.live.label === "Full-screen player" && full.live.open && /is-room|is-quiet/.test(full.live.cls) && full.live.noSkipping && /^(Stop listening to the room|Listen live)$/.test(full.live.main || "") && full.live.mainTitle && full.live.same && full.live.reload && full.live.back === "pv-livekeep" && full.live.bar,
     "in Live, the bar's full-screen button opens it for the room: no skipping or seeking, the same big button as the bar, reload; closed, the buttons go back to the bar (" + JSON.stringify(full.live) + ")");
 
   console.log("-- The full-screen player on a phone: one action, the transport and More");
@@ -3458,16 +3607,20 @@ try {
     await wait(300);
     document.querySelector('#dSide [data-sidetab="list"]').click();
     await wait(100);
+    // the crate's door says Join (an account); inside the dialog its tab and its button still say Create account
+    const door = (document.querySelector("#dSide .d-createaccount") || {}).textContent;
     document.querySelector("#dSide .d-login").click();
     await wait(200);
     const dlg = document.getElementById("joinBox");
     const out = { open: !!(dlg && dlg.open), inside: !!(dlg && dlg.querySelector("#authBox")), form: ["createscreen", "logscreen"].filter((id) => !document.getElementById(id).hidden).join(),
-      title: dlg && dlg.querySelector("#joinTitle").textContent, focused: document.activeElement && document.activeElement.id, stillDiscover: document.body.classList.contains("ft-discover") };
+      title: dlg && dlg.querySelector("#joinTitle").textContent, focused: document.activeElement && document.activeElement.id, stillDiscover: document.body.classList.contains("ft-discover"),
+      words: [door, document.getElementById("signuplink").textContent, document.getElementById("createAccountBttn").textContent].join("|") };
     dlg.close();
     return out;
   });
   check(join.open && join.inside && join.form === "logscreen" && join.focused === "loginemail" && join.stillDiscover,
     "Log in opens the form in a dialog, on Discover (" + JSON.stringify(join) + ")");
+  check(join.words === "Join|Create account|Create account", "the crate's door says Join; the dialog's tab and button still say Create account (" + join.words + ")");
 
   console.log("-- Join or log in from the header, on Discover and in Live");
   const header = await dPage.evaluate(async () => {
@@ -3477,6 +3630,8 @@ try {
     const out = {};
     const btn = document.getElementById("nav-signin");
     out.label = document.getElementById("nav-signinLabel").textContent;
+    // its tooltip says what its name says
+    out.named = btn.getAttribute("aria-label") + "|" + btn.title;
     out.discover = { shown: btn.offsetParent !== null };
     btn.click();
     await wait(200);
@@ -3498,6 +3653,7 @@ try {
     // Live's welcome opens the same dialog, with the same buttons as Discover
     const welcomeJoin = document.querySelector("#welcomeInfo .au-join .d-join .d-createaccount");
     out.live.welcome = !!welcomeJoin && welcomeJoin.offsetParent !== null && !document.querySelector("#welcomeInfo #authBox");
+    out.live.welcomeWords = welcomeJoin ? welcomeJoin.textContent : "none";
     if (welcomeJoin) welcomeJoin.click();
     await wait(200);
     out.live.welcomeOpens = dlg.open && !document.getElementById("createscreen").hidden;
@@ -3508,8 +3664,9 @@ try {
   });
   check(header.label === "Join" && header.discover.shown && header.discover.open && header.discover.form === "createscreen" && /^Join /.test(header.discover.title) && header.discover.retitled === "Welcome back",
     "on Discover, the header's Join opens the sign-in dialog; its title follows the tabs (" + JSON.stringify(header) + ")");
-  check(header.live.shown && header.live.open && header.live.inside && header.live.focused === "newemail" && header.live.welcome && header.live.welcomeOpens,
-    "in Live the header and the welcome's Create account open the same dialog; Live has no form of its own (" + JSON.stringify(header.live) + ")");
+  check(header.live.shown && header.live.open && header.live.inside && header.live.focused === "newemail" && header.live.welcome && header.live.welcomeOpens && header.live.welcomeWords === "Join",
+    "in Live the header and the welcome's Join open the same dialog; Live has no form of its own (" + JSON.stringify(header.live) + ")");
+  check(header.named === "Join or log in|Join or log in", "the header's Join is named Join or log in, and its tooltip says the same (" + header.named + ")");
 
   console.log("-- Discover: the sound map marks the room's genre, and a genre's card opens under it");
   // the room's song, as this page knows it, is one whose library record says Nu-Disco (put back after);
@@ -3742,7 +3899,7 @@ try {
     return out;
   });
   check(locked.tabs === "Join*,Playlists,Recent,Cards" && locked.form, "a visitor in Live sees Join, Playlists, Recent and Cards (" + JSON.stringify(locked) + ")");
-  check(!locked.playlists.form && locked.playlists.text && locked.playlists.join, "Playlists says what joining gives, with Create account (" + JSON.stringify(locked.playlists) + ")");
+  check(!locked.playlists.form && locked.playlists.text && locked.playlists.join, "Playlists says what joining gives, with Join (" + JSON.stringify(locked.playlists) + ")");
   check(locked.recent >= 1 && locked.played.discover && locked.played.playing === "lockrec001", "Recent lists the room's plays, and one plays in Discover (" + JSON.stringify({ n: locked.recent, played: locked.played }) + ")");
   check(locked.cards > 0 && locked.cards <= 3, "Cards shows the latest cards (" + locked.cards + ")");
   check(locked.back.form && locked.back.pane, "Join brings the welcome back (" + JSON.stringify(locked.back) + ")");
@@ -3774,7 +3931,7 @@ try {
       rows: document.querySelectorAll("#thediscovers .pvbar").length, loading: document.querySelectorAll("#thediscovers .ft-skeleton").length,
       djPicker: getComputedStyle(document.getElementById("djlistpicker")).visibility, clock: document.getElementById("timr").offsetParent !== null };
   });
-  // Listen to the room (the browser holding the sound back): one line in the stage's lower left, clear of the DJ
+  // Listen live (the browser holding the sound back): one line in the stage's lower left, clear of the DJ
   // (measured in the instant the state is set: the site clears it itself the moment the player gets going)
   const listenAt = async (pg) => pg.evaluate(() => {
     document.body.classList.add("media-blocked");
@@ -3811,9 +3968,9 @@ try {
   await qContext.close();
   check(hereWide.shown && hereWide.rows >= 2 && hereWide.djsFirst && Number(hereWide.count) >= 1 && hereWide.pressable === 0 && hereWide.clear && !hereWide.pulse,
     "a visitor's Live on a computer lists who is in the room in the left column, DJs first, nothing to press, under the header (" + JSON.stringify(hereWide) + ")");
-  check(!herePhone.shown && herePhone.pulse, "on a phone the line of faces above Create account says it instead (" + JSON.stringify(herePhone) + ")");
-  check([listenWide, listenPhone].every((l) => l.text === "Listen to the room" && l.sub === "none" && l.inStage && l.lines && l.clearOfDj && l.underSong) && listenPhone.left === 0,
-    "Listen to the room is one line under the song, inside the stage and clear of the DJ, on a computer and on a phone (where it lines up with the cover) (" + JSON.stringify({ wide: listenWide, phone: listenPhone }) + ")");
+  check(!herePhone.shown && herePhone.pulse, "on a phone the line of faces above Join says it instead (" + JSON.stringify(herePhone) + ")");
+  check([listenWide, listenPhone].every((l) => l.text === "Listen live" && l.sub === "none" && l.inStage && l.lines && l.clearOfDj && l.underSong) && listenPhone.left === 0,
+    "Listen live is one line under the song, inside the stage and clear of the DJ, on a computer and on a phone (where it lines up with the cover) (" + JSON.stringify({ wide: listenWide, phone: listenPhone }) + ")");
   check(freshBeside.djPicker === "hidden" && freshBeside.clock, "a visitor isn't offered a playlist to DJ from under the stage; the clocks stay (" + freshBeside.djPicker + ")");
   check(freshBeside.shown && freshBeside.login && freshBeside.view !== "discover" && freshBeside.rows >= 1 && !freshBeside.loading,
     "a visitor's Fresh, beside the welcome, loads without its tab being chosen (" + JSON.stringify(freshBeside) + ")");
