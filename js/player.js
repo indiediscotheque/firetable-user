@@ -348,9 +348,13 @@ firetable.actions.reloadtrack = function () {
  * Keeps the stage honest about what the YouTube player is doing:
  * - `yt-stalled` on <body>: YouTube is the active media but not playing, so the
  *   video screen stays up and YouTube's own title / play button / "Watch on
- *   YouTube" bar never show through the stage.
+ *   YouTube" bar never show through the stage. The player bar shows its reload
+ *   then (css/discover.css), unless one of the next two is on too, or media
+ *   playback is off (`media-off`): reloading can't help with those.
  * - `media-blocked` on <body>: the browser blocked autoplay (or paused it), so
  *   the "Tap to start audio" pill is shown.
+ * - `preview-stalled` on <body>: what stopped is a playlist preview's video,
+ *   not the room's song or a Discover pick, so the room's reload can't help.
  * Short gaps (loading the next video) are ignored via STALL_MS.
  */
 firetable.media = {
@@ -637,6 +641,7 @@ firetable.media = {
     var scActive = !firetable.preview && !!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD);
     if (scActive && m.scBlocked && !firetable.disableMediaPlayback) blocked = true;
     document.body.classList.toggle('yt-stalled', stalled);
+    document.body.classList.toggle('preview-stalled', stalled && !!firetable.preview && firetable.preview !== "discover");
     // Video shows once it plays (or when the user must tap YouTube's own button)
     document.body.classList.toggle('yt-revealed', !!(m.revealed || m.directTap));
     document.body.classList.toggle('media-blocked', blocked);

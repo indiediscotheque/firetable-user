@@ -216,8 +216,8 @@
             border-radius: var(--radius-md);
             & [class*="material-symbols-"] { font-size: 1.25rem; }
             & .nav-railCount {
-                font-family: var(--font-numbers);
                 font-size: 0.65rem;
+                font-variant-numeric: tabular-nums;
                 line-height: 1;
                 color: var(--color-text);
                 &:empty { display: none; }
@@ -418,7 +418,7 @@
             gap: 0.1rem;
             padding: var(--pad2) 0 var(--pad1);
             font-size: 0;
-            & .pe-count { font-size: 0.625rem; font-family: var(--font-numbers); }
+            & .pe-count { font-size: 0.625rem; font-variant-numeric: tabular-nums; }
         }
         /* everyone else is behind the count (the people button) */
         & :is(#pe-floorHead, #usersBot, #usersSuper, #usersMod, #usersRegular) { display: none; }

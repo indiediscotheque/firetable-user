@@ -1970,7 +1970,7 @@ firetable.discover = (function () {
     var g = document.querySelector('#oauthBox .oauthBttn[data-provider="google"] svg');
     return '<div class="d-join">' +
       (google ? '<button type="button" class="butt oauthBttn d-google">' + (g ? g.outerHTML : "") + "Continue with Google</button>" : "") +
-      '<button type="button" class="butt darkbutt d-createaccount">Join</button>' +
+      '<button type="button" class="butt d-createaccount">Join</button>' +
       '<p class="d-fact d-center">Already a member? <button type="button" class="linkButton d-login">Log in</button></p></div>';
   }
 
@@ -2274,6 +2274,9 @@ firetable.discover = (function () {
     announce("Stopped listening to the room");
   }
 
+  /** A pick's reload (the bar's when YouTube stops on it, the full-screen player's, its ⋮): it plays again from a moment before. */
+  function reloadPick() { return P.track && play(P.list, P.i, Math.max(0, P.at - 2), true); }
+
   function togglePause() {
     if (!P.track) return;
     if (!discoverActive() || firetable.preview !== "discover") return play(P.list, P.i, P.at);
@@ -2424,13 +2427,19 @@ firetable.discover = (function () {
   // The stage's own utilities: its screen (synced, on, off), reload, play on a
   // speaker or TV, and full screen. With the player along the bottom they live
   // in it too, in Discover and Live, and the stage is left to the DJs. The
-  // screen and the cast button go into the full-screen player while it's open
+  // screen, reload and the cast button go into the full-screen player's top
+  // while it's open, in the bar's order with a Discover song's own reload
+  // (#pv-fdtools) where the room's is: screen · reload · cast · fill · close
   // (its Video is the stage's screen down; on phones it's the only player with
-  // room for the cast button). In the bar they keep one order, with a Discover
-  // song's own reload (#pv-dtools) where the room's is, and the volume before
-  // full screen: screen · reload · cast · volume · full screen.
-  var STAGE_TOOLS = [["screenControl", "screenControlTip", "pv-tools", "pv-fscreen"], ["reloadtrack", "tip-reloadtrack", "pv-tools", null],
-    ["st-cast", "tip-st-cast", "pv-cast", "pv-fscreen"], ["fullscreenBtn", "tip-fullscreenBtn", "pv-fs", null]];
+  // room for them). In the bar they keep one order, with a Discover song's own
+  // reload (#pv-dtools) where the room's is, and the volume before full
+  // screen: screen · reload · cast · volume · full screen. Reload rests out of
+  // sight there and shows when YouTube stops on the song (css/discover.css); a
+  // pick's is in its ⋮ too (openMenu).
+  var STAGE_TOOLS = [["screenControl", "screenControlTip", "pv-tools", "pv-fscreen"], ["reloadtrack", "tip-reloadtrack", "pv-tools", "pv-fscreen"],
+    ["st-cast", "tip-st-cast", "pv-cast", "pv-fcast"], ["fullscreenBtn", "tip-fullscreenBtn", "pv-fs", null]];
+  // a Discover song's reload, the same in the bar and the full-screen player
+  var RELOAD_SONG = '<button type="button" class="butt graybutt iconbutt d-reload" title="Reload audio (if it stalls)" aria-label="Reload audio">' + ms("refresh") + "</button>";
   // Where the stage's buttons are: in the bar along the bottom, or in the
   // full-screen player while it's open. The stage keeps none.
   var stageAt = "stage";
@@ -2644,8 +2653,9 @@ firetable.discover = (function () {
     tr.innerHTML = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous" aria-label="Previous"' + (shuffle.before(idx) < 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
       '<button type="button" class="butt iconbutt pb-main d-big" title="' + mainLabel + '" aria-label="' + mainLabel + '"' + (kind === "quiet" ? " disabled" : "") + ">" + ms(mainIcon, true) + "</button>" +
       (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next" aria-label="Next"' + (shuffle.after(idx) < 0 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" : "");
-    // a Discover song's reload: among the tools, where the room's own reload is
-    document.getElementById("pv-dtools").innerHTML = disc ? shuffle.button() + '<button type="button" class="butt graybutt iconbutt d-reload" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>" : "";
+    // a Discover song's reload: among the tools, where the room's own reload is (shown while it stalls;
+    // drawn again only when it changes, so the bar redrawing meanwhile doesn't start its wait over)
+    redraw(document.getElementById("pv-dtools"), disc ? shuffle.button() + RELOAD_SONG : "");
 
     // progress: a Discover song can be moved through; the room can't
     var seekEl = document.getElementById("pv-seek");
@@ -2762,8 +2772,9 @@ firetable.discover = (function () {
       '<div class="pvf-brand"><span class="pvf-logo" role="img" aria-label="' + name + '"></span>' +
       '<span class="pvf-roomtext"><b>' + name + '</b><span id="pv-ftheme"></span></span></div>' +
       '<div class="pvf-tools">' +
-      // the stage's own screen button (placeStage moves it in): screen on, off or synced
-      '<span class="pb-host" id="pv-fscreen"></span>' +
+      // the stage's own screen and reload (placeStage moves them in): screen on, off or synced; a
+      // Discover song's own reload where the room's is; then the stage's cast button
+      '<span class="pb-host" id="pv-fscreen"></span><span class="pb-host" id="pv-fdtools"></span><span class="pb-host" id="pv-fcast"></span>' +
       iconBtn("pv-ffs", "fullscreen", "Fill the screen", " hidden") +
       iconBtn("pv-fclose", "close_fullscreen", "Close the player (Esc)") +
       "</div></header>" +
@@ -2963,10 +2974,10 @@ firetable.discover = (function () {
     else { mainIcon = "play_arrow"; mainLabel = "Play"; }
     tr = (disc ? '<button type="button" class="butt graybutt iconbutt d-prev" title="Previous (Shift + ←)" aria-label="Previous"' + (shuffle.before(P.i) < 0 && P.at <= 3 ? " disabled" : "") + ">" + ms("skip_previous", true) + "</button>" : "") +
       '<button type="button" class="butt iconbutt pvf-main d-big" title="' + mainLabel + ' (Space)" aria-label="' + mainLabel + '"' + (kind === "quiet" ? " disabled" : "") + ">" + ms(mainIcon, true) + "</button>" +
-      (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next (Shift + →)" aria-label="Next"' + (shuffle.after(P.i) < 0 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" +
-        shuffle.button("pb-small") + '<button type="button" class="butt graybutt iconbutt d-reload pb-small" title="Reload the song (if it stalls)" aria-label="Reload the song">' + ms("refresh") + "</button>"
-        : room ? '<button type="button" class="butt graybutt iconbutt pvf-reloadroom pb-small" title="Reload the room\'s audio (if it stalls)" aria-label="Reload the room\'s audio">' + ms("refresh") + "</button>" : "");
+      (disc ? '<button type="button" class="butt graybutt iconbutt d-next" title="Next (Shift + →)" aria-label="Next"' + (shuffle.after(P.i) < 0 ? " disabled" : "") + ">" + ms("skip_next", true) + "</button>" + shuffle.button("pb-small") : "");
     redraw(document.getElementById("pv-ftransport"), tr);
+    // reload is at the top with the screen and cast, not beside play: the room's is the stage's own (placeStage)
+    redraw(document.getElementById("pv-fdtools"), disc ? RELOAD_SONG : "");
     var seekEl = document.getElementById("pv-fseek");
     seekEl.disabled = !disc;
     seekEl.setAttribute("aria-label", disc ? "Seek" : "The room's song so far (it plays live)");
@@ -3554,7 +3565,6 @@ firetable.discover = (function () {
       if (document.fullscreenElement) return document.exitFullscreen().catch(function () {});
       return document.documentElement.requestFullscreen().catch(function () { firetable.ui.toast("This browser won't fill the screen from here."); });
     }
-    if ((b = t.closest(".pvf-reloadroom"))) { $("#reloadtrack").trigger("click"); return firetable.ui.toast("Reloading the room's audio"); }
     if ((b = t.closest(".pvf-list"))) {
       closeFull();
       D.sideTab = "list";
@@ -3641,7 +3651,7 @@ firetable.discover = (function () {
     }
     if ((b = t.closest(".d-share"))) { e.stopPropagation(); return openShareMenu(b); }
     if ((b = t.closest(".d-toggle"))) return togglePause();
-    if ((b = t.closest(".d-reload"))) return P.track && play(P.list, P.i, Math.max(0, P.at - 2), true);
+    if ((b = t.closest(".d-reload"))) return reloadPick();
     if ((b = t.closest(".d-next"))) return step(1);
     if ((b = t.closest(".d-prev"))) return step(-1);
     if ((b = t.closest(".d-mute"))) { firetable.actions.muteToggle(); return renderVolume(); }
@@ -3809,6 +3819,8 @@ firetable.discover = (function () {
     var key = dj && djKey(dj.uid, dj.name);
     if (key) h += item("headphones", esc(dj.name) + "'s DJ page", 'href="' + hrefTo("discover/djs/" + key) + '"');
     if (url) h += act("copy");
+    // the song playing in the bar: reload it, if it stalls (the bar keeps its reload out of sight until then)
+    if (discoverActive() && String(P.track.cid) === String(t.cid)) h += item("refresh", "Reload audio", 'href="#" data-act="reload"');
     if (canRetag(t)) h += act("tags");
     m.innerHTML = h;
     m.hidden = false;
@@ -3834,6 +3846,7 @@ firetable.discover = (function () {
     var act = b.getAttribute("data-act");
     var t = menuTrack, opener = menuButton;
     closeMenu(true);
+    if (act === "reload") return reloadPick();
     if (act === "toroom" && t) return toRoom(t);
     if (act === "sheet" && t) return openSheet(t);
     if (act === "add" && t) return save(t, opener || b);
@@ -4061,100 +4074,19 @@ firetable.discover = (function () {
     m.querySelector("[role=menuitem]").focus();
   }
 
-  /** The chart on show as a picture (1080 × 1350, for posts and stories), drawn here. */
+  /** The chart on show as a picture (1080 × 1350, for posts and stories): js/chart-image.js draws it, loaded the first time. */
   function chartImage() {
     var period = D.chart.period;
     var id = D.chart.id || currentId(period);
-    var c = D.data.charts[period + "/" + id];
-    var rows = chartRows(c).slice(0, 10);
+    var rows = chartRows(D.data.charts[period + "/" + id]).slice(0, 10);
     if (!rows.length) return firetable.ui.toast("This chart has no songs yet.");
     firetable.ui.toast("Making the image…");
-    var W = 1080, H = 1350, PAD = 72;
-    var canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = H;
-    var g = canvas.getContext("2d");
-    var load = function (src) {
-      return new Promise(function (ok) {
-        var img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = function () { ok(img); };
-        img.onerror = function () { ok(null); };
-        img.src = src;
-      });
-    };
-    var fonts = document.fonts && document.fonts.load ? Promise.all(["700 40px Inter", "500 30px Inter", "400 24px Inter", "700 28px 'Roboto Mono'"].map(function (f) { return document.fonts.load(f); })) : Promise.resolve();
-    Promise.all([fonts, load("img/idlogo.png")].concat(rows.map(function (t) { return load(artOf(t)); }))).then(function (got) {
-      var logo = got[1];
-      var arts = got.slice(2);
-      var fit = function (text, max) {
-        text = String(text || "");
-        if (g.measureText(text).width <= max) return text;
-        while (text.length > 1 && g.measureText(text + "…").width > max) text = text.slice(0, -1);
-        return text + "…";
-      };
-      g.fillStyle = "#181818";
-      g.fillRect(0, 0, W, H);
-      if (logo) g.drawImage(logo, PAD, PAD, 96, 48);
-      g.fillStyle = "#b3b3b3";
-      g.font = "700 22px Inter";
-      g.fillText(String(ftconfigs.roomName || "").toUpperCase(), PAD + 120, PAD + 34);
-      g.fillStyle = "#ffffff";
-      g.font = "700 64px Inter";
-      g.fillText("Room chart", PAD, PAD + 150);
-      g.fillStyle = "#cc9933";
-      g.font = "500 30px Inter";
-      g.fillText(fit(chartTitle(period, id), W - PAD * 2), PAD, PAD + 200);
-      var top = PAD + 260, rowH = 86;
-      rows.forEach(function (t, i) {
-        var y = top + i * rowH;
-        g.fillStyle = "#ffffff";
-        g.font = "700 28px 'Roboto Mono'";
-        g.textAlign = "right";
-        g.fillText(String(i + 1), PAD + 40, y + 46);
-        g.textAlign = "left";
-        var art = arts[i];
-        var ax = PAD + 64, aw = 112, ah = 63;
-        g.fillStyle = "#282828";
-        g.fillRect(ax, y + 8, aw, ah);
-        if (art) {
-          var sh = art.width * (ah / aw) > art.height ? art.height : art.width * (ah / aw);
-          g.drawImage(art, 0, (art.height - sh) / 2, art.width, sh, ax, y + 8, aw, ah);
-        }
-        var tx = ax + aw + 28, tw = W - PAD - tx - 170;
-        g.fillStyle = "#ffffff";
-        g.font = "500 30px Inter";
-        g.fillText(fit(t.t, tw), tx, y + 36);
-        g.fillStyle = "#b3b3b3";
-        g.font = "400 24px Inter";
-        g.fillText(fit(t.a, tw), tx, y + 68);
-        g.fillStyle = "#888888";
-        g.font = "400 22px 'Roboto Mono'";
-        g.textAlign = "right";
-        g.fillText(firetable.utilities.pluralize(t.plays, "play", "plays"), W - PAD, y + 50);
-        g.textAlign = "left";
-        g.fillStyle = "#333333";
-        g.fillRect(PAD, y + rowH - 2, W - PAD * 2, 1);
-      });
-      g.fillStyle = "#cc9933";
-      g.font = "500 26px Inter";
-      g.fillText(location.host.replace(/^www\./, "") + "/music/charts/", PAD, H - PAD + 10);
-      canvas.toBlob(function (blob) {
-        if (!blob) return firetable.ui.toast("Couldn't make the image.", "error");
-        var name = "room-chart-" + (period === "all" ? "all-time" : id) + ".png";
-        var file = typeof File === "function" ? new File([blob], name, { type: "image/png" }) : null;
-        if (file && navigator.canShare && navigator.canShare({ files: [file] }) && /Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) {
-          navigator.share({ files: [file], title: "Room chart · " + chartTitle(period, id) }).catch(function () {});
-          return;
-        }
-        var a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = name;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-        firetable.ui.toast("Saved " + name, "success");
-      }, "image/png");
+    ftLazy.own("chart-image-js", "js/chart-image.js").then(function () {
+      return firetable.chartImage({ title: chartTitle(period, id), file: "room-chart-" + (period === "all" ? "all-time" : id) + ".png",
+        rows: rows.map(function (t) { return { t: t.t, a: t.a, plays: t.plays, art: artOf(t) }; }) });
+    }).catch(function (err) {
+      console.error("[firetable] the chart's image:", err);
+      firetable.ui.toast("Couldn't make the image.", "error");
     });
   }
 

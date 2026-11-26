@@ -16,7 +16,7 @@ Boards `R4 · …` on the canvas's "Round 4" page. Where this section and a late
 - **Live:** no change to its layout, colours or controls. Phase 1's steps add function inside it, in today's skin.
 - **Colours:** today's variables (`--color-bg` `#181818`, `--color-bg-s2` `#111`, `--color-bg-t1` `#222`, `--color-border`, `--color-accent`). Panels in Discover are flat `--color-bg-t1`. No gradients, no tint from the song's cover, except the player bar (November 13, 2026): its edge, progress, source label and a faint wash take the playing song's artwork colour (`toneOf` in `discover.js`, read from the cover; grey or unreadable art keeps the accent). Live is told apart by its red ● LIVE badge, its words and its controls, not by colour.
 - **People:** circle avatars with the name beside them. Name plates only on the stage.
-- **Buttons:** today's raised `.butt` shape. A panel's main action is dark with gold text; play/pause is light; other buttons grey. No wide solid-gold buttons.
+- **Buttons:** today's raised `.butt` shape. A panel's main action is dark with gold text; play/pause is light; other buttons grey. No wide solid-gold buttons. *(Round 5, November 25, 2026, the owner: one exception, the main sign-up action: Join, and the dialog's Create account, are filled gold. Log in and Send reset link stay dark, and the header's Join or log in stays outlined, so a screen has one.)*
 - **Discover's frame (computers):** today's three columns at today's widths. The left column: logo, theme, Discover | Live, search, the views. (The live line with Listen in was retired November 13, 2026: the player bar and the On Air card carry the room.)
 - **Home:** leads with **New this week** (releases since Friday): the lead song's cover (208px at 1440), title, artist, genre and length, "Found by [avatar] Chris · Nov 6 · 1 play so far", **Play the week's 18**, **Save all**; the next six covers; "All 18 from this week". Then **Not played live yet** (six covers tagged "Be the first", release date, Save), Room chart, the six most-played DJs as circle avatars with play counts, Rising, then today's Theme nights, Genres, On this day and Recent plays. No intro text.
 - **The On Air card (right column, while you're not in the room and nothing of yours is playing):** "On air in the room · N here", the room's cover, song, artist, "190 plays · first Mar 15, 2012", "matt on deck · Chris next" with circle avatars, a thin progress line, **Listen live**, **Go to Live** (Listen in and Step inside until November 25, 2026), the chat peek, and **Just played** (four rows, "First play" tags). Art and text only, never a second player.
@@ -56,7 +56,7 @@ Contrast: `--text-4` on `--surface-1` is 5.5:1, fine for text of 12px and up. Ro
 
 ### Type
 
-Self-hosted only (`font-src 'self'`): **Inter** for everything, **Roboto Mono** for times and the numbers in tables. Use `font-variant-numeric: tabular-nums` for counts.
+Self-hosted only (`font-src 'self'`): **Inter** for everything, **Roboto Mono** for times and the numbers in tables. Use `font-variant-numeric: tabular-nums` for counts. *(Round 5, November 25, 2026, the owner: numbers, times and dates are in Inter with tabular figures too; Roboto Mono is for code and keys.)*
 
 | Token | Size / weight | Use |
 |---|---|---|
