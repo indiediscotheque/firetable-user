@@ -200,11 +200,13 @@
     --hist-connector-w: 1rem;
     --hist-avatar-size: 1.5rem;
 
-    /* Wide screens (1024px+): the left and middle columns have these widths
-       everywhere: Live, signed out, and Discover. The right column takes the
-       rest. */
+    /* Wide screens (1024px+): Live's columns, signed in or out. The left and
+       middle have these widths and the right takes the rest, which comes to
+       --col-right. Discover's left column is narrower (css/discover.css): its
+       middle takes what that gives up, and its right keeps --col-right. */
     --col-left: 24vw;
     --col-mid: min(46vw, 56rem);
+    --col-right: max(30vw, 76vw - 56rem);
 
     /* Code and keys (the shortcuts, the embed code) in the site's second face;
        numbers in text use the text's own type with tabular-nums (Round 5) */
@@ -7625,7 +7627,9 @@ html#about body {
 
     /* The logo and the header's buttons share one row in the narrow column
        (light mode's sun added one): a mouse doesn't need the phone's 40px
-       targets, and the visitor's Join is its word, without the face */
+       targets, and the visitor's Join is its word, without the face. A
+       visitor's five make a row of their own under the logo where the column
+       is narrower still (Discover's 15rem, and 1024px wide) */
     #topbarUtils .header_icon { min-width: 2.125rem; }
     #mainGrid.login #nav-signin { margin-left: var(--pad1); padding: 0 0.625rem; }
     #mainGrid.login #nav-signin [class*="material-symbols-"] { display: none; }

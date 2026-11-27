@@ -68,7 +68,8 @@ var STORAGE = {
   ttAvatar:           "firetableTurntableAvatar", // your Turntable avatar, also kept at users/<uid>/ttAvatar
   ttLaptop:           "firetableTurntableLaptop", // your laptop's lid and stickers, also kept at users/<uid>/ttLaptop
   ttLayout:           "firetableTurntableLayout", // the theme's sidebars: "one" or "two"
-  rail:               "firetableRail",        // "1": the left column is folded into a toolbar on this device (js/rail.js). js/head.js reads it before this file loads
+  rail:               "firetableRail",        // the left column on this device, a person's choice (js/rail.js): "1" folded into a toolbar, "0" open; none: the width's default (folded on a smaller computer screen once the device has signed in). js/head.js reads it before this file loads
+  side:               "firetableSide",        // "1": Discover's right column is folded to a strip on this device (js/side-panel.js). js/head.js reads it before this file loads
   look:               "firetableLook",        // light mode: "light" or "auto" (none: the dark site). js/head.js reads it before this file loads"
   guestId:            "firetableGuestId"          // a visitor's random id, so the people list counts each browser once (js/audience.js)
 };

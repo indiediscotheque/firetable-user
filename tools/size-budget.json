@@ -2,6 +2,6 @@
   "//": "KB, gzipped, of what the home page loads first from this site: node tools/size-budget.mjs (--write sets today's sizes + 5%)",
   "total": 369,
   "scripts": 223,
-  "styles": 50,
+  "styles": 51,
   "other": 96
 }
