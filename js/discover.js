@@ -397,12 +397,16 @@ firetable.discover = (function () {
       .sort(function (x, y) { return String(y.rel || "").localeCompare(String(x.rel || "")); })
       .map(function (t) { return Object.assign({ type: 1 }, t); });
   }
-  /** A heading whose link opens New on one of its filters. */
-  function newHead(title, link, filter) {
-    return '<div class="d-head"><h2>' + esc(title) + '</h2><a href="' + hrefTo("discover/new") + '" data-newfilter="' + esc(filter) + '">' + esc(link) + "</a></div>";
+  /** A heading whose link opens New on one of its filters; `acts` (buttons for the whole list) after the link. */
+  function newHead(title, link, filter, acts) {
+    return '<div class="d-head"><h2>' + esc(title) + '</h2><a href="' + hrefTo("discover/new") + '" data-newfilter="' + esc(filter) + '">' + esc(link) + "</a>" + (acts || "") + "</div>";
   }
-  /** Home's lead: the week's most played new release, big, with who found it. */
-  function leadCard(t, list, count) {
+  /**
+   * Home's lead: the week's most played new release, big, with who found it.
+   * Its own ⋮ and save are on its cover (Round 5, the owner); the week's Play
+   * and Save all are in the heading above (viewHome).
+   */
+  function leadCard(t, list) {
     var u = firetable.utilities;
     var dj = t.plays && t.dj ? djShown(t.djid, t.dj) : null;
     var found = t.plays
@@ -414,12 +418,12 @@ firetable.discover = (function () {
       (t.rel ? '<span class="d-tag d-numtag">out ' + esc(u.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime())) + "</span>" : "");
     return '<div class="pvbar d-lead' + (isPlaying(list, 0) ? " previewing" : "") + '"' + rowAttrs(t, list, 0) + ">" +
       '<div class="pv-art discart d-leadart" style="background-image:url(' + esc(artOf(t)) + ')">' +
-      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, 0) + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button></div>" +
+      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, 0) + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button>" +
+      moreButton() + saveButton(t) + "</div>" +
       '<div class="d-leadtext"><p class="d-kicker">' + (t.plays ? "The week's most played" : "New this week") + "</p>" +
       '<h3 class="d-leadtitle"><span class="d-sheetlink" role="button" tabindex="0">' + esc(t.t) + "</span></h3>" +
       '<p class="d-leadartist">' + artistLinks(t.a) + "</p>" +
-      (tags ? '<div class="d-tags">' + tags + "</div>" : "") + found +
-      '<div class="d-leadacts">' + playAllButton(list, "Play the week's " + count) + moreButton() + saveButton(t) + "</div></div></div>";
+      (tags ? '<div class="d-tags">' + tags + "</div>" : "") + found + "</div></div>";
   }
   /** Home: the six DJs with the most plays here, as faces with names. */
   function topDjs() {
@@ -658,7 +662,8 @@ firetable.discover = (function () {
     var week = weekNew();
     if (week.length >= 6) {
       setList("home-week", "New this week", week);
-      h += '<section class="d-week">' + newHead("New this week", "All " + week.length + " from this week", "week") + leadCard(week[0], "home-week", week.length) +
+      h += '<section class="d-week">' + newHead("New this week", "All " + week.length + " from this week", "week",
+        '<span class="d-actions d-headacts">' + playAllButton("home-week", "Play the week's " + week.length) + "</span>") + leadCard(week[0], "home-week") +
         '<div class="ft-cards d-compact">' + week.slice(1, 7).map(function (t, i) { return card(t, "home-week", i + 1, newMeta(t)); }).join("") + "</div></section>";
     } else {
       h += "<section>" + newHead(newTitle, "All new releases", "days90") + newList(nt, "grid", "home-new", 18, true) + "</section>";
@@ -1872,7 +1877,6 @@ firetable.discover = (function () {
     });
     renderSide();
     if (c.length >= 3 && !store.get(CRATE_ASKED_KEY, false)) {
-      store.set(CRATE_ASKED_KEY, true);
       setTimeout(openKeepCrate, 600);
     }
   }
@@ -1893,7 +1897,7 @@ firetable.discover = (function () {
         '<div class="pl-tools"><button type="button" class="butt darkbutt small d-playall" data-list="crate">' + ms("play_arrow", true) + "<span>Play</span></button>" +
         '<button type="button" class="butt graybutt small pl-shuffle" data-list="crate">' + ms("shuffle") + "<span>Shuffle</span></button></div>" +
         '<ol class="pl-rows">' + rows + "</ol>"
-        : '<p class="d-fact">Tap ' + ms("playlist_add") + " on any song, or Save in the player, to keep it here. No account needed.</p>") +
+        : roomCard() + '<p class="d-fact">Tap ' + ms("playlist_add") + " on any song, or Save in the player, to keep it here. No account needed.</p>") +
       '<p class="d-fact">Join and this crate becomes your first playlist, ready to play for the room.</p>' +
       joinButtons() + "</div>";
   }
@@ -1910,29 +1914,32 @@ firetable.discover = (function () {
       '<p class="d-fact d-center">Already a member? <button type="button" class="linkButton d-login">Log in</button></p></div>';
   }
 
-  function openKeepCrate() {
-    var c = crate();
-    var dlg = document.getElementById("keepCrateBox");
-    if (!dlg) {
-      dlg = document.createElement("dialog");
-      dlg.id = "keepCrateBox";
-      dlg.setAttribute("aria-labelledby", "keepCrateTitle");
-      document.body.appendChild(dlg);
-      dlg.addEventListener("click", function (e) {
-        if (e.target.closest(".closeModal, .d-notnow")) dlg.close();
-      });
-    }
-    dlg.innerHTML = '<div class="modalBox"><div class="modalHeader"><h2 id="keepCrateTitle">Keep your crate</h2>' +
-      '<button type="button" class="butt graybutt iconbutt closeModal" title="Close" aria-label="Close">' + ms("close") + "</button></div>" +
-      '<div class="modalContent d-keep"><p>' + esc(firetable.utilities.pluralize(c.length, "song", "songs")) + " saved. Join and your crate becomes a playlist you can play for the room" +
-      (peopleHere() ? ", with " + peopleHere() + " people here right now" : "") + ".</p>" +
-      '<div class="d-keep-list">' + c.slice(-3).map(function (t) {
-        return '<div class="d-mini-row"><span class="d-mini-art" style="background-image:url(' + esc(artOf(t)) + ')"></span><span class="d-mini-text"><b>' + esc(t.t) + "</b><span>" + esc(t.a) + "</span></span></div>";
-      }).join("") + "</div>" +
-      "<p>Joining also opens the chat, the people in the room and the decks.</p>" + joinButtons() +
-      '<button type="button" class="butt graybutt d-notnow">Not now</button><p class="d-fact">Not now keeps the crate in this browser.</p></div></div>';
-    if (!dlg.open) dlg.showModal();
+  // ─── The room, in a visitor's empty crate column (Round 5) ──────────────
+  // js/discover-room.js: who's on the decks, how many are here, the song's
+  // fires, the guests and the radio, over the crate's note while the crate is
+  // empty; and the "Keep your crate" dialog. Loaded the first time either is
+  // wanted (js/lazy.js). If it can't load, the note and Join are as they were,
+  // and the dialog waits for the next save.
+  var roomSide = null;
+  function roomReady() {
+    return roomSide ? Promise.resolve(roomSide) : ftLazy.own("room-js", "js/discover-room.js").then(function () {
+      return (roomSide = roomSide || firetable.discoverRoom({ esc: esc, ms: ms, db: db, djShown: djShown, robotLink: robotLink, nameLink: nameLink,
+        peopleHere: peopleHere, deckList: deckList, liveTrack: liveTrack, crate: crate, artOf: artOf, joinButtons: joinButtons }));
+    });
   }
+  /**
+   * The room's card, for a visitor once the page knows they're signed out
+   * (users.js marks #mainGrid .login), so a member never sees it flash before
+   * their sign-in arrives, and never gets it. "" until the module is here.
+   */
+  function roomCard() {
+    if (!document.querySelector("#mainGrid.login")) return "";
+    if (!roomSide) roomReady().then(renderSide, quiet);
+    return roomSide ? roomSide.html() : "";
+  }
+  // Keep your crate, once a browser: marked asked as it opens, so if the module can't load the next save
+  // offers it again (and a fourth save while it loads doesn't open it twice)
+  function openKeepCrate() { roomReady().then(function (r) { if (!store.get(CRATE_ASKED_KEY, false)) { store.set(CRATE_ASKED_KEY, true); r.keepCrate(); } }, quiet); }
 
   /** On joining: the crate becomes a playlist (their DJ playlist if it's their first). */
   function importCrate() {
@@ -3651,8 +3658,7 @@ firetable.discover = (function () {
       // (Settings can turn the play buttons off: then the title is the stop)
       var main = play && stops.indexOf(play) !== -1 ? play : stops.filter(function (el) { return el.classList.contains("d-sheetlink"); })[0] || stops[0];
       stops.forEach(function (el) {
-        // "Play the week's 6" and "Save all" on the lead card are about the whole list, so they keep their stops
-        if (el !== main && !el.classList.contains("butt")) el.setAttribute("tabindex", "-1");
+        if (el !== main) el.setAttribute("tabindex", "-1");
       });
     }
   }
@@ -4348,7 +4354,9 @@ firetable.discover = (function () {
       window.addEventListener("hashchange", onAddress);
       // (SoundCloud's FINISH reaches onEnded through the widget's own binding, player.js)
       ftapi.events.on("loggedIn", function () { signedIn(true); });
-      ftapi.events.on("loggedOut", function () { signedIn(false); });
+      // (then the side again: the room's card waits for #mainGrid .login, which users.js's
+      // showLoginScreen sets in a handler bound after this one, in js/init.js)
+      ftapi.events.on("loggedOut", function () { signedIn(false); setTimeout(renderSide, 0); });
       // after room.js's own (bound later, in ui.init), which sets firetable.song: the bar showed the song before
       ftapi.events.on("newSong", function () { setTimeout(function () {
         mapMarks();

@@ -65,6 +65,82 @@ test("recentPlays.nameKey: the same song across uploads (as the hostbot's lib/re
   assert.equal(r.none, null);
 });
 
+test("discoverRoom: the room in a visitor's empty crate column, from discover.js's helpers (Round 5)", async () => {
+  const r = await run(async () => {
+    await ftLazy.own("room-js", "js/discover-room.js");
+    const esc = firetable.utilities.htmlEscape;
+    // songFires as the database would hand it over (discover.js passes its db(), which gives ftapi.db())
+    const fakeDb = (fires) => () => ({ ref: () => ({ on: (ev, fn) => fn({ val: () => fires }), off: () => {} }) });
+    const make = (o) => firetable.discoverRoom(Object.assign({
+      esc, ms: (name) => '<i class="material-symbols-outlined" aria-hidden="true">' + name + "</i>", db: fakeDb(null),
+      // "hid" hid their name from visitors
+      djShown: (uid, name) => (uid === "hid" ? null : { uid, name }),
+      robotLink: (dj) => '<a class="d-djlink" href="#dj-' + esc(dj.uid) + '"><span class="ft-avatar" role="img" aria-label="' + esc(dj.name) + '"></span></a>',
+      nameLink: (dj) => '<a class="d-namelink" href="#dj-' + esc(dj.uid) + '">' + esc(dj.name) + "</a>",
+      peopleHere: () => 5,
+      // the decks as discover.js's deckList gives them: the DJ playing first
+      deckList: () => [{ id: "b", name: "Bea" }, { id: "a", name: "Al" }, { id: "c", name: "Cy" }],
+      liveTrack: () => ({ started: 1000, djid: "b" }),
+      crate: () => [], artOf: () => "", joinButtons: () => ""
+    }, o));
+    // what a visitor reads: an icon's word (aria-hidden, or a picture with its own name) isn't read
+    const words = (n) => [...n.childNodes].map((c) => c.nodeType === 3 ? c.textContent
+      : c.getAttribute("aria-hidden") === "true" || c.getAttribute("role") === "img" ? "" : words(c)).join("");
+    const read = (o) => {
+      const box = document.createElement("div");
+      box.innerHTML = make(o).html();
+      const el = box.firstElementChild;
+      return {
+        el: el.tagName + "#" + el.id + "|" + el.getAttribute("aria-labelledby") + "|" + el.querySelector("h2").id,
+        head: words(el.querySelector("h2")).trim(),
+        label: (el.querySelector("h3") || {}).textContent || "",
+        rows: [...el.querySelectorAll(".pe-row")].map((row) => row.querySelector(".pe-name").textContent +
+          (row.querySelector(".pe-now") ? ":" + row.querySelector(".pe-now").getAttribute("aria-label") : row.querySelector(".pe-next") ? ":" + row.querySelector(".pe-next").textContent : "")).join(),
+        facts: [...el.querySelectorAll(".d-fact")].map((p) => words(p).replace(/\s+/g, " ").trim()).join("|"),
+        chat: !!el.querySelector(".d-chatline, #actualChat, button")
+      };
+    };
+    const take = (guests, radio) => firetable.audience.take({ guests, guestsLive: 0, guestCountries: [], guestsUnplaced: guests, stream: { listeners: radio, unplaced: radio, countries: [] } });
+    const out = {};
+    take(0, 0);
+    out.decks = read();
+    out.firesHere = read({ db: fakeDb({ started: 1000, count: 3 }) }).facts;
+    out.firesOne = read({ db: fakeDb({ started: 1000, count: 1 }) }).facts;
+    out.firesOther = read({ db: fakeDb({ started: 999, count: 5 }) }).facts;
+    out.hidden = read({ deckList: () => [{ id: "b", name: "Bea" }, { id: "hid", name: "Hidden" }, { id: "a", name: "Al" }] });
+    out.allHidden = read({ deckList: () => [{ id: "hid", name: "Hidden" }, { id: "hid", name: "Hidden" }] });
+    out.open = read({ deckList: () => [], peopleHere: () => 0 });
+    out.quiet = read({ liveTrack: () => null, db: fakeDb({ started: 1000, count: 3 }) });
+    take(2, 0); out.guests = read().facts;
+    take(0, 4); out.radio = read().facts;
+    take(1, 1); out.both = read().facts;
+    take(0, 0);
+    return out;
+  });
+  const members = "Members chat with the room and take a turn on the decks.";
+  assert.equal(r.decks.el, "SECTION#pv-onair|pv-onairHead|pv-onairHead");
+  assert.equal(r.decks.head, "In the room now · 5 here");
+  assert.equal(r.decks.label, "On the decks");
+  assert.equal(r.decks.rows, "Bea:Playing now,Al:Next,Cy", "deckList's order, the DJ playing first, then Next");
+  assert.equal(r.decks.facts, members, "no fires, guests or radio while there are none");
+  assert.equal(r.decks.chat, false, "no chat, and no button: art and text only");
+  assert.equal(r.firesHere, "3 fires on this song|" + members);
+  assert.equal(r.firesOne, "1 fire on this song|" + members);
+  assert.equal(r.firesOther, members, "a count kept for another song is left out");
+  assert.equal(r.hidden.rows, "Bea:Playing now,Al", "a hidden name isn't named (and Next was theirs)");
+  assert.equal(r.hidden.facts, "and 1 more|" + members);
+  assert.equal(r.allHidden.rows, "");
+  assert.equal(r.allHidden.facts, "2 DJs|" + members);
+  assert.equal(r.open.head, "In the room now");
+  assert.equal(r.open.label, "", "nobody on the decks: no list");
+  assert.equal(r.open.facts, "The decks are open.|" + members);
+  assert.equal(r.quiet.rows, "Bea,Al,Cy", "a quiet room: nobody is playing, nobody is next");
+  assert.equal(r.quiet.facts, members, "and no fires without a song");
+  assert.equal(r.guests, "Plus 2 guests.|" + members);
+  assert.equal(r.radio, "Plus 4 on the radio.|" + members);
+  assert.equal(r.both, "Plus 1 guest and 1 on the radio.|" + members);
+});
+
 test("htmlEscape escapes every markup character", async () => {
   assert.equal(await run(() => firetable.utilities.htmlEscape(`<a href="x" onclick='y'>&</a>`)),
     "&lt;a href=&quot;x&quot; onclick=&#39;y&#39;&gt;&amp;&lt;/a&gt;");
