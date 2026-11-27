@@ -405,7 +405,8 @@ firetable.discover = (function () {
    * Home's lead: the week's most played new release, big, with who found it.
    * The cover holds only its play button; the song's own ⋮ and save sit under
    * its words (.d-leadown), as on the covers under it, so nothing covers the
-   * art. The week's Play and Save all are in the heading above (viewHome).
+   * art. A full-width panel, tinted with the cover's colour (viewHome). The
+   * week's Play and Save all are in the heading above (viewHome).
    */
   function leadCard(t, list) {
     var u = firetable.utilities, dot = '<span aria-hidden="true">·</span>';
@@ -419,8 +420,7 @@ firetable.discover = (function () {
       t.rel ? "<span>Out " + esc(u.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime())) + "</span>" : ""].filter(Boolean).join(dot);
     return '<div class="pvbar d-lead' + (isPlaying(list, 0) ? " previewing" : "") + '"' + rowAttrs(t, list, 0) + ">" +
       '<div class="pv-art discart d-leadart" style="background-image:url(' + esc(artOf(t)) + ')">' +
-      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, 0) + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button></div>" +
-      '<div class="d-leadtext"><p class="d-kicker">' + (t.plays ? "Most played" : "Just out") + "</p>" +
+      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, 0) + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button></div>" + '<div class="d-leadtext"><p class="d-kicker">' + (t.plays ? "Most played" : "Just out") + "</p>" +
       '<h3 class="d-leadtitle"><span class="d-sheetlink" role="button" tabindex="0">' + esc(t.t) + "</span></h3>" +
       '<p class="d-leadartist">' + artistLinks(t.a) + "</p>" + (meta ? '<p class="d-leadmeta">' + meta + "</p>" : "") + found +
       '<div class="d-leadown">' + moreButton() + saveButton(t) + "</div></div></div>";
@@ -670,6 +670,8 @@ firetable.discover = (function () {
       h += '<section class="d-week">' + newHead("New this week", "See all " + week.length, "week",
         '<span class="d-actions d-headacts">' + playAllButton("home-week", "Play all", "Play the week's " + week.length) + "</span>") + leadCard(week[0], "home-week") +
         '<div class="ft-cards d-compact">' + week.slice(1, 7).map(function (t, i) { return card(t, "home-week", i + 1, newMeta(t)); }).join("") + "</div></section>";
+      // the lead's panel takes its cover's colour (the bar's, toneOf), once the page has it
+      toneOf(week[0]).then(function (c) { var el = c && document.querySelector('#dBrowse .d-lead[data-cid="' + CSS.escape(week[0].cid) + '"]'); if (el) el.style.setProperty("--lead-tone", c); });
     } else {
       h += "<section>" + newHead(newTitle, "All new releases", "days90") + newList(nt, "grid", "home-new", 18, true) + "</section>";
     }

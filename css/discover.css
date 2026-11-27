@@ -2555,13 +2555,23 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 /* ============================================
    Home: New this week leads (redesign step 2.4)
    ============================================ */
+/* The lead: a full-width panel tinted with its cover's colour (--lead-tone,
+   the player bar's own pick from the art, set once it's read); a grey cover,
+   or one that can't be read, keeps the plain raised panel. The tone fades
+   across from the cover's side, and the words on it are the bright ones. */
 #dBrowse .pvbar.d-lead {
     display: flex;
     align-items: center;
     gap: var(--space-4);
-    padding: 0;
-    background: none;
+    padding: var(--space-3);
+    border-radius: var(--radius-panel);
+    background: var(--color-bg-t2);
 }
+#dBrowse .pvbar.d-lead[style*="--lead-tone"] {
+    background: linear-gradient(100deg, color-mix(in srgb, var(--lead-tone) 34%, var(--color-bg-t1)), color-mix(in srgb, var(--lead-tone) 10%, var(--color-bg-t1)) 85%);
+}
+#dBrowse .d-lead[style*="--lead-tone"] .d-kicker { color: color-mix(in srgb, var(--lead-tone) 50%, var(--color-text-light)); }
+#dBrowse .d-lead[style*="--lead-tone"] :is(.d-leadartist, .d-leadmeta, .d-leadfound, .d-leadown .row-icon:not(.is-saved)) { color: var(--color-text); }
 #dBrowse .d-lead .d-leadart {
     position: relative;
     flex: none;
