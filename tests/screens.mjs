@@ -71,12 +71,6 @@ const liveTab = (id) => async (page) => {
   await page.evaluate((t) => firetable.nav.setMobileTab(t), id);
 };
 const hash = (h) => async (page) => go(page, h);
-// Fresh: Live's tab under the stage; on phones a tile on Discover's Home (Round 5), opening it under Discover
-const fresh = async (page) => {
-  if (page.viewportSize().width >= 640) return liveTab("mm-discover")(page);
-  await go(page, "#discover");
-  await page.locator('#dBrowse .d-tile[data-view="fresh"]').click();
-};
 async function go(page, h) {
   if (await page.evaluate(() => firetable.discover.address()) !== h) await page.evaluate((x) => { location.hash = x; }, h);
 }
@@ -94,13 +88,13 @@ const VIEWS = [
   // Live, under the stage and beside it (at 1024 and up chat and people are always there)
   { name: "live-playlists", run: liveTab("mm-playlists") },
   { name: "live-recent", run: liveTab("mm-history") },
-  { name: "live-fresh", run: fresh },
   { name: "live-cards", run: liveTab("mm-cards") },
   { name: "live-chat", run: liveTab("mmchat"), maxWidth: 1023 },
   { name: "live-people", run: liveTab("mmusrs"), maxWidth: 1023 },
   // Discover
   { name: "d-home", run: hash("#discover") },
   { name: "d-new", run: hash("#discover/new") },
+  { name: "d-fresh", run: hash("#discover/fresh") },
   { name: "d-charts", run: hash("#discover/charts") },
   { name: "d-genres", run: genresAs("grid") },
   { name: "d-genres-map", run: genresAs("map"), after: (role, page) => genresAs("grid")(page) },

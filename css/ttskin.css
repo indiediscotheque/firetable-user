@@ -69,7 +69,7 @@ html body.tt-skin #mainGrid > #stage { grid-column: 1; grid-row: 2 / 4; }
 html body.tt-skin #mainGrid > #tt-pane { grid-column: 2; grid-row: 2 / 4; }
 /* a page of the Room tab that's another panel (Recently played, Fresh, Cards): the pane is only its header;
    the others (People here) are the pane, down to the bottom */
-html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { grid-row: 2; }
+html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { grid-row: 2; }
 
 /* the panel's pages: one at a time, by the tab (and the Room tab's page). [data-tt-tab]
    (always there in the theme) makes these outweigh the room's own rules that show a
@@ -83,7 +83,6 @@ html body.tt-skin[data-tt-tab] #mainGrid #queuebox,
 html body.tt-skin[data-tt-tab] #mainGrid #actualChat,
 html body.tt-skin[data-tt-tab] #mainGrid #thehistoryWrap,
 html body.tt-skin[data-tt-tab] #mainGrid #cardsWrap,
-html body.tt-skin[data-tt-tab] #mainGrid #discover,
 html body.tt-skin[data-tt-tab] #mainGrid #tt-pane,
 html body.tt-skin[data-tt-tab] #mainGrid #tt-qhead,
 html body.tt-skin[data-tt-tab] #mainGrid .tt-guestNote { display: none; }
@@ -92,14 +91,12 @@ html body.tt-skin #mainGrid #queuebox,
 html body.tt-skin #mainGrid #actualChat,
 html body.tt-skin #mainGrid .tt-guestNote { grid-column: 2; grid-row: 2 / 4; }
 html body.tt-skin #mainGrid #thehistoryWrap,
-html body.tt-skin #mainGrid #cardsWrap,
-html body.tt-skin #mainGrid #discover { grid-column: 2; grid-row: 3; }
+html body.tt-skin #mainGrid #cardsWrap { grid-column: 2; grid-row: 3; }
 
 html body.tt-skin[data-tt-tab="queue"] #mainGrid #queuebox,
 html body.tt-skin[data-tt-tab="chat"] #mainGrid #actualChat,
 html body.tt-skin[data-tt-tab="room"] #mainGrid #tt-pane,
-html body.tt-skin[data-tt-tab="room"][data-tt-sub="recent"] #mainGrid #thehistoryWrap,
-html body.tt-skin[data-tt-tab="room"][data-tt-sub="fresh"] #mainGrid #discover { display: flex; }
+html body.tt-skin[data-tt-tab="room"][data-tt-sub="recent"] #mainGrid #thehistoryWrap { display: flex; }
 html body.tt-skin[data-tt-tab="room"][data-tt-sub="cards"] #mainGrid #cardsWrap { display: block; }
 /* visitors: no playlists or chat to show (the room's panels aren't in the page) */
 html body.tt-skin[data-tt-tab="queue"] #mainGrid:is(.login, .pre-auth) #tt-guest,
@@ -115,7 +112,7 @@ html body.tt-skin[data-tt-tab="chat"] #mainGrid:is(.login, .pre-auth) #tt-guest 
     html body.tt-skin[data-tt-layout="two"] #mainGrid > #topbar { grid-column: 2; }
     html body.tt-skin[data-tt-layout="two"] #mainGrid > #stage { grid-column: 2; }
     html body.tt-skin[data-tt-layout="two"] #mainGrid > :is(#tt-tabs, #tt-pane),
-    html body.tt-skin[data-tt-layout="two"] #mainGrid :is(#actualChat, #thehistoryWrap, #cardsWrap, #discover, #tt-guest) { grid-column: 3; }
+    html body.tt-skin[data-tt-layout="two"] #mainGrid :is(#actualChat, #thehistoryWrap, #cardsWrap, #tt-guest) { grid-column: 3; }
     html body.tt-skin[data-tt-layout="two"] #mainGrid #queuebox { display: flex; grid-column: 1; grid-row: 2 / 4; border-left: 0; border-right: 1px solid #111; }
     html body.tt-skin[data-tt-layout="two"] #mainGrid:is(.login, .pre-auth) #tt-guestQ { display: flex; grid-column: 1; grid-row: 2 / 4; }
     html body.tt-skin[data-tt-layout="two"] #tt-tabs { grid-template-columns: repeat(2, 1fr); }
@@ -138,7 +135,7 @@ body.tt-skin #tt-layout { display: grid; place-items: center; flex: none; color:
 body.tt-skin #tt-layout:hover { color: #fff; }
 
 /* the side panel's look */
-html body.tt-skin #mainGrid :is(#queuebox, #actualChat, #thehistoryWrap, #cardsWrap, #discover, #tt-pane, .tt-guestNote) {
+html body.tt-skin #mainGrid :is(#queuebox, #actualChat, #thehistoryWrap, #cardsWrap, #tt-pane, .tt-guestNote) {
     background: var(--tt-panel);
     color: var(--tt-text);
     border-left: 1px solid #111;
@@ -284,6 +281,7 @@ body.tt-skin #tt-pane { overflow-y: auto; scrollbar-width: thin; }
     color: var(--tt-text);
     font: 500 0.85rem/1 var(--tt-font);
     text-align: left;
+    text-decoration: none; /* Fresh, in Discover, is a link */
     cursor: pointer;
 }
 .tt-subitem span { flex: 1; }
@@ -1255,11 +1253,11 @@ body.has-beat #tt-room.tt-dance .tt-seat:not(.tt-fired) .tt-head { animation-dur
     html body.tt-skin #mainGrid > #stage { grid-column: 1; grid-row: 2; }
     html body.tt-skin #mainGrid > #tt-tabs { grid-column: 1; grid-row: 3; }
     html body.tt-skin #mainGrid > #tt-pane,
-    html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { grid-column: 1; grid-row: 4; }
-    html body.tt-skin #mainGrid :is(#queuebox, #actualChat, #thehistoryWrap, #cardsWrap, #discover, .tt-guestNote) { grid-column: 1; grid-row: 4; }
+    html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { grid-column: 1; grid-row: 4; }
+    html body.tt-skin #mainGrid :is(#queuebox, #actualChat, #thehistoryWrap, #cardsWrap, .tt-guestNote) { grid-column: 1; grid-row: 4; }
     body.tt-skin #tt-layout { display: none; }
-    html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { align-self: start; z-index: 1; }
-    html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="fresh"], [data-tt-sub="cards"]) #mainGrid :is(#thehistoryWrap, #cardsWrap, #discover) { margin-top: 2.6rem; }
+    html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="cards"]) #mainGrid > #tt-pane { align-self: start; z-index: 1; }
+    html body.tt-skin[data-tt-tab="room"]:is([data-tt-sub="recent"], [data-tt-sub="cards"]) #mainGrid :is(#thehistoryWrap, #cardsWrap) { margin-top: 2.6rem; }
     body.tt-skin #tt-brand .tt-socials { display: none; }
     body.tt-skin #tt-exit span { display: none; }
     .tt-lapBody { grid-template-columns: 1fr; }

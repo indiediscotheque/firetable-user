@@ -14,7 +14,7 @@
      shortcuts and Open the column), or for visitors light mode, about and Join.
    On a wide middle (html.rail-desk, js/rail.js), Live's middle becomes a
    desk: the stage across the top, your playlist down the left and the
-   room's Recent, Fresh or Cards beside it.
+   room's Recent or Cards beside it.
    Who's here, or search, opens the column over the middle for a moment
    ("peek", html.rail-peek: Escape, a click outside or the button, a
    collapse button while it shows, puts it away). Only loaded once someone folds the column (js/lazy.js), or with the
@@ -50,10 +50,9 @@
     :root.rail.side-shut body.ft-discover:not(.tt-skin) #mainGrid {
         grid-template-columns: var(--rail-w) minmax(0, 1fr) 3.5rem;
     }
-    /* A visitor's Live: the stage and the welcome keep their width in the
-       middle, so the room goes to Fresh beside them, for more of its songs */
+    /* A visitor's Live: the stage and the welcome take the middle */
     :root.rail body:not(.tt-skin):not(.ft-discover) #mainGrid.login {
-        grid-template-columns: var(--rail-w) var(--col-mid) minmax(0, 1fr);
+        grid-template-columns: var(--rail-w) minmax(0, 1fr);
     }
 
     /* ── The middle: a stage that keeps its shape ──
@@ -66,7 +65,7 @@
 
     /* ── The desk: Live's middle when it's wide (js/rail.js: 66rem and up) ──
        The stage across the top; under it your playlist down the left, whole
-       height, and the room's Recent, Fresh or Cards beside it, under their tabs.
+       height, and the room's Recent or Cards beside it, under their tabs.
        Playlists is always there, so its tab steps aside (with it picked, Recent
        is the other side). Each side is about the width the middle has with the
        column open, the width its rows are made for. */

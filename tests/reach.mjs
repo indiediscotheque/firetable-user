@@ -203,10 +203,11 @@ const FEATURES = [
   // Discover's Recent plays links members to every play, in Live's Recent (where the mods' tools for a past play are)
   { row: "RE-01", name: "Recent plays (Discover's Recent plays: See every play in Live)", who: IN, mode: "discover", via: [...pages("recent"), '#dBrowse a[data-live="history"]'],
     target: "#thehistory .pvbar", hash: "#live" },
-  { row: "RE-04", name: "Fresh", who: IN, widths: WIDE, via: ["#mm-discover"], target: "#thediscovers" },
-  { row: "RE-04", name: "Fresh (visitors: beside the welcome)", who: ["visitor"], widths: WIDE, target: "#thediscovers" },
-  // phones: Fresh is a tile on Discover's Home (Round 5), opening Live's Fresh with the screen to itself
-  { row: "RE-04", name: "Fresh (phone: its tile on Discover's Home)", who: ALL, widths: PHONE, mode: "discover", via: ['#dBrowse .d-tile[data-view="fresh"]'], target: "#thediscovers", hash: "#live" },
+  // Fresh is Discover's page (November 27, 2026): its tile or its place in Discover's row of pages, Home's
+  // shelf, and a visitor's welcome on a phone ("hear what's fresh here")
+  { row: "RE-04", name: "Fresh (Discover's page)", who: ALL, mode: "discover", via: pages("fresh"), hash: "#discover/fresh", target: "#dBrowse .ft-cards .pvbar" },
+  { row: "RE-04", name: "Fresh: Home's shelf, and All of Fresh", who: ALL, mode: "discover", via: ['#dBrowse .d-head a[href$="#discover/fresh"]'], hash: "#discover/fresh", target: "#dBrowse .ft-cards .pvbar" },
+  { row: "RE-04", name: "Fresh from a visitor's welcome (phone)", who: ["visitor"], widths: PHONE, via: ["#minidiscover"], hash: "#discover/fresh", target: "#dBrowse .ft-cards .pvbar" },
   { row: "RE-05", name: "Cards", who: IN, via: ["#mm-cards"], target: "#cardsMain" },
   // visitors in Live: tabs showing what joining opens, and the room's recent plays
   { row: "DI-16", name: "Live for visitors: Join, and what joining opens", who: ["visitor"], target: "#dLocked [data-locked]" },
@@ -324,10 +325,10 @@ async function reset(page, mode, start) {
   const want = mode === "discover" ? "#discover" : "#live";
   if (await page.evaluate(() => firetable.discover.address()) !== want) await page.evaluate((h) => { location.hash = h; }, want);
   await sleep(250);
-  // phones: Live's own tabs, out of the Library tab and Fresh (each has the screen to itself)
+  // phones: Live's own tabs, out of the Library tab (it has the screen to itself)
   const tapped = mode !== "discover" && await page.evaluate(() => {
     const b = document.querySelector('#nav-tabs [data-tab="live"]');
-    if (!b || !b.offsetParent || !/\bnt-(library|fresh)\b/.test(document.body.className)) return false;
+    if (!b || !b.offsetParent || !document.body.classList.contains("nt-library")) return false;
     b.click();
     return true;
   });

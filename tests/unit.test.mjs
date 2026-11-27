@@ -65,6 +65,58 @@ test("recentPlays.nameKey: the same song across uploads (as the hostbot's lib/re
   assert.equal(r.none, null);
 });
 
+test("discoverFresh: Fresh, Discover's page of first plays here (js/discover-fresh.js): loading, nothing yet, then newest first, each play once", async () => {
+  const r = await run(async () => {
+    await ftLazy.own("fresh-js", "js/discover-fresh.js");
+    // the feed, answered when the test says (the real one needs the database)
+    let answer;
+    const wasWatch = ftapi.watchFeed, asked = [];
+    ftapi.watchFeed = (name) => { asked.push(name); return new Promise((res) => { answer = res; }); };
+    const lists = {}, out = {};
+    let renders = 0;
+    const f = firetable.discoverFresh({
+      card: (t, list, i, m) => "<i data-list=\"" + list + "\" data-i=\"" + i + "\">" + t.a + " - " + t.t + " · " + m.who + (m.dj ? " +robot" : "") + "</i>",
+      loading: () => "<b>loading</b>", emptyNote: (t) => "<p>" + t + "</p>",
+      head: (t, l, to) => "<h2>" + t + "</h2><a href=\"#" + to + "\">" + l + "</a>",
+      djShown: (uid, name) => (uid === "hid" ? null : { uid, name }), setList: (n, l, ts) => { lists[n] = [l, ts.length]; },
+      state: () => ({ mode: "discover", view: "fresh" }), render: () => { renders++; }
+    });
+    const tick = () => new Promise((res) => requestAnimationFrame(() => setTimeout(res, 0)));
+    out.loading = f.page();
+    out.loadingShelf = f.shelf();
+    out.asked = asked.slice();
+    answer();
+    await tick();
+    out.rendersOnReady = renders;
+    out.empty = f.page();
+    out.emptyShelf = f.shelf();
+    // the bot's newMusic rows as they arrive, oldest first; a repeat and a row with no song
+    [["k1", "Ann", "dj1", "First Band", "Old Song"], ["k2", "Hid", "hid", "Second Band", "<b>Tagged</b> Song"], ["k3", "Cy", "dj3", "Third Band", "New Song"],
+      ["k2", "Hid", "hid", "Second Band", "Tagged Song"], ["k4", "Nobody", "dj4", "", ""]].forEach(([histID, dj, djid, artist, title], i) =>
+      ftapi.events.emit("newProduce", { histID, dj, djid, artist, title, cid: histID === "k4" ? "" : "cid" + histID, type: 1, when: 1764000000000 + i * 60000 }));
+    await tick();
+    out.rendersOnArrival = renders;
+    out.tracks = f.tracks().map((t) => [t.cid, t.a, t.t, t.dj]);
+    out.page = f.page();
+    out.shelf = f.shelf();
+    out.lists = lists;
+    ftapi.watchFeed = wasWatch;
+    return out;
+  });
+  assert.deepEqual(r.asked, ["fresh"], "the feed is asked for once, when Fresh is first drawn");
+  assert.match(r.loading, /<h2>Fresh<\/h2>.*<b>loading<\/b>/);
+  assert.match(r.loadingShelf, /<h2>Fresh in the room<\/h2><a href="#discover\/fresh">All of Fresh<\/a>.*<b>loading<\/b><\/section>$/);
+  assert.equal(r.rendersOnReady, 1, "the page is drawn again once the feed is in");
+  assert.match(r.empty, /<p>Nothing new yet\. Songs show here the first time the room plays them\.<\/p>$/);
+  assert.equal(r.emptyShelf, "", "no shelf on Home when there's nothing fresh");
+  assert.equal(r.rendersOnArrival, 2, "a run of new plays draws once");
+  // (a play that arrives again counts once, where it arrived last; its tags come stripped of markup)
+  assert.deepEqual(r.tracks, [["cidk2", "Second Band", "Tagged Song", "Hid"], ["cidk3", "Third Band", "New Song", "Cy"], ["cidk1", "First Band", "Old Song", "Ann"]]);
+  assert.match(r.page, /<i data-list="fresh" data-i="0">Second Band - Tagged Song · <\/i><i data-list="fresh" data-i="1">Third Band - New Song · Cy \+robot<\/i>/, "a DJ who hides their name shows as nobody");
+  assert.match(r.shelf, /^<section><h2>Fresh in the room<\/h2>.*<div class="ft-cards d-compact"><i data-list="home-fresh" data-i="0">/);
+  assert.deepEqual(r.lists, { fresh: ["Fresh", 3], "home-fresh": ["Fresh", 3] });
+});
+
 test("discoverRoom: the room in a visitor's empty crate column, from discover.js's helpers (Round 5)", async () => {
   const r = await run(async () => {
     await ftLazy.own("room-js", "js/discover-room.js");
@@ -1142,10 +1194,10 @@ test("Konami code: heard in the chat box too, and its \"b\" and \"a\" don't stay
 });
 
 // ─── The phone's tab bar (js/discover-tabs.js) ──────────────────────────────
-test("the phone's tab bar lights the tab for where you are: Discover, Live, Library (a member's playlists, a visitor's crate), Fresh under Discover", async () => {
+test("the phone's tab bar lights the tab for where you are: Discover, Live, Library (a member's playlists, a visitor's crate)", async () => {
   const r = await run(() => {
-    // a member in Live on Chat, unless said otherwise; a visitor's Live is the stage over the welcome (or Fresh)
-    const at = (s) => firetable.discoverTabs.lit(Object.assign({ mode: "live", member: true, crate: false, view: "playlists", section: "chat", welcome: false, theme: false }, s));
+    // a member in Live on Chat, unless said otherwise; a visitor's Live is the stage over the welcome
+    const at = (s) => firetable.discoverTabs.lit(Object.assign({ mode: "live", member: true, crate: false, view: "playlists", section: "chat", welcome: false }, s));
     const visitor = (s) => at(Object.assign({ member: false, welcome: true }, s));
     return {
       discover: at({ mode: "discover" }),
@@ -1157,21 +1209,14 @@ test("the phone's tab bar lights the tab for where you are: Discover, Live, Libr
       library: at({ section: "view" }),
       recent: at({ section: "view", view: "history" }),
       cards: at({ section: "view", view: "cards" }),
-      fresh: at({ section: "view", view: "discover" }),
-      freshUnderChat: at({ view: "discover" }),
       visitorLive: visitor({}),
       visitorWelcome: visitor({ section: "view" }),
-      visitorFresh: visitor({ view: "discover" }),
-      themeFresh: at({ section: "view", view: "discover", theme: true }),
-      themeQueue: at({ section: "view", theme: true }),
       liveCrate: visitor({ crate: true })
     };
   });
   assert.deepEqual(r, {
     discover: "discover", visitorCrate: "library", visitorDiscover: "discover", memberSheet: "discover",
     chat: "live", people: "live", library: "library", recent: "live", cards: "live",
-    fresh: "discover", freshUnderChat: "live",
-    visitorLive: "live", visitorWelcome: "live", visitorFresh: "discover",
-    themeFresh: "live", themeQueue: "library", liveCrate: "live"
+    visitorLive: "live", visitorWelcome: "live", liveCrate: "live"
   });
 });
