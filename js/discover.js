@@ -404,25 +404,26 @@ firetable.discover = (function () {
   }
   /**
    * Home's lead: the week's most played new release, big, with who found it.
-   * Its own ⋮ and save are on its cover (Round 5, the owner); a full-width
-   * panel, tinted with the cover's colour (viewHome). The week's Play and
+   * As tall as its cover: the kicker at the top with its own ⋮ and save in the
+   * corner (.d-leadtop), the song in the middle (.d-leadmid), who first played
+   * it at the bottom, as on the cards; a panel tinted with the cover's colour. The week's Play and
    * Save all are in the heading above (viewHome).
    */
   function leadCard(t, list) {
     var u = firetable.utilities, dot = '<span aria-hidden="true">·</span>';
-    var dj = t.plays && t.dj ? djShown(t.djid, t.dj) : null, on = t.first ? " on " + esc(u.shortDate(t.first)) : "";
-    var found = t.plays
-      ? '<p class="d-leadfound">' + (dj ? robotLink(dj) + "<span>Found by " + nameLink(dj) + on + "</span>" : "<span>First played here" + on + "</span>") +
-        dot + "<span>" + esc(u.pluralize(t.plays, "play", "plays")) + (t.plays === 1 ? " so far" : "") + "</span></p>"
-      : '<p class="d-leadfound"><span class="d-befirst">Be the first</span>' + dot + "<span>nobody has played it here yet</span></p>";
+    // who first played it here (their robot), when, and its plays: the cards' short form, one line on a phone
+    var dj = t.plays && t.dj ? djShown(t.djid, t.dj) : null;
+    var found = '<p class="d-leadfound">' + (t.plays ? robotLink(dj) + (t.first ? "<span>first " + esc(u.shortDate(t.first)) + "</span>" + dot : "") +
+      "<span>" + esc(u.pluralize(t.plays, "play", "plays")) + "</span>" : '<span class="d-befirst">Be the first</span>') + "</p>";
     // genre, length and release day as one quiet line, not three pills
     var meta = [t.g ? '<a href="' + hrefTo("discover/genres/" + genreSlug(t.g)) + '">' + esc(t.g) + "</a>" : "", t.dur ? "<span>" + esc(clock(t.dur)) + "</span>" : "",
       t.rel ? "<span>Out " + esc(u.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime())) + "</span>" : ""].filter(Boolean).join(dot);
     return '<div class="pvbar d-lead' + (isPlaying(list, 0) ? " previewing" : "") + '"' + rowAttrs(t, list, 0) + ">" +
       '<div class="pv-art discart d-leadart" style="background-image:url(' + esc(artOf(t)) + ')">' +
-      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, 0) + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button>" + moreButton() + saveButton(t) + "</div>" + '<div class="d-leadtext"><p class="d-kicker">' + (t.plays ? "Most played" : "Just out") + "</p>" +
-      '<h3 class="d-leadtitle"><span class="d-sheetlink" role="button" tabindex="0">' + esc(t.t) + "</span></h3>" +
-      '<p class="d-leadartist">' + artistLinks(t.a) + "</p>" + (meta ? '<p class="d-leadmeta">' + meta + "</p>" : "") + found + "</div></div>";
+      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, 0) + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button></div>" + '<div class="d-leadtext"><div class="d-leadtop"><p class="d-kicker">' + (t.plays ? "Most played" : "Just out") + "</p>" +
+      '<span class="d-leadown">' + moreButton() + saveButton(t) + "</span></div>" +
+      '<div class="d-leadmid"><h3 class="d-leadtitle"><span class="d-sheetlink" role="button" tabindex="0">' + esc(t.t) + "</span></h3>" +
+      '<p class="d-leadartist">' + artistLinks(t.a) + "</p>" + (meta ? '<p class="d-leadmeta">' + meta + "</p>" : "") + "</div>" + found + "</div></div>";
   }
   /** Home: the six DJs with the most plays here, as faces with names. */
   function topDjs() {

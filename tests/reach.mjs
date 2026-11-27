@@ -230,10 +230,10 @@ const FEATURES = [
   { row: "DI-27", name: "The full-screen player", who: ALL, widths: WIDE, mode: "discover", via: ["#fullscreenBtn"], target: "#pv-full" },
   { row: "DI-27", name: "The full-screen player (phone: tap the bar)", who: ALL, widths: PHONE, mode: "discover", via: full, target: "#pv-full" },
   { row: "DI-19", name: "A song's ⋮ menu", who: ALL, mode: "discover", via: ["#dBrowse .pvbar .d-more"], target: "#dMenu" },
-  // Home's lead song keeps its own ⋮ and save on its cover, at every width; the week's Play and Save all are
-  // New this week's heading's (Round 5, November 25, 2026)
-  { row: "DI-19", name: "Home: the lead song's ⋮ (on its cover)", who: ALL, mode: "discover", via: ["#dBrowse .d-lead .d-leadart .d-more"], target: "#dMenu" },
-  { row: "DI-01", name: "Home: the lead song's save (on its cover)", who: ALL, mode: "discover", target: "#dBrowse .d-lead .d-leadart .histeal" },
+  // Home's lead song has its own ⋮ and save at its panel's top right, in its kicker's row (November 27, 2026);
+  // the week's Play all and Save all are New this week's heading's
+  { row: "DI-19", name: "Home: the lead song's ⋮ (its top right)", who: ALL, mode: "discover", via: ["#dBrowse .d-lead .d-leadown .d-more"], target: "#dMenu" },
+  { row: "DI-01", name: "Home: the lead song's save (its top right)", who: ALL, mode: "discover", target: "#dBrowse .d-lead .d-leadown .histeal" },
   { row: "DI-18", name: "Home: Play all (New this week's heading)", who: ALL, mode: "discover", target: "#dBrowse .d-week .d-head .d-playall" },
   { row: "DI-18", name: "Home: Save all (New this week's heading)", who: ALL, mode: "discover", target: "#dBrowse .d-week .d-head .d-saveall" },
   // a cover's ⋮ and save: beside the song's name, as on Fresh's cards, at every width (November 27, 2026)

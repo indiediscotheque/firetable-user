@@ -2506,7 +2506,7 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
    across from the cover's side, and the words on it are the bright ones. */
 #dBrowse .pvbar.d-lead {
     display: flex;
-    align-items: center;
+    align-items: stretch; /* the words as tall as the cover */
     gap: var(--space-4);
     padding: var(--space-3);
     border-radius: var(--radius-panel);
@@ -2516,9 +2516,9 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     background: linear-gradient(100deg, color-mix(in srgb, var(--lead-tone) 34%, var(--color-bg-t1)), color-mix(in srgb, var(--lead-tone) 10%, var(--color-bg-t1)) 85%);
 }
 #dBrowse .d-lead[style*="--lead-tone"] .d-kicker { color: color-mix(in srgb, var(--lead-tone) 50%, var(--color-text-light)); }
-#dBrowse .d-lead[style*="--lead-tone"] :is(.d-leadartist, .d-leadmeta, .d-leadfound) { color: var(--color-text); }
+#dBrowse .d-lead[style*="--lead-tone"] :is(.d-leadartist, .d-leadmeta, .d-leadfound, .d-leadown .row-icon:not(.is-saved)) { color: var(--color-text); }
 #dBrowse .d-lead .d-leadart {
-    position: relative; /* its ⋮ and save, over its corner */
+    position: relative;
     flex: none;
     width: clamp(8.5rem, 28vw, 13rem); /* 208px at 1440 */
     aspect-ratio: 1;
@@ -2527,11 +2527,23 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
     background-size: cover;
     background-position: center;
 }
+/* The words, as tall as the cover: the kicker and the song's ⋮ and save at
+   the top, the song in the middle, who first played it at the bottom (level
+   with the cover's foot, as on the cards' last line) */
 .d-leadtext {
     display: flex;
+    flex: 1 1 auto; /* to the panel's right edge, where its ⋮ and save are */
     flex-direction: column;
-    gap: var(--space-1);
+    justify-content: space-between;
+    gap: var(--space-2);
     min-width: 0;
+}
+.d-leadmid {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-1);
 }
 .d-kicker {
     margin: 0;
@@ -2572,34 +2584,41 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 .d-leadfound { gap: var(--space-1) 0.35rem; color: var(--color-text-subtle); }
 #dBrowse .d-leadfound .ft-avatar { width: 1.25rem; height: 1.25rem; flex: none; }
 #dBrowse .d-lead .d-leadart .previewicon { width: 3.25rem; height: 3.25rem; font-size: 2rem; }
-/* The song's own ⋮ and save over its cover's corner, at every width and
-   always shown: one big cover, nothing to point at first (Round 5, the
-   owner). The covers under it have theirs beside the song's name, as Fresh's
-   do. The week's Play and Save all are the heading's (.d-headacts, below). */
-#dBrowse .d-leadart .row-icon {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    width: 2rem;
-    height: 2rem;
-    margin: 0;
-    border-radius: 50%;
-    background: rgb(0 0 0 / 0.7); /* dark enough for the saved gold to read 3:1 over a white cover */
-    color: #fff;
-    font-size: 1.15rem;
+/* The song's own ⋮ and save in the panel's top right corner, the panel's
+   padding from its edges, in the kicker's row with their feet on its line
+   (November 27, 2026, the owner): the cover keeps only its play button.
+   Plain icons in the icons' grey (a saved song keeps its accent). On a touch
+   screen each is a tap's size, its area hanging from it. The week's Play and Save all are
+   the heading's (.d-headacts, below). */
+.d-leadtop {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-2);
 }
-#dBrowse .d-leadart .d-more { right: 3.25rem; }
-#dBrowse .d-leadart .row-icon.is-saved { color: var(--color-accent); }
-/* A cover's disc stays dark in light mode, so a saved mark on one keeps the
-   dark look's gold there: light mode's bronze would vanish into it. */
-:root[data-look="light"] #dBrowse .d-leadart .row-icon.is-saved { color: #cc9933; }
-/* a touch screen: each a tap's size (44px), up and out from its disc, so
-   neither reaches the play button in the middle of a phone's 136px cover */
+.d-leadown { display: flex; flex: none; gap: 1.25rem; }
+#dBrowse .d-leadown .row-icon {
+    position: relative; /* its tap area (below) hangs from it */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem; /* the glyph's own box: the corner's spacing is the panel's padding */
+    height: 1.35rem;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--color-icon);
+    font-size: 1.35rem;
+    line-height: 1;
+}
+#dBrowse .d-leadown .row-icon.is-saved { color: var(--color-accent); }
 @media (pointer: coarse) {
-    #dBrowse .d-leadart .row-icon::before {
+    #dBrowse .d-leadown .row-icon::before {
         content: "";
         position: absolute;
-        inset: -0.75rem -0.375rem 0;
+        inset: -0.7rem -0.6rem; /* 41 by 44px, inside the panel's padding and the gap between them */
     }
 }
 /* New this week's heading: its link, then Play all and Save all, compact;
@@ -2611,7 +2630,7 @@ body.pv-full-closing #mainGrid #stage { opacity: 0; transition: opacity 0.25s ea
 #dBrowse .d-headacts .butt i { font-size: 1.1rem; }
 @media only screen and (max-width: 639px) {
     #dBrowse .d-week > .d-head .d-headacts { order: 3; flex: 1 0 100%; }
-    #dBrowse .pvbar.d-lead { align-items: flex-start; gap: var(--space-3); }
+    #dBrowse .pvbar.d-lead { gap: var(--space-3); }
     .d-leadtitle { font-size: var(--fs-h3); }
 }
 
