@@ -4785,9 +4785,9 @@ try {
     await hPage.waitForFunction(() => document.getElementById("modeTabs") && /smoke tests/.test(document.getElementById("themePillText").textContent), null, { timeout: 30000 }).catch(() => {});
     await sleep(800);
     // a computer: the left column reads logo and icons, the switch, then the theme (Discover);
-    // Tab goes logo, theme, switch, icons. Discover's column is 15rem (Round 5): a visitor's five
-    // icons make a row of their own under the logo there, all inside it, and the search and the
-    // views start under the header, whatever its height
+    // Tab goes logo, theme, switch, icons. Discover's column is 15rem (Round 5), a visitor's 18rem:
+    // their four icons (search is the column's own box, so not in the header here) beside the logo,
+    // all inside it, and the search and the views start under the header, whatever its height
     const column = await hPage.evaluate(() => {
       const r = (id) => document.getElementById(id).getBoundingClientRect();
       const head = r("topbar"), logo = r("roomlogo"), mode = r("modeTabs"), theme = r("themeSlot"), utils = r("topbarUtils");
@@ -4803,9 +4803,9 @@ try {
         dom: ids.every((el, i) => !i || !!(ids[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)) };
     });
     column.tab = await tabFrom(hPage);
-    check(column.home === "topbar" && column.width === 240 && column.rows && column.inside && column.under && column.dom && column.tab === "discover,live,dSearchOpen" &&
+    check(column.home === "topbar" && column.width === 288 && column.icons === "beside the logo" && column.rows && column.inside && column.under && column.dom && column.tab === "discover,live,nav-look" &&
       column.section === 'rgba(0, 0, 0, 0)|0px|none|column|rgba(0, 0, 0, 0)|"nightlife"',
-      "a computer, in Discover: the left column (15rem) has the logo and its icons, then Discover | Live, then the theme (a section as in Live's column: a heading over it, no pill), all inside it, and the search and views under it; Tab goes from the theme to the switch, then the icons (" + JSON.stringify(column) + ")");
+      "a computer, in Discover: a visitor's left column (18rem) has the logo and its icons in one row, then Discover | Live, then the theme (a section as in Live's column: a heading over it, no pill), all inside it, and the search and views under it; Tab goes from the theme to the switch, then the icons (" + JSON.stringify(column) + ")");
 
     // in Live, with a member's room panels in, the theme is the left column's first section (the owner,
     // November 27, 2026; it had been on the stage, over the song): under the counts, over the DJ waitlist,

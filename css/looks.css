@@ -7680,8 +7680,9 @@ html#about body {
     /* The logo and the header's buttons share one row in the narrow column
        (light mode's sun added one): a mouse doesn't need the phone's 40px
        targets, and the visitor's Join is its word, without the face. A
-       visitor's five make a row of their own under the logo where the column
-       is narrower still (Discover's 15rem, and 1024px wide) */
+       visitor's column is wide enough for its five and the logo in one row
+       (below, and css/discover.css): a row of their own under the logo read
+       as a mistake */
     #topbarUtils .header_icon { min-width: 2.125rem; }
     #mainGrid.login #nav-signin { margin-left: var(--pad1); padding: 0 0.625rem; }
     #mainGrid.login #nav-signin [class*="material-symbols-"] { display: none; }
@@ -7757,6 +7758,9 @@ html#about body {
        over the DJ; narrower than 520px, a desktop stage would stand its DJ at
        the side (ui.js applyDeckPlacement) */
     #mainGrid.login {
+        /* the logo and a visitor's five (search, light mode, community, About,
+           Log in) in one row: 24vw is too narrow for them below 1334px */
+        --col-left: max(24vw, 20rem);
         grid-template-columns: var(--col-left) minmax(0, 1fr);
         grid-template-rows: auto 1fr;
         grid-template-areas:

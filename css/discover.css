@@ -1080,6 +1080,12 @@ body.ft-discover #dSide #actualChat {
         padding-top: var(--topbar-h, 10rem);
     }
     body.ft-discover { --col-left: 15rem; }
+    /* a visitor's: wide enough for the logo and their four (light mode,
+       community, About, Log in) in one row */
+    body.ft-discover #mainGrid.login { --col-left: 18rem; }
+    /* search is the column's own box, right under the header (as on a phone,
+       and in the toolbar: css/rail.css) */
+    body.ft-discover:not(.tt-skin) #dSearchOpen { display: none; }
     body.ft-discover #mainGrid {
         grid-template-columns: var(--col-left) minmax(0, 1fr) var(--col-right);
     }
@@ -1094,7 +1100,7 @@ body.ft-discover #dSide #actualChat {
     body.ft-discover #discoverPage { grid-template-rows: minmax(0, 1fr); }
     #dRail { grid-row: 1; padding-top: var(--topbar-h, 10rem); border-right: 1px solid var(--color-border); }
     /* the views scroll under the search where the column's too short for them all (a visitor's header
-       is taller, its icons a row of their own), never under the player (the toolbar's list scrolls
+       is taller), never under the player (the toolbar's list scrolls
        whole, css/rail.css) */
     #dNav { overflow: hidden auto; scrollbar-width: thin; }
     #dBrowse { grid-row: 1; grid-column: 2; }
