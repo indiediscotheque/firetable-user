@@ -7553,6 +7553,13 @@ html#about body {
     #cardsWrap,
     #discover   { grid-area: view; }
 
+    /* The stage gives up the views' scrollbar gutter on both sides, as the
+       Playlists panel under it does (#queuebox, .queuetop), so their edges
+       line up. 0 with overlay scrollbars (js/ui.js measures it). A visitor's
+       stage has no panel under it; Turntable and the full-screen player set
+       their own margins. */
+    #mainGrid:not(.login) > #stage { margin-inline: var(--scroll-gutter, 0px); }
+
     /* Sidepanel tab bar: show at 640px+; hide chat/people from minimodeoptions */
     #sidepanel-tabs { display: flex; }
     #mmchat, #mmusrs { display: none; }

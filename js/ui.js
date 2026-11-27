@@ -2381,14 +2381,18 @@ firetable.ui.init = function () {
     obs.observe(inner, { childList: true });
   });
 
-  // ── Scrollbar gutters: expose each view's gutter width as --scroll-gutter ──
-  // Lets the Playlists header give up the same strip as its list, and lets the
-  // other views keep an even 1rem inset on both sides. The gutter is 0 with
-  // overlay scrollbars and varies by OS, browser and zoom, so it is measured.
+  // ── Scrollbar gutters: expose the views' gutter width as --scroll-gutter ──
+  // Lets the Playlists header give up the same strip as its list, the stage
+  // above the views take the same inset so its edges line up with the
+  // Playlists panel (css/looks.css), and the other views keep an even 1rem
+  // inset on both sides. The gutter is 0 with overlay scrollbars and varies
+  // by OS, browser and zoom, so it is measured. The four lists share one
+  // scrollbar style, so whichever is showing sets it on #mainGrid, which
+  // holds the stage and every view: the stage keeps one width across tabs.
   (function () {
     if (typeof ResizeObserver === 'undefined') return;
     // [scroller, element that carries the variable]
-    [['queuelist', 'queuebox'], ['thehistory', 'thehistory'], ['discover', 'discover'], ['cardsWrap', 'cardsWrap']]
+    [['queuelist', 'mainGrid'], ['thehistory', 'mainGrid'], ['discover', 'mainGrid'], ['cardsWrap', 'mainGrid']]
       .forEach(function (ids) {
         var el = document.getElementById(ids[0]);
         var target = document.getElementById(ids[1]);
