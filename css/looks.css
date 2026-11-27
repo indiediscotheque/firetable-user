@@ -4652,13 +4652,16 @@ body.d-queue-here .cr-djtag > span {
     }
 }
 
-/* The theme in Live's left column (js/theme-slot.js: in Live on a computer,
-   the column open): its first section, under the counts of who's here and
-   over the DJ waitlist, drawn as the column's other sections are (a small
-   uppercase heading with its icon, then what it says). The whole section is
-   the button that opens the popover; a long theme wraps to three lines. No
-   rule under it: the sections are told apart by their headings and the
-   same 24px before each, as On the decks and On the floor are */
+/* The theme as a section of the left column, on a computer with the column
+   open: in Live its first section (js/theme-slot.js), under the counts of
+   who's here and over the DJ waitlist; in Discover (and a visitor's Live) the
+   header's row under Discover | Live. Drawn as the column's other sections
+   are: a small uppercase heading with its icon, then what it says, no pill,
+   border or shadow. The whole section is the button that opens the popover;
+   a long theme wraps to three lines. No rule under it: sections are told apart
+   by their headings and the same 24px before each, as On the decks and On the
+   floor are. Folded, it's the toolbar's icon (css/rail.css); on phones and
+   tablets the header's pill. */
 #usersbox > #themeSlot {
     order: 0;
     flex: none;
@@ -4666,69 +4669,72 @@ body.d-queue-here .cr-djtag > span {
     margin: 0;
     padding: var(--pad2) var(--pad4) 0;
 }
-#usersbox #themePill {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.3rem;
-    width: calc(100% + var(--pad2) * 2);
-    max-width: none;
-    height: auto;
-    min-height: 0;
-    margin: calc(var(--pad2) * -1);
-    padding: var(--pad2);
-    border-radius: var(--radius-md);
-    background: none;
-    color: var(--color-text);
-    font-size: 0.9375rem;
-    line-height: 1.35;
-}
-@media (hover: hover) {
-    #usersbox #themePill:hover { background: var(--color-bg-t1); }
-}
-#usersbox #themePill[aria-expanded="true"] { background: var(--color-bg-t1); }
-/* the heading: as "DJ Waitlist" under it */
-#usersbox #themePill .themeLabel,
-#usersbox #themePill.no-theme .themeLabel {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0;
-    border-radius: 0;
-    background: none;
-    color: var(--color-text-w66);
-    font-size: 0.7rem;
-    &::before {
-        content: "nightlife";
-        font-family: 'Material Symbols Outlined';
-        font-size: 1rem;
-        font-weight: 400;
-        line-height: 1;
-        letter-spacing: 0;
-        text-transform: none;
-        font-feature-settings: 'liga';
-        color: var(--color-accent);
+@media only screen and (min-width: 1024px) {
+    :is(#usersbox, :root:is(:not(.rail), .rail-peek) body:not(.tt-skin) #topbar) {
+        & #themePill {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.3rem;
+            width: calc(100% + var(--pad2) * 2);
+            max-width: none;
+            height: auto;
+            min-height: 0;
+            margin: calc(var(--pad2) * -1);
+            padding: var(--pad2);
+            border-radius: var(--radius-md);
+            background: none;
+            color: var(--color-text);
+            font-size: 0.9375rem;
+            line-height: 1.35;
+        }
+        & #themePill[aria-expanded="true"] { background: var(--color-bg-t1); }
+        /* the heading: as "DJ Waitlist" under it */
+        & #themePill .themeLabel {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0;
+            border-radius: 0;
+            background: none;
+            color: var(--color-text-w66);
+            font-size: 0.7rem;
+            &::before {
+                content: "nightlife";
+                font-family: 'Material Symbols Outlined';
+                font-size: 1rem;
+                font-weight: 400;
+                line-height: 1;
+                letter-spacing: 0;
+                text-transform: none;
+                font-feature-settings: 'liga';
+                color: var(--color-accent);
+            }
+        }
+        & #themePill.no-theme .themeLabel::before { color: inherit; }
+        & #themePillText {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            font-weight: 600;
+        }
+        /* none: in the waitlist's own quiet words ("Less than 4 DJs = no need to wait!") */
+        & #themePill.no-theme #themePillText {
+            font-size: 0.8rem;
+            font-weight: 400;
+            font-style: italic;
+            color: var(--color-text-muted);
+        }
+        & #themePillText code { font-size: 0.875em; }
+    }
+    @media (hover: hover) {
+        :is(#usersbox, :root:is(:not(.rail), .rail-peek) body:not(.tt-skin) #topbar) #themePill:hover { background: var(--color-bg-t1); }
     }
 }
-#usersbox #themePill.no-theme .themeLabel::before { color: inherit; }
-#usersbox #themePillText {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    max-width: 100%;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    font-weight: 600;
-}
-/* none: in the waitlist's own quiet words ("Less than 4 DJs = no need to wait!") */
-#usersbox #themePill.no-theme #themePillText {
-    font-size: 0.8rem;
-    font-weight: 400;
-    font-style: italic;
-    color: var(--color-text-muted);
-}
-#usersbox #themePillText code { font-size: 0.875em; }
 
 .themePopBox {
     display: flex;
@@ -7715,12 +7721,13 @@ html#about body {
 
 
     /* The column is narrow: under the logo, Discover | Live takes the first
-       row (css/discover.css), then the theme one of its own (in Discover: in
-       Live it's the column's first section, js/theme-slot.js) */
+       row (css/discover.css), then the theme one of its own, a section as in
+       Live's column (in Live it's the column's first section, js/theme-slot.js),
+       as far under the switch as it is there */
     #themeSlot {
         order: 2;
         flex: 1 0 100%;
-        margin-top: var(--pad1);
+        margin-top: var(--pad3);
     }
     #themePill {
         flex: 1;
