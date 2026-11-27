@@ -2946,7 +2946,7 @@ try {
     "the room is in the bar (On air / Live, Listen live) and the full-screen player (who is here), with no second room line above search (" + JSON.stringify({ bar: home.bar, line: !home.noLine }) + ")");
   check(home.goLive === "Go to Live|sensors|Go to Live: the stage, the DJs, everyone", "in Discover the bar's way to the room reads Go to Live, with the Live tab's icon (" + home.goLive + ")");
 
-  console.log("-- Discover Home leads with New this week: the most played, who found it, Play the week's (in the heading), its own ⋮ and save on its cover");
+  console.log("-- Discover Home leads with New this week: the most played, who found it, Play all (in the heading), its own ⋮ and save on its cover");
   {
     // seven releases in the last 8 days; two have 5 plays, and the newer of them leads
     const DAYMS = 86400000;
@@ -2963,7 +2963,7 @@ try {
     const lead = await dPage.evaluate(async () => {
       const el = document.querySelector("#dBrowse .d-lead");
       if (!el) return null;
-      // the week's Play and Save all are the heading's, after its link (Round 5: the lead song keeps its own on its cover)
+      // the week's Play all and Save all are the heading's, after its link (Round 5: the lead song keeps its own on its cover)
       const head = document.querySelector("#dBrowse .d-week > .d-head");
       const art = el.querySelector(".d-leadart");
       const out = {
@@ -2977,7 +2977,8 @@ try {
         head: [...head.children].map((c) => c.matches("a[data-newfilter]") ? "link:" + c.textContent : c.matches(".d-headacts") ?
           [...c.querySelectorAll("button")].map((b) => (b.classList.contains("d-playall") ? "play:" : b.classList.contains("d-saveall") ? "saveall:" : "?:") + b.querySelector("span").textContent).join("|") : c.tagName).join("|"),
         leadLists: el.querySelectorAll(".d-playall, .d-saveall, .d-leadacts").length,
-        cover: [...art.querySelectorAll("button")].map((b) => b.className.split(" ").find((c) => /^(d-play|d-more|histeal)$/.test(c)) + ":" + b.getAttribute("aria-label")).join("|")
+        cover: [...art.querySelectorAll("button")].map((b) => b.className.split(" ").find((c) => /^(d-play|d-more|histeal)$/.test(c)) + ":" + b.getAttribute("aria-label")).join("|"),
+        playHint: head.querySelector(".d-playall").title
       };
       // the lead's own save: that song, and only it, into a visitor's (empty) crate, its + turning into the saved mark;
       // then out again with the crate's own ×
@@ -2988,16 +2989,14 @@ try {
       out.saved = JSON.parse(localStorage.getItem("ft-crate") || "[]").map((t) => t.cid).join() + "|" + save.classList.contains("is-saved") + "|" + save.textContent;
       out.cid = el.getAttribute("data-cid");
       // a cover's disc stays dark in light mode, so a saved mark on it keeps the dark look's gold there (light
-      // mode's bronze vanished into it): the lead's, and (with a mouse, as here) one of Home's small covers'
-      const root = document.documentElement, look = root.getAttribute("data-look"), small = el.parentElement.querySelector(".d-compact .histeal");
-      small.classList.add("is-saved");
-      const marks = () => getComputedStyle(save).color + "|" + getComputedStyle(small).color;
+      // mode's bronze vanished into it): the lead's (the covers under it have theirs beside the song's name)
+      const root = document.documentElement, look = root.getAttribute("data-look");
+      const marks = () => getComputedStyle(save).color;
       out.marks = { dark: marks() };
       root.setAttribute("data-look", "light");
       await new Promise((r) => setTimeout(r, 300));
       out.marks.light = marks();
       if (look) root.setAttribute("data-look", look); else root.removeAttribute("data-look");
-      small.classList.remove("is-saved");
       await new Promise((r) => setTimeout(r, 300));
       document.querySelector("#dSide .d-unsave")?.click();
       await new Promise((r) => setTimeout(r, 100));
@@ -3023,19 +3022,19 @@ try {
       return out;
     });
     const want = "Week Three"; // the newer of the two with 5 plays
-    check(lead && lead.title === want && lead.kicker === "The week's most played" && /Found by dj1/.test(lead.found) && /5 plays/.test(lead.found),
+    check(lead && lead.title === want && lead.kicker === "Most played" && /Found by dj1/.test(lead.found) && /5 plays/.test(lead.found),
       "the lead is the week's most played release (the newer on a tie), with who found it (" + JSON.stringify(lead) + ")");
-    check(lead && lead.playAll === "Play the week's " + inWeek && lead.under === 6 && lead.all === "week" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),
-      "Play the week's " + inWeek + " plays the week from the lead; the next six sit under it (" + JSON.stringify(lead) + ")");
-    check(lead && lead.head === "H2|link:All " + inWeek + " from this week|play:Play the week's " + inWeek + "|saveall:Save all" && lead.leadLists === 0,
-      "New this week's heading holds its link, then Play the week's " + inWeek + " and Save all; the lead song holds neither (" + (lead && lead.head) + ", " + (lead && lead.leadLists) + " in the lead)");
+    check(lead && lead.playAll === "Play all" && lead.playHint === "Play the week's " + inWeek && lead.under === 6 && lead.all === "week" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),
+      "Play all (titled Play the week's " + inWeek + ") plays the week from the lead; the next six sit under it (" + JSON.stringify(lead) + ")");
+    check(lead && lead.head === "H2|link:See all " + inWeek + "|play:Play all|saveall:Save all" && lead.leadLists === 0,
+      "New this week's heading holds its link (See all " + inWeek + "), then Play all and Save all; the lead song holds neither (" + (lead && lead.head) + ", " + (lead && lead.leadLists) + " in the lead)");
     check(lead && lead.cover === "d-play:Play Week Three by Band 3|d-more:More|histeal:Add to playlist",
       "the lead's cover holds its play button, then its own ⋮ (More) and save (Add to playlist) (" + (lead && lead.cover) + ")");
     check(lead && lead.saved === lead.cid + "|true|playlist_add_check_circle" && lead.unsaved && lead.menu && lead.menuClosed,
       "the lead's save puts that song, and only it, in a visitor's crate (its mark turns to saved), and its ⋮ opens the song menu for it (" + JSON.stringify(lead && { saved: lead.saved, cid: lead.cid, menu: lead.menu }) + ")");
-    const gold = "rgb(204, 153, 51)|rgb(204, 153, 51)"; // the dark look's accent, #cc9933
+    const gold = "rgb(204, 153, 51)"; // the dark look's accent, #cc9933
     check(lead && lead.marks && lead.marks.dark === gold && lead.marks.light === gold,
-      "a saved mark on a cover's dark disc is the dark look's gold in light mode too, the lead's and (with a mouse) a small cover's (" + JSON.stringify(lead && lead.marks) + ")");
+      "a saved mark on the lead's dark disc is the dark look's gold in light mode too (" + JSON.stringify(lead && lead.marks) + ")");
     check(lead && /^New this week\|Not played live yet\|Room chart/.test(lead.order), "Home's order: New this week, Not played live yet, the chart (" + (lead && lead.order) + ")");
     check(lead && lead.unplayed && lead.unplayed.n === 2 && lead.unplayed.twice === "" && lead.unplayed.link === "All 3",
       "Not played live yet doesn't repeat the week's row: two of the three unplayed show, the third is already above, the link counts all three (" + JSON.stringify(lead && lead.unplayed) + ")");
@@ -5022,36 +5021,27 @@ try {
   const lead = taps.lead || {};
   check(lead.cover === 136 && lead.more && lead.save && [...lead.more, ...lead.save].every((n) => n >= 44) && lead.clear,
     "on a phone, the lead's ⋮ and save on its 136px cover can each be tapped over 44×44px, clear of each other and of its play button (" + JSON.stringify(taps.lead) + ")");
-  // touch screens (round 5, November 25, 2026): a cover on Home (.d-compact) and New (.d-newgrid) keeps
-  // only its play button; ⋮ and save sit under the song's name, in the card, the size of a tap
+  // touch screens: a cover on Home (.d-compact) and New (.d-newgrid) keeps only its play button; ⋮ and save
+  // sit beside the song's name, as on Fresh's cards (November 27, 2026: one way everywhere)
   const covers = await tPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const box = (el) => el.getBoundingClientRect();
     const inside = (b, o) => b.left >= o.left - 0.5 && b.right <= o.right + 0.5 && b.top >= o.top - 0.5 && b.bottom <= o.bottom + 0.5;
-    // what a colour of the palette is, where the card is
     const tone = (card, v) => { const s = card.appendChild(document.createElement("span")); s.style.color = "var(" + v + ")"; const c = getComputedStyle(s).color; s.remove(); return c; };
     const look = async (hash, grid) => {
       location.hash = hash;
       for (let i = 0; i < 50 && !document.querySelector("#dBrowse " + grid + " .pvbar .histeal"); i++) await wait(100);
       const card = document.querySelector("#dBrowse " + grid + " .pvbar");
       if (!card) return "no " + grid;
-      const c = box(card), art = box(card.querySelector(".discart")), words = box(card.querySelector(".fresh-title"));
+      const c = box(card), art = box(card.querySelector(".discart")), title = box(card.querySelector(".fresh-track-title")), words = box(card.querySelector(".fresh-title"));
       const more = card.querySelector(".d-more"), save = card.querySelector(".histeal"), m = box(more), s = box(save), b = getComputedStyle(save, "::before");
       const onCover = [...card.querySelectorAll("button, a, [role=button]")].filter((el) => { const r = box(el); return r.width && r.top < art.bottom && r.bottom > art.top; });
-      return { cover: onCover.map((el) => (el.classList.contains("d-play") ? "play" : el.className)).join(), under: Math.min(m.top, s.top) >= Math.max(words.bottom, art.bottom) - 0.5,
-        inCard: inside(m, c) && inside(s, c), size: [m.width, m.height, s.width, s.height].map(Math.round),
-        tap: [Math.round(s.width - parseFloat(b.left) - parseFloat(b.right)), Math.round(s.height - parseFloat(b.top) - parseFloat(b.bottom))],
-        grey: getComputedStyle(more).color === tone(card, "--color-icon") && getComputedStyle(save).color === tone(card, "--color-icon") };
+      return { cover: onCover.map((el) => (el.classList.contains("d-play") ? "play" : el.className)).join(),
+        beside: Math.min(m.left, s.left) >= words.right - 0.5 && m.top < title.bottom && s.top < title.bottom && Math.min(m.top, s.top) >= art.bottom - 0.5,
+        inCard: inside(m, c) && inside(s, c),
+        tap: [Math.round(s.width - parseFloat(b.left) - parseFloat(b.right)), Math.round(s.height - parseFloat(b.top) - parseFloat(b.bottom))] };
     };
     const out = { home: await look("#discover", ".d-compact"), newGrid: await look("#discover/new", ".d-newgrid") };
-    // a row of New's covers has them level, a robot or "Be the first" under them
-    const rows = {};
-    for (const card of document.querySelectorAll("#dBrowse .d-newgrid .pvbar")) {
-      const top = Math.round(box(card).top);
-      (rows[top] = rows[top] || []).push({ more: box(card.querySelector(".d-more")).top, robot: !!card.querySelector(".fresh-meta .pv-dj-avatar"), first: !!card.querySelector(".fresh-meta .d-befirst") });
-    }
-    const spread = (r) => Math.max(...r.map((c) => c.more)) - Math.min(...r.map((c) => c.more));
-    out.level = { spread: Math.round(Math.max(0, ...Object.values(rows).map(spread))), mixed: Object.values(rows).some((r) => r.some((c) => c.robot) && r.some((c) => c.first)) };
     // a saved song keeps its mark's accent (a visitor's save goes to the crate)
     const save = document.querySelector("#dBrowse .d-newgrid .pvbar .histeal");
     save.click();
@@ -5059,11 +5049,10 @@ try {
     out.saved = save.classList.contains("is-saved") && getComputedStyle(save).color === tone(save.closest(".pvbar"), "--color-accent");
     return out;
   });
-  const coverOk = (c) => c && c.cover === "play" && c.under && c.inCard && c.size.every((n) => n >= 40) && c.tap[0] >= 40 && c.tap[1] >= 44 && c.grey;
+  const coverOk = (c) => c && c.cover === "play" && c.beside && c.inCard && c.tap[0] >= 32 && c.tap[1] >= 40;
   check(coverOk(covers.home) && coverOk(covers.newGrid),
-    "on a touch screen a cover on Home and New keeps only its play button; ⋮ and save are under the song's name, in the card, each a tap's size (" + JSON.stringify(covers) + ")");
+    "on a touch screen a cover on Home and New keeps only its play button; ⋮ and save are beside the song's name, in the card, as on Fresh's (" + JSON.stringify(covers) + ")");
   check(covers.saved, "...and a saved song's mark keeps its accent there (" + JSON.stringify(covers.saved) + ")");
-  check(covers.level.spread <= 1, "...and along a row of New's covers they're level, whether a robot or \"Be the first\" is under them (" + JSON.stringify(covers.level) + ")");
   await tContext.close();
   await cPage.close();
 
@@ -5228,14 +5217,14 @@ try {
     "Discover: Tab goes from song to song, one stop each, and the stop names its song (" + JSON.stringify([one.from, one.name, one.tabs]) + ")");
   check(one.arrows.slice(0, 2).join() === "title,artist" && one.arrows.indexOf("more") !== -1 && one.menu && one.back === "more" && one.ring === "solid",
     "Discover: ← and → reach a song's title, artist, ⋮ and Add, the menu key opens ⋮, and the ring goes round the whole song (" + JSON.stringify(one) + ")");
-  // with a mouse, Home's covers keep ⋮ and save over the cover's corner (a touch screen has them under the name)
+  // with a mouse too, Home's covers have ⋮ and save beside the song's name, shown, off the cover (as Fresh's)
   const mouseCover = await sPage.evaluate(() => {
     const b = document.querySelector("#dBrowse .d-compact .pvbar .d-more");
     if (!b) return null;
-    const art = b.closest(".pvbar").querySelector(".discart").getBoundingClientRect(), r = b.getBoundingClientRect();
-    return { pos: getComputedStyle(b).position, onCover: r.top >= art.top && r.bottom <= art.bottom && r.right <= art.right };
+    const card = b.closest(".pvbar"), art = card.querySelector(".discart").getBoundingClientRect(), r = b.getBoundingClientRect();
+    return { shown: getComputedStyle(b).opacity === "1", offCover: r.top >= art.bottom - 0.5, beside: r.left >= card.querySelector(".fresh-title").getBoundingClientRect().right - 0.5 };
   });
-  check(mouseCover && mouseCover.pos === "absolute" && mouseCover.onCover, "with a mouse, Home's covers keep ⋮ and save over the cover's corner (" + JSON.stringify(mouseCover) + ")");
+  check(mouseCover && mouseCover.shown && mouseCover.offCover && mouseCover.beside, "with a mouse, Home's covers have ⋮ and save beside the song's name, shown, off the cover (" + JSON.stringify(mouseCover) + ")");
   await sPage.close();
 
   console.log("-- Discover: members chat with the room from Discover");

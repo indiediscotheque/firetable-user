@@ -404,27 +404,25 @@ firetable.discover = (function () {
   }
   /**
    * Home's lead: the week's most played new release, big, with who found it.
-   * Its own ⋮ and save are on its cover (Round 5, the owner); the week's Play
-   * and Save all are in the heading above (viewHome).
+   * Its own ⋮ and save are on its cover (Round 5, the owner); a full-width
+   * panel, tinted with the cover's colour (viewHome). The week's Play and
+   * Save all are in the heading above (viewHome).
    */
   function leadCard(t, list) {
-    var u = firetable.utilities;
-    var dj = t.plays && t.dj ? djShown(t.djid, t.dj) : null;
+    var u = firetable.utilities, dot = '<span aria-hidden="true">·</span>';
+    var dj = t.plays && t.dj ? djShown(t.djid, t.dj) : null, on = t.first ? " on " + esc(u.shortDate(t.first)) : "";
     var found = t.plays
-      ? '<p class="d-leadfound">' + (dj ? robotLink(dj) + "<span>Found by " + nameLink(dj) + "</span>" : "<span>First played here</span>") +
-        (t.first ? "<span>·</span><span>" + esc(u.shortDate(t.first)) + "</span>" : "") +
-        "<span>·</span><span>" + esc(u.pluralize(t.plays, "play", "plays")) + (t.plays === 1 ? " so far" : "") + "</span></p>"
-      : '<p class="d-leadfound"><span class="d-tag d-befirst">Be the first</span><span>Nobody has played it here yet</span></p>';
-    var tags = (t.g ? '<a class="d-tag" href="' + hrefTo("discover/genres/" + genreSlug(t.g)) + '">' + esc(t.g) + "</a>" : "") + (t.dur ? '<span class="d-tag d-numtag">' + esc(clock(t.dur)) + "</span>" : "") +
-      (t.rel ? '<span class="d-tag d-numtag">out ' + esc(u.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime())) + "</span>" : "");
+      ? '<p class="d-leadfound">' + (dj ? robotLink(dj) + "<span>Found by " + nameLink(dj) + on + "</span>" : "<span>First played here" + on + "</span>") +
+        dot + "<span>" + esc(u.pluralize(t.plays, "play", "plays")) + (t.plays === 1 ? " so far" : "") + "</span></p>"
+      : '<p class="d-leadfound"><span class="d-befirst">Be the first</span>' + dot + "<span>nobody has played it here yet</span></p>";
+    // genre, length and release day as one quiet line, not three pills
+    var meta = [t.g ? '<a href="' + hrefTo("discover/genres/" + genreSlug(t.g)) + '">' + esc(t.g) + "</a>" : "", t.dur ? "<span>" + esc(clock(t.dur)) + "</span>" : "",
+      t.rel ? "<span>Out " + esc(u.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime())) + "</span>" : ""].filter(Boolean).join(dot);
     return '<div class="pvbar d-lead' + (isPlaying(list, 0) ? " previewing" : "") + '"' + rowAttrs(t, list, 0) + ">" +
       '<div class="pv-art discart d-leadart" style="background-image:url(' + esc(artOf(t)) + ')">' +
-      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, 0) + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button>" +
-      moreButton() + saveButton(t) + "</div>" +
-      '<div class="d-leadtext"><p class="d-kicker">' + (t.plays ? "The week's most played" : "New this week") + "</p>" +
+      '<button type="button" class="material-symbols-filled previewicon d-play" aria-label="' + playLabel(t, list, 0) + '">' + (isSounding(list, 0) ? "pause" : "play_arrow") + "</button>" + moreButton() + saveButton(t) + "</div>" + '<div class="d-leadtext"><p class="d-kicker">' + (t.plays ? "Most played" : "Just out") + "</p>" +
       '<h3 class="d-leadtitle"><span class="d-sheetlink" role="button" tabindex="0">' + esc(t.t) + "</span></h3>" +
-      '<p class="d-leadartist">' + artistLinks(t.a) + "</p>" +
-      (tags ? '<div class="d-tags">' + tags + "</div>" : "") + found + "</div></div>";
+      '<p class="d-leadartist">' + artistLinks(t.a) + "</p>" + (meta ? '<p class="d-leadmeta">' + meta + "</p>" : "") + found + "</div></div>";
   }
   /** Home: the six DJs with the most plays here, as faces with names. */
   function topDjs() {
@@ -668,9 +666,11 @@ firetable.discover = (function () {
     var week = weekNew();
     if (week.length >= 6) {
       setList("home-week", "New this week", week);
-      h += '<section class="d-week">' + newHead("New this week", "All " + week.length + " from this week", "week",
-        '<span class="d-actions d-headacts">' + playAllButton("home-week", "Play the week's " + week.length) + "</span>") + leadCard(week[0], "home-week") +
+      h += '<section class="d-week">' + newHead("New this week", "See all " + week.length, "week",
+        '<span class="d-actions d-headacts">' + playAllButton("home-week", "Play all", "Play the week's " + week.length) + "</span>") + leadCard(week[0], "home-week") +
         '<div class="ft-cards d-compact">' + week.slice(1, 7).map(function (t, i) { return card(t, "home-week", i + 1, newMeta(t)); }).join("") + "</div></section>";
+      // the lead's panel takes its cover's colour (the bar's, toneOf), once the page has it
+      toneOf(week[0]).then(function (c) { var el = c && document.querySelector('#dBrowse .d-lead[data-cid="' + CSS.escape(week[0].cid) + '"]'); if (el) el.style.setProperty("--lead-tone", c); });
     } else {
       h += "<section>" + newHead(newTitle, "All new releases", "days90") + newList(nt, "grid", "home-new", 18, true) + "</section>";
     }
@@ -824,8 +824,8 @@ firetable.discover = (function () {
       return "<i" + (k ? ' style="background-image:url(' + esc(coverOf(k)) + ')"' : "") + "></i>";
     }).join("") + "</span>";
   }
-  function playAllButton(listName, label) {
-    return '<button type="button" class="butt d-playall d-panelmain" data-list="' + esc(listName) + '">' + ms("play_arrow", true) + "<span>" + esc(label) + "</span></button>" +
+  function playAllButton(listName, label, hint) {
+    return '<button type="button" class="butt d-playall d-panelmain" data-list="' + esc(listName) + '"' + (hint ? ' title="' + esc(hint) + '"' : "") + ">" + ms("play_arrow", true) + "<span>" + esc(label) + "</span></button>" +
       saveAllButton(listName);
   }
   // The genre's playlist on YouTube Music, once the bot has made it (discover/ytm)
