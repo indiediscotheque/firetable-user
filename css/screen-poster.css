@@ -1,0 +1,55 @@
+/* The song's own picture on the stage's screen, between songs (js/screen-poster.js
+   adds this the first time a song changes with the screen down). It sits under the player: the
+   screen cuts to it at once when the song changes, and the video fades in over
+   it when it's ready. */
+#screenPoster {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #000;
+}
+
+#screenPoster[hidden] {
+    display: none;
+}
+
+#screenPoster img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* it drifts slowly in, so a still reads as the song's title card, not a stuck video */
+#screenPoster .sp-pic {
+    animation: sp-drift 14s ease-out both;
+}
+
+/* a cover (SoundCloud) whole, over a dark blur of itself */
+#screenPoster.is-art .sp-pic {
+    object-fit: contain;
+}
+
+#screenPoster .sp-fill {
+    inset: -8%;
+    width: 116%;
+    height: 116%;
+    filter: blur(28px) brightness(0.45) saturate(1.2);
+}
+
+@keyframes sp-drift {
+    from { transform: scale(1); }
+    to { transform: scale(1.06); }
+}
+
+/* the video fades in over the picture once YouTube's own bars have gone
+   (player.js REVEAL_MS), and still goes at once: a cut, never a fade to black */
+body.yt-revealed #playerArea {
+    transition: opacity 0.45s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #screenPoster .sp-pic { animation: none; }
+    body.yt-revealed #playerArea { transition: none; }
+}

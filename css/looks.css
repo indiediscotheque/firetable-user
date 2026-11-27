@@ -2795,7 +2795,8 @@ body.dance-mode .dance-start-right {
    whenever a video starts or resumes. The player (sized exactly like the
    screen, so videos and cover art scale as they always have) stays hidden
    until the video has been playing long enough for those to go away, then
-   appears at once (no fade). player.js sets body.yt-revealed. */
+   fades in over the song's picture (css/screen-poster.css, once the screen
+   has been down). player.js sets body.yt-revealed. */
 #playerArea {
     opacity: 0;
 }
@@ -3519,8 +3520,14 @@ input.ft-filter {
    it depends on the density setting), plus one margin for its first row's
    top. The size has to be exact, or the list jumps when it is redrawn
    (send to top / bottom). "auto" remembers a block's real height once it
-   has been shown. */
+   has been shown.
+   --q-pitch doesn't pass down past the blocks: the list moving between Live
+   and Discover changes it (a narrower column, taller rows), and passed down it
+   made the browser restyle every row of the list each time. The blocks take
+   it from the list themselves. */
+@property --q-pitch { syntax: "*"; inherits: false; }
 #mainqueue > .pvchunk {
+    --q-pitch: inherit;
     display: flow-root; /* row margins stay inside, the same on- and off-screen */
     content-visibility: auto;
     contain-intrinsic-size: auto calc(var(--rows, 100) * var(--q-pitch, calc(var(--q-art, 2rem) + 2px + var(--pad1))) + var(--pad1));

@@ -99,7 +99,9 @@ firetable.discoverQueue = (function () {
       watcher.observe(rows, { childList: true });
       if (found) watcher.observe(found, { childList: true }); // Find tracks' results play here too
     }
-    window.dispatchEvent(new Event("resize")); // the list measures its scrollbar again
+    // (no resize event: the list's scrollbar gutter has its own ResizeObserver
+    // (ui.js), and a synthetic one made every listener on the page lay it all
+    // out again, at once, in the middle of the switch)
   }
 
   /** Live gets its panel back. */
