@@ -8,8 +8,8 @@
      room (its theme, and in Live who's here, with how many);
    - in the middle, in Live: who's on the decks, as faces (the one playing
      ringed, presence on each), the waitlist and Hop on. Everyone else is
-     behind the count. In Discover: search and the views;
-   - at the bottom: search, mentions, community, the button that opens the
+     behind the count. In Discover: the views;
+   - at the bottom: search (in Live and Discover), mentions, community, the button that opens the
      column again, and your account (whose menu has light mode, About, the
      shortcuts and Open the column), or for visitors light mode, about and Join.
    On a wide middle (html.rail-desk, js/rail.js), Live's middle becomes a
@@ -296,8 +296,9 @@
             font-size: 0;
             border-radius: 50%;
         }
-        /* Discover has search in its own column */
-        &.ft-discover #dSearchOpen { display: none; }
+        /* Discover: the same search at the bottom as in Live (css/discover.css
+           hides it in the open column, which has its own box) */
+        &.ft-discover #dSearchOpen { display: inline-flex; }
 
         /* Words the icons stand for: out of sight, still read by screen readers
            (the tooltips show them) */
@@ -333,29 +334,22 @@
         & #mainGrid.login #pe-here { padding: 0 0 var(--pad3); overflow: hidden auto; scrollbar-width: none; cursor: pointer; }
         & #allUsersWrap { scrollbar-width: none; }
 
-        /* Discover: search (a press opens the column with the box), then the views */
+        /* Discover: the views. Search is the button at the bottom; the box
+           stays out of sight but can still take the focus (the button and /
+           focus it, and that opens the column with it: js/rail.js) */
         & #dSearch {
-            flex: none;
-            align-self: center;
-            width: var(--rail-btn);
-            height: var(--rail-btn);
-            margin: var(--pad2) 0 0;
-            border-radius: var(--radius-md);
-            & i { left: 50%; transform: translate(-50%, -50%); font-size: 1.25rem; color: var(--color-icon); }
-            & input {
-                position: absolute;
-                inset: 0;
-                width: 100%;
-                height: 100%;
-                padding: 0;
-                opacity: 0;
-                cursor: pointer;
-            }
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            clip-path: inset(50%);
         }
         & #dNav {
             align-items: center;
             padding: var(--pad1) 0 var(--pad2);
-            overflow: visible; /* the list scrolls whole, search and all (#dRail): not the views on their own */
+            overflow: visible; /* the list scrolls whole (#dRail): not the views on their own */
         }
         & .d-nav {
             justify-content: center;
@@ -365,9 +359,6 @@
             padding: 0;
             gap: 0;
             & i { font-size: 1.25rem; }
-        }
-        @media (hover: hover) {
-            & #dSearch:hover { background: var(--color-bg-t1); }
         }
 
         /* The people: who's on the decks, as faces */

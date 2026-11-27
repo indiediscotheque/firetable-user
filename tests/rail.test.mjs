@@ -88,7 +88,8 @@ test("[ folds it: the middle gets the room, chat keeps its width; kept on this d
     label: document.getElementById("nav-railBtn").getAttribute("aria-label"),
     tip: document.getElementById("tip-nav-railBtn").textContent,
     rail: document.getElementById("dRail").getBoundingClientRect().width,
-    search: document.getElementById("dSearch").getBoundingClientRect().width,
+    search: (() => { const b = document.getElementById("dSearchOpen"), l = document.getElementById("nav-look"); return b.offsetParent ? Math.round(l.getBoundingClientRect().top - b.getBoundingClientRect().bottom) : null; })(),
+    box: document.getElementById("dSearch").getBoundingClientRect().width,
     navWords: getComputedStyle(document.querySelector("#dNav .d-nav span")).clipPath,
     themeFlat: getComputedStyle(document.getElementById("themePill")).boxShadow
   }));
@@ -103,7 +104,8 @@ test("[ folds it: the middle gets the room, chat keeps its width; kept on this d
   assert.ok(Math.abs(shut[2] - open[2]) < 2, "the right column keeps its width");
   assert.deepEqual(shut.map(Math.round), [64, 944, 432]);
   assert.ok(r.rail <= 64, "Discover's views are icons");
-  assert.ok(r.search < 50, "search is an icon");
+  assert.ok(r.search !== null && r.search >= 0 && r.search < 10, "search is the button at the bottom, right above light mode, as in Live: " + r.search);
+  assert.ok(r.box <= 1, "the views list has no search of its own");
   assert.equal(r.navWords, "inset(50%)", "the views' words are out of sight, still there for screen readers");
   assert.equal(r.themeFlat, "none", "the theme is a flat icon, as the toolbar's others (no button shadow)");
 });
@@ -160,6 +162,11 @@ test("search opens the column over the middle; a click outside puts it away", as
   await page.mouse.click(700, 450);
   await page.waitForFunction(() => !document.documentElement.classList.contains("rail-peek"), null, { timeout: 3000 });
   assert.equal(await folded(), true);
+  // the search button at the bottom does the same
+  await page.click("#dSearchOpen");
+  await page.waitForFunction(() => document.documentElement.classList.contains("rail-peek") && document.activeElement.id === "dQ", null, { timeout: 3000 });
+  await page.mouse.click(700, 450);
+  await page.waitForFunction(() => !document.documentElement.classList.contains("rail-peek"), null, { timeout: 3000 });
 });
 
 test("the tooltip says what an icon is", async () => {
@@ -368,15 +375,15 @@ test("another tab's choice follows here", async () => {
   await other.close();
 });
 
-test("a short laptop screen (1366 by 640): Discover's views scroll under the search, and none goes under the player", async () => {
+test("a short laptop screen (1366 by 640): Discover's views scroll, and none goes under the player", async () => {
   await page.setViewportSize({ width: 1366, height: 640 });
   await go("#discover");
   const r = await page.evaluate(() => {
     const nav = document.getElementById("dNav"), views = [...nav.querySelectorAll(".d-nav")].filter((n) => n.offsetParent);
-    const box = nav.getBoundingClientRect(), search = document.getElementById("dSearch").getBoundingClientRect(), bar = document.getElementById("dMini").getBoundingClientRect();
+    const box = nav.getBoundingClientRect(), top = document.getElementById("dRail").getBoundingClientRect(), bar = document.getElementById("dMini").getBoundingClientRect();
     nav.scrollTop = nav.scrollHeight;
     const last = views[views.length - 1].getBoundingClientRect();
-    return { scrolls: nav.scrollHeight > nav.clientHeight, under: box.top >= search.bottom, above: box.bottom <= bar.top + 0.5, last: last.top >= box.top - 0.5 && last.bottom <= box.bottom + 0.5 };
+    return { scrolls: nav.scrollHeight > nav.clientHeight, under: box.top >= top.top, above: box.bottom <= bar.top + 0.5, last: last.top >= box.top - 0.5 && last.bottom <= box.bottom + 0.5 };
   });
   assert.deepEqual(r, { scrolls: true, under: true, above: true, last: true }, "the last view scrolls into sight, over the player");
   await page.evaluate(() => { document.getElementById("dNav").scrollTop = 0; });
