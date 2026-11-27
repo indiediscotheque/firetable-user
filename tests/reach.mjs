@@ -84,7 +84,7 @@ const FEATURES = [
   { row: "TB-11", name: "Fold the left column into a toolbar", who: ALL, widths: WIDE, via: ["#nav-railBtn"], target: "#nav-railPeople", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: who's here, with names, over the middle", who: IN, widths: WIDE, via: ["#nav-railBtn", "#nav-railPeople"], target: "#usersDJs .prson .ft-avatar", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: who's here, with names, over the middle (visitors)", who: ["visitor"], widths: WIDE, via: ["#nav-railBtn", "#nav-railPeople"], target: "#pe-here .pe-row", close: ["#nav-railBtn"] },
-  { row: "TB-11", name: "Toolbar: Discover's search, over the middle", who: ALL, widths: WIDE, mode: "discover", via: ["#nav-railBtn", "#dSearch"], target: "#dQ", close: ["#nav-railBtn"] },
+  { row: "TB-11", name: "Toolbar: Discover's search, over the middle", who: ALL, widths: WIDE, mode: "discover", via: ["#nav-railBtn", "#dSearchOpen"], target: "#dQ", close: ["#nav-railBtn"] },
   // folded: community on the toolbar; a member's light mode, about and shortcuts in the account menu (a visitor's on the toolbar)
   { row: "TB-11", name: "Toolbar: community", who: ALL, widths: WIDE, via: ["#nav-railBtn", "#socialTrigger"], target: "#socialPopover", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: light mode (the account menu)", who: IN, widths: WIDE, via: ["#nav-railBtn", "#loggedInUser"], target: "#nav-acctLook", close: ["#nav-railBtn"] },

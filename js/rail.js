@@ -279,7 +279,7 @@ firetable.rail = (function () {
     }, true);
     document.addEventListener("focusin", function (e) {
       var t = e.target;
-      // search (the toolbar's magnifier, the / key, or the header's search from Live)
+      // search (the toolbar's search button, in Discover or Live, or the / key)
       if (t.id === "dQ" && showing() && !peeking()) { openPeek(document.querySelector("#dNav .d-nav.on") || $id("dNav")); return; }
       // the room's video takes the focus by itself while it loads: that's not leaving
       if (peeking() && t.tagName !== "IFRAME" && outside(t)) closePeek(false);
@@ -297,7 +297,7 @@ firetable.rail = (function () {
 
   // ── The tooltip ─────────────────────────────────────────────────────────
 
-  var TIPS = "#topbar button, #topbar a, #topbar .tab, #reconnecting, #dSearch, #dNav .d-nav, " +
+  var TIPS = "#topbar button, #topbar a, #topbar .tab, #reconnecting, #dNav .d-nav, " +
     "#usersWaitlist .waitlist-item, #usersWaitlist .wlAddMeBtn, #allUsers .prson, #allUsers > .pe-groupHead, " +
     "#pe-here .pe-row";
   var tip = null;
@@ -333,7 +333,6 @@ firetable.rail = (function () {
     if (el.matches(".wlAddMeBtn")) return "Hop on the decks";
     if (el.matches(".pe-row")) return [text(el, ".pe-name"), attr(el, ".pe-role", "aria-label"), el.classList.contains("is-dj") ? "DJ" : ""].filter(Boolean).join(" · ");
     if (el.id === "themePill") return el.classList.contains("no-theme") ? "No theme yet" : "Theme: " + text(el, "#themePillText");
-    if (el.id === "dSearch") return "Search (/)";
     if (el.id === "reconnecting") return text(el) || "Reconnecting…";
     if (el.id === "nav-railPeople") return el.getAttribute("aria-label");
     if (el.matches(".d-nav")) return text(el, "span");
