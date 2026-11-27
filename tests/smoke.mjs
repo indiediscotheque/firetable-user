@@ -2918,9 +2918,9 @@ try {
   const home = await dPage.evaluate(async () => ({
     on: document.body.classList.contains("ft-discover"),
     tabs: [...document.querySelectorAll("#modeTabs .tab")].map((b) => b.textContent.trim() + (b.classList.contains("on") ? "*" : "")).join(),
-    cards: document.querySelectorAll("#dBrowse .ft-cards .pvbar").length,
+    cards: document.querySelectorAll("#dBrowse .ft-cards .pvbar:not(.d-over)").length,
     befirst: [...document.querySelectorAll("#dBrowse section")].filter((sec) => /Not played live yet/.test(sec.querySelector("h2")?.textContent || ""))
-      .map((sec) => sec.querySelectorAll(".pvbar").length + ":" + [...sec.querySelectorAll(".d-befirst")].map((e) => e.textContent).join() + ":" + sec.querySelector("[data-newfilter]")?.textContent).join(),
+      .map((sec) => sec.querySelectorAll(".pvbar:not(.d-over)").length + ":" + [...sec.querySelectorAll(".d-befirst")].map((e) => e.textContent).join() + ":" + sec.querySelector("[data-newfilter]")?.textContent).join(),
     chart: [...document.querySelectorAll("#dBrowse .ft-rows .hist-timestamp")].slice(0, 2).map((e) => e.textContent).join(),
     unplayed: [...document.querySelectorAll("#dBrowse .fresh-meta")].some((e) => /Be the first/.test(e.textContent) && /Nobody has played it yet/.test(e.textContent)),
     stageHidden: getComputedStyle(document.getElementById("stage")).opacity === "0",
@@ -2960,7 +2960,7 @@ try {
     await put("/discover/new", { at: now, days: 90, tracks });
     await dPage.evaluate(() => { location.hash = "#discover"; });
     await dPage.waitForFunction(() => document.querySelector("#dBrowse .d-lead"), null, { timeout: 10000 }).catch(() => {});
-    const lead = await dPage.evaluate(async () => {
+    const lead = await dPage.evaluate(async (tracksUnplayed) => {
       const el = document.querySelector("#dBrowse .d-lead");
       if (!el) return null;
       // the week's Play all and Save all are the heading's, after its link (Round 5: the lead song keeps its own on its cover)
@@ -2971,7 +2971,10 @@ try {
         kicker: el.querySelector(".d-kicker").textContent,
         found: el.querySelector(".d-leadfound").textContent.replace(/\s+/g, " ").trim(),
         playAll: head.querySelector(".d-playall span").textContent,
-        under: el.parentElement.querySelectorAll(".ft-cards .pvbar").length,
+        under: el.parentElement.querySelectorAll(".ft-cards .pvbar:not(.d-over)").length,
+        // two full rows under the lead, however many fit across (js/discover-shelves.js)
+        across: getComputedStyle(el.parentElement.querySelector(".ft-cards")).gridTemplateColumns.trim().split(/\s+/).length,
+        drawn: el.parentElement.querySelectorAll(".ft-cards .pvbar").length,
         all: el.parentElement.querySelector("[data-newfilter]").getAttribute("data-newfilter"),
         order: [...document.querySelectorAll("#dBrowse section h2")].map((h) => h.textContent).slice(0, 4).join("|"),
         head: [...head.children].map((c) => c.matches("a[data-newfilter]") ? "link:" + c.textContent : c.matches(".d-headacts") ?
@@ -3015,8 +3018,11 @@ try {
       out.menuClosed = !!menu && menu.hidden;
       // Not played live yet, under the week's row: none of the songs that row already shows
       const unSec = [...document.querySelectorAll("#dBrowse section")].find((sec) => /Not played live yet/.test(sec.querySelector("h2")?.textContent || ""));
-      const cids = (box) => [...box.querySelectorAll(".pvbar[data-cid]")].map((p) => p.getAttribute("data-cid"));
-      out.unplayed = unSec ? { n: cids(unSec).length, twice: cids(unSec).filter((c) => cids(el.parentElement).includes(c)).join(), link: unSec.querySelector("[data-newfilter]").textContent } : null;
+      const cids = (box) => [...box.querySelectorAll(".pvbar[data-cid]:not(.d-over)")].map((p) => p.getAttribute("data-cid"));
+      // (how many of the three show there depends on how many of them the week's two rows already show)
+      const aboveCids = cids(el.parentElement).concat(el.getAttribute("data-cid"));
+      out.unplayed = unSec ? { n: cids(unSec).length, twice: cids(unSec).filter((c) => aboveCids.includes(c)).join(), link: unSec.querySelector("[data-newfilter]").textContent,
+        above: tracksUnplayed.filter((c) => aboveCids.includes(c)).length } : null;
       // the test's videos aren't real: keep the player from skipping past them (the skip waits 800ms)
       window.__skip = firetable.discover.onFailed;
       firetable.discover.onFailed = () => {};
@@ -3024,12 +3030,12 @@ try {
       await new Promise((r) => setTimeout(r, 300));
       out.playing = firetable.discover.state().playing;
       return out;
-    });
+    }, tracks.filter((t) => !t.plays).map((t) => t.cid));
     const want = "Week Three"; // the newer of the two with 5 plays
     check(lead && lead.title === want && lead.kicker === "Most played" && /first \S+ \d+\s*·\s*5 plays$/.test(lead.found) && !/Found by/.test(lead.found),
       "the lead is the week's most played release (the newer on a tie), with who found it (their robot), when and its plays, as the cards say it (" + JSON.stringify(lead) + ")");
-    check(lead && lead.playAll === "Play all" && lead.playHint === "Play the week's " + inWeek && lead.under === 6 && lead.all === "week" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),
-      "Play all (titled Play the week's " + inWeek + ") plays the week from the lead; the next six sit under it (" + JSON.stringify(lead) + ")");
+    check(lead && lead.playAll === "Play all" && lead.playHint === "Play the week's " + inWeek && lead.under === Math.min(lead.drawn, 2 * lead.across) && lead.drawn === inWeek - 1 && lead.all === "week" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),
+      "Play all (titled Play the week's " + inWeek + ") plays the week from the lead; two full rows of the rest sit under it, however many fit across (" + JSON.stringify(lead) + ")");
     check(lead && lead.head === "H2|link:See all " + inWeek + "|play:Play all|saveall:Save all" && lead.leadLists === 0,
       "New this week's heading holds its link (See all " + inWeek + "), then Play all and Save all; the lead song holds neither (" + (lead && lead.head) + ", " + (lead && lead.leadLists) + " in the lead)");
     check(lead && lead.cover === "d-play:Play Week Three by Band 3" && lead.own === "d-more:More|histeal:Add to playlist" && Math.abs(lead.feet) <= 4 && lead.right <= 16,
@@ -3039,8 +3045,8 @@ try {
     check(lead && lead.marks && lead.marks.dark === "accent" && lead.marks.light === "accent",
       "the lead's saved mark is the look's own accent, dark and light (" + JSON.stringify(lead && lead.marks) + ")");
     check(lead && /^New this week\|Not played live yet\|Room chart/.test(lead.order), "Home's order: New this week, Not played live yet, the chart (" + (lead && lead.order) + ")");
-    check(lead && lead.unplayed && lead.unplayed.n === 2 && lead.unplayed.twice === "" && lead.unplayed.link === "All 3",
-      "Not played live yet doesn't repeat the week's row: two of the three unplayed show, the third is already above, the link counts all three (" + JSON.stringify(lead && lead.unplayed) + ")");
+    check(lead && lead.unplayed && lead.unplayed.n + lead.unplayed.above === 3 && lead.unplayed.twice === "" && lead.unplayed.link === "All 3",
+      "Not played live yet doesn't repeat the week's row: of the three unplayed, it shows those the week's lead and two rows don't, the link counts all three (" + JSON.stringify(lead && lead.unplayed) + ")");
     await dPage.evaluate(async () => {
       if (firetable.discover.state().playing) document.querySelector("#dMini .pb-main")?.click();
       await new Promise((r) => setTimeout(r, 1000));

@@ -669,24 +669,20 @@ firetable.discover = (function () {
       setList("home-week", "New this week", week);
       h += '<section class="d-week">' + newHead("New this week", "See all " + week.length, "week",
         '<span class="d-actions d-headacts">' + playAllButton("home-week", "Play all", "Play the week's " + week.length) + "</span>") + leadCard(week[0], "home-week") +
-        '<div class="ft-cards d-compact">' + week.slice(1, 7).map(function (t, i) { return card(t, "home-week", i + 1, newMeta(t)); }).join("") + "</div></section>";
+        '<div class="ft-cards d-compact">' + week.slice(1, 21).map(function (t, i) { return card(t, "home-week", i + 1, newMeta(t)); }).join("") + "</div></section>";
       // the lead's panel takes its cover's colour (the bar's, toneOf), once the page has it
       toneOf(week[0]).then(function (c) { var el = c && document.querySelector('#dBrowse .d-lead[data-cid="' + CSS.escape(week[0].cid) + '"]'); if (el) el.style.setProperty("--lead-tone", c); });
     } else {
-      h += "<section>" + newHead(newTitle, "All new releases", "days90") + newList(nt, "grid", "home-new", 18, true) + "</section>";
+      h += "<section>" + newHead(newTitle, "All new releases", "days90") + newList(nt, "grid", "home-new", 20, true) + "</section>";
     }
-    // Under New this week, a song its row already shows stays out of this one
-    // (in a week nobody had played yet the two rows were the same four songs).
-    // The link still counts them all, and New lists them all. Without a week's
-    // row the newest releases lead instead, and this row is as it was.
-    var allUnplayed = unplayedNew();
-    var above = {};
-    if (week.length >= 6) week.slice(0, 7).forEach(function (t) { above[t.cid] = true; });
-    var unplayed = allUnplayed.filter(function (t) { return !above[t.cid]; });
+    // Each shelf of covers draws up to 20; js/discover-shelves.js shows two
+    // rows of them, however many fit across, and this one (.d-norepeat) skips
+    // a song New this week already shows, so the two don't repeat.
+    var unplayed = unplayedNew();
     if (unplayed.length) {
       setList("home-unplayed", "Not played live yet", unplayed);
-      h += "<section>" + newHead("Not played live yet", "All " + allUnplayed.length, "unplayed") +
-        '<div class="ft-cards d-compact">' + unplayed.slice(0, 6).map(function (t, i) {
+      h += "<section>" + newHead("Not played live yet", "All " + unplayed.length, "unplayed") +
+        '<div class="ft-cards d-compact d-norepeat">' + unplayed.slice(0, 20).map(function (t, i) {
           return card(t, "home-unplayed", i, { tag: "Be the first", date: t.rel ? "out " + firetable.utilities.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime()) : "" });
         }).join("") + "</div></section>";
     }
