@@ -38,7 +38,7 @@
     "longFunctions": 1
   },
   "js/room.js": {
-    "lines": 1283,
+    "lines": 1245,
     "longFunctions": 5
   },
   "js/search.js": {
@@ -49,7 +49,7 @@
     "longFunctions": 3
   },
   "js/ui.js": {
-    "lines": 1854,
+    "lines": 1846,
     "longFunctions": 4
   },
   "js/users.js": {

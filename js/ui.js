@@ -360,7 +360,7 @@ function drawSaveButton(btn, where) {
 
 /** Redraw every add button on songs outside your own playlist. */
 firetable.ui.markSaved = firetable.utilities.oncePerFrame(function () {
-  document.querySelectorAll("#thehistory .histeal, #thediscovers .histeal, #searchResults .queuetrack, #dBrowse .histeal").forEach(function (btn) {
+  document.querySelectorAll("#thehistory .histeal, #searchResults .queuetrack, #dBrowse .histeal").forEach(function (btn) {
     var row = btn.closest(".pvbar");
     if (!row || !row.getAttribute("data-cid")) return;
     drawSaveButton(btn, firetable.saved.where(row.getAttribute("data-type") || 1, row.getAttribute("data-cid")));
@@ -949,7 +949,7 @@ firetable.ui.applySongAnnouncementVisibility = function () {
 
 // ─── Navigation State ─────────────────────────────────────────────────────────
 // Tracks three independent pieces of state:
-//   view         – which content view is active (playlists|history|cards|discover)
+//   view         – which content view is active (playlists|history|cards)
 //   side         – which side panel is active at medium (chat|people)
 //   mobileSection – which group shows on mobile (view|chat|people)
 // All three are persisted to localStorage so refresh restores the exact state.
@@ -961,11 +961,11 @@ firetable.nav = {
   _isFading: false,
   _fadeMs: 180,
 
-  _validViews:   ['playlists', 'history', 'cards', 'discover'],
+  _validViews:   ['playlists', 'history', 'cards'],
   _validSides:   ['chat', 'people'],
   _validMobile:  ['view', 'chat', 'people'],
-  _viewTabMap:   { playlists: 'mm-playlists', history: 'mm-history', cards: 'mm-cards', discover: 'mm-discover' },
-  _mainPanels:   ['#queuebox', '#thehistoryWrap', '#cardsWrap', '#discover'],
+  _viewTabMap:   { playlists: 'mm-playlists', history: 'mm-history', cards: 'mm-cards' },
+  _mainPanels:   ['#queuebox', '#thehistoryWrap', '#cardsWrap'],
   _sidePanels:   ['#actualChat', '#usersbox'],
 
   _collectVisiblePanels: function (selectors) {
@@ -1043,12 +1043,12 @@ firetable.nav = {
     var n = firetable.nav;
 
     // URL path takes priority for viewNav (handles old bookmarks / shared links)
-    var pathMatch = location.pathname.match(/\/(playlists|history|cards|discover)\/?$/);
+    var pathMatch = location.pathname.match(/\/(playlists|history|cards)\/?$/);
     if (pathMatch) {
       n.view = pathMatch[1];
       n.mobileSection = 'view';
       // Clean up the URL so it doesn't look like we still do path-based routing
-      history.replaceState(null, '', location.pathname.replace(/\/(playlists|history|cards|discover)\/?$/, '/'));
+      history.replaceState(null, '', location.pathname.replace(/\/(playlists|history|cards)\/?$/, '/'));
     } else {
       var sv = localStorage[STORAGE.navView];
       if (sv && n._validViews.indexOf(sv) !== -1) n.view = sv;
@@ -1085,7 +1085,7 @@ firetable.nav = {
   /** Handle a mini-mode tab click by its element ID. */
   setMobileTab: function (tabId) {
     var n = firetable.nav;
-    var viewMap = { 'mm-playlists': 'playlists', 'mm-history': 'history', 'mm-cards': 'cards', 'mm-discover': 'discover' };
+    var viewMap = { 'mm-playlists': 'playlists', 'mm-history': 'history', 'mm-cards': 'cards' };
     var isMd = window.matchMedia('(min-width: 640px)').matches;
     var isViewTab = !!viewMap[tabId];
     var selectors = !isMd
@@ -1115,7 +1115,7 @@ firetable.nav = {
     var isMd = window.matchMedia('(min-width: 640px)').matches;
 
     // ── View class (always) ──
-    $g.removeClass('view-playlists view-history view-cards view-discover')
+    $g.removeClass('view-playlists view-history view-cards')
       .addClass('view-' + n.view);
 
     // ── Layout classes ──
@@ -1167,9 +1167,8 @@ firetable.nav = {
     // layout pass (breakpoint changes, tab clicks, logins all call apply)
     if (n.view === 'cards' && n._cardsShown !== true) firetable.actions.cardCase();
     n._cardsShown = n.view === 'cards';
-    // Recent and Fresh download the first time they're opened
+    // Recent downloads the first time it's opened (Fresh is Discover's: js/discover-fresh.js)
     if (n.view === 'history') ftapi.watchFeed('history');
-    if (n.view === 'discover') ftapi.watchFeed('fresh');
     // the bottom tab bar on phones: Live or Library
     if (firetable.discover && firetable.discover.renderTabs) firetable.discover.renderTabs();
   }
@@ -1319,8 +1318,8 @@ firetable.ui.tooltip = (function () {
       hide();
     });
 
-    // ── History / Discover: title-based tooltips ──
-    $('#thehistoryWrap, #thediscovers').on('mouseenter.ft-tooltip', '[title]', function () {
+    // ── History: title-based tooltips ──
+    $('#thehistoryWrap').on('mouseenter.ft-tooltip', '[title]', function () {
       var $el = $(this), text = $el.attr('title');
       $el.attr('data-ft-title', text).removeAttr('title');
       show(this, text);
@@ -1330,8 +1329,8 @@ firetable.ui.tooltip = (function () {
       hide();
     });
 
-    // ── History / Discover: DJ avatar name tooltip ──
-    $('#thehistoryWrap, #thediscovers').on('mouseenter.ft-tooltip', '.dj-avatar-tip[aria-label]', function () {
+    // ── History: DJ avatar name tooltip ──
+    $('#thehistoryWrap').on('mouseenter.ft-tooltip', '.dj-avatar-tip[aria-label]', function () {
       var text = $(this).attr('aria-label');
       if (text) show(this, text);
     }).on('mouseleave.ft-tooltip', '.dj-avatar-tip', hide);
@@ -1790,10 +1789,10 @@ firetable.ui.setupSkipLinks = function () {
   // before Tab moves focus (so a button that just became useful is there to land on),
   // and whenever the page changes for readers that don't Tab
   document.addEventListener("keydown", function (e) { if (e.key === "Tab") update(); }, true);
-  // Discover Home's address, #discover, is also the id of Live's Fresh panel
-  // (ids here are fixed), so the browser takes that panel, half-way down the
-  // page, as where Tab starts from: the header and these buttons were never
-  // reached. With nothing in focus, start from the top again.
+  // Discover Home's address is #discover: should anything here ever carry that
+  // id, the browser would take it as where Tab starts from (it was Live's Fresh
+  // panel, half-way down the page, and the header and these buttons were never
+  // reached). With nothing in focus, start from the top again.
   var fromTop = function () {
     if (location.hash !== "#discover" || (document.activeElement && document.activeElement !== document.body)) return;
     nav.setAttribute("tabindex", "-1");
@@ -1813,14 +1812,6 @@ firetable.ui.setupMiscEvents = function () {
 
   // ── Floating UI tooltips ──
   firetable.ui.tooltip.bind();
-
-  // ── Mini mode discover/login tabs (pre-login only) ──
-  $("#minidiscover").on("click", function () {
-    firetable.nav.setView('discover');
-  });
-  $("#minijoin").on("click", function () {
-    firetable.nav.setView('playlists');
-  });
 
   // ── Mini-mode tabs ──
   $("#minimodeoptions .tab").on("click", function () {
@@ -2362,7 +2353,6 @@ firetable.ui.init = function () {
   [
     { inner: '#mainqueue',    outer: '#queuebox' },
     { inner: '#thehistory',   outer: '#thehistoryWrap' },
-    { inner: '#thediscovers', outer: '#discover' },
   ].forEach(function (pair) {
     var inner = document.querySelector(pair.inner);
     var outer = document.querySelector(pair.outer);
@@ -2394,7 +2384,7 @@ firetable.ui.init = function () {
   (function () {
     if (typeof ResizeObserver === 'undefined') return;
     // [scroller, element that carries the variable]
-    [['queuelist', 'mainGrid'], ['thehistory', 'mainGrid'], ['discover', 'mainGrid'], ['cardsWrap', 'mainGrid']]
+    [['queuelist', 'mainGrid'], ['thehistory', 'mainGrid'], ['cardsWrap', 'mainGrid']]
       .forEach(function (ids) {
         var el = document.getElementById(ids[0]);
         var target = document.getElementById(ids[1]);

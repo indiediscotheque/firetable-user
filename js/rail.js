@@ -23,7 +23,7 @@
  *   shortcuts and About are in it already), so the toolbar keeps to what's
  *   used all the time; community stays on it;
  * - the desk: when Live's middle is wide (66rem and up), your playlist down
- *   the left and the room's Recent, Fresh or Cards beside it, under the
+ *   the left and the room's Recent or Cards beside it, under the
  *   stage (html.rail-desk; css/rail.css lays it out).
  */
 firetable.rail = (function () {

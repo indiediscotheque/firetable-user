@@ -14,8 +14,8 @@
  * the song in full and what goes with it (who found it, up next, the decks,
  * the chat), for a TV or a second screen, in Discover and in Live.
  *
- * Views: Home, New, Charts, Genres, DJs, Years, Recent plays, and a page
- * for each genre, DJ, artist, year and tempo (BPM). The bot publishes the charts, new
+ * Views: Home, New, Fresh (js/discover-fresh.js), Charts, Genres, DJs, Years,
+ * Recent plays, and a page for each genre, DJ, artist, year and tempo (BPM). The bot publishes the charts, new
  * releases and a chat peek under discover/ (firetable-hostbot's
  * lib/discover.js); the weekly play history job publishes the library pages
  * under discover/lib/ (tools/history/library.js). Song details come from the
@@ -43,7 +43,7 @@
  * and the library's own lists, which the site shows as they were built:
  *   /music/ (the library), /music/artists/, /music/artists-a-z/<letter>/
  * The rest keep a #: #discover (Home), #discover/search/<words>,
- * #discover/bpm/<tempo>, #discover/recent, #live. Every page also answers to
+ * #discover/bpm/<tempo>, #discover/fresh, #discover/recent, #live. Every page also answers to
  * its old #discover/... address, which becomes the real one.
  */
 
@@ -217,7 +217,7 @@ firetable.discover = (function () {
   }
   // The library's lists with no Discover page of their own: its front page, the artists, and the artists by letter
   var PAGES = /^(?:library|artists|artists-a-z\/[a-z0-9-]{1,5})$/;
-  /** The library address of a page, or null for the pages that keep a # (Home, search, tempo, Recent plays, Live). */
+  /** The library address of a page, or null for the pages that keep a # (Home, search, tempo, Fresh, Recent plays, Live). */
   function pathOf(r) {
     if (!r || r.mode !== "discover") return null;
     var v = r.view;
@@ -487,6 +487,7 @@ firetable.discover = (function () {
   var VIEWS = [
     { id: "home", label: "Home", icon: "home" },
     { id: "new", label: "New", icon: "new_releases" },
+    { id: "fresh", label: "Fresh", icon: "fiber_new" },
     { id: "charts", label: "Charts", icon: "leaderboard" },
     { id: "genres", label: "Genres", icon: "category" },
     { id: "djs", label: "DJs", icon: "headphones" },
@@ -602,6 +603,7 @@ firetable.discover = (function () {
     else if (v === "themes") h = D.sub ? viewNight(D.sub) : viewNights();
     else if (v === "search") h = viewSearch(D.sub || "");
     else if (v === "page") h = viewPage(D.sub);
+    else if (v === "fresh") h = fresh("page");
     else if (v === "recent") {
       var rt = recentTracks();
       setList("recent", "Recent plays", rt);
@@ -686,6 +688,7 @@ firetable.discover = (function () {
           return card(t, "home-unplayed", i, { tag: "Be the first", date: t.rel ? "out " + firetable.utilities.shortDate(new Date(String(t.rel).slice(0, 10) + "T12:00:00").getTime()) : "" });
         }).join("") + "</div></section>";
     }
+    h += fresh("shelf"); // the first plays here of new uploads
     h += "<section>" + head("Room chart · this week", "Full chart", "discover/charts") + chartList(chart, "home-chart", 5, "week") + "</section>";
     h += topDjs();
     if (rising.length) {
@@ -1998,6 +2001,18 @@ firetable.discover = (function () {
     state: function () { return D; }, views: function () { return VIEWS; }
   });
   function renderTabs() { tabBar.render(); }
+  // Fresh, the first plays here of new uploads: js/discover-fresh.js, loaded the first time
+  // Home or Fresh is drawn (js/lazy.js). part is "page" or "shelf"; until it's here, rows loading
+  var freshPage = null, freshAsked = null;
+  function fresh(part) {
+    if (freshPage) return freshPage[part]();
+    freshAsked = freshAsked || ftLazy.own("fresh-js", "js/discover-fresh.js").then(function () {
+      freshPage = firetable.discoverFresh({ card: card, loading: loading, emptyNote: emptyNote, head: head, djShown: djShown, setList: setList, state: function () { return D; }, render: renderBrowse });
+      freshPage.changed();
+    }, function (err) { freshAsked = null; quiet(err); }); // the next draw asks again
+    return part === "page" ? '<div class="d-headrow"><h2>Fresh</h2></div>' + loading() : "<section>" + loading() + "</section>";
+  }
+
   function djList() { return queue.djList(); }
 
   // ─── The room, as Discover plays alongside it ───────────────────────────
@@ -3365,7 +3380,7 @@ firetable.discover = (function () {
       db().ref("discover/chartIds/" + p).once("value").then(function (s) { D.data.chartIds[p] = s.val() || {}; if (D.view === "charts") renderBrowse(); }, quiet);
     });
     // (the bot's public chat peek, discover/chat, isn't read: the chat is for members only)
-    renderPeek();
+    lockedTabs();
   }
   function quiet(err) { firetable.debug && console.log("[discover] not readable yet:", err && err.message); }
   // Leaving for Live lets go of it only after a few minutes there: going back
@@ -3466,12 +3481,7 @@ firetable.discover = (function () {
 
   // ─── Visitors' Live: the chat to read ───────────────────────────────────
 
-  /** The chat is for members only (the owner's call, November 2026): no chat to read for visitors. */
-  function renderPeek() {
-    lockedTabs();
-    var el = document.getElementById("chatPeek");
-    if (el) el.hidden = true;
-  }
+  // (The chat is for members only, the owner's call, November 2026: no chat to read for visitors, only lockedTabs.)
 
   // ─── Events ─────────────────────────────────────────────────────────────
 
@@ -3571,7 +3581,7 @@ firetable.discover = (function () {
     if ((b = t.closest("#dSearchOpen"))) return openSearch();
     if (t.closest(".d-import")) return D.importMeta && firetable.importer.open(D.importMeta);
     if ((b = t.closest(".d-sheetlink"))) { e.preventDefault(); return openSheet(songFrom(b)); }
-    if ((b = t.closest("#thehistory .pv-dj-avatar, #thediscovers .pv-dj-avatar"))) {
+    if ((b = t.closest("#thehistory .pv-dj-avatar"))) {
       var key = djKey(b.getAttribute("data-avatar-uid"), b.getAttribute("aria-label"));
       if (key) return goTo("discover/djs/" + key);
     }
@@ -3889,19 +3899,19 @@ firetable.discover = (function () {
   }
 
   // ─── Every name is a door: Live's lists and stage, and the song sheet ───
-  // Live's Recent, Fresh and stage are drawn by room.js; this only adds to
+  // Live's Recent and stage are drawn by room.js; this only adds to
   // what's there, watching for new rows: artist names link to their pages,
   // a DJ's robot to their DJ page, and a song's title opens its sheet.
 
   function linkLive(root) {
-    root.querySelectorAll(".hist-track-artist, .fresh-track-artist, #artist").forEach(function (el) {
+    root.querySelectorAll(".hist-track-artist, #artist").forEach(function (el) {
       if (el.closest("#dBrowse")) return;
       var text = el.textContent;
       if (!text || el.getAttribute("data-linked") === text) return;
       el.setAttribute("data-linked", text);
       el.innerHTML = artistLinks(text);
     });
-    root.querySelectorAll(".hist-track-title, .fresh-track-title, #track").forEach(function (el) {
+    root.querySelectorAll(".hist-track-title, #track").forEach(function (el) {
       // (the stage card's title with no song on is words: there's nothing to open, js/stage-state.js)
       if (el.closest("#dBrowse") || el.classList.contains("d-sheetlink") || (el.id === "track" && !liveTrack())) return;
       el.classList.add("d-sheetlink");
@@ -3936,7 +3946,7 @@ firetable.discover = (function () {
     var bar = el.closest(".pvbar");
     if (!bar || !bar.getAttribute("data-cid")) return null;
     var avatar = (bar.closest(".hist-entry") || bar).querySelector(".pv-dj-avatar");
-    var artistEl = bar.querySelector(".hist-track-artist, .fresh-track-artist");
+    var artistEl = bar.querySelector(".hist-track-artist");
     return { type: Number(bar.getAttribute("data-type") || 1), cid: bar.getAttribute("data-cid"), a: artistEl ? artistEl.textContent : "", t: el.textContent,
       img: bar.getAttribute("data-img") || null, url: (bar.querySelector(".tracklink-btn") || {}).href || null,
       dj: avatar && avatar.getAttribute("aria-label"), djid: avatar && avatar.getAttribute("data-avatar-uid") };
@@ -4136,15 +4146,6 @@ firetable.discover = (function () {
       var here = route();
       if (here && here.view === "page") builtPages[here.sub] = { html: filledHtml, title: document.title };
     }
-
-    // visitors' Live: the chat, above Fresh
-    var fresh = document.getElementById("discover");
-    if (fresh) {
-      var peek = document.createElement("div");
-      peek.id = "chatPeek";
-      peek.hidden = true;
-      fresh.insertBefore(peek, fresh.firstChild);
-    }
   }
 
   /** The player bar's frame: renderBar fills it in. */
@@ -4221,7 +4222,7 @@ firetable.discover = (function () {
     if (!on) P.inRoom = null;
     setMode(mode);
     renderSide();
-    renderPeek();
+    lockedTabs();
   }
 
   function applyRoute(r) {
@@ -4407,7 +4408,7 @@ firetable.discover = (function () {
         barRo.observe(barEl);
         if (tabsEl) barRo.observe(tabsEl);
       }
-      // Home, Charts and Recent show people's names and faces (and hide the
+      // Home, Fresh, Charts and Recent show people's names and faces (and hide the
       // ones who asked): redraw them only when those change, not on every
       // tab someone hides or shows (idle), which rebuilt every shelf
       var browseUsers = null;
@@ -4417,7 +4418,7 @@ firetable.discover = (function () {
         var sig = firetable.utilities.usersSig();
         if (sig === browseUsers) return;
         browseUsers = sig;
-        if (D.mode === "discover" && /^(home|charts|recent)$/.test(D.view)) renderBrowse();
+        if (D.mode === "discover" && /^(home|fresh|charts|recent)$/.test(D.view)) renderBrowse();
       }));
       // a play, or its genre arriving a moment later: tonight's rings on the sound map
       ftapi.events.on("editedHistory", firetable.utilities.oncePerFrame(function () { setTimeout(mapMarks, 0); }));

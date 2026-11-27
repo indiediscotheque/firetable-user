@@ -76,6 +76,8 @@
 	<meta name="find-js" content="js/discover-find.js?v=01.12.08" />
 	<!-- Genres' sound map (js/lazy.js loads it the first time Map is pressed: Genres opens on its grid) -->
 	<meta name="map-js" content="js/discover-map.js?v=01.12.08" />
+	<!-- Fresh, Discover's page of first plays here (js/discover.js loads it the first time Home or Fresh is drawn) -->
+	<meta name="fresh-js" content="js/discover-fresh.js?v=01.12.08" />
 	<!-- The room in a visitor's empty crate column, and Keep your crate (js/discover.js loads it the first time either is wanted) -->
 	<meta name="room-js" content="js/discover-room.js?v=01.12.08" />
 	<!-- A chart as a picture (Share → Save as an image): js/discover.js loads it the first time one is made -->
@@ -300,7 +302,6 @@
 		<div id="minimodeoptions" class="tabs" role="tablist" aria-label="Sections">
 			<button type="button" role="tab" class="tab on" id="mm-playlists" aria-selected="true">Playlists</button>
 			<button type="button" role="tab" class="tab" id="mm-history" aria-selected="false">Recent</button>
-			<button type="button" role="tab" class="tab" id="mm-discover" aria-selected="false">Fresh</button>
 			<button type="button" role="tab" class="tab" id="mm-cards" aria-selected="false">Cards</button>
 			<button type="button" role="tab" class="tab" id="mmchat" aria-selected="false">Chat</button>
 			<button type="button" role="tab" class="tab" id="mmusrs" aria-selected="false">People</button>
@@ -646,38 +647,6 @@
 		</button>
 		<span id="tip-nav-sideBtn" role="tooltip" class="ft-tip" data-placement="left" style="position-anchor: --tip-nav-sideBtn">Fold the side panel</span>
 
-		<div id="discover" class="scroll-view" role="region" aria-label="Fresh in the room">
-			<!-- Fresh's heading: a visitor's (beside the sign-up form at 640px and up), and on phones whenever Fresh has the screen to itself (body.nt-fresh), a member's too; Join or log in is a visitor's on a phone -->
-			<div id="freshIntro">
-				<h2>Fresh in the room</h2>
-				<p>New music people played here lately.</p>
-				<button type="button" id="minijoin" class="butt small" data-auth-open="auto">Join or log in</button>
-			</div>
-			<div id="thediscovers">
-				<div class="pvbar">
-					<div class="pv-art discart">
-						<button type="button" class="material-symbols-filled previewicon" aria-label="Preview">&#xE037;</button>
-					</div>
-					<div class="qtxt">
-						<div class="listwords">
-							<div class="fresh-title"></div>
-							<a class="material-symbols-outlined row-icon tracklink-btn" target="_blank" rel="noopener" href="" title="Open track" aria-label="Open track">open_in_new</a>
-							<button type="button" class="histeal material-symbols-outlined row-icon" title="Add to playlist" aria-label="Add to playlist">&#xE03B;</button>
-						</div>
-						<div class="fresh-meta">
-							<span class="pv-dj-avatar ft-avatar dj-avatar-tip" role="img"></span>
-							<span class="histdj"></span>
-							<span class="histdate"></span>
-							<span class="histtime"></span>
-						</div>
-					</div>
-				</div>
-				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2.5rem;height:2.5rem;flex-shrink:0;border-radius:3px"></div><div style="flex:1;min-width:0"><div class="skel" style="height:0.75rem;max-width:15rem;margin-bottom:0.35rem"></div><div class="skel" style="height:0.65rem;max-width:8rem"></div></div></div>
-				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2.5rem;height:2.5rem;flex-shrink:0;border-radius:3px"></div><div style="flex:1;min-width:0"><div class="skel" style="height:0.75rem;max-width:11rem;margin-bottom:0.35rem"></div><div class="skel" style="height:0.65rem;max-width:6rem"></div></div></div>
-				<div class="ft-skeleton" aria-hidden="true" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;border-bottom:1px solid var(--color-border)"><div class="skel" style="width:2.5rem;height:2.5rem;flex-shrink:0;border-radius:3px"></div><div style="flex:1;min-width:0"><div class="skel" style="height:0.75rem;max-width:18rem;margin-bottom:0.35rem"></div><div class="skel" style="height:0.65rem;max-width:9rem"></div></div></div>
-			</div>
-		</div>
-
 		<div id="pe-here" class="scroll-view" role="region" aria-label="People in the room"></div>
 
 		<div id="login" class="scroll-view" role="region" aria-label="Join or log in">
@@ -687,7 +656,7 @@
 				<div id="roomPulse" aria-live="polite"></div>
 				<div class="au-join"><button type="button" class="butt d-createaccount">Join</button><span>Already a member? <button type="button" class="linkButton d-login">Log in</button></span></div>
 				<p class="welcomeGetApp" id="welcomeGetApp" hidden><button type="button" class="linkButton showInstallGuide"><i class="material-symbols-outlined" aria-hidden="true">install_mobile</i> Get the app on your phone</button></p>
-				<div class="miniLoginNavOnly"><p>Or <span id="minidiscover">learn more about this station</span>.</p></div>
+				<div class="miniLoginNavOnly"><p>Or <a id="minidiscover" href="#discover/fresh">hear what's fresh here</a>, in Discover.</p></div>
 			</div>
 		</div>
 	</div>

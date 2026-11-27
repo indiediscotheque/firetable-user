@@ -70,6 +70,7 @@ const genresAs = (view) => async (page) => {
 const VIEWS = [
   { name: "d-home", run: hash("#discover") },
   { name: "d-new", run: hash("#discover/new") },
+  { name: "d-fresh", run: hash("#discover/fresh") },
   { name: "d-charts", run: hash("#discover/charts") },
   { name: "d-genres", run: genresAs("grid") },
   { name: "d-genres-map", run: genresAs("map"), after: (page) => page.evaluate(() => document.querySelector('#dBrowse .d-segbtn[data-gview="grid"]')?.click()) },
@@ -79,8 +80,6 @@ const VIEWS = [
   { name: "live-recent", run: liveTab("mm-history") },
   { name: "live-chat", run: liveTab("mmchat") },
   { name: "live-people", run: liveTab("mmusrs") },
-  // a visitor's Fresh on a phone, with its Join or log in (a gold button; its words were gold on gold until Round 5)
-  { name: "live-fresh", who: ["visitor"], maxWidth: 639, run: liveTab("mm-discover") },
   { name: "full-player", run: async (page) => { await hash("#discover")(page); await page.evaluate(() => firetable.discover.openFull()); },
     after: (page) => page.evaluate(() => firetable.discover.closeFull()) },
   // the left column folded into a toolbar (wide screens), and the column over the middle

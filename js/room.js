@@ -55,8 +55,8 @@ firetable.ui.applyBeat = function () {
 // ─── History Item Renderer ────────────────────────────────────────────────────
 
 /**
- * Build and attach a history/discover item to the DOM.
- * Extracted from the nearly-identical newProduce / newHistory handlers.
+ * Build and attach a Recent item to the DOM (Fresh, which shared it, is
+ * Discover's page now: js/discover-fresh.js).
  *
  * @param {Object} data          - Track data from ftapi
  * @param {jQuery} $template     - Cloneable template element
@@ -79,7 +79,7 @@ function renderHistoryItem(data, $template, containerSel, older) {
   $histItem.attr('id', "pvbar" + pkey)
            .attr("data-key", pkey)
            .attr("data-histid", data.histID)
-           .attr("data-list", containerSel === "#thediscovers" ? "newMusic" : "songHistory")
+           .attr("data-list", "songHistory")
            .attr("data-cid", data.cid)
            .attr("data-type", data.type)
            .attr("data-tag", data.artist + " - " + data.title);
@@ -97,19 +97,11 @@ function renderHistoryItem(data, $template, containerSel, older) {
   // Track link
   var titleText = firetable.ui.strip(data.title || "");
   var artistText = firetable.ui.strip(data.artist || "");
-  var isFresh = containerSel === "#thediscovers";
-  var $histLink = $histItem.find(isFresh ? '.fresh-title' : '.histlink').attr('id', data.histID);
-  if (isFresh) {
-    $histLink.html(
-      '<span class="fresh-track-title">' + firetable.utilities.htmlEscape(titleText) + '</span>' +
-      '<span class="fresh-track-artist">' + firetable.utilities.htmlEscape(artistText) + '</span>'
-    );
-  } else {
-    // Title on top, artist under it: easier to scan on a narrow screen
-    $histLink.attr('title', artistText + " - " + titleText);
-    $histLink.find('.hist-track-title').text(titleText);
-    $histLink.find('.hist-track-artist').text(artistText);
-  }
+  var $histLink = $histItem.find('.histlink').attr('id', data.histID);
+  // Title on top, artist under it: easier to scan on a narrow screen
+  $histLink.attr('title', artistText + " - " + titleText);
+  $histLink.find('.hist-track-title').text(titleText);
+  $histLink.find('.hist-track-artist').text(artistText);
   var platform = data.type == MEDIA_SOUNDCLOUD ? 'SoundCloud' : 'YouTube';
   $histItem.find('.tracklink-btn')
     .attr({ href: data.url || '', title: 'Open on ' + platform, 'aria-label': 'Open on ' + platform });
@@ -151,10 +143,9 @@ function renderHistoryItem(data, $template, containerSel, older) {
     var btnCid = $(this).closest('.pvbar').attr('data-cid');
     var btnType = parseInt($(this).closest('.pvbar').attr('data-type'), 10);
     var btnImg = $(this).closest('.pvbar').attr('data-img') || '';
-    // Recent rows use .histlink; Fresh rows use .fresh-title (with artist/title spans)
-    var $histlink = $(this).closest('.pvbar').find('.histlink, .fresh-title').first();
-    var $trackTitle = $histlink.find('.fresh-track-title, .hist-track-title');
-    var $trackArtist = $histlink.find('.fresh-track-artist, .hist-track-artist');
+    var $histlink = $(this).closest('.pvbar').find('.histlink').first();
+    var $trackTitle = $histlink.find('.hist-track-title');
+    var $trackArtist = $histlink.find('.hist-track-artist');
     var btnTitle = ($trackTitle.length && $trackArtist.length)
       ? $trackArtist.text().trim() + ' - ' + $trackTitle.text().trim()
       : $histlink.text();
@@ -571,34 +562,7 @@ firetable.ui.setupRoomEvents = function () {
     firetable._fyreStageObserver.observe(document.getElementById('djStage'));
   }
 
-  // ── Discover (Recently Played by Others) ──
-  var $discoverItem = $('#thediscovers .pvbar').remove();
-  firetable._produceCache = firetable._produceCache || [];
-  ftapi.events.on('newProduce', function (data) {
-    firetable._produceCache.push(data);
-    renderHistoryItem(data, $discoverItem, "#thediscovers");
-    firetable.ui.markSaved();
-  });
-
-  // Fresh downloads the first time it's on screen, not only when its tab is
-  // chosen: signed out at 640px and up it sits beside the welcome, where
-  // visitors have no Fresh tab to choose (it showed its loading rows for good)
-  var freshBox = document.getElementById('discover');
-  if (freshBox && window.IntersectionObserver) {
-    var freshSeen = new IntersectionObserver(function (entries) {
-      if (!entries.some(function (e) { return e.isIntersecting; })) return;
-      freshSeen.disconnect();
-      ftapi.watchFeed('fresh').then(function () {
-        // nothing new lately: say so, instead of loading rows that never end
-        var list = document.getElementById('thediscovers');
-        if (!list || list.querySelector('.pvbar')) return;
-        list.querySelectorAll('.ft-skeleton').forEach(function (el) { el.remove(); });
-        freshBox.classList.remove('content-loading');
-        if (!list.querySelector('.fresh-empty')) $('<p class="fresh-empty"></p>').text('Nothing new yet. Songs show here the first time the room plays them.').appendTo(list);
-      });
-    });
-    freshSeen.observe(freshBox);
-  }
+  // (Fresh, the first plays here of new uploads, is Discover's page: js/discover-fresh.js)
 
   // ── History (Your Play History) ──
   var $historyItem = $('#thehistory .pvbar').remove();
@@ -690,16 +654,10 @@ firetable.ui.setupRoomEvents = function () {
     firetable.ui.markSaved();
   });
 
-  // ── Re-render history/discover after re-login ──
+  // ── Re-render Recent after re-login ──
   // Firebase won't re-fire child_added for already-seen items after a logout/login
   // cycle, so replay from cache into the now-reattached containers.
   ftapi.events.on('loggedIn', function () {
-    if (firetable._produceCache && firetable._produceCache.length) {
-      $('#thediscovers').empty();
-      firetable._produceCache.forEach(function (data) {
-        renderHistoryItem(data, $discoverItem, "#thediscovers");
-      });
-    }
     if (firetable._historyCache && firetable._historyCache.length) {
       $('#thehistory').empty();
       firetable._historyCache.forEach(function (data) {
@@ -717,7 +675,7 @@ firetable.ui.setupRoomEvents = function () {
     var el = document.getElementById(data.histID);
     if (el) {
       var $el = $(el);
-      var $title = $el.find('.fresh-track-title, .hist-track-title'), $artist = $el.find('.fresh-track-artist, .hist-track-artist');
+      var $title = $el.find('.hist-track-title'), $artist = $el.find('.hist-track-artist');
       if ($title.length && $artist.length) {
         $title.text(firetable.ui.strip(data.title || ''));
         $artist.text(firetable.ui.strip(data.artist || ''));
@@ -728,10 +686,8 @@ firetable.ui.setupRoomEvents = function () {
       $el.closest('.pvbar').attr('data-tag', tag);
     }
     // keep the cached copies (used to redraw after logging back in) in step
-    [firetable._historyCache, firetable._produceCache].forEach(function (cache) {
-      (cache || []).forEach(function (item) {
-        if (item.histID === data.histID) { item.artist = data.artist; item.title = data.title; if (data.g) item.g = data.g; }
-      });
+    (firetable._historyCache || []).forEach(function (item) {
+      if (item.histID === data.histID) { item.artist = data.artist; item.title = data.title; if (data.g) item.g = data.g; }
     });
     applyHistoryFilter();
   });

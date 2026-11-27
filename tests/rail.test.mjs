@@ -108,7 +108,7 @@ test("[ folds it: the middle gets the room, chat keeps its width; kept on this d
   assert.equal(r.themeFlat, "none", "the theme is a flat icon, as the toolbar's others (no button shadow)");
 });
 
-test("a visitor's Live: the room goes to Fresh; the people button counts and opens the list over the middle", async () => {
+test("a visitor's Live: the stage and the welcome take the middle (Fresh is Discover's); the people button counts and opens the list over the middle", async () => {
   await go("#live");
   const r = await page.evaluate(() => {
     const ppl = document.getElementById("nav-railPeople");
@@ -117,9 +117,9 @@ test("a visitor's Live: the room goes to Fresh; the people button counts and ope
   assert.equal(r.people, true, "the people button is in the toolbar in Live");
   assert.equal(r.expanded, "false");
   const cols = r.cols.split(" ").map(parseFloat);
+  assert.equal(cols.length, 2, "no column for Fresh: " + cols);
   assert.equal(cols[0], 64);
-  assert.ok(Math.abs(cols[1] - 0.46 * 1440) < 2, "the stage and the welcome keep their column: " + cols);
-  assert.ok(Math.abs(cols[2] - (1440 - 64 - 0.46 * 1440)) < 2, "Fresh takes the rest: " + cols);
+  assert.ok(Math.abs(cols[1] - (1440 - 64)) < 2, "the stage and the welcome take the rest: " + cols);
   await page.click("#nav-railPeople");
   await page.waitForFunction(() => document.documentElement.classList.contains("rail-peek"), null, { timeout: 3000 });
   const peek = await page.evaluate(() => ({
@@ -288,7 +288,7 @@ test("Live's toolbar shows who's on the decks; everyone else is behind the count
   await page.evaluate(() => { document.getElementById("pe-here").innerHTML = ""; });
 });
 
-test("the desk: a wide middle puts your playlist beside Recent, Fresh or Cards, under a taller stage", async () => {
+test("the desk: a wide middle puts your playlist beside Recent or Cards, under a taller stage", async () => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await go("#live");
   // a member's Live (the page is a visitor's): the room's panels in, as smoke.mjs does
@@ -500,7 +500,7 @@ test("Discover's right column folds to a strip and opens again: the middle takes
   // Live keeps its own columns, and has no such button
   await go("#live");
   const live = await page.evaluate(() => ({ shown: !!document.getElementById("nav-sideBtn").offsetParent, cols: getComputedStyle(document.getElementById("mainGrid")).gridTemplateColumns.split(" ").map((c) => Math.round(parseFloat(c))) }));
-  assert.deepEqual(live, { shown: false, cols: [346, 662, 432] });
+  assert.deepEqual(live, { shown: false, cols: [346, 1094] }); // a visitor's: the people, then the stage over the welcome (Fresh is Discover's)
   // next time it paints folded (js/head.js), before any other script
   await page.addInitScript(() => {
     document.addEventListener("readystatechange", () => {

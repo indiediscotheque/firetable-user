@@ -48,7 +48,7 @@ firetable.tt = (function () {
     built: false,
     tab: "room",       // queue | room | chat
     layout: "one",     // one sidebar (Queue · Room · Chat) or two (Queue on the left, Room · Chat on the right)
-    sub: null,         // the Room tab's page: people | recent | fresh | cards (null: its front)
+    sub: null,         // the Room tab's page: people | recent | cards (null: its front)
     list: null, byId: {}, tiers: {}, classics: null,
     ready: null,       // the avatars' list, loading
     seats: {}, crowd: {}, // the figures on the stage, by uid
@@ -789,7 +789,6 @@ firetable.tt = (function () {
   var SUBS = [
     { id: "people", icon: "group", label: "People here" },
     { id: "recent", icon: "history", label: "Recently played", view: "history", members: true },
-    { id: "fresh", icon: "new_releases", label: "Fresh", view: "discover" },
     { id: "cards", icon: "style", label: "Cards", view: "cards", members: true }
   ];
 
@@ -858,7 +857,9 @@ firetable.tt = (function () {
         "</div>" +
         '<nav class="tt-subnav" aria-label="Room">' + SUBS.filter(function (s) { return !s.members || ftapi.uid; }).map(function (s) {
           return '<button type="button" class="tt-subitem" data-tt-sub="' + s.id + '">' + ms(s.icon) + "<span>" + esc(s.label) + "</span>" + ms("chevron_right") + "</button>";
-        }).join("") + "</nav>";
+        }).join("") +
+        // Fresh was a page here; it's Discover's now (js/discover-fresh.js), a link away
+        '<a class="tt-subitem" href="#discover/fresh">' + ms("fiber_new") + "<span>Fresh, in Discover</span>" + ms("chevron_right") + "</a></nav>";
     }
     // only redraw when it changed: keeps focus and the scroll where they are
     var key = (sub ? sub.id : "front") + "|" + n + "|" + !!ftapi.uid;
@@ -1352,11 +1353,11 @@ firetable.tt = (function () {
     document.addEventListener("click", function (e) {
       if (e.target.closest("[data-tt-signin]")) { var s = $id("nav-signin"); if (s) s.click(); }
       // the phone's tab bar, after it has done its part (js/discover-tabs.js go): Library is a member's Queue tab here (a
-      // visitor's is their crate, in Discover), Live the room; a link from Discover into Live's Fresh or Recent (data-live:
-      // Fresh's tile, "See every play in Live") opens the Room's page for it, as the theme comes back with Live (a
+      // visitor's is their crate, in Discover), Live the room; a link from Discover into Live's Recent (data-live:
+      // "See every play in Live") opens the Room's Recently played, as the theme comes back with Live (a
       // click with a key held opens the link in a new tab, as js/discover-tabs.js toPanel leaves it: this one stays as it was)
       var nt = S.active && e.target.closest("#nav-tabs [data-tab]"), to = nt && { library: ftapi.uid ? "queue" : null, live: S.tab === "queue" ? "room" : S.tab }[nt.dataset.tab];
-      if (to) setTab(to); else if (S.pref && !e.defaultPrevented && !e.button && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) && (nt = e.target.closest("a[data-live]"))) { S.tab = "room"; S.sub = { discover: "fresh", history: "recent" }[nt.dataset.live] || null; }
+      if (to) setTab(to); else if (S.pref && !e.defaultPrevented && !e.button && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) && (nt = e.target.closest("a[data-live]"))) { S.tab = "room"; S.sub = nt.dataset.live === "history" ? "recent" : null; }
     });
 
     var dlg = $id("tt-picker");

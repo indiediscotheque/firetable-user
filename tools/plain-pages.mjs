@@ -633,11 +633,11 @@ if (HOME) {
   // Discover's pages as tiles first, as the site draws them at the top of its Home (js/discover-tabs.js,
   // from discover.js's VIEWS): a phone's way to them (css/discover.css shows them under 640px) from the
   // first paint, not only once the live Home has its data. The library's pages only where one was built
-  const tiles = [["new", "New", "new_releases", "new/"], ["charts", "Charts", "leaderboard", "charts/"], ["genres", "Genres", "category", "genres/"],
-    ["djs", "DJs", "headphones", "djs/"], ["years", "Years", "calendar_month", "years/"], ["themes", "Theme nights", "nightlife", "themes/"],
-    ["recent", "Recent plays", "history", "#discover/recent"], ["fresh", "Fresh", "fiber_new", "#live"]]
+  const tiles = [["new", "New", "new_releases", "new/"], ["fresh", "Fresh", "fiber_new", "#discover/fresh"], ["charts", "Charts", "leaderboard", "charts/"],
+    ["genres", "Genres", "category", "genres/"], ["djs", "DJs", "headphones", "djs/"], ["years", "Years", "calendar_month", "years/"],
+    ["themes", "Theme nights", "nightlife", "themes/"], ["recent", "Recent plays", "history", "#discover/recent"]]
     .filter(([, , , to]) => to[0] === "#" || pages.some((p) => p.path === to))
-    .map(([id, label, name, to]) => `<a class="d-tile" data-view="${id}" href="${to[0] === "#" ? "/" + to : BASE + to}"${id === "fresh" ? ' data-live="discover"' : ""}>${icon(name)}<span>${label}</span></a>`);
+    .map(([id, label, name, to]) => `<a class="d-tile" data-view="${id}" href="${to[0] === "#" ? "/" + to : BASE + to}">${icon(name)}<span>${label}</span></a>`);
   homeHtml = fill(/<base href/i.test(TEMPLATE) ? TEMPLATE : TEMPLATE.replace(/(<head>\s*\n?)/i, `$1\t<base href="/" />\n`), "discover",
     `<nav class="d-tiles" aria-label="Discover's pages">${tiles.join("")}</nav>` +
     `<div class="d-headrow"><h2>${esc(ROOM)}</h2></div>${about ? `<p class="d-fact">${about}</p>` : ""}` +
