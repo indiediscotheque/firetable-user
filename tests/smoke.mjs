@@ -4801,11 +4801,15 @@ try {
         rows: utils.top >= head.top && utils.bottom <= mode.top + 0.5 && mode.top >= logo.bottom && theme.top >= mode.bottom && theme.bottom <= head.bottom,
         inside: [logo, utils, mode, theme].every((b) => b.left >= head.left - 0.5 && b.right <= head.right + 0.5) && bar.scrollWidth <= bar.clientWidth + 1,
         under: Math.abs(parseFloat(getComputedStyle(document.getElementById("dRail")).paddingTop) - head.height) <= 1,
+        // drawn as in Live's column: a heading with its icon over the theme, no pill, border or shadow
+        section: (() => { const pl = getComputedStyle(document.getElementById("themePill")), mk = document.querySelector("#themePill .themeLabel");
+          return pl.backgroundColor + "|" + pl.borderTopWidth + "|" + pl.boxShadow + "|" + pl.flexDirection + "|" + getComputedStyle(mk).backgroundColor + "|" + getComputedStyle(mk, "::before").content; })(),
         dom: ids.every((el, i) => !i || !!(ids[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)) };
     });
     column.tab = await tabFrom(hPage);
-    check(column.home === "topbar" && column.width === 240 && column.rows && column.inside && column.under && column.dom && column.tab === "discover,live,dSearchOpen",
-      "a computer, in Discover: the left column (15rem) has the logo and its icons, then Discover | Live, then the theme, all inside it, and the search and views under it; Tab goes from the theme to the switch, then the icons (" + JSON.stringify(column) + ")");
+    check(column.home === "topbar" && column.width === 240 && column.rows && column.inside && column.under && column.dom && column.tab === "discover,live,dSearchOpen" &&
+      column.section === 'rgba(0, 0, 0, 0)|0px|none|column|rgba(0, 0, 0, 0)|"nightlife"',
+      "a computer, in Discover: the left column (15rem) has the logo and its icons, then Discover | Live, then the theme (a section as in Live's column: a heading over it, no pill), all inside it, and the search and views under it; Tab goes from the theme to the switch, then the icons (" + JSON.stringify(column) + ")");
 
     // in Live, with a member's room panels in, the theme is the left column's first section (the owner,
     // November 27, 2026; it had been on the stage, over the song): under the counts, over the DJ waitlist,
