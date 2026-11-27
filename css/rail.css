@@ -5,8 +5,7 @@
    takes the room it gives up; chat keeps its width. Everything the column
    holds stays one click away, as an icon with a tooltip:
    - at the top: the logo; then where you are (Discover | Live) and the
-     room (in Discover its theme: in Live that's on the stage, over the
-     song, js/theme-slot.js; and in Live who's here, with how many);
+     room (its theme, and in Live who's here, with how many);
    - in the middle, in Live: who's on the decks, as faces (the one playing
      ringed, presence on each), the waitlist and Hop on. Everyone else is
      behind the count. In Discover: search and the views;
@@ -181,7 +180,7 @@
         }
 
         /* The theme: its icon, lit when there is one (the tooltip says which). In
-           Discover only: in Live it's on the stage, over the song (js/theme-slot.js) */
+           Discover and Live (open, Live's column has it as its first section: js/theme-slot.js) */
         & #topbar > #themeSlot {
             order: 3;
             flex: none;

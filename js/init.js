@@ -119,7 +119,7 @@ firetable.init = function () {
   // ── Discover (always on since 5.3). Sign-in is
   // reported later, so its listeners are in place in time. ──
   if (firetable.discover) firetable.discover.init();
-  // the theme: on Live's stage on a computer, else in the header (js/theme-slot.js)
+  // the theme: Live's left column on a computer, else in the header (js/theme-slot.js)
   firetable.themeSlot.init();
 
   // ── Auth Lifecycle Events ──

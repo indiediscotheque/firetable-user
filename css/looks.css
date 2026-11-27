@@ -1270,7 +1270,7 @@ button.track-warning {
 #topbarUtils { margin-left: auto; }
 /* A member's light mode and About are in the account menu (the bottom sheet
    on a phone, the You tab's), at every width, so the header keeps to the
-   theme (in Live on a computer it's on the stage, over the song), search,
+   theme (in Live on a computer it's the left column's first section), search,
    community, mentions and you. Visitors have no account menu:
    theirs stay in the header. Not in the Turntable theme, whose bar and menu
    are its own. */
@@ -4561,7 +4561,7 @@ body.d-queue-here .cr-djtag > span {
 /* ============================================
    Room Theme (#87)
    A pill in the header; at 1024px+ a row of its own under Discover | Live,
-   and in Live there it's on the stage, over the song (js/theme-slot.js).
+   and in Live there the left column's first section (js/theme-slot.js).
    Tapping it opens #themePopover.
    ============================================ */
 #themeSlot {
@@ -4653,42 +4653,83 @@ body.d-queue-here .cr-djtag > span {
     }
 }
 
-/* The theme on Live's stage, over the song (js/theme-slot.js: in Live on a
-   computer). The stage is dark in both looks and its accent is the song's
-   colour, so the pill is see-through black and the THEME mark the room's own
-   gold with black words (8:1) whatever the song. It sits in the card's top
-   margin (20px tall, 4px from the stage's edge), so the song's words and its
-   cover stay where they were, no nearer the DJ's head */
-#npText > #themeSlot {
+/* The theme in Live's left column (js/theme-slot.js: in Live on a computer,
+   the column open): its first section, under the counts of who's here and
+   over the DJ waitlist, drawn as the column's other sections are (a small
+   uppercase heading with its icon, then what it says). The whole section is
+   the button that opens the popover; a long theme wraps to three lines. */
+#usersbox > #themeSlot {
     order: 0;
     flex: none;
-    margin: -1.25rem 0 0;
+    display: block;
+    margin: 0;
+    padding: var(--pad3) var(--pad4) var(--pad2);
+    border-bottom: 1px solid var(--color-border);
 }
-#npText #themePill {
-    flex: none;
+#usersbox #themePill {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    width: calc(100% + var(--pad2) * 2);
+    max-width: none;
     height: auto;
-    min-height: 1.25rem;
-    padding-block: 0;
-    border-color: rgba(255, 255, 255, 0.16);
-    background: rgba(0, 0, 0, 0.45);
-    font-size: var(--fs-meta);
+    min-height: 0;
+    margin: calc(var(--pad2) * -1);
+    padding: var(--pad2);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--color-text);
+    font-size: 0.9375rem;
+    line-height: 1.35;
 }
-#npText #themePill:is(:hover, [aria-expanded="true"]) {
-    border-color: rgba(255, 255, 255, 0.32);
-    background: rgba(0, 0, 0, 0.6);
+@media (hover: hover) {
+    #usersbox #themePill:hover { background: var(--color-bg-t1); }
 }
-#npText .themeLabel { padding-block: 0.1rem; background: var(--color-orange); color: #000; }
-#npText .no-theme .themeLabel { background: rgba(255, 255, 255, 0.16); color: #fff; }
-/* a touch screen's tap reaches up to the stage's edge (24px), never into the
-   title, a button of its own: 44px would push the song 20px nearer the DJ */
-@media (pointer: coarse) {
-    #npText #themePill { position: relative; }
-    #npText #themePill::before {
-        content: "";
-        position: absolute;
-        inset: -0.5rem 0 0;
+#usersbox #themePill[aria-expanded="true"] { background: var(--color-bg-t1); }
+/* the heading: as "DJ Waitlist" under it */
+#usersbox #themePill .themeLabel,
+#usersbox #themePill.no-theme .themeLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--color-text-w66);
+    font-size: 0.7rem;
+    &::before {
+        content: "nightlife";
+        font-family: 'Material Symbols Outlined';
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1;
+        letter-spacing: 0;
+        text-transform: none;
+        font-feature-settings: 'liga';
+        color: var(--color-accent);
     }
 }
+#usersbox #themePill.no-theme .themeLabel::before { color: inherit; }
+#usersbox #themePillText {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-weight: 600;
+}
+/* none: in the waitlist's own quiet words ("Less than 4 DJs = no need to wait!") */
+#usersbox #themePill.no-theme #themePillText {
+    font-size: 0.8rem;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--color-text-muted);
+}
+#usersbox #themePillText code { font-size: 0.875em; }
 
 .themePopBox {
     display: flex;
@@ -7666,7 +7707,7 @@ html#about body {
 
     /* The column is narrow: under the logo, Discover | Live takes the first
        row (css/discover.css), then the theme one of its own (in Discover: in
-       Live it's on the stage, over the song, js/theme-slot.js) */
+       Live it's the column's first section, js/theme-slot.js) */
     #themeSlot {
         order: 2;
         flex: 1 0 100%;

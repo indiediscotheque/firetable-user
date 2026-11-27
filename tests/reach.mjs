@@ -65,8 +65,9 @@ const fullMore = [...full, '#pv-full [aria-label="More controls"]'];
 const FEATURES = [
   // ── the header (TB) ──
   { row: "TB-01", name: "The :id: logo", who: ALL, target: "#roomlogo" },
-  // in Live on a computer the theme is on the stage, over the song; in the header everywhere else (round 5, November 25, 2026)
-  { row: "TB-02", name: "The theme, and Suggest a theme (Live: on the stage)", who: ALL, widths: WIDE, via: ["#npText #themePill"], target: "#themeSuggest" },
+  // in Live on a computer a member's theme is the left column's first section; a visitor's, and everywhere else, in the header (November 27, 2026)
+  { row: "TB-02", name: "The theme, and Suggest a theme (Live: the left column)", who: IN, widths: WIDE, via: ["#usersbox #themePill"], target: "#themeSuggest" },
+  { row: "TB-02", name: "The theme, and Suggest a theme (Live, visitors: the header)", who: ["visitor"], widths: WIDE, via: ["#topbar #themePill"], target: "#themeSuggest" },
   { row: "TB-02", name: "The theme, and Suggest a theme (Live on a phone: the header)", who: ALL, widths: PHONE, via: ["#topbar #themePill"], target: "#themeSuggest" },
   { row: "TB-02", name: "The theme, and Suggest a theme (Discover: the header)", who: ALL, mode: "discover", via: ["#topbar #themePill"], target: "#themeSuggest" },
   { row: "TB-03", name: "Community links", who: ALL, via: ["#socialTrigger"], target: "#socialPopover" },
