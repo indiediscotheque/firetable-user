@@ -288,15 +288,13 @@ body.ft-discover #discoverPage {
 .d-mv.down { color: var(--color-danger-text); }
 .d-mv.new, .d-mv.re { color: var(--color-accent); }
 
-/* Home's shelves of covers (New this week's six, Not played live yet, Fresh
-   in the room, New this month): the Fresh page's own cards and grid, ⋮ and
-   save beside the song's name at every width (November 27, 2026, the owner:
-   one way everywhere). A long shelf shows three rows: 12 across a computer's
-   columns, 8 on a phone's two; its link has them all. */
-#dBrowse .d-compact .pvbar:nth-child(n + 13) { display: none; }
-@media only screen and (max-width: 639px) {
-    #dBrowse .d-compact .pvbar:nth-child(n + 9) { display: none; }
-}
+/* Home's shelves of covers (New this week's, Not played live yet, Fresh in
+   the room, New releases): the Fresh page's own cards and grid, ⋮ and save
+   beside the song's name. Two full rows of them, however many fit across:
+   js/discover-shelves.js marks the rest, and a shelf left with nothing (its
+   songs all higher up the page) hides. Its link has them all. */
+#dBrowse .d-compact > .d-over,
+#dBrowse section.d-noshelf { display: none; }
 
 /* A library page from search, filled in before the site starts
    (tools/plain-pages.mjs): Discover's own look, headings as h1 */

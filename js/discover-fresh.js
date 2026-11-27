@@ -22,7 +22,7 @@
  */
 firetable.discoverFresh = (function () {
   "use strict";
-  var SHELF = 6; // the cards on Home's shelf
+  var SHELF = 20; // the most Home's shelf draws: two rows of them show (js/discover-shelves.js)
 
   /** One play from the feed, as the song Discover's cards and player take. */
   function track(p) {
