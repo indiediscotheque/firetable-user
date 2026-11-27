@@ -1634,11 +1634,11 @@ a.sociallogo[href] {
     flex-direction: column;
     gap: var(--pad2);
     flex-shrink: 0;
-    padding: var(--pad3) var(--pad4) var(--pad2) var(--pad4);
-    border-bottom: 1px solid var(--color-border);
+    padding: var(--pad3) var(--pad4) 0;
 
+    /* no rule under it: a heading and 24px start each section, as On the floor */
     + #allUsers {
-        padding-top: var(--pad3);
+        padding-top: var(--pad4);
     }
 }
 
@@ -4580,9 +4580,12 @@ body.d-queue-here .cr-djtag > span {
     max-width: 100%;
     min-height: 2rem;
     padding: 0.25rem 0.75rem 0.25rem 0.3rem;
-    border: 1px solid rgba(var(--ink-rgb), 0.12);
+    /* flat: no border and no drop shadow (the page's default button has both);
+       its tint alone shapes it */
+    border: 0;
     border-radius: var(--radius-pill);
     background: rgba(var(--ink-rgb), 0.06);
+    box-shadow: none;
     color: var(--color-text-light);
     font: inherit;
     font-size: 0.8125rem;
@@ -4594,7 +4597,6 @@ body.d-queue-here .cr-djtag > span {
 #themePill:hover,
 #themePill[aria-expanded="true"] {
     background: rgba(var(--ink-rgb), 0.1);
-    border-color: rgba(var(--ink-rgb), 0.22);
 }
 #themePill:focus-visible {
     outline: 2px solid var(--color-accent);
@@ -4628,10 +4630,7 @@ body.d-queue-here .cr-djtag > span {
 /* A new theme glows for a moment */
 #themePill.is-new { animation: theme-glow 2.4s ease-out; }
 @keyframes theme-glow {
-    0%, 35% {
-        border-color: var(--color-accent);
-        box-shadow: 0 0 0 1px var(--color-accent), 0 0 1rem var(--color-accent);
-    }
+    0%, 35% { box-shadow: 0 0 0 1px var(--color-accent), 0 0 1rem var(--color-accent); }
     100% { box-shadow: 0 0 0 0 transparent; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -4657,14 +4656,15 @@ body.d-queue-here .cr-djtag > span {
    the column open): its first section, under the counts of who's here and
    over the DJ waitlist, drawn as the column's other sections are (a small
    uppercase heading with its icon, then what it says). The whole section is
-   the button that opens the popover; a long theme wraps to three lines. */
+   the button that opens the popover; a long theme wraps to three lines. No
+   rule under it: the sections are told apart by their headings and the
+   same 24px before each, as On the decks and On the floor are */
 #usersbox > #themeSlot {
     order: 0;
     flex: none;
     display: block;
     margin: 0;
-    padding: var(--pad3) var(--pad4) var(--pad2);
-    border-bottom: 1px solid var(--color-border);
+    padding: var(--pad2) var(--pad4) 0;
 }
 #usersbox #themePill {
     display: flex;
@@ -4677,7 +4677,6 @@ body.d-queue-here .cr-djtag > span {
     min-height: 0;
     margin: calc(var(--pad2) * -1);
     padding: var(--pad2);
-    border: 0;
     border-radius: var(--radius-md);
     background: none;
     color: var(--color-text);
@@ -7772,12 +7771,8 @@ html#about body {
         display: flex;
         flex-direction: column;
         gap: var(--pad2) 0;
-        padding: 0 var(--pad4) var(--pad3);
-        border-bottom: 1px solid var(--color-border);
-    }
-
-    #ondeck ~ #allUsersWrap #usersWaitlist {
-        padding-top: var(--pad3);
+        /* 24px under the theme (or the counts), as before every section here */
+        padding: var(--pad4) var(--pad4) 0;
     }
 
     .waitlist-label {
