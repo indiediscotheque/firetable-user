@@ -59,7 +59,8 @@ firetable.tt = (function () {
 
   var $id = function (id) { return document.getElementById(id); };
   var esc = function (s) { return firetable.utilities.htmlEscape(String(s == null ? "" : s)); };
-  var ms = function (name, cls) { return '<i class="' + (cls || "material-symbols-outlined") + '" aria-hidden="true">' + name + "</i>"; };
+  // (a carrot is the site's own icon, drawn by css/looks.css .ms-carrot: Material Symbols has none)
+  var ms = function (name, cls) { var own = name === "carrot"; return '<i class="' + (cls || "material-symbols-outlined") + (own ? " ms-carrot" : "") + '" aria-hidden="true">' + (own ? "" : name) + "</i>"; };
   var store = {
     get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set: function (k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } }
@@ -859,7 +860,7 @@ firetable.tt = (function () {
           return '<button type="button" class="tt-subitem" data-tt-sub="' + s.id + '">' + ms(s.icon) + "<span>" + esc(s.label) + "</span>" + ms("chevron_right") + "</button>";
         }).join("") +
         // Fresh was a page here; it's Discover's now (js/discover-fresh.js), a link away
-        '<a class="tt-subitem" href="#discover/fresh">' + ms("fiber_new") + "<span>Fresh, in Discover</span>" + ms("chevron_right") + "</a></nav>";
+        '<a class="tt-subitem" href="#discover/fresh">' + ms("carrot") + "<span>Fresh, in Discover</span>" + ms("chevron_right") + "</a></nav>";
     }
     // only redraw when it changed: keeps focus and the scroll where they are
     var key = (sub ? sub.id : "front") + "|" + n + "|" + !!ftapi.uid;
