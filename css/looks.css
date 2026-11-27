@@ -7722,9 +7722,12 @@ html#about body {
         display: flex;
     }
 
-    /* a visitor's Live: the people, then the stage over the welcome, which
-       grow with the middle on a wide screen (they were a phone's width, with
-       Fresh beside them, until it moved to Discover) */
+    /* a visitor's Live: the people, then the stage over the welcome in the
+       middle (Fresh, beside them until it moved to Discover, has gone). The
+       stage is as wide as a member's (--col-mid), as it was: wider, its 16:9
+       at the stage's height (33vh) is squashed and the song's card comes down
+       over the DJ; narrower than 520px, a desktop stage would stand its DJ at
+       the side (ui.js applyDeckPlacement) */
     #mainGrid.login {
         grid-template-columns: var(--col-left) minmax(0, 1fr);
         grid-template-rows: auto 1fr;
@@ -7732,10 +7735,7 @@ html#about body {
             "people  stage"
             "people  login";
     }
-    #mainGrid.login #login { max-width: clamp(36rem, 60%, 52rem); }
-    /* the stage no wider than its 16:9 at its height (33vh, #djStage): wider, it
-       was squashed, and the song's card came down over the DJ */
-    #mainGrid.login #stage { max-width: min(clamp(36rem, 60%, 52rem), 62vh); }
+    #mainGrid.login #stage { max-width: var(--col-mid); }
 
     #mainGrid.login #topbar {
         display: flex;

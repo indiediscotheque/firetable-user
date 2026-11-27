@@ -55,7 +55,7 @@ body.ft-discover #stage {
     left: -10000px;
     top: 0;
     width: 640px;
-    max-width: none !important; /* (a visitor's Live caps it: parked at its Live width, the DJ came back 0px wide) */
+    max-width: none !important; /* (a visitor's Live caps it at --col-mid: parked at that width, its DJ came back 0px wide) */
     height: 360px;
     opacity: 0;
     pointer-events: none;
