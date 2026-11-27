@@ -7732,7 +7732,10 @@ html#about body {
             "people  stage"
             "people  login";
     }
-    #mainGrid.login :is(#stage, #login) { max-width: clamp(36rem, 60%, 52rem); }
+    #mainGrid.login #login { max-width: clamp(36rem, 60%, 52rem); }
+    /* the stage no wider than its 16:9 at its height (33vh, #djStage): wider, it
+       was squashed, and the song's card came down over the DJ */
+    #mainGrid.login #stage { max-width: min(clamp(36rem, 60%, 52rem), 62vh); }
 
     #mainGrid.login #topbar {
         display: flex;
