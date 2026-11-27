@@ -4829,6 +4829,9 @@ try {
       // flat, and no rules between the column's sections: no drop shadow or border on the theme, no line under it or the waitlist
       const ps = getComputedStyle(pill), line = (id) => getComputedStyle(document.getElementById(id)).borderBottomWidth;
       out.flat = ps.boxShadow + "|" + ps.borderTopWidth + "|" + line("themeSlot") + "|" + line("usersWaitlist");
+      // the column's collapse button the same: just its icon, no plate, and the list fades out under it
+      const rb = getComputedStyle(document.getElementById("nav-railBtn"));
+      out.railBtn = rb.backgroundColor + "|" + rb.boxShadow + "|" + rb.borderTopWidth + "|" + (getComputedStyle(document.getElementById("allUsersWrap")).maskImage !== "none");
       pill.click();
       await new Promise((res) => setTimeout(res, 400));
       const pop = document.getElementById("themePopover"), p = pop.getBoundingClientRect(), b = pill.getBoundingClientRect();
@@ -4838,8 +4841,8 @@ try {
       return out;
     });
     check(inCol.home === "usersbox" && inCol.after === "usersStats" && !inCol.onStage && !inCol.inHeader && inCol.inside && inCol.clear && inCol.over &&
-      inCol.heading === 'uppercase|rgba(0, 0, 0, 0)|"nightlife"' && inCol.wraps === "normal" && inCol.flat === "none|0px|0px|0px" && inCol.pop && inCol.expanded === "true",
-      "in Live on a computer the theme is the left column's first section: under the counts, over the waitlist and the decks, the column's width, under the header, a heading as the waitlist's and the theme wrapping, flat (no shadow, border or rule under it or the waitlist), and its popover opens from there; the stage has none (" + JSON.stringify(inCol) + ")");
+      inCol.heading === 'uppercase|rgba(0, 0, 0, 0)|"nightlife"' && inCol.wraps === "normal" && inCol.flat === "none|0px|0px|0px" && inCol.railBtn === "rgba(0, 0, 0, 0)|none|0px|true" && inCol.pop && inCol.expanded === "true",
+      "in Live on a computer the theme is the left column's first section: under the counts, over the waitlist and the decks, the column's width, under the header, a heading as the waitlist's and the theme wrapping, flat (no shadow, border or rule under it or the waitlist; the collapse button just its icon, the list fading under it), and its popover opens from there; the stage has none (" + JSON.stringify(inCol) + ")");
 
     // back in the header: on a tablet, in Discover, with the column folded (the toolbar's theme icon), in
     // the Turntable theme and for a visitor (signed out: the room's panels leave the page, the theme
