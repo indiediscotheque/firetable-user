@@ -92,6 +92,18 @@ const VIEWS = [
     after: (page) => page.evaluate(() => firetable.rail.set(false)) },
   { name: "rail-discover", minWidth: 1024, run: async (page) => { await hash("#discover")(page); await page.evaluate(() => firetable.rail.set(true)); },
     after: (page) => page.evaluate(() => firetable.rail.set(false)) },
+  // Discover's right column folded to a strip (js/side-panel.js): its button's name and state; signed in,
+  // with a message's count on it (then the only sign of one), from someone else in the room's chat
+  { name: "side-shut", minWidth: 1024, run: async (page) => {
+    await hash("#discover")(page);
+    await page.evaluate(() => firetable.sidePanel.set(true));
+    if (!await page.evaluate(() => !!ftapi.uid)) return;
+    const k = "a11y" + Date.now();
+    await put("/chatData/" + k, { id: "dj1", name: "dj1", txt: "anyone still here?", time: Date.now() });
+    await put("/chatFeed/" + k, { chatID: k });
+    await page.waitForFunction(() => document.querySelector("#nav-sideBtn .d-unread").textContent !== "", null, { timeout: 10000 });
+  },
+  after: (page) => page.evaluate(() => firetable.sidePanel.set(false)) },
   { name: "join", who: ["visitor"], run: (page) => page.locator("#nav-signin").click() },
   { name: "profile", who: ["member", "mod"], run: (page) => page.evaluate(() => firetable.ui.openAccount("profile-tab")) },
   { name: "settings", who: ["member", "mod"], run: (page) => page.evaluate(() => firetable.ui.openAccount("settings-tab")) },

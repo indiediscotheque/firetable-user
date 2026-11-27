@@ -2,12 +2,14 @@
    Discover (js/discover.js)
    Only used when config.js sets discover: true. Built from the site's own
    parts and tokens: the tabs, the Fresh cards (.ft-cards), the Recent rows
-   (.ft-rows), buttons and the dialog. Wide screens use the same three columns
-   as Live (--col-left, --col-mid, the rest).
+   (.ft-rows), buttons and the dialog. Wide screens have three columns, as
+   Live: a narrower left one (--col-left is 15rem here), the middle, and
+   Live's right one (--col-right), which can fold to a strip (js/side-panel.js).
    ============================================ */
 
 #discoverPage,
-#chatPeek[hidden] {
+#chatPeek[hidden],
+#nav-sideBtn {
     display: none;
 }
 
@@ -135,7 +137,10 @@ body.ft-discover #discoverPage {
     width: 100%;
     height: 2.5rem;
     padding-left: 2.3rem;
+    padding-right: var(--pad2);
 }
+/* the placeholder's words whole in a 15rem column: the clear button only takes room once there's something to clear */
+#dQ:placeholder-shown::-webkit-search-cancel-button { display: none; }
 .d-new { color: var(--color-text-muted); }
 .d-ytsearch { display: inline-flex; align-items: center; gap: var(--pad1); }
 .d-ytsearch i { font-size: 1.15rem; }
@@ -1093,7 +1098,7 @@ body.ft-discover #dSide #actualChat {
     padding: 0 0.3rem;
     border-radius: 99px;
     background: var(--color-accent);
-    color: #fff;
+    color: var(--color-on-accent-mark);
     font-size: 0.65rem;
     font-variant-numeric: tabular-nums;
     line-height: 1.1rem;
@@ -1142,26 +1147,70 @@ body.ft-discover #dSide #actualChat {
 }
 .d-peekjoin span { flex: 1; }
 
-/* ── Wide screens: Live's three columns ── */
+/* ── Wide screens: three columns ──
+   The left one narrower than Live's (Round 5, November 25, 2026): the middle,
+   the library's pages, takes what it gives up, and the right keeps its width */
 @media only screen and (min-width: 1024px) {
     body.ft-has-discover #usersbox {
         padding-top: var(--topbar-h, 10rem);
     }
+    body.ft-discover { --col-left: 15rem; }
     body.ft-discover #mainGrid {
-        grid-template-columns: var(--col-left) var(--col-mid) minmax(0, 1fr);
+        grid-template-columns: var(--col-left) minmax(0, 1fr) var(--col-right);
     }
     body.ft-discover #discoverPage {
         grid-row: 1 / -1;
         grid-column: 1 / -1;
+        /* the grid's own columns, folded or not: Safari 15.4 has no subgrid and keeps these */
+        grid-template-columns: inherit;
         grid-template-columns: subgrid;
         height: 100%;
     }
     body.ft-discover #discoverPage { grid-template-rows: minmax(0, 1fr); }
     #dRail { grid-row: 1; padding-top: var(--topbar-h, 10rem); border-right: 1px solid var(--color-border); }
+    /* the views scroll under the search where the column's too short for them all (a visitor's header
+       is taller, its icons a row of their own), never under the player (the toolbar's list scrolls
+       whole, css/rail.css) */
+    #dNav { overflow: hidden auto; scrollbar-width: thin; }
     #dBrowse { grid-row: 1; grid-column: 2; }
     #dSide { grid-row: 1; grid-column: 3; }
     /* the switch: the first row under the logo, over the theme (css/looks.css) */
     #modeTabs { order: 1; }
+
+    /* The right column folds to a strip and opens again (js/side-panel.js): its
+       button at the column's top right, past its tabs; folded, the strip's, with
+       Chat's unread count. Not in the Turntable theme (its own layout) */
+    body.ft-discover:not(.tt-skin) {
+        & #nav-sideBtn {
+            grid-column: 3;
+            grid-row: 1 / -1;
+            align-self: start;
+            justify-self: end;
+            position: relative;
+            z-index: 5;
+            display: inline-flex;
+            width: 2.25rem;
+            min-width: 0;
+            height: 2.25rem;
+            min-height: 0;
+            margin: 0.125rem var(--pad1) 0 0;
+            border-radius: var(--radius-md);
+            & i { transform: scaleX(-1); } /* the left column's icons, mirrored */
+            & .d-unread { position: absolute; top: -0.25rem; right: -0.25rem; margin: 0; }
+            & .d-unread:empty { display: none; }
+        }
+        & .d-sidetabs { padding-right: 2.5rem; }
+    }
+    :root.side-shut body.ft-discover:not(.tt-skin) {
+        & #mainGrid { grid-template-columns: var(--col-left) minmax(0, 1fr) 3.5rem; }
+        & #dSide > * { display: none; }
+        & #nav-sideBtn { justify-self: center; margin: var(--pad2) 0 0; }
+    }
+    :root:not(.side-shut) #nav-sideBtn .nav-sideOpen,
+    :root.side-shut #nav-sideBtn .nav-sideClose { display: none; }
+    @media (hover: hover) {
+        #nav-sideBtn:hover { background: var(--color-bg-t1); }
+    }
 }
 
 

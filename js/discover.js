@@ -4108,7 +4108,7 @@ firetable.discover = (function () {
     page.setAttribute("aria-label", "Discover");
     page.innerHTML = '<div id="dRail">' +
       '<form id="dSearch" role="search"><i class="material-symbols-outlined" aria-hidden="true">search</i>' +
-      '<input type="search" id="dQ" placeholder="Search artists, songs, genres, DJs" aria-label="Search the library" autocomplete="off" enterkeyhint="search" /></form>' +
+      '<input type="search" id="dQ" placeholder="Artists, songs, genres, DJs" aria-label="Search the library" autocomplete="off" enterkeyhint="search" /></form>' +
       '<nav id="dNav" aria-label="Discover">' +
       VIEWS.map(function (v) { return '<button type="button" class="d-nav" data-view="' + v.id + '">' + ms(v.icon) + "<span>" + esc(v.label) + "</span></button>"; }).join("") +
       '<button type="button" class="d-nav d-chatnav">' + ms("forum") + "<span>Chat</span></button>" +

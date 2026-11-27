@@ -1,11 +1,15 @@
 // The left column folded into a toolbar (js/rail.js, css/rail.css), on wide
 // screens: nothing of it loads before it's used; the button, the [ key and
 // Settings' switch fold it and open it again; the middle takes the room it
-// gives up while chat keeps its width; the choice is kept on the device and
-// the page paints folded next time; who's here and search open the column
-// over the middle for a moment; it never applies on a narrow screen or in the
-// Turntable theme. A visitor's page, under the real Content-Security-Policy.
-// No emulator needed.
+// gives up while chat keeps its width; the choice is kept on the device ("1"
+// or "0") and the page paints folded next time; with no choice kept, a
+// smaller computer screen (1024 to 1369px, with a mouse) starts folded once
+// the device has signed in, and follows the window across that range; who's
+// here and search open the column over the middle for a moment; it never
+// applies on a narrow screen or in the Turntable theme. And Discover's
+// columns (a narrower left one), with its right column folded to a strip
+// (js/side-panel.js). A visitor's page, under the real
+// Content-Security-Policy. No emulator needed.
 //   cd tests && npm ci && npm run unit
 // Never deployed. CI: .github/workflows/smoke.yml
 import { test, before, after } from "node:test";
@@ -70,6 +74,7 @@ test("nothing of it loads before it's used, and its button says what it does", a
 test("[ folds it: the middle gets the room, chat keeps its width; kept on this device", async () => {
   await go("#discover");
   const open = await columns();
+  assert.deepEqual(open.map(Math.round), [240, 768, 432], "Discover's columns: the left one narrower than Live's, the middle wider, the right as Live's");
   await blur();
   await page.keyboard.press("[");
   await waitFolded(true);
@@ -96,6 +101,7 @@ test("[ folds it: the middle gets the room, chat keeps its width; kept on this d
   assert.equal(shut[0], 64, "the toolbar is 4rem wide");
   assert.ok(Math.abs(shut[1] - (open[1] + open[0] - 64)) < 2, "the middle takes what the column gave up: " + open + " → " + shut);
   assert.ok(Math.abs(shut[2] - open[2]) < 2, "the right column keeps its width");
+  assert.deepEqual(shut.map(Math.round), [64, 944, 432]);
   assert.ok(r.rail <= 64, "Discover's views are icons");
   assert.ok(r.search < 50, "search is an icon");
   assert.equal(r.navWords, "inset(50%)", "the views' words are out of sight, still there for screen readers");
@@ -343,7 +349,7 @@ test("the page paints folded next time, and Settings' switch opens it", async ()
   assert.equal(r.box, true, "Settings' switch shows it's on");
   await page.evaluate(() => { const b = document.getElementById("railToggle"); b.checked = false; b.dispatchEvent(new Event("change")); });
   await waitFolded(false);
-  assert.equal(await page.evaluate(() => localStorage.getItem("firetableRail")), null, "opening it is kept too");
+  assert.equal(await page.evaluate(() => localStorage.getItem("firetableRail")), "0", "opening it is kept too, as a choice");
   // and the button folds it again
   await page.click("#nav-railBtn");
   await waitFolded(true);
@@ -360,6 +366,242 @@ test("another tab's choice follows here", async () => {
   await other.evaluate(() => firetable.rail.set(false));
   await waitFolded(false);
   await other.close();
+});
+
+test("a short laptop screen (1366 by 640): Discover's views scroll under the search, and none goes under the player", async () => {
+  await page.setViewportSize({ width: 1366, height: 640 });
+  await go("#discover");
+  const r = await page.evaluate(() => {
+    const nav = document.getElementById("dNav"), views = [...nav.querySelectorAll(".d-nav")].filter((n) => n.offsetParent);
+    const box = nav.getBoundingClientRect(), search = document.getElementById("dSearch").getBoundingClientRect(), bar = document.getElementById("dMini").getBoundingClientRect();
+    nav.scrollTop = nav.scrollHeight;
+    const last = views[views.length - 1].getBoundingClientRect();
+    return { scrolls: nav.scrollHeight > nav.clientHeight, under: box.top >= search.bottom, above: box.bottom <= bar.top + 0.5, last: last.top >= box.top - 0.5 && last.bottom <= box.bottom + 0.5 };
+  });
+  assert.deepEqual(r, { scrolls: true, under: true, above: true, last: true }, "the last view scrolls into sight, over the player");
+  await page.evaluate(() => { document.getElementById("dNav").scrollTop = 0; });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await sleep(300);
+  assert.equal(await page.evaluate(() => { const n = document.getElementById("dNav"); return n.scrollHeight > n.clientHeight; }), false, "with room, nothing scrolls");
+});
+
+// ── With no choice kept: the width's own ─────────────────────────────────
+
+/** A page of its own, `known` once this device has signed in, recording what js/head.js did before any other script. */
+async function fresh(width, height, known) {
+  const ctx = await browser.newContext({ viewport: { width, height } });
+  await ctx.addInitScript((k) => {
+    if (k) try { localStorage.setItem("ft-has-account", "1"); } catch (e) { /* blocked */ }
+    document.addEventListener("readystatechange", () => {
+      if (document.readyState !== "interactive") return;
+      const css = document.getElementById("nav-railCss");
+      window.__railAtParse = { rail: document.documentElement.classList.contains("rail"), css: !!css, blocking: css && css.getAttribute("blocking") };
+    });
+  }, known);
+  const p = await ctx.newPage();
+  p.on("pageerror", (e) => errors.push(e.message));
+  await openPage(p, SITE + "#discover");
+  await p.waitForFunction(() => window.firetable && firetable.started && document.getElementById("modeTabs"), null, { timeout: 30000 });
+  return { ctx, p };
+}
+const toolbar = (p) => p.evaluate(() => ({
+  rail: document.documentElement.classList.contains("rail"),
+  script: !!document.querySelector('script[src*="rail.js"]'),
+  stored: localStorage.getItem("firetableRail")
+}));
+
+for (const [width, height] of [[1280, 800], [1366, 768]]) {
+  test("a smaller computer screen (" + width + " by " + height + "): a device that has signed in starts folded; [ opens it, and that's kept", async () => {
+    const { ctx, p } = await fresh(width, height, true);
+    await p.waitForFunction(() => document.querySelector('script[src*="rail.js"]') && document.getElementById("nav-railBtn").getAttribute("aria-expanded") === "false", null, { timeout: 10000 });
+    const r = await p.evaluate(() => ({ at: window.__railAtParse, box: document.getElementById("railToggle").checked, label: document.getElementById("nav-railBtn").getAttribute("aria-label") }));
+    assert.deepEqual(r.at, { rail: true, css: true, blocking: "render" }, "folded before the first paint");
+    assert.equal(r.box, true, "Settings' switch shows it");
+    assert.equal(r.label, "Open the column");
+    assert.equal((await toolbar(p)).stored, null, "the width's own, not a choice: nothing kept");
+    await p.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+    await p.keyboard.press("[");
+    await p.waitForFunction(() => !document.documentElement.classList.contains("rail"), null, { timeout: 5000 });
+    assert.equal((await toolbar(p)).stored, "0", "opening it is a choice, kept");
+    await p.reload({ waitUntil: "domcontentloaded" });
+    await p.waitForFunction(() => window.firetable && firetable.started, null, { timeout: 30000 });
+    assert.deepEqual(await p.evaluate(() => window.__railAtParse), { rail: false, css: false, blocking: null }, "next time it paints open");
+    assert.equal((await toolbar(p)).rail, false);
+    await ctx.close();
+  });
+}
+
+test("a device that hasn't signed in keeps the labelled column on a smaller screen (Join in words), and nothing of the toolbar loads", async () => {
+  const { ctx, p } = await fresh(1280, 800, false);
+  await sleep(300);
+  const r = await p.evaluate(() => ({ at: window.__railAtParse, join: getComputedStyle(document.getElementById("nav-signinLabel")).display !== "none" && !!document.getElementById("nav-signin").offsetParent }));
+  assert.deepEqual(r, { at: { rail: false, css: false, blocking: null }, join: true });
+  assert.deepEqual(await toolbar(p), { rail: false, script: false, stored: null });
+  await ctx.close();
+});
+
+test("with no choice kept, the window into the smaller screens' range folds it, and out of it opens it, quietly", async () => {
+  const { ctx, p } = await fresh(1440, 900, true);
+  await sleep(300);
+  assert.deepEqual(await toolbar(p), { rail: false, script: false, stored: null }, "1440: open, and nothing of the toolbar loads");
+  await p.setViewportSize({ width: 1280, height: 800 });
+  await p.waitForFunction(() => document.documentElement.classList.contains("rail") && document.getElementById("nav-railBtn").getAttribute("aria-expanded") === "false", null, { timeout: 10000 });
+  assert.deepEqual(await toolbar(p), { rail: true, script: true, stored: null }, "folded, and not kept: it's the width's");
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await p.waitForFunction(() => !document.documentElement.classList.contains("rail"), null, { timeout: 5000 });
+  assert.equal((await toolbar(p)).stored, null);
+  // a choice holds across the range: folded at 1440, it stays folded at 1280 and back
+  await p.evaluate(() => firetable.rail.set(true));
+  await p.waitForFunction(() => document.documentElement.classList.contains("rail"), null, { timeout: 5000 });
+  await p.setViewportSize({ width: 1280, height: 800 });
+  await sleep(300);
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await sleep(300);
+  assert.deepEqual(await toolbar(p), { rail: true, script: true, stored: "1" });
+  await ctx.close();
+});
+
+// ── Discover's right column, folded to a strip (js/side-panel.js) ─────────
+
+/** The right column's button, and what it says. */
+const sideBtn = () => page.evaluate(() => {
+  const b = document.getElementById("nav-sideBtn"), r = b.getBoundingClientRect(), col = document.getElementById("dSide").getBoundingClientRect();
+  const inside = document.querySelector("#dSide > *");
+  return {
+    label: b.getAttribute("aria-label"), expanded: b.getAttribute("aria-expanded"), controls: b.getAttribute("aria-controls"),
+    tip: document.getElementById("tip-nav-sideBtn").textContent, stored: localStorage.getItem("firetableSide"),
+    // at the column's top right, or the strip's top
+    atTop: r.left >= col.left && r.right <= col.right + 1 && r.top - col.top < 12 && r.right > col.right - 48,
+    content: !!(inside && inside.offsetParent)
+  };
+});
+const sideShut = (on) => page.waitForFunction((v) => document.documentElement.classList.contains("side-shut") === v, on, { timeout: 3000 });
+
+test("Discover's right column folds to a strip and opens again: the middle takes the room; kept on this device; the page paints it folded", async () => {
+  await go("#discover");
+  assert.deepEqual(await sideBtn(), { label: "Fold the side panel", expanded: "true", controls: "dSide", tip: "Fold the side panel", stored: null, atTop: true, content: true });
+  // in Discover's page, just before the column: Tab reaches it after the middle, and Shift+Tab from the column's tabs
+  await page.focus("#dSide [data-sidetab]");
+  await page.keyboard.press("Shift+Tab");
+  assert.deepEqual(await page.evaluate(() => ({ focus: document.activeElement.id, in: document.getElementById("nav-sideBtn").parentNode.id, tip: document.getElementById("nav-sideBtn").nextElementSibling.id })),
+    { focus: "nav-sideBtn", in: "discoverPage", tip: "tip-nav-sideBtn" });
+  await blur();
+  await page.click("#nav-sideBtn");
+  await sideShut(true);
+  assert.deepEqual((await columns()).map(Math.round), [240, 1144, 56], "a 3.5rem strip, and the middle takes the room");
+  assert.deepEqual(await sideBtn(), { label: "Open the side panel", expanded: "false", controls: "dSide", tip: "Open the side panel", stored: "1", atTop: true, content: false });
+  // the left column folded too
+  await page.evaluate(() => firetable.rail.set(true));
+  await waitFolded(true);
+  await sleep(500);
+  assert.deepEqual((await columns()).map(Math.round), [64, 1320, 56], "both folded: the middle has the rest");
+  await page.evaluate(() => firetable.rail.set(false));
+  await waitFolded(false);
+  // Live keeps its own columns, and has no such button
+  await go("#live");
+  const live = await page.evaluate(() => ({ shown: !!document.getElementById("nav-sideBtn").offsetParent, cols: getComputedStyle(document.getElementById("mainGrid")).gridTemplateColumns.split(" ").map((c) => Math.round(parseFloat(c))) }));
+  assert.deepEqual(live, { shown: false, cols: [346, 662, 432] });
+  // next time it paints folded (js/head.js), before any other script
+  await page.addInitScript(() => {
+    document.addEventListener("readystatechange", () => {
+      if (document.readyState === "interactive") window.__sideAtParse = document.documentElement.classList.contains("side-shut");
+    });
+  });
+  await go("#discover");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => window.firetable && firetable.started && document.getElementById("dSide"), null, { timeout: 30000 });
+  assert.equal(await page.evaluate(() => window.__sideAtParse), true);
+  await sleep(300);
+  assert.deepEqual((await columns()).map(Math.round), [240, 1144, 56]);
+  // a narrower screen: the column is a sheet there, and the button isn't shown
+  await page.setViewportSize({ width: 800, height: 900 });
+  await sleep(300);
+  assert.equal(await page.evaluate(() => !!document.getElementById("nav-sideBtn").offsetParent), false);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await sleep(300);
+  // the button opens it again (Enter, as a keyboard would)
+  await page.focus("#nav-sideBtn");
+  await page.keyboard.press("Enter");
+  await sideShut(false);
+  assert.deepEqual((await columns()).map(Math.round), [240, 768, 432]);
+  assert.deepEqual(await sideBtn(), { label: "Fold the side panel", expanded: "true", controls: "dSide", tip: "Fold the side panel", stored: null, atTop: true, content: true });
+});
+
+test("folding with Chat open goes to Playlists first, so new messages are counted, on the button, which opens Chat again; the full-screen player's list button opens it on Playlists", async () => {
+  await go("#discover");
+  // a member's Discover (the page is a visitor's): the room's panels in, as the desk's test does, and
+  // Playlists and Chat in the right column
+  await page.evaluate(() => {
+    window.__shellWasIn = !!document.getElementById("appShell");
+    if (firetable.$appShell && !window.__shellWasIn) $("#mainGrid").append(firetable.$appShell);
+    ftapi.uid = "rail-test";
+    firetable.discover.testSignedIn(true);
+  });
+  await page.waitForFunction(() => document.querySelector('#dSide [data-sidetab="chat"]'), null, { timeout: 5000 });
+  await page.click('#dSide [data-sidetab="chat"]');
+  await page.waitForFunction(() => document.querySelector('#dSide [data-sidetab="chat"].on') && document.querySelector("#dSide #actualChat"), null, { timeout: 5000 });
+  await page.click("#nav-sideBtn");
+  await sideShut(true);
+  const put = await page.evaluate(() => ({ list: !!document.querySelector('#dSide [data-sidetab="list"].on'), chatAway: !document.querySelector("#dSide #actualChat") }));
+  assert.deepEqual(put, { list: true, chatAway: true }, "Chat put away first: Playlists is the column's tab");
+  // a message from someone else, while it's folded: counted, and the count is on the button
+  await page.evaluate(() => {
+    ftapi.events.emit("chatHistoryLoaded");
+    ftapi.events.emit("newChat", { chatID: "-NrailTest1", id: "rail-friend", name: "friend", txt: "hello", time: Date.now() });
+  });
+  await page.waitForFunction(() => document.querySelector("#nav-sideBtn .d-unread").textContent === "1", null, { timeout: 3000 });
+  const counted = await page.evaluate(() => ({
+    label: document.getElementById("nav-sideBtn").getAttribute("aria-label"),
+    tip: document.getElementById("tip-nav-sideBtn").textContent,
+    shown: getComputedStyle(document.querySelector("#nav-sideBtn .d-unread")).display !== "none"
+  }));
+  assert.deepEqual(counted, { label: "Open the side panel: 1 new in Chat", tip: "Open the side panel: 1 new in Chat", shown: true });
+  // the button opens it as it was left: on Chat, the message read
+  await page.click("#nav-sideBtn");
+  await sideShut(false);
+  await page.waitForFunction(() => document.querySelector('#dSide [data-sidetab="chat"].on') && document.querySelector("#dSide #actualChat"), null, { timeout: 5000 });
+  const chatAgain = await page.evaluate(() => ({ stored: localStorage.getItem("firetableSide"), tab: !!document.querySelector("#dSide .d-unread"), count: document.querySelector("#nav-sideBtn .d-unread").textContent }));
+  assert.deepEqual(chatAgain, { stored: null, tab: false, count: "" }, "Chat again, its count cleared");
+  // folded from Chat again, a second message counted
+  await page.click("#nav-sideBtn");
+  await sideShut(true);
+  await page.evaluate(() => ftapi.events.emit("newChat", { chatID: "-NrailTest2", id: "rail-friend", name: "friend", txt: "again", time: Date.now() }));
+  await page.waitForFunction(() => document.querySelector("#nav-sideBtn .d-unread").textContent === "1", null, { timeout: 3000 });
+  // the full-screen player's list button opens the column again, on Playlists
+  await page.evaluate(() => firetable.discover.openFull());
+  await page.waitForFunction(() => { const b = document.querySelector("#pv-full .pvf-list"); return b && b.checkVisibility(); }, null, { timeout: 5000 });
+  await page.click("#pv-full .pvf-list");
+  await sideShut(false);
+  const back = await page.evaluate(() => ({
+    full: firetable.discover.state().full, stored: localStorage.getItem("firetableSide"), list: !!document.querySelector('#dSide [data-sidetab="list"].on'),
+    label: document.getElementById("nav-sideBtn").getAttribute("aria-label"), count: document.querySelector("#nav-sideBtn .d-unread").textContent,
+    tab: (document.querySelector('#dSide [data-sidetab="chat"] .d-unread') || {}).textContent
+  }));
+  assert.deepEqual(back, { full: false, stored: null, list: true, label: "Fold the side panel", count: "", tab: "1" }, "open, on Playlists; the count is on Chat's tab again");
+  // folded, in a narrower window the column is a sheet: Chat opened there stays as it is when another tab
+  // folds it; wider again, it steps aside, so new messages are counted on the button, which opens on Chat
+  await page.click("#nav-sideBtn");
+  await sideShut(true);
+  await page.setViewportSize({ width: 800, height: 900 });
+  await sleep(300);
+  await page.click(".d-chatnav");
+  await page.waitForFunction(() => document.body.classList.contains("d-sheet-open") && document.querySelector('#dSide [data-sidetab="chat"].on'), null, { timeout: 5000 });
+  await page.evaluate(() => window.dispatchEvent(new StorageEvent("storage", { key: "firetableSide" })));
+  assert.equal(await page.evaluate(() => !!document.querySelector('#dSide [data-sidetab="chat"].on') && !!document.querySelector("#dSide #actualChat")), true, "the sheet's Chat as it was");
+  await page.click("#dSide .d-sheetclose");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForFunction(() => document.querySelector('#dSide [data-sidetab="list"].on'), null, { timeout: 5000 });
+  assert.deepEqual(await page.evaluate(() => ({ shut: firetable.sidePanel.isShut(), stored: localStorage.getItem("firetableSide") })), { shut: true, stored: "1" }, "wider again: folded still, on Playlists");
+  await page.evaluate(() => ftapi.events.emit("newChat", { chatID: "-NrailTest3", id: "rail-friend", name: "friend", txt: "still there?", time: Date.now() }));
+  await page.waitForFunction(() => document.querySelector("#nav-sideBtn .d-unread").textContent === "1", null, { timeout: 3000 });
+  await page.click("#nav-sideBtn");
+  await sideShut(false);
+  await page.waitForFunction(() => document.querySelector('#dSide [data-sidetab="chat"].on') && document.querySelector("#dSide #actualChat"), null, { timeout: 5000 });
+  await page.evaluate(() => {
+    ftapi.uid = null;
+    firetable.discover.testSignedIn(false);
+    if (!window.__shellWasIn) $("#appShell").detach();
+  });
 });
 
 test("no page errors", () => {

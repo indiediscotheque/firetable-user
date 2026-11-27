@@ -19,9 +19,11 @@
    Who's here, or search, opens the column over the middle for a moment
    ("peek", html.rail-peek: Escape, a click outside or the button, a
    collapse button while it shows, puts it away). Only loaded once someone folds the column (js/lazy.js), or with the
-   page where it was left folded (js/head.js puts html.rail and this
-   stylesheet on before the first paint). The Turntable theme has its own
-   layout, so none of this applies there.
+   page where it was left folded, or where it starts folded: from 1024 to
+   1369px wide with a mouse, once the device has signed in and with no
+   choice kept (js/head.js puts html.rail and this stylesheet on before the
+   first paint). The Turntable theme has its own layout, so none of this
+   applies there.
    ============================================ */
 
 @media only screen and (min-width: 1024px) {
@@ -41,8 +43,13 @@
     :root.rail body:not(.tt-skin) #mainGrid {
         grid-template-columns: var(--rail-w) var(--col-mid-rail) auto;
     }
+    /* Discover: the right column keeps its width (or its strip, folded too:
+       js/side-panel.js), and the middle takes the rest */
     :root.rail body.ft-discover:not(.tt-skin) #mainGrid {
-        grid-template-columns: var(--rail-w) var(--col-mid-rail) minmax(0, 1fr);
+        grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--col-right);
+    }
+    :root.rail.side-shut body.ft-discover:not(.tt-skin) #mainGrid {
+        grid-template-columns: var(--rail-w) minmax(0, 1fr) 3.5rem;
     }
     /* A visitor's Live: the stage and the welcome keep their width in the
        middle, so the room goes to Fresh beside them, for more of its songs */
@@ -350,6 +357,7 @@
         & #dNav {
             align-items: center;
             padding: var(--pad1) 0 var(--pad2);
+            overflow: visible; /* the list scrolls whole, search and all (#dRail): not the views on their own */
         }
         & .d-nav {
             justify-content: center;

@@ -3,10 +3,13 @@
  * and up). Loaded by its stand-in in js/lazy.js (which keeps its ways in:
  * the button at the column's bottom, the [ key and Settings' switch); css/rail.css
  * draws it. This keeps it working:
- * - folding and opening (set, toggle): html.rail, kept on this device
- *   (STORAGE.rail, which js/head.js reads before the first paint next time),
- *   the button's and Settings' state, the column fading to its new shape
- *   (not with reduced motion), and the same in every open tab;
+ * - folding and opening (set, toggle): html.rail, kept on this device as a
+ *   choice (STORAGE.rail "1" or "0", which js/head.js reads before the first
+ *   paint next time), the button's and Settings' state, the column fading to
+ *   its new shape (not with reduced motion), and the same in every open tab;
+ * - with no choice kept, the width's own: folded from 1024 to 1369px wide
+ *   with a mouse once this device has signed in (a laptop), open otherwise,
+ *   following the window across that range without keeping anything;
  * - where the list under the toolbar's top starts and ends (--rail-top,
  *   --rail-foot), measured from the top part and the buttons at the bottom;
  * - peek: who's here (the people button, or a visitor's faces) or search
@@ -29,6 +32,8 @@ firetable.rail = (function () {
   var root = document.documentElement;
   var wide = window.matchMedia("(min-width: 1024px)");
   var hover = window.matchMedia("(hover: hover)");
+  // a smaller computer screen, with a mouse: where it starts folded (the same in js/head.js)
+  var small = window.matchMedia("(min-width: 1024px) and (max-width: 1369px) and (hover: hover)");
   // what makes up the column: the header (the toolbar itself) and the lists under it
   var COLUMN = "#topbar, #usersbox, #pe-here, #dRail, #nav-railBtn";
   // the toolbar's top part, which the list starts under
@@ -71,16 +76,25 @@ firetable.rail = (function () {
   }
 
   function save(folded) {
-    try {
-      if (folded) localStorage.setItem(STORAGE.rail, "1");
-      else localStorage.removeItem(STORAGE.rail);
-    } catch (e) { /* storage blocked: it lasts this visit */ }
+    try { localStorage.setItem(STORAGE.rail, folded ? "1" : "0"); } catch (e) { /* storage blocked: it lasts this visit */ }
+  }
+
+  /** The choice kept on this device: "1" folded, "0" open, or null (none: the width's own). */
+  function chosen() {
+    try { return localStorage.getItem(STORAGE.rail); } catch (e) { return null; }
+  }
+
+  /** Folded with no choice kept: a smaller computer screen, once this device has signed in (js/users.js AUTH_KNOWN_KEY). */
+  function byDefault() {
+    var known = null;
+    try { known = localStorage.getItem("ft-has-account"); } catch (e) { /* storage blocked */ }
+    return !!known && small.matches;
   }
 
   /**
    * Fold the column (true) or open it (false).
    * @param {boolean} folded
-   * @param {boolean} [quiet] - don't keep the choice (another tab made it)
+   * @param {boolean} [quiet] - not a choice, so not kept (another tab made it, or it's the width's own)
    * @returns {Promise<boolean>} folded or not, after
    */
   var going = null; // where a change on its way is going (the cross-fade puts it on a moment later)
@@ -509,12 +523,15 @@ firetable.rail = (function () {
   // Discover or Live, the Turntable theme, signing in: what the toolbar holds changes
   new MutationObserver(settle).observe(document.body, { attributes: true, attributeFilter: ["class"] });
   if (wide.addEventListener) wide.addEventListener("change", settle);
-  // another tab folded or opened it
+  // another tab folded or opened it (or let go of the choice: the width's own again)
   window.addEventListener("storage", function (e) {
     if (e.key !== STORAGE.rail && e.key !== null) return;
-    var folded = false;
-    try { folded = localStorage.getItem(STORAGE.rail) === "1"; } catch (x) { /* storage blocked */ }
-    set(folded, true);
+    var v = chosen();
+    set(v === "1" || (v === null && byDefault()), true);
+  });
+  // the window into or out of the smaller screens' range, with no choice kept: theirs, not kept
+  if (small.addEventListener) small.addEventListener("change", function () {
+    if (chosen() === null) set(byDefault(), true);
   });
   show();
   soon();

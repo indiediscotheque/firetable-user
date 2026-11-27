@@ -25,9 +25,16 @@ let failures = 0;
 const check = (ok, msg) => { console.log((ok ? "  PASS " : "  FAIL ") + msg); if (!ok) failures++; };
 
 const browser = await chromium.launch(launchOptions());
-// every context answers avatar requests itself (see stubAvatars)
+// every context answers avatar requests itself (see stubAvatars), and keeps the left column open: these
+// pages are 1280 wide (Playwright's own size, and others), where a device that has signed in starts with
+// it folded (js/head.js); checks of the open column need it open, and the default is rail.test.mjs's
 const newContext = browser.newContext.bind(browser);
-browser.newContext = async (opts) => { const c = await newContext(opts); await stubAvatars(c); return c; };
+browser.newContext = async (opts) => {
+  const c = await newContext(opts);
+  await stubAvatars(c);
+  await c.addInitScript(() => { try { if (localStorage.getItem("firetableRail") === null) localStorage.setItem("firetableRail", "0"); } catch (e) { /* blocked */ } });
+  return c;
+};
 const context = await browser.newContext();
 await context.grantPermissions(["notifications"], { origin: SITE.slice(0, -1) });
 const page = await context.newPage();
@@ -4782,17 +4789,23 @@ try {
     await hPage.waitForFunction(() => document.getElementById("modeTabs") && /smoke tests/.test(document.getElementById("themePillText").textContent), null, { timeout: 30000 }).catch(() => {});
     await sleep(800);
     // a computer: the left column reads logo and icons, the switch, then the theme (Discover);
-    // Tab goes logo, theme, switch, icons
+    // Tab goes logo, theme, switch, icons. Discover's column is 15rem (Round 5): a visitor's five
+    // icons make a row of their own under the logo there, all inside it, and the search and the
+    // views start under the header, whatever its height
     const column = await hPage.evaluate(() => {
       const r = (id) => document.getElementById(id).getBoundingClientRect();
       const head = r("topbar"), logo = r("roomlogo"), mode = r("modeTabs"), theme = r("themeSlot"), utils = r("topbarUtils");
       const ids = ["roomlogo", "themeSlot", "modeTabs", "topbarUtils"].map((id) => document.getElementById(id));
-      return { home: ids[1].parentNode.id, rows: utils.top < logo.bottom && mode.top >= logo.bottom && theme.top >= mode.bottom && theme.bottom <= head.bottom,
+      const bar = document.getElementById("topbar");
+      return { home: ids[1].parentNode.id, width: Math.round(head.width), icons: utils.top < logo.bottom ? "beside the logo" : "under the logo",
+        rows: utils.top >= head.top && utils.bottom <= mode.top + 0.5 && mode.top >= logo.bottom && theme.top >= mode.bottom && theme.bottom <= head.bottom,
+        inside: [logo, utils, mode, theme].every((b) => b.left >= head.left - 0.5 && b.right <= head.right + 0.5) && bar.scrollWidth <= bar.clientWidth + 1,
+        under: Math.abs(parseFloat(getComputedStyle(document.getElementById("dRail")).paddingTop) - head.height) <= 1,
         dom: ids.every((el, i) => !i || !!(ids[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)) };
     });
     column.tab = await tabFrom(hPage);
-    check(column.home === "topbar" && column.rows && column.dom && column.tab === "discover,live,dSearchOpen",
-      "a computer, in Discover: the left column has the logo and its icons, then Discover | Live, then the theme; Tab goes from the theme to the switch, then the icons (" + JSON.stringify(column) + ")");
+    check(column.home === "topbar" && column.width === 240 && column.rows && column.inside && column.under && column.dom && column.tab === "discover,live,dSearchOpen",
+      "a computer, in Discover: the left column (15rem) has the logo and its icons, then Discover | Live, then the theme, all inside it, and the search and views under it; Tab goes from the theme to the switch, then the icons (" + JSON.stringify(column) + ")");
 
     // in Live the theme is on the stage, over the song: its mark the room's gold, black on it, whatever the song's colour
     // (a red song's here, whatever the seed's song has: the stage's accent is the song's colour, css/room-colors.css)

@@ -31,9 +31,10 @@
 	<meta name="color-scheme" content="dark" />
 	<meta name="theme-color" content="#181818" />
 	<!-- The left column folded into a toolbar (wide screens): js/head.js adds this stylesheet before the
-	     first paint where it was left folded, js/lazy.js the first time it's folded; nothing downloads before -->
+	     first paint where it was left folded or starts folded (a smaller computer screen, once the device
+	     has signed in), js/lazy.js the first time it's folded; nothing downloads before -->
 	<meta name="rail-css" content="css/rail.css?v=01.12.08" />
-	<!-- Before first paint, in one request: the iPhone viewport, light mode and the folded column (js/head.js) -->
+	<!-- Before first paint, in one request: the iPhone viewport, light mode and the folded columns (js/head.js) -->
 	<script src="js/head.js?v=01.12.08"></script>
 	<!-- Google Analytics, on the live site only (js/analytics.js; never holds up the page) -->
 	<script async src="js/analytics.js?v=01.12.08" data-id="G-ZJC6WV417B G-RP332GNB93"></script>
@@ -634,6 +635,13 @@
 			<i class="material-symbols-outlined nav-railClose" aria-hidden="true">left_panel_close</i><i class="material-symbols-outlined nav-railOpen" aria-hidden="true">left_panel_open</i>
 		</button>
 		<span id="tip-nav-railBtn" role="tooltip" class="ft-tip" data-placement="right" style="position-anchor: --tip-nav-railBtn">Collapse the column ([)</span>
+		<!-- Discover on wide screens: fold its right column (#dSide) to a strip, and open it again (js/side-panel.js,
+		     which moves it and its tooltip into Discover's page, just before the column, for Tab's order).
+		     At the column's top right; folded, the strip's, with Chat's unread count (css/discover.css) -->
+		<button type="button" id="nav-sideBtn" class="header_icon" aria-label="Fold the side panel" aria-expanded="true" aria-controls="dSide" style="anchor-name: --tip-nav-sideBtn" aria-describedby="tip-nav-sideBtn">
+			<i class="material-symbols-outlined nav-sideClose" aria-hidden="true">left_panel_close</i><i class="material-symbols-outlined nav-sideOpen" aria-hidden="true">left_panel_open</i><span class="d-unread"></span>
+		</button>
+		<span id="tip-nav-sideBtn" role="tooltip" class="ft-tip" data-placement="left" style="position-anchor: --tip-nav-sideBtn">Fold the side panel</span>
 
 		<div id="discover" class="scroll-view" role="region" aria-label="Fresh in the room">
 			<!-- Fresh's heading: a visitor's (beside the sign-up form at 640px and up), and on phones whenever Fresh has the screen to itself (body.nt-fresh), a member's too; Join or log in is a visitor's on a phone -->
@@ -1246,7 +1254,7 @@
 							<input type="checkbox" id="railToggle" name="railToggle" aria-describedby="railHint">
 							<label for="railToggle">Fold the left column into a toolbar</label>
 						</div>
-						<p class="settingHint" id="railHint">More room for the stage, your playlists and Discover. Its icons do everything the column does, and who's here or search opens it for a moment. <kbd>[</kbd> or the button at the column's bottom switches it too. Kept on this device.</p>
+						<p class="settingHint" id="railHint">More room for the stage, your playlists and Discover. Its icons do everything the column does, and who's here or search opens it for a moment. On a smaller computer screen it starts folded. <kbd>[</kbd> or the button at the column's bottom switches it too, and that's kept on this device.</p>
 					</section>
 					<section class="ac-section" aria-labelledby="se-privacyLabel">
 						<h3 class="ac-label" id="se-privacyLabel">Privacy</h3>
@@ -1715,6 +1723,7 @@
 	<script type="text/javascript" src="js/discover-shuffle.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/discover-tabs.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/discover.js?v=01.12.08"></script>
+	<script type="text/javascript" src="js/side-panel.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/theme-slot.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/scrub.js?v=01.12.08"></script>
 	<script type="text/javascript" src="js/glitch.js?v=01.12.08"></script>

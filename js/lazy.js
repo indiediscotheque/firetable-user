@@ -272,10 +272,12 @@ firetable.recentPlays = (function () {
 /*
  * The left column folded into a toolbar, on wide screens (js/rail.js, and
  * css/rail.css, loaded the first time it's folded; where it was left folded,
- * js/head.js put both on before the first paint and the script loads with
- * the page). Its ways in stay here, so they work before it's loaded and go
- * to the real thing once it is: the button at the column's bottom, the [ key and
- * Settings' switch.
+ * or where it starts folded (a smaller computer screen, once the device has
+ * signed in), js/head.js put both on before the first paint and the script
+ * loads with the page). Its ways in stay here, so they work before it's
+ * loaded and go to the real thing once it is: the button at the column's
+ * bottom, the [ key and Settings' switch; and so does the window narrowing
+ * into that range with no choice kept, which folds it (not a choice).
  */
 firetable.rail = (function () {
   "use strict";
@@ -301,7 +303,7 @@ firetable.rail = (function () {
   stub = {
     isOn: function () { return root.classList.contains("rail"); },
     toggle: function () { return real().then(function () { return firetable.rail.toggle(); }, function () {}); },
-    set: function (on) { return real().then(function () { return firetable.rail.set(on); }, function () {}); }
+    set: function (on, quiet) { return real().then(function () { return firetable.rail.set(on, quiet); }, function () {}); }
   };
 
   /** [ : not while typing, with Ctrl, Cmd or Alt held, over a dialog, or where there's no column to fold. */
@@ -326,5 +328,17 @@ firetable.rail = (function () {
     box.addEventListener("change", function () { firetable.rail.set(box.checked); });
   }
   if (stub.isOn()) real();
+  // into a smaller computer screen's range (the same in js/head.js), with no choice kept, once the
+  // device has signed in: folded, quietly (still so once it's loaded: the window may have moved on)
+  var small = window.matchMedia && window.matchMedia("(min-width: 1024px) and (max-width: 1369px) and (hover: hover)");
+  var byDefault = function () {
+    var v = null, known = null;
+    try { v = localStorage.getItem(STORAGE.rail); known = localStorage.getItem("ft-has-account"); } catch (e) { /* storage blocked */ }
+    return small.matches && v === null && !!known;
+  };
+  if (small && small.addEventListener) small.addEventListener("change", function () {
+    if (firetable.rail !== stub || !byDefault()) return;
+    real().then(function () { if (byDefault()) firetable.rail.set(true, true); }, function () {});
+  });
   return stub;
 })();

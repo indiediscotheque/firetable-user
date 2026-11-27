@@ -7,8 +7,10 @@
  *    before the stylesheets is the right colour. The stage, the full-screen
  *    player and the Turntable theme stay dark (css/looks.css, js/ttskin.js).
  * 3. The left column folded into a toolbar (js/rail.js): where it was left
- *    folded, html.rail and its stylesheet (css/rail.css), so the page paints
- *    folded.
+ *    folded, or, with no choice kept, on a smaller computer screen with a
+ *    mouse once this device has signed in, html.rail and its stylesheet
+ *    (css/rail.css), so the page paints folded. And Discover's right column
+ *    folded to a strip where it was left so (html.side-shut, js/side-panel.js).
  * Runs before storage.js, so it reads localStorage itself.
  */
 
@@ -117,17 +119,25 @@ var ftLook = (function () {
   };
 })();
 
-// ── 3. The folded column ──
-// Only on a device where it was left folded; nothing downloads otherwise
-// (js/lazy.js loads it the first time). blocking="render": a browser that
-// knows it waits for the stylesheet before painting; the others draw the
-// column open for a moment.
+// ── 3. The folded columns ──
+// The left one where it was left folded ("1"; "0" is left open), or with no
+// choice kept, from 1024 to 1369px wide with a mouse once this device has
+// signed in (the same in js/rail.js); nothing downloads otherwise (js/lazy.js
+// loads it the first time). blocking="render": a browser that knows it waits
+// for the stylesheet before painting; the others draw the column open for a
+// moment. Discover's right one where it was left folded.
 (function () {
   "use strict";
-  var on = null;
-  try { on = window.localStorage.getItem("firetableRail"); } catch (e) { /* storage blocked */ } // STORAGE.rail in js/constants.js
-  if (on !== "1") return;
-  document.documentElement.classList.add("rail");
+  var root = document.documentElement;
+  var on = null, known = null;
+  try {
+    on = window.localStorage.getItem("firetableRail"); // STORAGE.rail in js/constants.js
+    known = window.localStorage.getItem("ft-has-account"); // js/users.js AUTH_KNOWN_KEY
+    if (window.localStorage.getItem("firetableSide") === "1") root.classList.add("side-shut"); // STORAGE.side
+  } catch (e) { /* storage blocked */ }
+  var small = known && window.matchMedia && window.matchMedia("(min-width: 1024px) and (max-width: 1369px) and (hover: hover)").matches;
+  if (on !== "1" && !(on === null && small)) return;
+  root.classList.add("rail");
   var meta = document.querySelector('meta[name="rail-css"]');
   var css = document.createElement("link");
   css.rel = "stylesheet";

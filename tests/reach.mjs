@@ -57,7 +57,10 @@ const fullMore = [...full, '#pv-full [aria-label="More controls"]'];
  * at these; `mode`: live (default) or discover; `via`: the controls tapped in
  * order; `target`: what must be on screen after; `hash`: where the address must
  * end up; `notFor`: roles that must NOT see `notTarget` (straight away, no taps);
- * `known`: a gap already reported to the owner, listed rather than failed.
+ * `known`: a gap already reported to the owner, listed rather than failed;
+ * `start: "default"`: the left column as this device finds it with no choice
+ * kept (a reload; from 1024 to 1369px it starts folded once the device has
+ * signed in).
  */
 const FEATURES = [
   // ── the header (TB) ──
@@ -92,6 +95,8 @@ const FEATURES = [
   { row: "TB-11", name: "Toolbar: mentions", who: IN, widths: WIDE, via: ["#nav-railBtn", "#inboxTrigger"], target: "#inboxList", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: your account", who: IN, widths: WIDE, via: ["#nav-railBtn", "#loggedInUser"], target: "#nav-accountMenu", close: ["#nav-railBtn"] },
   { row: "TB-11", name: "Toolbar: Discover's pages", who: ALL, widths: WIDE, mode: "discover", via: ["#nav-railBtn", '#dNav [data-view="charts"]'], target: "#dBrowse", hash: "#discover/charts", close: ["#nav-railBtn"] },
+  // a smaller computer screen starts with it folded once the device has signed in (Round 5): its button opens it
+  { row: "TB-11", name: "A smaller screen: it starts folded once signed in here; the button opens it", who: IN, widths: [1024], start: "default", via: ["#nav-railBtn"], target: "#usersDJs .prson .prsnName" },
   // ── phones: the bottom tab bar (NV-01): Discover · Live · Library · You (Round 5, November 25, 2026) ──
   { row: "NV-01", name: "Tab bar: Discover (from Live, the page you left)", who: ALL, widths: PHONE, via: ['#nav-tabs [data-tab="discover"]'], target: "#dBrowse", hash: "#discover" },
   { row: "NV-01", name: "Tab bar: Discover again: Home, with its pages as tiles", who: ALL, widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="discover"]'], target: '#dBrowse .d-tiles [data-view="years"]', hash: "#discover" },
@@ -234,6 +239,9 @@ const FEATURES = [
   { row: "DI-01", name: "A cover's save (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", target: "#dBrowse .d-compact .pvbar .histeal" },
   { row: "DI-17", name: "Members' playlist beside the player", who: IN, widths: WIDE, mode: "discover", target: "#dSide" },
   { row: "DI-15", name: "Visitors' crate", who: ["visitor"], widths: WIDE, mode: "discover", target: "#dSide" },
+  // the right column folds to a strip and opens again, from its button (its open icon shows only folded; Round 5)
+  { row: "DI-17", name: "Members' playlist: fold the right column, and open it again", who: IN, widths: WIDE, mode: "discover", via: ["#nav-sideBtn", "#nav-sideBtn .nav-sideOpen"], target: "#dSide #mainqueue .pvbar" },
+  { row: "DI-15", name: "Visitors' crate: fold the right column, and open it again", who: ["visitor"], widths: WIDE, mode: "discover", via: ["#nav-sideBtn", "#nav-sideBtn .nav-sideOpen"], target: "#dSide .d-listpanel" },
   // while a visitor's crate is empty, the room over its note (Round 5, November 25, 2026); never for members
   { row: "DI-23", name: "The room, in a visitor's empty crate column", who: ["visitor"], widths: WIDE, mode: "discover", target: "#pv-onair", notFor: IN, notTarget: "#pv-onair" },
   // last, as it leaves a Discover pick playing: a pick's reload is in its ⋮ (the bar's on computers; on
@@ -284,8 +292,18 @@ async function onScreen(page, sel, timeout = 3000) {
   });
 }
 
-/** Back to a known state: menus, popovers, dialogs and the full-screen player closed. */
-async function reset(page, mode) {
+/**
+ * Back to a known state: menus, popovers, dialogs and the full-screen player
+ * closed, both side columns open; or with `start` "default", the left column
+ * as the device finds it with no choice kept (a reload).
+ */
+async function reset(page, mode, start) {
+  if (start === "default") {
+    await page.evaluate(() => localStorage.removeItem("firetableRail"));
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.firetable && firetable.started && window.ftapi && ftapi.uid && document.querySelector("#mainqueue .pvbar"), null, { timeout: 30000 }).catch(() => {});
+    await sleep(500);
+  }
   await page.keyboard.press("Escape").catch(() => {});
   await page.evaluate(() => {
     document.querySelectorAll(":popover-open").forEach((p) => { try { p.hidePopover(); } catch (e) { /* fine */ } });
@@ -293,9 +311,14 @@ async function reset(page, mode) {
     if (window.firetable && firetable.discover && firetable.discover.state().full) firetable.discover.closeFull();
     document.body.classList.remove("d-sheet-open");
   });
-  // the left column open, as it is for everyone at first (TB-11 folds it)
-  await page.evaluate(() => firetable.rail.isOn() && firetable.rail.set(false));
-  await page.waitForFunction(() => !document.documentElement.classList.contains("rail"), null, { timeout: 3000 }).catch(() => {});
+  // the left column open (TB-11 folds it). From 1024 to 1369px it starts folded once the device has signed
+  // in, so opening it here is kept as a person's choice ("0"): it stays open after a reload, as before
+  if (start !== "default") {
+    await page.evaluate(() => firetable.rail.isOn() && firetable.rail.set(false));
+    await page.waitForFunction(() => !document.documentElement.classList.contains("rail"), null, { timeout: 3000 }).catch(() => {});
+  }
+  // Discover's right column open (DI-17 folds it)
+  await page.evaluate(() => firetable.sidePanel.isShut() && firetable.sidePanel.set(false));
   await page.waitForFunction(() => { const f = document.getElementById("pv-full"); return !f || !f.checkVisibility(); }, null, { timeout: 3000 }).catch(() => {});
   const want = mode === "discover" ? "#discover" : "#live";
   if (await page.evaluate(() => firetable.discover.address()) !== want) await page.evaluate((h) => { location.hash = h; }, want);
@@ -348,7 +371,7 @@ try {
         const mustNot = f.notFor && f.notFor.includes(role);
         if (!has && !mustNot) continue;
         checked++;
-        await reset(page, f.mode);
+        await reset(page, f.mode, f.start);
         const label = f.row + " " + f.name;
         if (mustNot) {
           const shown = await onScreen(page, f.notTarget, 300);
