@@ -10,6 +10,21 @@ works() {
   out=$(sudo apt-get update 2>&1)
   ! grep -qE "Failed to fetch|Temporary failure resolving|Could not resolve|Unable to connect|Could not connect" <<<"$out"
 }
+# A third-party source the machine comes with (Microsoft's, on 27 Nov 2026: 403,
+# "no longer signed") fails every update whichever Ubuntu mirror answers. Nothing here installs
+# from them, so a failing one is set aside.
+offThirdParty() {
+  local host f
+  for host in $(sudo apt-get update 2>&1 | grep -E "^(E|Err):" | grep -oE "https?://[^/ ']+" | sed -E 's|.*://||' | sort -u); do
+    case "$host" in *ubuntu.com|mirrors.edge.kernel.org) continue ;; esac
+    sudo mkdir -p /etc/apt/sources-off
+    for f in $(grep -lF "$host" /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null); do
+      echo "apt: setting aside $f ($host doesn't answer)"
+      sudo mv "$f" /etc/apt/sources-off/
+    done
+  done
+}
+offThirdParty
 if works; then echo "apt: Ubuntu's usual servers answer"; exit 0; fi
 for m in http://azure.archive.ubuntu.com/ubuntu http://archive.ubuntu.com/ubuntu http://us.archive.ubuntu.com/ubuntu http://mirrors.edge.kernel.org/ubuntu; do
   sudo mkdir -p /etc/apt/sources-off
