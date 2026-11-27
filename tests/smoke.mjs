@@ -2939,7 +2939,7 @@ try {
     "the room is in the bar (On air / Live, Listen live) and the full-screen player (who is here), with no second room line above search (" + JSON.stringify({ bar: home.bar, line: !home.noLine }) + ")");
   check(home.goLive === "Go to Live|sensors|Go to Live: the stage, the DJs, everyone", "in Discover the bar's way to the room reads Go to Live, with the Live tab's icon (" + home.goLive + ")");
 
-  console.log("-- Discover Home leads with New this week: the most played, who found it, Play the week's");
+  console.log("-- Discover Home leads with New this week: the most played, who found it, Play the week's (in the heading), its own ⋮ and save on its cover");
   {
     // seven releases in the last 8 days; two have 5 plays, and the newer of them leads
     const DAYMS = 86400000;
@@ -2956,15 +2956,53 @@ try {
     const lead = await dPage.evaluate(async () => {
       const el = document.querySelector("#dBrowse .d-lead");
       if (!el) return null;
+      // the week's Play and Save all are the heading's, after its link (Round 5: the lead song keeps its own on its cover)
+      const head = document.querySelector("#dBrowse .d-week > .d-head");
+      const art = el.querySelector(".d-leadart");
       const out = {
         title: el.querySelector(".d-leadtitle").textContent,
         kicker: el.querySelector(".d-kicker").textContent,
         found: el.querySelector(".d-leadfound").textContent.replace(/\s+/g, " ").trim(),
-        playAll: el.querySelector(".d-playall span").textContent,
+        playAll: head.querySelector(".d-playall span").textContent,
         under: el.parentElement.querySelectorAll(".ft-cards .pvbar").length,
         all: el.parentElement.querySelector("[data-newfilter]").getAttribute("data-newfilter"),
-        order: [...document.querySelectorAll("#dBrowse section h2")].map((h) => h.textContent).slice(0, 4).join("|")
+        order: [...document.querySelectorAll("#dBrowse section h2")].map((h) => h.textContent).slice(0, 4).join("|"),
+        head: [...head.children].map((c) => c.matches("a[data-newfilter]") ? "link:" + c.textContent : c.matches(".d-headacts") ?
+          [...c.querySelectorAll("button")].map((b) => (b.classList.contains("d-playall") ? "play:" : b.classList.contains("d-saveall") ? "saveall:" : "?:") + b.querySelector("span").textContent).join("|") : c.tagName).join("|"),
+        leadLists: el.querySelectorAll(".d-playall, .d-saveall, .d-leadacts").length,
+        cover: [...art.querySelectorAll("button")].map((b) => b.className.split(" ").find((c) => /^(d-play|d-more|histeal)$/.test(c)) + ":" + b.getAttribute("aria-label")).join("|")
       };
+      // the lead's own save: that song, and only it, into a visitor's (empty) crate, its + turning into the saved mark;
+      // then out again with the crate's own ×
+      localStorage.setItem("ft-crate", "[]");
+      const save = art.querySelector(".histeal");
+      save.click();
+      for (let i = 0; i < 20 && !save.classList.contains("is-saved"); i++) await new Promise((r) => setTimeout(r, 100));
+      out.saved = JSON.parse(localStorage.getItem("ft-crate") || "[]").map((t) => t.cid).join() + "|" + save.classList.contains("is-saved") + "|" + save.textContent;
+      out.cid = el.getAttribute("data-cid");
+      // a cover's disc stays dark in light mode, so a saved mark on it keeps the dark look's gold there (light
+      // mode's bronze vanished into it): the lead's, and (with a mouse, as here) one of Home's small covers'
+      const root = document.documentElement, look = root.getAttribute("data-look"), small = el.parentElement.querySelector(".d-compact .histeal");
+      small.classList.add("is-saved");
+      const marks = () => getComputedStyle(save).color + "|" + getComputedStyle(small).color;
+      out.marks = { dark: marks() };
+      root.setAttribute("data-look", "light");
+      await new Promise((r) => setTimeout(r, 300));
+      out.marks.light = marks();
+      if (look) root.setAttribute("data-look", look); else root.removeAttribute("data-look");
+      small.classList.remove("is-saved");
+      await new Promise((r) => setTimeout(r, 300));
+      document.querySelector("#dSide .d-unsave")?.click();
+      await new Promise((r) => setTimeout(r, 100));
+      out.unsaved = localStorage.getItem("ft-crate") === "[]" && !save.classList.contains("is-saved");
+      // its ⋮: the song menu for that song (its YouTube link is the lead's)
+      art.querySelector(".d-more").click();
+      await new Promise((r) => setTimeout(r, 100));
+      const menu = document.getElementById("dMenu");
+      out.menu = !!menu && !menu.hidden && [...menu.querySelectorAll("a[href]")].some((a) => a.href.includes("v=" + out.cid));
+      document.body.click(); // closes it
+      await new Promise((r) => setTimeout(r, 100));
+      out.menuClosed = !!menu && menu.hidden;
       // Not played live yet, under the week's row: none of the songs that row already shows
       const unSec = [...document.querySelectorAll("#dBrowse section")].find((sec) => /Not played live yet/.test(sec.querySelector("h2")?.textContent || ""));
       const cids = (box) => [...box.querySelectorAll(".pvbar[data-cid]")].map((p) => p.getAttribute("data-cid"));
@@ -2972,7 +3010,7 @@ try {
       // the test's videos aren't real: keep the player from skipping past them (the skip waits 800ms)
       window.__skip = firetable.discover.onFailed;
       firetable.discover.onFailed = () => {};
-      el.querySelector(".d-playall").click();
+      head.querySelector(".d-playall").click();
       await new Promise((r) => setTimeout(r, 300));
       out.playing = firetable.discover.state().playing;
       return out;
@@ -2981,7 +3019,16 @@ try {
     check(lead && lead.title === want && lead.kicker === "The week's most played" && /Found by dj1/.test(lead.found) && /5 plays/.test(lead.found),
       "the lead is the week's most played release (the newer on a tie), with who found it (" + JSON.stringify(lead) + ")");
     check(lead && lead.playAll === "Play the week's " + inWeek && lead.under === 6 && lead.all === "week" && lead.playing === (want === "Week Two" ? "wk02aaaaa" : "wk03aaaaa"),
-      "Play the week's " + inWeek + " plays from the lead; the next six sit under it (" + JSON.stringify(lead) + ")");
+      "Play the week's " + inWeek + " plays the week from the lead; the next six sit under it (" + JSON.stringify(lead) + ")");
+    check(lead && lead.head === "H2|link:All " + inWeek + " from this week|play:Play the week's " + inWeek + "|saveall:Save all" && lead.leadLists === 0,
+      "New this week's heading holds its link, then Play the week's " + inWeek + " and Save all; the lead song holds neither (" + (lead && lead.head) + ", " + (lead && lead.leadLists) + " in the lead)");
+    check(lead && lead.cover === "d-play:Play Week Three by Band 3|d-more:More|histeal:Add to playlist",
+      "the lead's cover holds its play button, then its own ⋮ (More) and save (Add to playlist) (" + (lead && lead.cover) + ")");
+    check(lead && lead.saved === lead.cid + "|true|playlist_add_check_circle" && lead.unsaved && lead.menu && lead.menuClosed,
+      "the lead's save puts that song, and only it, in a visitor's crate (its mark turns to saved), and its ⋮ opens the song menu for it (" + JSON.stringify(lead && { saved: lead.saved, cid: lead.cid, menu: lead.menu }) + ")");
+    const gold = "rgb(204, 153, 51)|rgb(204, 153, 51)"; // the dark look's accent, #cc9933
+    check(lead && lead.marks && lead.marks.dark === gold && lead.marks.light === gold,
+      "a saved mark on a cover's dark disc is the dark look's gold in light mode too, the lead's and (with a mouse) a small cover's (" + JSON.stringify(lead && lead.marks) + ")");
     check(lead && /^New this week\|Not played live yet\|Room chart/.test(lead.order), "Home's order: New this week, Not played live yet, the chart (" + (lead && lead.order) + ")");
     check(lead && lead.unplayed && lead.unplayed.n === 2 && lead.unplayed.twice === "" && lead.unplayed.link === "All 3",
       "Not played live yet doesn't repeat the week's row: two of the three unplayed show, the third is already above, the link counts all three (" + JSON.stringify(lead && lead.unplayed) + ")");
@@ -3623,6 +3670,83 @@ try {
   check(Math.abs(djSide.down.h - djSide.down.w * 9 / 16) <= 2 && Math.abs(djSide.down.spotMid - djSide.down.w / 2) < djSide.down.w * 0.2,
     "screen down: the stage is 16:9 for the video again, the DJ in the middle (" + JSON.stringify(djSide.down) + ")");
 
+  console.log("-- Discover: a visitor's empty crate column shows the room (Round 5)");
+  {
+    // the card as a visitor reads it: an icon's word (aria-hidden, or a picture with its own name) isn't read
+    const roomCard = () => dPage.evaluate(() => {
+      const el = document.getElementById("pv-onair");
+      if (!el) return null;
+      const words = (n) => [...n.childNodes].map((c) => c.nodeType === 3 ? c.textContent
+        : c.getAttribute("aria-hidden") === "true" || c.getAttribute("role") === "img" ? "" : words(c)).join("");
+      const r = el.getBoundingClientRect();
+      // the decks as the site orders them: the DJ playing first, then the order after them
+      const table = Object.values(firetable.tableData || {}).filter((d) => d && d.id);
+      const at = table.findIndex((d) => firetable.song && d.id === firetable.song.djid);
+      return {
+        shown: r.width > 0 && r.height > 0 && r.top >= 0 && r.top < innerHeight && el.parentElement.firstElementChild === el && !!el.closest("#dSide .d-listpanel"),
+        labelled: el.tagName + "|" + el.getAttribute("aria-labelledby") + "|" + (document.getElementById("pv-onairHead") || {}).tagName,
+        head: words(document.getElementById("pv-onairHead")).trim(),
+        names: [...el.querySelectorAll(".pe-row .pe-name")].map((n) => n.textContent).join(),
+        marks: [...el.querySelectorAll(".pe-row")].map((row) => (row.querySelector(".pe-now") || {}).ariaLabel || (row.querySelector(".pe-next") || {}).textContent || "").join(),
+        links: [...el.querySelectorAll(".pe-row")].map((row) => row.querySelectorAll('a[href*="djs/"]').length).join(),
+        facts: [...el.querySelectorAll(".d-fact")].map((p) => words(p).replace(/\s+/g, " ").trim()),
+        here: Object.values(ftapi.users || {}).filter((u) => u && !u.hostbot).length,
+        decks: (at < 0 ? table : table.slice(at).concat(table.slice(0, at))).map((d) => d.name).join(),
+        chat: !!document.querySelector("#dSide #actualChat, #dSide .d-chatline, #dSide #chatPeek"),
+        note: !!el.nextElementSibling && /Tap .* on any song/.test(el.nextElementSibling.textContent)
+      };
+    });
+    const until = async (fn, ms = 5000) => { const end = Date.now() + ms; let v = await fn(); while (!v && Date.now() < end) { await sleep(150); v = await fn(); } return v; };
+    const song = await dPage.evaluate(async () => {
+      localStorage.setItem("ft-crate", "[]");
+      if (firetable.discover.address() !== "#discover") location.hash = "#discover";
+      document.querySelector('#dSide [data-sidetab="list"]').click();
+      for (let i = 0; i < 50 && !document.getElementById("pv-onair"); i++) await new Promise((r) => setTimeout(r, 100));
+      return { started: firetable.song.started };
+    });
+    // the table in another order than the decks play: dj2 sits first, dj1 is playing
+    const tableWas = await (await fetch(DB + "/table.json?ns=" + NS)).json();
+    await put("/table", [{ name: "dj2", id: "dj2", plays: 0 }, { name: "dj1", id: "dj1", plays: 1 }]);
+    const first = await until(async () => { const c = await roomCard(); return c && c.names === "dj1,dj2" && c; });
+    check(first && first.shown && first.note && first.labelled === "SECTION|pv-onairHead|H2" && first.head === "In the room now · " + first.here + " here",
+      "a visitor with an empty crate sees the room at the top of the right column, over the crate's note: In the room now · " + (first && first.here) + " here, the bar's count (" + JSON.stringify(first) + ")");
+    check(first && first.names === first.decks && first.names === "dj1,dj2" && first.marks === "Playing now,Next" && first.links === "2,0",
+      "...the DJs on the decks in the decks' order, the one playing first (Playing now, then Next), face and name opening the DJ page of one who has one (" + JSON.stringify(first && { names: first.names, decks: first.decks, marks: first.marks, links: first.links }) + ")");
+    check(first && !first.chat && first.facts.join("|") === "Members chat with the room and take a turn on the decks.",
+      "...no chat in it (the chat is for members), and the members' line, with nothing about fires, guests or the radio while there are none (" + JSON.stringify(first && first.facts) + ")");
+    // the song's fires: songFires for the song playing now, and nothing for another song's count
+    await put("/songFires", { started: song.started, count: 3 });
+    const fired = await until(async () => { const c = await roomCard(); return c && c.facts.includes("3 fires on this song") && c; });
+    await put("/songFires", { started: song.started - 60000, count: 5 });
+    const stale = await until(async () => { const c = await roomCard(); return c && !c.facts.some((f) => /fire/.test(f)) && c; });
+    await put("/songFires", null);
+    check(fired && stale, "...3 fires on this song from songFires, and none for a count kept for another song (" + JSON.stringify({ fired: fired && fired.facts, stale: stale && stale.facts }) + ")");
+    // guests and the radio's listeners: the people list's counts, a count that's none left out
+    await dPage.evaluate(() => firetable.audience.take({ guests: 2, guestsLive: 0, guestCountries: [], guestsUnplaced: 2, stream: { listeners: 0, unplaced: 0, countries: [] } }));
+    const guests = await until(async () => { const c = await roomCard(); return c && c.facts.includes("Plus 2 guests.") && c; });
+    await dPage.evaluate(() => firetable.audience.take({ guests: 2, guestsLive: 1, guestCountries: [], guestsUnplaced: 2, stream: { listeners: 4, unplaced: 4, countries: [] } }));
+    const radio = await until(async () => { const c = await roomCard(); return c && c.facts.includes("Plus 2 guests and 4 on the radio.") && c; });
+    check(guests && radio, "...Plus 2 guests., then Plus 2 guests and 4 on the radio. (" + JSON.stringify({ guests: guests && guests.facts, radio: radio && radio.facts }) + ")");
+    // a DJ who hid their name from visitors is counted, not named
+    await put("/users/dj2/publicName", false);
+    const hidden = await until(async () => { const c = await roomCard(); return c && c.names === "dj1" && c; });
+    await put("/users/dj2/publicName", null);
+    await put("/table", tableWas);
+    check(hidden && hidden.facts.includes("and 1 more") && hidden.links === "2", "...a DJ who hides their name from visitors isn't named: and 1 more (" + JSON.stringify(hidden) + ")");
+    // one save and the crate takes its place; taking the last song out brings the room back
+    const swap = await dPage.evaluate(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      document.querySelector("#dBrowse .ft-cards .pvbar .histeal").click();
+      await wait(300);
+      const out = { saved: !document.getElementById("pv-onair") && document.querySelectorAll("#dSide .pl-rows .pl-row").length === 1 };
+      document.querySelector("#dSide .d-unsave").click();
+      for (let i = 0; i < 30 && !document.getElementById("pv-onair"); i++) await wait(100);
+      out.back = !!document.getElementById("pv-onair") && !document.querySelector("#dSide .pl-rows") && localStorage.getItem("ft-crate") === "[]";
+      return out;
+    });
+    check(swap.saved && swap.back, "...one save and the crate takes its place; taking the last song out brings the room back (" + JSON.stringify(swap) + ")");
+  }
+
   console.log("-- Discover: the chat is for members only; visitors save songs to a crate");
   const peek = await dPage.evaluate(() => ({
     hidden: document.getElementById("chatPeek").hidden && !document.querySelector("#chatPeek .d-chatline"),
@@ -3646,6 +3770,43 @@ try {
   });
   check(crate.stored === 3 && crate.checked === 3, "saves go to a crate in this browser, each + turning into a check (" + JSON.stringify(crate) + ")");
   check(crate.dialog && crate.google, "the third save offers to keep the crate, with Continue with Google (" + JSON.stringify(crate) + ")");
+  // Keep your crate comes with js/discover-room.js, loaded the first time it's wanted: if it can't load at
+  // the third save, nothing opens and nothing is marked asked, and the next third save offers it
+  {
+    const kContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    let blockRoom = true;
+    await kContext.route("**/js/discover-room.js*", (r) => (blockRoom ? r.abort() : r.continue()));
+    // two songs saved on an earlier visit (so the empty crate's room card doesn't load the module first)
+    const earlier = discover(now).new.tracks.slice(1, 3).map((t) => ({ type: 1, cid: t.cid, a: t.a, t: t.t, img: null, url: null }));
+    await kContext.addInitScript((c) => {
+      if (window.top !== window) return; // (the page itself, not the players' frames)
+      localStorage.setItem("ft-crate", c);
+      localStorage.removeItem("ft-crate-asked");
+    }, JSON.stringify(earlier));
+    const kPage = await kContext.newPage();
+    await openPage(kPage, SITE + "#discover");
+    const third = (n) => kPage.evaluate(async (n) => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const mine = () => JSON.parse(localStorage.getItem("ft-crate") || "[]").map((t) => t.cid);
+      for (let i = 0; i < 100 && !document.querySelector("#dBrowse .pvbar[data-cid] .histeal"); i++) await wait(100);
+      const bar = [...document.querySelectorAll("#dBrowse .pvbar[data-cid]")].find((b) => b.querySelector(".histeal") && !mine().includes(b.getAttribute("data-cid")));
+      if (!bar) return { none: "no song to save on Home" };
+      bar.querySelector(".histeal").click();
+      const out = { saved: mine().length };
+      for (let i = 0; i < 30 && !document.querySelector("#keepCrateBox[open]"); i++) await wait(100);
+      out.dialog = !!document.querySelector("#keepCrateBox[open]");
+      out.asked = localStorage.getItem("ft-crate-asked");
+      // the third song out again, for the next try
+      if (n === 1) { document.querySelector('#dSide .d-unsave[data-i="2"]')?.click(); await wait(200); out.after = mine().length; }
+      return out;
+    }, n);
+    const blocked = await third(1);
+    blockRoom = false;
+    const loaded = await third(2);
+    await kContext.close();
+    check(blocked.saved === 3 && !blocked.dialog && blocked.asked === null && blocked.after === 2 && loaded.saved === 3 && loaded.dialog && loaded.asked === "true",
+      "...if its module can't load then, nothing opens and nothing is marked, and the next third save offers it (" + JSON.stringify({ blocked, loaded }) + ")");
+  }
 
   console.log("-- Discover: chart extras, theme nights, Save all");
   const extras = await dPage.evaluate(async () => {
@@ -4838,6 +4999,11 @@ try {
   const tContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const tPage = await tContext.newPage();
   await openPage(tPage, SITE + "#discover/charts");
+  // a full week of new releases (seven from yesterday, the most played first), so Home leads with one and its cover is on screen
+  const yesterday = new Date(Date.now() - 86400000);
+  const relDay = yesterday.getFullYear() + "-" + String(yesterday.getMonth() + 1).padStart(2, "0") + "-" + String(yesterday.getDate()).padStart(2, "0");
+  await put("/discover/new", { at: now, days: 90, tracks: Array.from({ length: 7 }, (_, i) => ({ cid: "tap" + String(i).padStart(7, "0"), a: "Band " + (i + 1), t: "Tap " + (i + 1),
+    dur: 200, rel: relDay, relSrc: "yt", plays: 7 - i, first: now - 86400000, dj: "dj1", djid: "dj1" })).concat(discover(now).new.tracks) });
   const taps = await tPage.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     for (let i = 0; i < 80 && !document.querySelector("#dBrowse .d-rowlist .pvbar"); i++) await wait(100);
@@ -4854,15 +5020,34 @@ try {
     }).map((el) => el.id || el.className))];
     const out = { coarse: matchMedia("(pointer: coarse)").matches, more: area("#dBrowse .d-rowlist .row-icon.d-more"), play: area("#dBrowse .d-rowlist .previewicon"), loose: loose() };
     location.hash = "#discover";
-    for (let i = 0; i < 50 && !document.querySelector("#dBrowse .d-leadacts .row-icon"); i++) await wait(100);
+    for (let i = 0; i < 50 && !document.querySelector("#dBrowse .d-leadart .row-icon"); i++) await wait(100);
     out.loose = out.loose.concat(loose());
     const join = document.getElementById("nav-signin"), r = join.getBoundingClientRect(), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     out.joinOnTop = !!top && (top === join || join.contains(top));
+    // Home's lead (Round 5): its own ⋮ and save on its cover, each with a tap's area that stays off the play button in the middle
+    const art = document.querySelector("#dBrowse .d-leadart");
+    if (!art) return Object.assign(out, { lead: "no lead" });
+    const tapBox = (el) => {
+      const b = getComputedStyle(el, "::before"), r = el.getBoundingClientRect();
+      if (b.content === "none" || b.position !== "absolute" || getComputedStyle(el).position === "static") return null;
+      return { left: r.left + parseFloat(b.left), top: r.top + parseFloat(b.top), right: r.right - parseFloat(b.right), bottom: r.bottom - parseFloat(b.bottom) };
+    };
+    const meet = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+    const more = tapBox(art.querySelector(".d-more")), save = tapBox(art.querySelector(".histeal")), play = art.querySelector(".d-play").getBoundingClientRect();
+    const size = (t) => t && [Math.round(t.right - t.left), Math.round(t.bottom - t.top)];
+    out.lead = { cover: Math.round(art.getBoundingClientRect().width), more: size(more), save: size(save),
+      clear: !!(more && save) && !meet(more, play) && !meet(save, play) && !meet(more, save) };
     return out;
   });
+  await put("/discover/new", discover(now).new);
+  // (the seed's own releases back on Home before the covers below are read: no week to lead with)
+  await tPage.waitForFunction(() => !document.querySelector("#dBrowse .d-lead"), null, { timeout: 10000 }).catch(() => {});
   check(taps.coarse && taps.more && taps.more[0] >= 40 && taps.more[1] >= 44 && taps.play && taps.play[0] >= 40 && taps.play[1] >= 40,
     "on a touch screen a row's ⋮ can be tapped over 40×44px and its play button over the whole cover, at the size they were (" + JSON.stringify(taps) + ")");
   check(!taps.loose.length && taps.joinOnTop, "no tap area hangs loose from a control that isn't positioned, on Charts or Home, and nothing covers Join (" + JSON.stringify({ loose: taps.loose, join: taps.joinOnTop }) + ")");
+  const lead = taps.lead || {};
+  check(lead.cover === 136 && lead.more && lead.save && [...lead.more, ...lead.save].every((n) => n >= 44) && lead.clear,
+    "on a phone, the lead's ⋮ and save on its 136px cover can each be tapped over 44×44px, clear of each other and of its play button (" + JSON.stringify(taps.lead) + ")");
   // touch screens (round 5, November 25, 2026): a cover on Home (.d-compact) and New (.d-newgrid) keeps
   // only its play button; ⋮ and save sit under the song's name, in the card, the size of a tap
   const covers = await tPage.evaluate(async () => {
@@ -5080,7 +5265,7 @@ try {
     const home = document.getElementById("actualChat").parentElement;
     location.hash = "#discover";
     await wait(300);
-    const out = { tab: !!document.querySelector('#dSide [data-sidetab="chat"]'), nav: !!document.querySelector("#dNav .d-chatnav") };
+    const out = { tab: !!document.querySelector('#dSide [data-sidetab="chat"]'), nav: !!document.querySelector("#dNav .d-chatnav"), noRoomCard: !document.getElementById("pv-onair") };
     document.querySelector('#dSide [data-sidetab="chat"]').click();
     await wait(200);
     const chat = document.getElementById("actualChat");
@@ -5103,6 +5288,7 @@ try {
     return out;
   });
   check(chatHere.tab && chatHere.nav, "members get a Chat tab in Discover (" + JSON.stringify(chatHere) + ")");
+  check(chatHere.noRoomCard, "a member's right column never shows the visitors' room card (#pv-onair) (" + chatHere.noRoomCard + ")");
   check(chatHere.moved && chatHere.visible, "the room's chat, with its message box, opens in Discover's panel (" + JSON.stringify(chatHere) + ")");
   check(chatHere.backOnNow && chatHere.unread === "1" && chatHere.cleared, "on another tab, new messages from others are counted, and cleared on Chat (" + JSON.stringify(chatHere) + ")");
   check(chatHere.live.home && !chatHere.live.here, "Live gets its chat back (" + JSON.stringify(chatHere.live) + ")");

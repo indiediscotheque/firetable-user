@@ -223,14 +223,22 @@ const FEATURES = [
   { row: "DI-27", name: "The full-screen player", who: ALL, widths: WIDE, mode: "discover", via: ["#fullscreenBtn"], target: "#pv-full" },
   { row: "DI-27", name: "The full-screen player (phone: tap the bar)", who: ALL, widths: PHONE, mode: "discover", via: full, target: "#pv-full" },
   { row: "DI-19", name: "A song's ⋮ menu", who: ALL, mode: "discover", via: ["#dBrowse .pvbar .d-more"], target: "#dMenu" },
+  // Home's lead song keeps its own ⋮ and save on its cover, at every width; the week's Play and Save all are
+  // New this week's heading's (Round 5, November 25, 2026)
+  { row: "DI-19", name: "Home: the lead song's ⋮ (on its cover)", who: ALL, mode: "discover", via: ["#dBrowse .d-lead .d-leadart .d-more"], target: "#dMenu" },
+  { row: "DI-01", name: "Home: the lead song's save (on its cover)", who: ALL, mode: "discover", target: "#dBrowse .d-lead .d-leadart .histeal" },
+  { row: "DI-18", name: "Home: Play the week's N (New this week's heading)", who: ALL, mode: "discover", target: "#dBrowse .d-week .d-head .d-playall" },
+  { row: "DI-18", name: "Home: Save all (New this week's heading)", who: ALL, mode: "discover", target: "#dBrowse .d-week .d-head .d-saveall" },
   // a cover's ⋮ and save: over its corner with a mouse, under the song's name on a touch screen (round 5, November 25, 2026)
   { row: "DI-19", name: "A cover's ⋮ (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", via: ["#dBrowse .d-compact .pvbar .d-more"], target: "#dMenu" },
   { row: "DI-01", name: "A cover's save (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", target: "#dBrowse .d-compact .pvbar .histeal" },
   { row: "DI-17", name: "Members' playlist beside the player", who: IN, widths: WIDE, mode: "discover", target: "#dSide" },
   { row: "DI-15", name: "Visitors' crate", who: ["visitor"], widths: WIDE, mode: "discover", target: "#dSide" },
+  // while a visitor's crate is empty, the room over its note (Round 5, November 25, 2026); never for members
+  { row: "DI-23", name: "The room, in a visitor's empty crate column", who: ["visitor"], widths: WIDE, mode: "discover", target: "#pv-onair", notFor: IN, notTarget: "#pv-onair" },
   // last, as it leaves a Discover pick playing: a pick's reload is in its ⋮ (the bar's on computers; on
   // phones the full-screen player's, behind More), as the bar shows its own only while the song stalls
-  { row: "ST-07", name: "Reload audio (a playing pick's ⋮)", who: ALL, widths: WIDE, mode: "discover", via: ["#dBrowse .d-leadacts .d-playall", "#dMini .d-more"], target: '#dMenu [data-act="reload"]' },
+  { row: "ST-07", name: "Reload audio (a playing pick's ⋮)", who: ALL, widths: WIDE, mode: "discover", via: ["#dBrowse .d-week .d-head .d-playall", "#dMini .d-more"], target: '#dMenu [data-act="reload"]' },
   { row: "ST-07", name: "Reload audio (phone: a playing pick's ⋮, in the full-screen player's More)", who: ALL, widths: PHONE, mode: "discover", via: ["#dBrowse .ft-cards .pvbar .d-play", ...fullMore, "#pv-facts .d-more"], target: '#dMenu [data-act="reload"]' },
   // phones (Round 5): a visitor's crate is the tab bar's Library; a member's chat in Discover is a sheet from the full-screen player
   { row: "DI-15", name: "Visitors' crate (phone: the tab bar's Library)", who: ["visitor"], widths: PHONE, mode: "discover", via: ['#nav-tabs [data-tab="library"]'], target: "#dSide .d-listpanel" },

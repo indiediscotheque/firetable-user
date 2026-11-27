@@ -1143,8 +1143,9 @@ button.track-warning {
        cover takes the whole cover, and All Playlists' star, headphones, open
        and more get the same margin. Nothing looks any bigger. Each rule sets
        the position the margin hangs from itself: on an icon that stays
-       position: static (the lead card's, .d-leadacts) the margin would hang
-       from some far ancestor and cover whatever is there. (A row's play button
+       position: static the margin would hang from some far ancestor and cover
+       whatever is there (Home's lead song's icons once covered Join so; on its
+       cover now, they have their own, css/discover.css). (A row's play button
        is already position: absolute over its cover in all three lists.) */
     :is(#thehistory, .ft-rows, #mainqueue) .pvbar .row-icon,
     .plx-icon { position: relative; }
