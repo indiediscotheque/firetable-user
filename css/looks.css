@@ -7691,10 +7691,20 @@ html#about body {
         min-height: 0;
         margin: 0 var(--pad3) var(--pad3) 0;
         border-radius: var(--radius-md);
-        background: var(--color-bg);
+        /* flat, as the theme and the header's icons: just the icon, a tint on
+           hover. No plate: the page's colour runs darker towards the bottom,
+           so a solid square read as a box */
+        background: none;
     }
     @media (hover: hover) {
         body:not(.tt-skin) #nav-railBtn:hover { background: var(--color-bg-t1); }
+    }
+    /* with no plate under it, the people list fades out over its last 2.5rem
+       as it scrolls, so no row runs into the icon (the list's end, with its
+       3rem of room, is never faded). Discover's views stop above it already */
+    :root:is(:not(.rail), .rail-peek) body:not(.tt-skin) :is(#allUsersWrap, #mainGrid.login:not(.pre-auth) #pe-here:not(:empty)) {
+        -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent calc(100% - 0.25rem));
+        mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent calc(100% - 0.25rem));
     }
     :root.rail:not(.rail-peek) body:not(.tt-skin) #nav-railBtn .nav-railClose,
     :root:is(:not(.rail), .rail-peek) body:not(.tt-skin) #nav-railBtn .nav-railOpen { display: none; }
