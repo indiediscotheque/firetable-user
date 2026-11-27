@@ -1147,9 +1147,11 @@ firetable.ui.setupPlaylistEvents = function () {
 
   // ── Row spacing for off-screen blocks (--q-pitch, see .pvchunk in looks.css) ──
   // Measured from the list's first row whenever its size changes (density
-  // setting, fonts loading, the tab being shown).
+  // setting, fonts loading, the tab being shown), in the frame after: read
+  // straight away, it made the browser style and lay out the whole list again
+  // before the frame that shows it (the list moving between Live and Discover).
   var queueEl = document.getElementById('mainqueue');
-  var pitchObserver = typeof ResizeObserver !== 'undefined' && new ResizeObserver(function (entries) {
+  var pitchObserver = typeof ResizeObserver !== 'undefined' && new ResizeObserver(firetable.utilities.oncePerFrame(function (entries) {
     var row = entries[0].target;
     var h = row.offsetHeight;
     if (!h || !row.isConnected) return;
@@ -1157,7 +1159,7 @@ firetable.ui.setupPlaylistEvents = function () {
     // neighbouring rows' margins collapse into one
     var pitch = h + Math.max(parseFloat(cs.marginTop) || 0, parseFloat(cs.marginBottom) || 0);
     queueEl.style.setProperty('--q-pitch', pitch + 'px');
-  });
+  }));
   function watchRowPitch() {
     if (!pitchObserver) return;
     pitchObserver.disconnect();

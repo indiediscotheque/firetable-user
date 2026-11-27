@@ -6,6 +6,7 @@
 // Never deployed. CI: .github/workflows/smoke.yml
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { policy, config, serveSite, launchOptions, openPage } from "./harness.mjs";
 
@@ -1154,6 +1155,63 @@ test("the media state: YouTube stopped on the song, held back by the browser, or
     return out;
   });
   assert.deepEqual(r, ["none", "none", "yt-stalled", "yt-stalled,media-blocked", "yt-stalled,preview-stalled", "yt-stalled,preview-stalled", "none", "yt-stalled", "yt-stalled"]);
+});
+
+test("between songs, with the screen down: the video running out as its song ends isn't a stall, and the screen cuts to the next song's picture", async () => {
+  // YouTube's thumbnail (no bigger one for this video) and SoundCloud's biggest cover, answered here
+  const png = readFileSync(new URL("../favicon.png", import.meta.url));
+  const pics = /^https:\/\/(i\.ytimg\.com|i1\.sndcdn\.com)\//;
+  await page.route(pics, (route) => /maxresdefault/.test(route.request().url())
+    ? route.fulfill({ status: 404, body: "" })
+    : route.fulfill({ status: 200, contentType: "image/png", body: png }));
+  const r = await run(async () => {
+    const m = firetable.media, body = document.body;
+    const was = { song: firetable.song, preview: firetable.preview, state: m.ytState, error: m.ytError, tap: m.directTap, cls: body.className };
+    firetable.preview = false;
+    m.ytError = false;
+    m.directTap = false;
+    const stalledAt = (secsIn, duration) => {
+      firetable.song = { type: MEDIA_YOUTUBE, cid: "abc", started: ftapi.now() - secsIn * 1000, duration };
+      m.ytState = 0; // ENDED
+      m.refresh();
+      return body.classList.contains("yt-stalled");
+    };
+    // ended two seconds early, at its end, waiting for the next; ended a minute early
+    const stalled = [stalledAt(178, 180), stalledAt(180, 180), stalledAt(183, 180), stalledAt(120, 180)];
+    const poster = () => document.getElementById("screenPoster");
+    const settle = () => new Promise((ok) => setTimeout(ok, 400));
+    const shot = async (song) => {
+      firetable.song = song;
+      m.songChanged();
+      await m._poster;
+      await settle();
+      const b = poster(), pic = b.querySelector(".sp-pic");
+      return { hidden: b.hidden, art: b.classList.contains("is-art"), src: pic ? pic.getAttribute("src") : null, fill: !!b.querySelector(".sp-fill") };
+    };
+    body.classList.remove("screen", "pv-full-video");
+    m._poster = null;
+    firetable.song = { type: MEDIA_YOUTUBE, cid: "vid0", started: ftapi.now() };
+    m.songChanged();
+    const before = !!poster();
+    body.classList.add("screen");
+    const shots = [
+      await shot({ type: MEDIA_YOUTUBE, cid: "vid1", started: ftapi.now() }),
+      await shot({ type: MEDIA_SOUNDCLOUD, cid: "1", image: "https://i1.sndcdn.com/artworks-x-large.jpg", started: ftapi.now() }),
+      await shot(null)
+    ];
+    const css = !!document.getElementById("screen-poster-css");
+    Object.assign(firetable, { song: was.song, preview: was.preview });
+    Object.assign(m, { ytState: was.state, ytError: was.error, directTap: was.tap });
+    body.className = was.cls;
+    return { stalled, before, shots, css };
+  });
+  await page.unroute(pics);
+  assert.deepEqual(r.stalled, [false, false, false, true]);
+  assert.equal(r.before, false, "nothing loads while the screen has never been down");
+  assert.deepEqual(r.shots[0], { hidden: false, art: false, src: "https://i.ytimg.com/vi/vid1/hqdefault.jpg", fill: false });
+  assert.deepEqual(r.shots[1], { hidden: false, art: true, src: "https://i1.sndcdn.com/artworks-x-t500x500.jpg", fill: true });
+  assert.equal(r.shots[2].hidden, true, "no song: no picture");
+  assert.equal(r.css, true, "its stylesheet came with it");
 });
 
 test("no page errors while the site loaded and ran these", () => {

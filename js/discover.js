@@ -615,12 +615,15 @@ firetable.discover = (function () {
       if (/class="d-loading"/.test(h)) return;
       D.prerendered = false;
     }
-    var keep = pressed(el);
-    el.innerHTML = h;
+    // The same page as is there (coming back from Live, the database sending
+    // what it sent before) isn't built again: rebuilding Home's hundreds of
+    // covers made the switch from Live slow, and lost the place on the page.
+    var same = h === el._drawn && el.firstChild, keep = !same && pressed(el);
+    if (!same) { el.innerHTML = h; el._drawn = h; }
     if (keep && el.querySelector(keep)) el.querySelector(keep).focus({ preventScroll: true });
     writeTitle(); // a page's name can arrive with its data
-    if (v === "genres" && !D.sub) layoutMap();
-    if (v === "djs" && D.sub) drawCards();
+    if (!same && v === "genres" && !D.sub) layoutMap();
+    if (!same && v === "djs" && D.sub) drawCards();
     firetable.ui.markSaved();
   }
 
@@ -3133,7 +3136,7 @@ firetable.discover = (function () {
     F.open = false;
     clearTimeout(F.idle);
     keepScreenOn(false);
-    releaseData();
+    lingerData();
     ["mainGrid", "dMini"].forEach(function (id) { var x = document.getElementById(id); if (x) x.inert = false; });
     placeStage();
     renderBar();
@@ -3281,12 +3284,14 @@ firetable.discover = (function () {
     // which it is, Listen live takes you to the room, a song in Discover away from it.
     if (!D.src) setSrc("live"); // the room plays until something is picked
     if (mode === "live") {
-      releaseData();
+      lingerData();
       chatBack();
       queue.back();
       if (D.sideTab === "chat") D.sideTab = "list";
       document.body.classList.remove("d-sheet-open");
-      if (changed) window.dispatchEvent(new Event("resize")); // the stage measures itself again
+      // the stage measures itself again, after Live is on screen: measured straight
+      // away, it laid the whole page out twice before the switch could show
+      if (changed) requestAnimationFrame(function () { setTimeout(function () { window.dispatchEvent(new Event("resize")); }); });
       renderBar();
     } else {
       if (!D.signedIn && !store.get(FOUND_KEY, null)) store.set(FOUND_KEY, (addressFor().replace(/^#/, "") || "discover").slice(0, 200));
@@ -3378,12 +3383,15 @@ firetable.discover = (function () {
     lockedTabs();
   }
   function quiet(err) { firetable.debug && console.log("[discover] not readable yet:", err && err.message); }
+  // Leaving for Live lets go of it only after a few minutes there: going back
+  // and forth (the usual) found it all again each time, and drew Discover's
+  // page four more times as each part came back.
+  function lingerData() { clearTimeout(lingerData.at); lingerData.at = setTimeout(releaseData, 3 * 60000); }
   /** Stop following Discover's live data once neither Discover nor the full player is open. */
   function releaseData() {
     if (!watching || D.mode === "discover" || F.open) return;
     watching = false;
-    following.forEach(function (f) { f[0].off("value", f[1]); });
-    following = [];
+    following.splice(0).forEach(function (f) { f[0].off("value", f[1]); });
     Object.keys(liveKeys).forEach(function (key) { delete liveCharts[key]; });
     liveKeys = {};
   }
@@ -4243,9 +4251,12 @@ firetable.discover = (function () {
         var fsTip = document.getElementById("tip-fullscreenBtn");
         if (fsTip) fsTip.textContent = "Full-screen player (F)";
       }
-      // the left column starts below the header, whatever its height
+      // the left column starts below the header, whatever its height. Live's
+      // header and Discover's differ: each keeps its own (Discover's on its
+      // left column, Live's on the page), so switching doesn't change a value
+      // on the page, which made the browser restyle all of it every time
       var topbar = document.getElementById("topbar");
-      var measure = function () { document.documentElement.style.setProperty("--topbar-h", topbar.offsetHeight + "px"); };
+      var measure = function () { (D.mode === "discover" && document.getElementById("dRail") || document.documentElement).style.setProperty("--topbar-h", topbar.offsetHeight + "px"); };
       measure();
       if (window.ResizeObserver) new ResizeObserver(measure).observe(topbar);
       document.addEventListener("click", onClick);

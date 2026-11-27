@@ -384,6 +384,9 @@ firetable.media = {
   SC_DRIFT_S: 1.5,
   /** How many times to retry starting a SoundCloud song in a background tab */
   SC_RETRIES: 6,
+  /** Seconds before the room's song ends within which its video running out is just the song ending */
+  ENDING_S: 5,
+  _poster: null,
 
   /** The preview that starts a quarter of the way in when it first plays (null: none waiting). */
   quarterFor: null,
@@ -444,10 +447,31 @@ firetable.media = {
     return state === 1 || state === 3; // PLAYING or BUFFERING
   },
 
+  /** The room's song is in its last few seconds (or past its end, waiting for the next). */
+  songEnding: function () {
+    var song = firetable.song;
+    if (!song || !song.started || !(song.duration > 0)) return false;
+    return (ftapi.now() - song.started) / 1000 >= song.duration - firetable.media.ENDING_S;
+  },
+
+  /**
+   * The song's own picture on the screen between songs (js/screen-poster.js):
+   * loaded the first time it changes song or state with the screen down, then kept in step.
+   */
+  poster: function () {
+    var m = firetable.media, b = document.body.classList;
+    if (!m._poster) {
+      if (!b.contains('screen') && !b.contains('pv-full-video')) return;
+      m._poster = ftLazy.own('poster-js', 'js/screen-poster.js');
+    }
+    m._poster.then(function () { firetable.screenPoster.sync(); }, function () { m._poster = null; });
+  },
+
   /** YouTube player state changed. */
   onYouTubeState: function (state) {
     var m = firetable.media;
     m.ytState = state;
+    m.poster();
     if (state === 0 && firetable.preview === "discover" && firetable.discover) firetable.discover.onEnded();
     clearTimeout(m._stallTimer);
     if (state === 1) {
@@ -624,6 +648,7 @@ firetable.media = {
     clearTimeout(m._scTimer);
     m.scBlocked = false;
     m._scErrorShown = false;
+    m.poster(); // the screen cuts to the new song's picture until its video is ready
     m.refresh();
   },
 
@@ -635,7 +660,10 @@ firetable.media = {
       : !!(firetable.song && firetable.song.type === MEDIA_YOUTUBE && firetable.song.cid != 0);
     var s = m.ytState;
     var known = s !== null && s !== undefined;
-    var stalled = ytActive && known && !m._isPlaying(s) && !m.directTap;
+    // The room's video ran out as its song ends: that's between songs, not a stall,
+    // so the screen stays down on the song's picture until the next one cuts in
+    var between = s === 0 && !firetable.preview && m.songEnding();
+    var stalled = ytActive && known && !m._isPlaying(s) && !m.directTap && !between;
     var blocked = stalled && !firetable.preview && !firetable.disableMediaPlayback &&
       !m.ytError && (s === -1 || s === 2 || s === 5); // UNSTARTED, PAUSED, CUED
     var scActive = !firetable.preview && !!(firetable.song && firetable.song.type == MEDIA_SOUNDCLOUD);
