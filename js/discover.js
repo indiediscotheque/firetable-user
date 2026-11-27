@@ -109,7 +109,8 @@ firetable.discover = (function () {
   var NEW_MONTH_DAYS = 31;
 
   var esc = function (s) { return firetable.utilities.htmlEscape(s == null ? "" : String(s)); };
-  var ms = function (name, filled) { return '<i class="material-symbols-' + (filled ? "filled" : "outlined") + '" aria-hidden="true">' + name + "</i>"; };
+  // (a carrot is the site's own icon, drawn by css/looks.css .ms-carrot: Material Symbols has none)
+  var ms = function (name, filled) { var own = name === "carrot"; return '<i class="material-symbols-' + (filled ? "filled" : "outlined") + (own ? " ms-carrot" : "") + '" aria-hidden="true">' + (own ? "" : name) + "</i>"; };
   var store = {
     get: function (k, fallback) { try { var v = localStorage.getItem(k); return v == null ? fallback : JSON.parse(v); } catch (e) { return fallback; } },
     set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private window */ } }
@@ -487,7 +488,7 @@ firetable.discover = (function () {
   var VIEWS = [
     { id: "home", label: "Home", icon: "home" },
     { id: "new", label: "New", icon: "new_releases" },
-    { id: "fresh", label: "Fresh", icon: "fiber_new" },
+    { id: "fresh", label: "Fresh", icon: "carrot" },
     { id: "charts", label: "Charts", icon: "leaderboard" },
     { id: "genres", label: "Genres", icon: "category" },
     { id: "djs", label: "DJs", icon: "headphones" },

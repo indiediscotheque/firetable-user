@@ -153,7 +153,8 @@ const pages = []; // {path, html, hash}
 const cardJobs = []; // {path, card: {kicker, title, fact, covers: ["type_cid", ...]}}
 const keysOf = (list) => (list || []).filter((t) => t && t.cid).slice(0, 4).map((t) => (t.type || 1) + "_" + t.cid);
 const updated = { at: Date.now() };
-const icon = (name) => `<i class="material-symbols-outlined" aria-hidden="true">${name}</i>`;
+// (a carrot is the site's own icon, drawn by css/looks.css .ms-carrot: Material Symbols has none)
+const icon = (name) => (name === "carrot" ? '<i class="material-symbols-outlined ms-carrot" aria-hidden="true"></i>' : `<i class="material-symbols-outlined" aria-hidden="true">${name}</i>`);
 const ldScript = (ld) => `\t<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n`;
 /** Search results cut a description near 160 characters: end on a whole word. */
 const clip = (text, max = 220) => { text = String(text).replace(/\s+/g, " ").trim(); return text.length <= max ? text : text.slice(0, max - 1).replace(/\s+\S*$/, "") + "…"; };
@@ -633,7 +634,7 @@ if (HOME) {
   // Discover's pages as tiles first, as the site draws them at the top of its Home (js/discover-tabs.js,
   // from discover.js's VIEWS): a phone's way to them (css/discover.css shows them under 640px) from the
   // first paint, not only once the live Home has its data. The library's pages only where one was built
-  const tiles = [["new", "New", "new_releases", "new/"], ["fresh", "Fresh", "fiber_new", "#discover/fresh"], ["charts", "Charts", "leaderboard", "charts/"],
+  const tiles = [["new", "New", "new_releases", "new/"], ["fresh", "Fresh", "carrot", "#discover/fresh"], ["charts", "Charts", "leaderboard", "charts/"],
     ["genres", "Genres", "category", "genres/"], ["djs", "DJs", "headphones", "djs/"], ["years", "Years", "calendar_month", "years/"],
     ["themes", "Theme nights", "nightlife", "themes/"], ["recent", "Recent plays", "history", "#discover/recent"]]
     .filter(([, , , to]) => to[0] === "#" || pages.some((p) => p.path === to))

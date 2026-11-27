@@ -1085,6 +1085,20 @@ button.track-warning {
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
+/* The site's own icons, where Material Symbols has none: drawn in its outlined
+   style (a 2px line on a 24px grid) and coloured as it is (currentColor), at
+   the icon's size. Each helper that writes icons (ms() in js/discover.js and
+   js/ttskin.js, icon() in tools/plain-pages.mjs) gives the name as a class.
+   Fresh's carrot (the owner, November 27, 2026: Material has no carrot or corn) */
+.ms-carrot {
+    width: 1em;
+    height: 1em;
+    background-color: currentColor;
+    -webkit-mask: var(--ms-carrot) center / contain no-repeat;
+    mask: var(--ms-carrot) center / contain no-repeat;
+    --ms-carrot: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3.6 20.4 10.9 9.2a3.3 3.3 0 0 1 3.9 5.9Z'/><path d='M14.6 9.4 15.6 3.6M14.6 9.4l5.8-1M14.6 9.4l4.2-4.2M8.3 14.9l1.4 1M10.4 11.8l1.3 1'/></svg>");
+}
+
 /* Icon-only actions inside track rows. Same size and colour everywhere; a
    playlist row keeps Top and ⋮ last (playlist.js). */
 .row-icon {
