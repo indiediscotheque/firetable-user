@@ -230,11 +230,11 @@ const FEATURES = [
   { row: "DI-27", name: "The full-screen player", who: ALL, widths: WIDE, mode: "discover", via: ["#fullscreenBtn"], target: "#pv-full" },
   { row: "DI-27", name: "The full-screen player (phone: tap the bar)", who: ALL, widths: PHONE, mode: "discover", via: full, target: "#pv-full" },
   { row: "DI-19", name: "A song's ⋮ menu", who: ALL, mode: "discover", via: ["#dBrowse .pvbar .d-more"], target: "#dMenu" },
-  // Home's lead song keeps its own ⋮ and save on its cover, at every width; the week's Play and Save all are
-  // New this week's heading's (Round 5, November 25, 2026)
-  { row: "DI-19", name: "Home: the lead song's ⋮ (on its cover)", who: ALL, mode: "discover", via: ["#dBrowse .d-lead .d-leadart .d-more"], target: "#dMenu" },
-  { row: "DI-01", name: "Home: the lead song's save (on its cover)", who: ALL, mode: "discover", target: "#dBrowse .d-lead .d-leadart .histeal" },
-  { row: "DI-18", name: "Home: Play the week's N (New this week's heading)", who: ALL, mode: "discover", target: "#dBrowse .d-week .d-head .d-playall" },
+  // Home's lead song has its own ⋮ and save under its words, its cover only its play button (November 27, 2026);
+  // the week's Play all and Save all are New this week's heading's
+  { row: "DI-19", name: "Home: the lead song's ⋮ (under its words)", who: ALL, mode: "discover", via: ["#dBrowse .d-lead .d-leadown .d-more"], target: "#dMenu" },
+  { row: "DI-01", name: "Home: the lead song's save (under its words)", who: ALL, mode: "discover", target: "#dBrowse .d-lead .d-leadown .histeal" },
+  { row: "DI-18", name: "Home: Play all (New this week's heading)", who: ALL, mode: "discover", target: "#dBrowse .d-week .d-head .d-playall" },
   { row: "DI-18", name: "Home: Save all (New this week's heading)", who: ALL, mode: "discover", target: "#dBrowse .d-week .d-head .d-saveall" },
   // a cover's ⋮ and save: over its corner with a mouse, under the song's name on a touch screen (round 5, November 25, 2026)
   { row: "DI-19", name: "A cover's ⋮ (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", via: ["#dBrowse .d-compact .pvbar .d-more"], target: "#dMenu" },
