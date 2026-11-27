@@ -2384,7 +2384,9 @@ firetable.ui.init = function () {
   // ── Scrollbar gutters: expose each view's gutter width as --scroll-gutter ──
   // Lets the Playlists header give up the same strip as its list, and lets the
   // other views keep an even 1rem inset on both sides. The gutter is 0 with
-  // overlay scrollbars and varies by OS, browser and zoom, so it is measured.
+  // overlay scrollbars and varies by OS, browser and zoom, so it is measured,
+  // in the frame after a change (measured straight away, it laid the page out
+  // again before Live or Discover could show).
   (function () {
     if (typeof ResizeObserver === 'undefined') return;
     // [scroller, element that carries the variable]
@@ -2394,7 +2396,7 @@ firetable.ui.init = function () {
         var target = document.getElementById(ids[1]);
         if (!el || !target) return;
         var last = -1;
-        new ResizeObserver(function () {
+        new ResizeObserver(firetable.utilities.oncePerFrame(function () {
           if (!el.offsetWidth) return; // hidden tab
           var cs = getComputedStyle(el);
           var gutter = Math.max(0, el.offsetWidth - el.clientWidth -
@@ -2402,7 +2404,7 @@ firetable.ui.init = function () {
           if (gutter === last) return;
           last = gutter;
           target.style.setProperty('--scroll-gutter', gutter + 'px');
-        }).observe(el);
+        })).observe(el);
       });
   }());
 
