@@ -74,7 +74,7 @@ test("nothing of it loads before it's used, and its button says what it does", a
 test("[ folds it: the middle gets the room, chat keeps its width; kept on this device", async () => {
   await go("#discover");
   const open = await columns();
-  assert.deepEqual(open.map(Math.round), [240, 768, 432], "Discover's columns: the left one narrower than Live's, the middle wider, the right as Live's");
+  assert.deepEqual(open.map(Math.round), [288, 720, 432], "Discover's columns: a visitor's left one 18rem (the logo and their icons in one row), the middle the rest, the right as Live's");
   await blur();
   await page.keyboard.press("[");
   await waitFolded(true);
@@ -488,7 +488,7 @@ test("Discover's right column folds to a strip and opens again: the middle takes
   await blur();
   await page.click("#nav-sideBtn");
   await sideShut(true);
-  assert.deepEqual((await columns()).map(Math.round), [240, 1144, 56], "a 3.5rem strip, and the middle takes the room");
+  assert.deepEqual((await columns()).map(Math.round), [288, 1096, 56], "a 3.5rem strip, and the middle takes the room");
   assert.deepEqual(await sideBtn(), { label: "Open the side panel", expanded: "false", controls: "dSide", tip: "Open the side panel", stored: "1", atTop: true, content: false });
   // the left column folded too
   await page.evaluate(() => firetable.rail.set(true));
@@ -512,7 +512,7 @@ test("Discover's right column folds to a strip and opens again: the middle takes
   await page.waitForFunction(() => window.firetable && firetable.started && document.getElementById("dSide"), null, { timeout: 30000 });
   assert.equal(await page.evaluate(() => window.__sideAtParse), true);
   await sleep(300);
-  assert.deepEqual((await columns()).map(Math.round), [240, 1144, 56]);
+  assert.deepEqual((await columns()).map(Math.round), [288, 1096, 56]);
   // a narrower screen: the column is a sheet there, and the button isn't shown
   await page.setViewportSize({ width: 800, height: 900 });
   await sleep(300);
@@ -523,7 +523,7 @@ test("Discover's right column folds to a strip and opens again: the middle takes
   await page.focus("#nav-sideBtn");
   await page.keyboard.press("Enter");
   await sideShut(false);
-  assert.deepEqual((await columns()).map(Math.round), [240, 768, 432]);
+  assert.deepEqual((await columns()).map(Math.round), [288, 720, 432]);
   assert.deepEqual(await sideBtn(), { label: "Fold the side panel", expanded: "true", controls: "dSide", tip: "Fold the side panel", stored: null, atTop: true, content: true });
 });
 
