@@ -236,9 +236,9 @@ const FEATURES = [
   { row: "DI-01", name: "Home: the lead song's save (on its cover)", who: ALL, mode: "discover", target: "#dBrowse .d-lead .d-leadart .histeal" },
   { row: "DI-18", name: "Home: Play all (New this week's heading)", who: ALL, mode: "discover", target: "#dBrowse .d-week .d-head .d-playall" },
   { row: "DI-18", name: "Home: Save all (New this week's heading)", who: ALL, mode: "discover", target: "#dBrowse .d-week .d-head .d-saveall" },
-  // a cover's ⋮ and save: over its corner with a mouse, under the song's name on a touch screen (round 5, November 25, 2026)
-  { row: "DI-19", name: "A cover's ⋮ (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", via: ["#dBrowse .d-compact .pvbar .d-more"], target: "#dMenu" },
-  { row: "DI-01", name: "A cover's save (phones: under the song's name)", who: ALL, widths: PHONE, mode: "discover", target: "#dBrowse .d-compact .pvbar .histeal" },
+  // a cover's ⋮ and save: beside the song's name, as on Fresh's cards, at every width (November 27, 2026)
+  { row: "DI-19", name: "A cover's ⋮ (beside the song's name)", who: ALL, mode: "discover", via: ["#dBrowse .d-compact .pvbar .d-more"], target: "#dMenu" },
+  { row: "DI-01", name: "A cover's save (beside the song's name)", who: ALL, mode: "discover", target: "#dBrowse .d-compact .pvbar .histeal" },
   { row: "DI-17", name: "Members' playlist beside the player", who: IN, widths: WIDE, mode: "discover", target: "#dSide" },
   { row: "DI-15", name: "Visitors' crate", who: ["visitor"], widths: WIDE, mode: "discover", target: "#dSide" },
   // the right column folds to a strip and opens again, from its button (its open icon shows only folded; Round 5)
