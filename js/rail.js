@@ -186,7 +186,7 @@ firetable.rail = (function () {
     var top = 0;
     TOP.forEach(function (id) {
       var el = $id(id);
-      // only what's in the toolbar: in Live the theme is on the stage (js/theme-slot.js)
+      // only what's in the toolbar: with the column open in Live, the theme is its first section (js/theme-slot.js)
       if (el && bar.contains(el) && el.getClientRects().length) top = Math.max(top, el.getBoundingClientRect().bottom - box.top);
     });
     var foot = box.bottom - utils.getBoundingClientRect().top;

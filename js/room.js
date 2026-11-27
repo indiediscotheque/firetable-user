@@ -976,7 +976,7 @@ firetable.ui.setupRoomEvents = function () {
   });
 
   // ── Theme (#87) ──
-  // A pill in the header (in Live on a computer, on the stage: js/theme-slot.js); tapping it opens #themePopover.
+  // A pill in the header (in Live on a computer, the left column's first section: js/theme-slot.js); tapping it opens #themePopover.
   var themePill = document.getElementById('themePill');
   var themePillText = document.getElementById('themePillText');
   var themePop = document.getElementById('themePopover');
