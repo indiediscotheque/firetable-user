@@ -2374,8 +2374,8 @@ firetable.ui.init = function () {
   // ── Scrollbar gutters: expose the views' gutter width as --scroll-gutter ──
   // Lets the Playlists header give up the same strip as its list, the stage
   // above the views take the same inset so its edges line up with the
-  // Playlists panel (css/looks.css), and the other views keep an even 1rem
-  // inset on both sides. The gutter is 0 with overlay scrollbars and varies
+  // Playlists panel (css/looks.css), and Recent and Cards give it up the same
+  // way, so all three run the stage's width. The gutter is 0 with overlay scrollbars and varies
   // by OS, browser and zoom, so it is measured, in the frame after a change
   // (measured straight away, it laid the page out again before Live or
   // Discover could show). The four lists share one scrollbar style, so

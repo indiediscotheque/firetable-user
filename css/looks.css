@@ -5469,6 +5469,18 @@ img.emoji,
     }
 }
 
+/* Recent and Cards run the same width as Playlists and the stage: no side
+   inset, and the list's scrollbar gutter (--scroll-gutter, set in ui.js)
+   given up on the left as #queuebox does, with the filter bar giving it up on
+   the right as .queuetop does, so every edge lines up. Turntable's side panel
+   keeps its own inset. */
+body:not(.tt-skin) {
+    & #thehistoryWrap { padding-inline-start: var(--scroll-gutter, 0px); }
+    & #thehistoryWrap #histFilterBar { padding-inline: 0; margin-inline-end: var(--scroll-gutter, 0px); }
+    & #thehistory { padding-inline: 0; }
+    & #cardsWrap { padding-inline: var(--scroll-gutter, 0px) 0; }
+}
+
 :is(#thehistory, .ft-rows) {
     container: hist / inline-size;
     flex: 1;
